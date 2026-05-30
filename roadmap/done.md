@@ -4,6 +4,50 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Proto contract review (adversarial agent-team) → reviews/06
+
+**What:** Ran a 4-expert agent-team peer review of the 20 sub-phase-0b proto files +
+`schema/plugin.v1.json`, pre-freeze (per ADR-003). Lenses: api-designer (proto/gRPC),
+plugin-author (implementability), security-eng (wire-vs-comment enforcement),
+systems-architect (composition/failure). Reviewers worked cold (not given the prior
+architecture reviews' answers), cross-challenged each other, and classified every finding on
+**severity × freeze-gate**. Output: [`reviews/06-proto-contract-review.md`](../reviews/06-proto-contract-review.md).
+
+**Headline:** the protos are clean as individual services, but the cross-plugin properties that
+are the RAT thesis (call-by-capability invocation, per-plugin/tenant isolation, tamper-evident
+audit) are asserted in comments but **not enforced by the fields** — comment-deep. **Contract
+is NOT ready to freeze** — **15 freeze-blockers + 1 open design decision (AUTH-2 invocation
+model)**; ~28 further findings are GA-deferrable.
+
+**15 freeze-blockers (cannot fix post-freeze)** — top: the identity keystone (forgeable +
+contradictorily-defined `subject` → C3 unbuildable); format capability URI naming breaks the
+triple; state key grammar + `state.Put` outcome tri-state + CAS-linearizability-conformance (+
+DynamoDB eventual-consistency → split-brain leader election, a NEW critical); audit
+AppendResponse shape; async event-bus envelope (no `event.proto`); `MergeBranch`
+idempotency/expected-snapshot; `secret.Resolve.found` semantics; Arrow protocol+role; split
+`Write` per-mode; `rat.capability` annotation; `Ingest` streaming shape; timestamp type;
+`slots.target` wrap.
+
+**Method notes:** keystone hit independently by 3/4 lenses; the sharpest find (confused-deputy
+assertion-replay → per-hop `correlation_id` enforcement) only emerged from the team's converged
+fix; one finding conceded down (API-8), one reviewer self-discarded 4 unverified findings.
+
+**⚠️ Correction (committed `0201892`, after first version `b9be88b`):** systems-architect's
+ballot was lost in transit (tool acked, message never landed). The first report version was
+written without it and **wrongly recorded AUTH-2 as direct-dial-by-consensus** plus three items
+as GA. When the ballot arrived, the report was corrected — all changes toward *more* severe:
+AUTH-2 is now a documented **open disagreement** (systems-architect: core-mediated /
+plugin-author: direct-dial; needs an ADR), and `state.Put` tri-state, the async event envelope,
+and `MergeBranch` request-shape were upgraded to freeze-blockers (12 → 15). Provenance noted in
+the report appendix.
+
+**Next:** resolve the AUTH-2 model (ADR) + apply the 15 freeze-blocker fixes (start with the
+`context.proto` keystone — everything keys off it), re-running buf each step.
+
+**Files:** `reviews/06-proto-contract-review.md` (commits `b9be88b` + correction `0201892`), `roadmap/*`.
+
+---
+
 ## 2026-05-30 — Agent-teams flag pinned into project settings
 
 Declared `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in the project-committed `.claude/settings.json` `env` block so the repo self-documents its reliance on the experimental agent-teams feature (previously set only in user-global `~/.claude/settings.json`). Flag is experimental/unofficial — may change on product update. Doc: `https://code.claude.com/docs/en/settings.md` (`env` block pattern).
