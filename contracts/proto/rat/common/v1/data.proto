@@ -23,16 +23,51 @@ message TableRef {
   string branch = 3;
 }
 
+// The wire protocol of an out-of-band data stream. PINNED at freeze
+// (reviews/06 AUTH-3): "gRPC/Flight-style" was not a spec — two authors would
+// build incompatible channels. Arrow Flight (DoGet/DoPut) is the v1 protocol; a
+// new major may add others, but a given ArrowStream names exactly one.
+enum ArrowTransport {
+  ARROW_TRANSPORT_UNSPECIFIED = 0;
+  // Apache Arrow Flight. PRODUCER_HOSTED → consumer calls DoGet(ticket);
+  // CONSUMER_HOSTED → producer calls DoPut(ticket).
+  ARROW_TRANSPORT_FLIGHT = 1;
+}
+
+// Which party HOSTS the endpoint (the other party dials). PINNED at freeze
+// (reviews/06 AUTH-3): the same ArrowStream type is used in opposite directions —
+// format.Resolve returns a producer-hosted stream the consumer pulls; the source
+// on format.Append/Merge is a stream the format pulls from a caller-hosted
+// endpoint. Without this field the holder can't tell whether to host or dial.
+enum ArrowStreamRole {
+  ARROW_STREAM_ROLE_UNSPECIFIED = 0;
+  // The producer hosts `endpoint`; the consumer dials it to READ (Flight DoGet).
+  ARROW_STREAM_ROLE_PRODUCER_HOSTED = 1;
+  // The consumer hosts `endpoint`; the producer dials it to WRITE (Flight DoPut).
+  ARROW_STREAM_ROLE_CONSUMER_HOSTED = 2;
+}
+
 // An Arrow data stream endpoint — the out-of-band side channel for bulk bytes.
-// The producer plugin stands this up; the consumer dials it. The control-plane
+// One party hosts `endpoint`; the other dials it (see `role`). The control-plane
 // RPC only exchanges this descriptor, keeping bulk data off the core path.
 message ArrowStream {
-  // gRPC/Flight-style endpoint the consumer dials for record batches.
+  // Endpoint the dialing party connects to for record batches.
   string endpoint = 1;
-  // Opaque ticket the producer issues to authorize + identify this stream.
+  // Opaque ticket that authorizes + identifies this stream. SECURITY (reviews/06
+  // SEC-14): a conformant producer MUST issue tickets that are short-TTL,
+  // single-use, and bound to {caller_plugin, tenant, this stream} so a
+  // leaked/guessed ticket can't be replayed for cross-tenant data access. (The
+  // bytes leg bypasses the core, so the ticket is the only gate.) The detailed
+  // ticket-format spec is enforcement-layer (GA); the field is here so it's in
+  // the frozen shape.
   bytes ticket = 2;
-  // Arrow IPC schema (serialized) so the consumer can validate before pulling.
+  // Arrow IPC schema (serialized) so the dialing party can validate before
+  // transferring.
   bytes ipc_schema = 3;
+  // The wire protocol of this stream. MUST be set (UNSPECIFIED is rejected).
+  ArrowTransport transport = 4;
+  // Which party hosts `endpoint`. MUST be set so the holder knows host-vs-dial.
+  ArrowStreamRole role = 5;
 }
 
 // Outcome envelope reused by data-plane mutating RPCs.

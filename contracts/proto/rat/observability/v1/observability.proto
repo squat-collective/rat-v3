@@ -22,9 +22,16 @@ import "rat/common/v1/context.proto";
 option go_package = "github.com/rat-dev/rat/gen/rat/observability/v1;observabilityv1";
 
 service ObservabilityService {
-  // rat://observability/v1/ingest — client-stream telemetry into the sink.
-  // Client-streaming: emitters push batches; the sink acks once at the end.
-  rpc Ingest(stream IngestRequest) returns (IngestResponse);
+  // rat://observability/v1/ingest — stream telemetry into the sink.
+  //
+  // BIDI-STREAMING (reviews/06 API-4 / freeze-blocker #9): the old shape was
+  // client-streaming with a SINGLE terminal ack — for a process-lifetime
+  // telemetry stream the sink would ack only at stream close (≈never), giving no
+  // backpressure and no partial-failure feedback. Bidi lets the sink return an
+  // IngestResponse per batch (or periodically), so the emitter sees accepted /
+  // rejected counts incrementally and can flow-control. Streaming-shape changes
+  // are wire-breaking, hence pre-freeze.
+  rpc Ingest(stream IngestRequest) returns (stream IngestResponse);
 }
 
 enum SignalType {
@@ -49,6 +56,9 @@ message IngestRequest {
   repeated TelemetryPoint points = 2;
 }
 
+// Acknowledgement for the batches received so far on this bidi stream. The sink
+// emits one per inbound batch (or periodically); counts are cumulative for the
+// stream so the emitter can track progress and apply backpressure.
 message IngestResponse {
   int64 accepted = 1;
   int64 rejected = 2;
