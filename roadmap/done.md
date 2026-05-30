@@ -4,6 +4,28 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Freeze-blocker #1: context.proto keystone rewrite (3-principal identity)
+
+**What:** Applied the first + highest-leverage freeze-blocker from [reviews/06](../reviews/06-proto-contract-review.md) C-1 (SEC-1 ⊕ AUTH-12, the keystone). Rewrote `contracts/proto/rat/common/v1/context.proto`, replacing the single forgeable, semantically-ambiguous `subject` string with three distinct principals + structural trace/identity separation. Commit `322126c`.
+
+**New `RequestContext` shape:**
+- `TraceContext` (traceparent/tracestate/correlation_id) — caller-supplied, propagated verbatim, diagnostic-only.
+- `Identity` — all fields CORE-stamped, never trusted from the wire:
+  - `caller_plugin` — immediate caller, server-derived from the hop's channel credential, **re-derived every hop, never propagated**. C3 state namespace = `(caller_plugin, tenant)`.
+  - `subject` — a `SubjectAssertion` (core signature + `bound_correlation_id` + `expires_unix_ms`), not a bare string. Verification contract: every consuming hop verifies the signature, checks `bound_correlation_id == inbound correlation_id` (anti-replay/confused-deputy), and checks TTL. Propagated.
+  - `tenant` — server-stamped, propagated, never caller-writable (C7 structural).
+- `deadline_unix_ms` — unchanged hint.
+
+**Downstream coherence (other half of AUTH-12):** `state.proto` C3 namespace now keys on `identity.caller_plugin` (was the contradictory `subject (the calling plugin)`); comment refs → `context.identity.{tenant,subject}` in storage/secret/billing/tenancy/identity. Composes with ADR-005 (the core-mediated gateway stamps `caller_plugin` per hop).
+
+**Verified (containerized):** buf lint 0, build 0, generate 38 Go files; dup-scan clean (python-verified across all 6 touched files).
+
+**Next:** freeze-blocker #2 — rename `format` capability URIs `rat://format-capability/v1/*` → `rat://format/v1/*`.
+
+**Files:** `contracts/proto/rat/common/v1/context.proto` (rewrite), `state/v1/state.proto`, `storage/v1/storage.proto`, `secret/v1/secret.proto`, `billing/v1/billing.proto`, `tenancy/v1/tenancy.proto`.
+
+---
+
 ## 2026-05-30 — ADR-005: capability invocation model — core-mediated
 
 **What:** Resolved the one open design decision from [reviews/06](../reviews/06-proto-contract-review.md) C-6 (AUTH-2 ⊕ ARCH-2) — how a plugin actually *calls* a capability it `requires`, which the protos never expressed on the wire. Wrote [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md).
