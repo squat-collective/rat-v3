@@ -86,3 +86,15 @@ We'll know we failed if:
 The architectural depth in v3 doesn't pay off for the *first* year. It pays off in years 2-5 when other platforms add their N+1 vendor integration and we add a plugin. By year 3, the gap is structural. By year 5, it's a moat.
 
 This is the kind of bet that's only worth making if you're prepared to spend 12 months on foundations before shipping a useful product. **The architecture is the product** — for a longer-than-comfortable runway.
+
+## Anti-goals (added 2026-05-30, post-synthesis)
+
+The 5-perspective adversarial review (see [reviews/00-synthesis.md](../reviews/00-synthesis.md)) surfaced one failure mode the original vision didn't name: **"the architecture is the product" is a precondition, not a strategy.** "Be too good to fork" and "let architecture be a quiet credibility moat" are restatements of the build-it-and-they-will-come trap, not escapes from it. The cruel irony surfaced by the GTM perspective: the docs predicted "OSGi outcome — technically great, ecosystem stillborn" and then proposed mitigations that lead exactly there.
+
+To address this honestly, we commit to two anti-goals:
+
+1. **No new plugin axis ships in year 1 until 100 real users run the core daily.** The roadmap must be pulled by users, not pushed by architecture. The temptation to add the 17th, 18th, 19th axis is the project's structural failure mode. If we hit 100 users with 16 axes, the next axis is allowed. Until then, no.
+
+2. **The effort ratio over the next year must invert from ~95% architecture / 5% GTM to something closer to 60% architecture / 40% distribution.** Distribution decides, not architecture. Hand-to-hand first-100-users work (design partners, the demo-loader port as the front-door wow, anti-lock-in messaging, dbt→RAT migration path) is the actual job — and it is *more* work than the architecture, not less. We will not pretend otherwise.
+
+These anti-goals exist because the synthesis demonstrated that the project knows its failure modes (the docs name "another OSGi", "a worse Snowflake", "ecosystem stillborn" out loud) and the architectural mitigations on offer don't escape them. Distribution is the escape, and it has no owner in the current ADRs. Naming the anti-goals here is the smallest possible structural acknowledgment; converting them into concrete work happens in [roadmap/phases.md](../roadmap/phases.md).

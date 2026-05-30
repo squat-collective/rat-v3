@@ -34,6 +34,7 @@ This repo holds the **architectural thinking, ADRs, and ongoing design** for RAT
 6. **Capture ideas where they're born.** Anything that sparks during a conversation → `ideas/inbox.md`. Ideas that become real → promoted to an ADR or design doc. Don't trust memory.
 7. **Save the conversations that matter.** Long Claude sessions where architectural shape emerged → distill into `docs/conversations/YYYY-MM-DD-<topic>.md`. Future-us needs to know how we got here.
 8. **Test the deployment topology, not the feature.** When we ship code, the test is "can a solo user `chmod +x && ./rat` AND can a hybrid-cloud team compose a plane?" — not "does feature X work." Architecture proves itself across topologies.
+9. **Keep the roadmap fresh.** [`roadmap/`](roadmap/) is the single source of truth for *what we're doing, what's done, what's next.* **After every working session that produces concrete output, update the roadmap** in this order: `done.md` → `current.md` → `phases.md` (if a phase moved) → `backlog.md` (if new work surfaced). A stale roadmap is worse than no roadmap. Full rules in [`roadmap/CLAUDE.md`](roadmap/CLAUDE.md).
 
 ## Directory map
 
@@ -47,9 +48,20 @@ rat/
 │   │   ├── overview.md       # the full architecture in one document
 │   │   └── adrs/             # numbered architectural decisions
 │   │       ├── README.md     # ADR index + template
-│   │       └── 001-*.md
+│   │       ├── 001-everything-is-a-plugin.md
+│   │       ├── 002-founding-tech-stack.md
+│   │       └── 003-two-references-before-contract-freeze.md
 │   └── conversations/        # distilled Claude sessions
 │       └── YYYY-MM-DD-*.md
+├── reviews/                  # adversarial reviews of the architecture
+│   └── 00-synthesis.md       # multi-perspective synthesis (read second to vision.md)
+├── roadmap/                  # what we're doing, what's done, what's next
+│   ├── CLAUDE.md             # roadmap maintenance rules
+│   ├── README.md             # entry point
+│   ├── current.md            # ← always-current; read on every new session
+│   ├── phases.md             # phased plan (Phase 0 → 5)
+│   ├── done.md               # completion log (reverse chronological)
+│   └── backlog.md            # queued work
 ├── ideas/
 │   ├── inbox.md              # capture-as-you-go
 │   └── CLAUDE.md             # ideas rules
@@ -62,10 +74,12 @@ rat/
 
 **Reading order for a new session:**
 1. This file (you're here).
-2. `docs/vision.md` — the *why*.
-3. `docs/architecture/overview.md` — the *what*.
-4. Latest entry in `docs/conversations/` — the *how we got here*.
-5. `ideas/inbox.md` — the *what's bubbling*.
+2. **[`roadmap/current.md`](roadmap/current.md)** — what's in flight + the immediate next step. Always read this; it tells you what to do.
+3. `docs/vision.md` — the *why*.
+4. `docs/architecture/overview.md` — the *what*.
+5. Latest entry in `docs/conversations/` — the *how we got here*.
+6. `reviews/00-synthesis.md` — adversarial review findings that shaped the current direction.
+7. `ideas/inbox.md` — the *what's bubbling*.
 
 **Capture flow:**
 - New idea? → `ideas/inbox.md`.
