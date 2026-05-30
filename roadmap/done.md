@@ -4,6 +4,30 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Phase 0 entered: sub-phase 0a manifest schema drafted
+
+**What:** Entered Phase 0 (Lock the contracts) and produced the first contract artifact — the manifest envelope schema. Created the `contracts/` workspace.
+
+**Artifacts (all in `contracts/`):**
+- `schema/plugin.v1.json` — manifest **envelope** schema, JSON Schema 2020-12 (per ADR-002 D3). Validates the structure common to every axis: `api_version`/`kind`/`metadata`/`provides`/`requires`/`suggests`/`contributes`/`metadata_schema`, plus the capability-URI grammar `rat://<axis>/v<major>/<capability>`.
+- `schema/README.md` — design notes; records the **per-kind schema decision** (envelope-first now, per-kind schemas layered in 0b as each axis proto lands) and the documented gaps (semantic capability validity needs `rat plugin validate`, 0f).
+- `examples/rat-strategy-scd2.plugin.yaml` — canonical valid manifest (from overview.md, extended with Critical fields).
+- `examples/rat-format-deltalake.plugin.yaml` — second valid manifest (signed/team+ trust block).
+- `examples/INVALID-examples.md` — negative test vectors (future 0f corpus).
+- `README.md` — contracts workspace entry point + status table.
+
+**Critical concerns baked in (synthesis):** C4 resource asks/limits (`resources`, **mandatory**), C5 capability enforcement (`provides` is the enforced declaration, minItems 1), C8 supply-chain trust (`trust` block, optional@solo / required@team+).
+
+**Verified:** ran a containerized validator (Podman, `python:3.12-slim` + `jsonschema`) — schema is meta-valid, both examples pass, all 4 negative vectors correctly rejected. ALL GREEN.
+
+**Phase status:** Phase 0 moved not-started → in-flight; sub-phase 0a substantially drafted (schema + examples done; per-kind schemas deferred to 0b).
+
+**Note on the commitment gate:** `phases.md` flags a 12–18mo runway + GTM commitment as a pre-Phase-0 gate. Tom chose to proceed (sandbox/exploratory). Gate noted, not formally cleared.
+
+**Files:** `contracts/` (new tree, 6 files), `roadmap/current.md`, `roadmap/phases.md`, `roadmap/done.md`.
+
+---
+
 ## 2026-05-30 — Core language locked: Go (ADR-004)
 
 Wrote [ADR-004](../docs/architecture/adrs/004-core-language-go.md) to **ratify and lock** the Go decision that [ADR-002](../docs/architecture/adrs/002-founding-tech-stack.md) D1 had already made. The decision itself wasn't new — D1 said "Core language: Go" all along — but the project *prose* (CLAUDE.md "Rust or Go") and the just-landed allowlist (both toolchains) were still treating it as open. ADR-004 closes that gap before code starts.

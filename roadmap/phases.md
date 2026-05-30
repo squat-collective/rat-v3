@@ -9,7 +9,7 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | Phase | What | Status | Effort | Notes |
 |---|---|---|---|---|
 | **−1** | Architectural design + adversarial review | **done** (2026-05-30) | ~1 day | ADRs 001-003, vision, overview, 5-perspective review, synthesis |
-| **0** | Lock the contracts (with Critical concerns baked in) | not-started — pending commitment | 4-6 months | Wire-breaking-to-retrofit work; see ADR-003 |
+| **0** | Lock the contracts (with Critical concerns baked in) | **in-flight** (entered 2026-05-30) | 4-6 months | 0a manifest schema drafted; see ADR-003 |
 | **1** | Build the core (~12-15k LOC) | not-started | 3 months | Six things + cross-cutting enforcement |
 | **2** | Solo deployment reference plugins (production-grade) | not-started | 2 months | `chmod +x ./rat` works end-to-end |
 | **3** | Self-hosted team reference plugins | not-started | 2 months | Match v2's operational shape |
@@ -30,7 +30,7 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 
 | Sub-phase | Work | Effort |
 |---|---|---|
-| 0a | Manifest schema (`plugin/v1.json`) — including resources, trust, capabilities blocks | 2-3 weeks |
+| 0a | Manifest schema (`contracts/schema/plugin.v1.json`) — including resources, trust, capabilities blocks | 2-3 weeks — **envelope drafted ✅; per-kind schemas deferred to 0b** |
 | 0b | ~20 axis protos (data + control + experience) | 4-6 weeks, parallelizable |
 | 0c | Cross-cutting concern protos (`common/v1/context.proto` for trace/identity, audit envelope, descriptors) | 2-3 weeks |
 | 0d | Reference implementations round 1 — 1 per critical axis (6 plugins) | 6-8 weeks, parallelizable |

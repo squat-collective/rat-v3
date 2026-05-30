@@ -1,0 +1,34 @@
+# Second example — a Rust format plugin wrapping delta-rs (the cross-check
+# author from reviews/02). Demonstrates: a different axis, capability PROVISION
+# (this is what a strategy's `requires: format-capability/v1/merge` resolves to),
+# and a signed (team+) trust block. Validates against contracts/schema/plugin.v1.json.
+api_version: rat/1
+kind: format
+metadata:
+  name: rat-format-deltalake
+  version: 1.2.0
+  authors: ["Community"]
+  description: "Delta Lake format plugin, wraps delta-rs (Rust)"
+  license: Apache-2.0
+  homepage: https://github.com/example/rat-format-deltalake
+  support_url: https://github.com/example/rat-format-deltalake/issues
+compatible_core: ["rat/1"]
+provides:
+  - capability: rat://format-capability/v1/scan
+  - capability: rat://format-capability/v1/merge
+  - capability: rat://format-capability/v1/append
+requires:
+  - capability: rat://storage/v1/read
+  - capability: rat://storage/v1/write
+resources:
+  requests:
+    cpu: "250m"
+    memory: "256Mi"
+  limits:
+    cpu: "2"
+    memory: "2Gi"
+trust:
+  signature: "MEUCIQDexampleSignatureBytesBase64=="
+  signed_by: "https://github.com/example/rat-format-deltalake/.github/workflows/release.yml@refs/tags/v1.2.0"
+  attestations:
+    - "sha256:0000000000000000000000000000000000000000000000000000000000000000"

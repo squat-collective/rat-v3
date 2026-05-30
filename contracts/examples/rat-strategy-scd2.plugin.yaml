@@ -1,0 +1,38 @@
+# Canonical example manifest — the scd2 strategy from docs/architecture/overview.md,
+# extended with the Phase-0 Critical bake-in fields (C4 resources, C8 trust).
+# Validates against contracts/schema/plugin.v1.json.
+api_version: rat/1
+kind: strategy
+metadata:
+  name: rat-strategy-scd2
+  version: 0.3.0
+  authors: ["RAT core team"]
+  description: "Slowly-changing-dimension type-2 strategy"
+  license: Apache-2.0
+  support_url: https://github.com/rat-dev/rat-strategy-scd2/issues
+compatible_core: ["rat/1"]
+provides:
+  - capability: rat://strategy/v1/apply
+requires:
+  - capability: rat://format-capability/v1/merge
+  - capability: rat://runtime/v1/execute
+suggests:
+  - capability: rat://catalog/v1/register
+contributes:
+  slots:
+    - target: rat://ui/v1/pipeline-detail
+      component: scd2-config-panel
+metadata_schema: ./config-schema.json
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+# trust: omitted — valid at the solo tier (unsigned). A team+ deployment
+# would require a trust block:
+#   trust:
+#     signature: "MEUCIQ..."
+#     signed_by: "https://github.com/rat-dev/.github/workflows/release.yml@refs/tags/v0.3.0"
+#     attestations: ["sha256:..."]

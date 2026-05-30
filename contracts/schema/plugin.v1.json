@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rat.dev/schema/plugin/v1.json",
+  "title": "RAT v3 plugin manifest (rat/1)",
+  "description": "The manifest contract for a RAT v3 plugin. One of the three coupled artifacts of the contract triple (manifest + proto + capability URI). Operator-editable; designed for IDE autocomplete + inline validation per ADR-002 D3. This is the kind-agnostic ENVELOPE schema: it validates the common structure for every axis. Per-kind constraints on provides/requires (e.g. 'a kind:engine must provide rat://engine/v1/scan') are layered as separate per-kind schemas — see contracts/schema/README.md, 'The per-kind schema question'.",
+  "type": "object",
+  "required": ["api_version", "kind", "metadata", "provides", "resources"],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": {
+      "description": "The contract major this manifest targets. Mirrors K8s apiVersion. Only the contract major is encoded (ADR-002 D4).",
+      "type": "string",
+      "const": "rat/1"
+    },
+    "kind": {
+      "description": "The plugin axis. The v1 starting set is the 16+ open-set axes (ADR-001). Community axes are allowed via the open `kind` pattern, but unknown kinds SHOULD be proposed via ADR before publishing. The enum lists the v1 blessed axes for autocomplete; the pattern keeps the set open.",
+      "type": "string",
+      "anyOf": [
+        {
+          "enum": [
+            "engine",
+            "runtime",
+            "format",
+            "strategy",
+            "catalog",
+            "storage",
+            "deployment-runtime",
+            "state-backend",
+            "secret-backend",
+            "scheduler-backend",
+            "identity",
+            "tenancy",
+            "billing",
+            "observability",
+            "audit-log",
+            "ui",
+            "notifications",
+            "marketplace"
+          ]
+        },
+        {
+          "pattern": "^[a-z][a-z0-9-]*[a-z0-9]$"
+        }
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Globally-unique plugin name. Convention: rat-<kind>-<impl> (e.g. rat-format-deltalake).",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*[a-z0-9]$",
+          "minLength": 3,
+          "maxLength": 128
+        },
+        "version": {
+          "description": "Plugin version, SemVer. Governs the PLUGIN's own lifecycle. Distinct from capability major-versioning (ADR-002 D4), which is encoded in the capability URI, not here.",
+          "type": "string",
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+        },
+        "authors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "license": {
+          "description": "SPDX license identifier (e.g. Apache-2.0, MIT).",
+          "type": "string"
+        },
+        "homepage": {
+          "type": "string",
+          "format": "uri"
+        },
+        "support_url": {
+          "description": "Where users file issues for THIS plugin. Load-bearing for the support-attribution model: rat diagnose points blame here when a failure originates in this plugin (reviews/02 Stage 8). Required for team+ marketplace listing; recommended always.",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "compatible_core": {
+      "description": "The core contract majors this plugin is known to work against. A CHECKED compatibility gate (like VSCode engines.vscode), not advisory (reviews/02 Stage 10). Defaults to [the api_version major] when omitted.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^rat/[1-9][0-9]*$"
+      },
+      "minItems": 1,
+      "default": ["rat/1"]
+    },
+    "provides": {
+      "description": "Capabilities this plugin implements. The registry indexes these so peers can resolve capability -> provider WITHOUT naming this plugin. C5: what is declared here is what the gateway enforces at runtime — a plugin may only serve calls for capabilities it provides.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/capabilityRef" }
+    },
+    "requires": {
+      "description": "Capabilities this plugin needs, by capability (never by peer plugin name). The reconciler refuses to install a plugin whose requires are unsatisfied. Capability-not-implementation negotiation is the core coupling mechanism (ADR-001).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/capabilityRef" },
+      "default": []
+    },
+    "suggests": {
+      "description": "Capabilities that enhance this plugin but are not required. Informational; the reconciler does not block on these.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/capabilityRef" },
+      "default": []
+    },
+    "contributes": {
+      "description": "Extension slots this plugin contributes into (e.g. a UI panel into the portal). The target is a capability-shaped slot URI; the contribution is named by component.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "slots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["target", "component"],
+            "additionalProperties": false,
+            "properties": {
+              "target": { "$ref": "#/$defs/capabilityUri" },
+              "component": { "type": "string" }
+            }
+          },
+          "default": []
+        }
+      }
+    },
+    "metadata_schema": {
+      "description": "Relative path to a JSON Schema describing this plugin's own configuration block (operator-supplied config). Enables IDE validation of plugin config, same mechanism as the manifest itself.",
+      "type": "string"
+    },
+    "resources": {
+      "description": "C4: resource asks + limits, K8s-shaped, MANDATORY. Even in-process solo plugins declare them so the reconciler can reason about placement and the operator can see the cost. requests = guaranteed floor; limits = hard ceiling.",
+      "type": "object",
+      "required": ["requests"],
+      "additionalProperties": false,
+      "properties": {
+        "requests": { "$ref": "#/$defs/resourceQuantities" },
+        "limits": { "$ref": "#/$defs/resourceQuantities" }
+      }
+    },
+    "trust": {
+      "description": "C8: supply-chain trust block. OPTIONAL at the solo tier (unsigned local plugins are allowed); REQUIRED by team+ deployments (signing default-required — 'install on trust' is not a trust model). When present, the core verifies the signature against signed_by before install.",
+      "type": "object",
+      "required": ["signature", "signed_by"],
+      "additionalProperties": false,
+      "properties": {
+        "signature": {
+          "description": "Detached signature over the plugin image digest (cosign/Sigstore-style).",
+          "type": "string"
+        },
+        "signed_by": {
+          "description": "Identity that signed the plugin (e.g. a Sigstore OIDC identity or key reference).",
+          "type": "string"
+        },
+        "attestations": {
+          "description": "Optional in-toto/SLSA provenance attestation references.",
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        }
+      }
+    }
+  },
+  "$defs": {
+    "capabilityUri": {
+      "description": "A capability URI: rat://<axis>/<major-version>/<capability>. The ONLY coupling between plugins. Mirrors the proto package + service method coordinate (ADR-002 D2/D4).",
+      "type": "string",
+      "pattern": "^rat://[a-z][a-z0-9-]*/v[1-9][0-9]*/[a-z][a-z0-9-]*$"
+    },
+    "capabilityRef": {
+      "type": "object",
+      "required": ["capability"],
+      "additionalProperties": false,
+      "properties": {
+        "capability": { "$ref": "#/$defs/capabilityUri" }
+      }
+    },
+    "resourceQuantities": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "cpu": {
+          "description": "K8s-style CPU quantity (e.g. '500m', '2').",
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?m?$"
+        },
+        "memory": {
+          "description": "K8s-style memory quantity (e.g. '256Mi', '2Gi').",
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+        }
+      }
+    }
+  }
+}
