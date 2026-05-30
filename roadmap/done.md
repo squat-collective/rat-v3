@@ -13,7 +13,7 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 3. **Canonical serialization pinned in-contract:** specified the deterministic proto3 form the signature/hash cover (ascending field order, each field once, minimal varints, defaults omitted, no unknowns) → cross-impl verification is well-defined. Un-retrofittable once chains exist → pre-freeze.
 4. **Per-record response, prefix-only commit:** replaced `AppendResponse.appended:int64` with `repeated RecordAck` (`AppendStatus` COMMITTED/DUPLICATE/REJECTED + `RejectCode` BAD_SIGNATURE/CHAIN_BREAK/STORAGE_ERROR); commit is a contiguous prefix (a REJECTED entry ⇒ all later uncommitted, so no fork on partial failure); `last_committed_id`/`last_committed_hash` watermark lets a reconnecting emitter resume with no gap. `APPEND_STATUS_DUPLICATE` is the idempotent-retry valve. Two prose invariants captured: a dropped/rejected record is itself a meta-audit event; duplicate-on-retry must not double-append.
 
-**Verified:** buf lint 0 / build 0 / generate 40 Go files (new RecordAck + 2 enums); dup-free; no stale `appended` refs.
+**Verified:** buf lint 0 / build 0 / generate 38 Go files (RecordAck + 2 enums compile into the existing auditlog package files — no new file count); dup-free; no stale `appended` refs.
 
 **Next:** freeze-blocker #5 — `annotations.proto` + `(rat.capability)` method option + split `Write`/`engine.Execute` per-mode (do together).
 
