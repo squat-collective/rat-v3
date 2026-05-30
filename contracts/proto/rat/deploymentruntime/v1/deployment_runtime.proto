@@ -1,0 +1,107 @@
+// Deployment-runtime axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: deployment-runtime` plugin (local-process, docker, podman, k8s,
+// nomad, lambda, fargate) is WHERE PLUGINS RUN. Distinct from `runtime` (where
+// data-plane WORK runs). This is a TIER-0 plugin (bootstrap-critical, selected
+// at boot — plugin-architecture.md): the core needs one to launch any other
+// out-of-process plugin.
+//
+// Capability mapping:
+//   rat://deployment-runtime/v1/launch    -> Launch
+//   rat://deployment-runtime/v1/terminate -> Terminate
+//   rat://deployment-runtime/v1/healthcheck -> Healthcheck
+//
+// SECURITY (reviews/04 I9 — minimum isolation profile): a deployment-runtime
+// MUST honor the IsolationProfile (non-root, cap_drop ALL, no-new-privileges,
+// read-only FS, blocked metadata egress). The profile is part of the LaunchSpec
+// so it is contract, not convention — a runtime that ignores it fails conformance.
+// This is the trust boundary the whole "install many 3rd-party plugins" bet leans
+// on (reviews/01), so it is wire-level, not a deployment nicety.
+syntax = "proto3";
+
+package rat.deploymentruntime.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/deploymentruntime/v1;deploymentruntimev1";
+
+service DeploymentRuntimeService {
+  // rat://deployment-runtime/v1/launch — start a plugin instance from an image.
+  rpc Launch(LaunchRequest) returns (LaunchResponse);
+
+  // rat://deployment-runtime/v1/terminate — stop a running plugin instance.
+  rpc Terminate(TerminateRequest) returns (TerminateResponse);
+
+  // rat://deployment-runtime/v1/healthcheck — liveness/readiness of an instance.
+  // The reconciler calls this to drive convergence (overview.md).
+  rpc Healthcheck(HealthcheckRequest) returns (HealthcheckResponse);
+}
+
+// K8s-shaped resource asks, mirroring the manifest `resources` block (C4).
+message ResourceQuantities {
+  string cpu = 1;    // e.g. "500m"
+  string memory = 2; // e.g. "512Mi"
+}
+
+// I9 minimum isolation profile — contract, not convention.
+message IsolationProfile {
+  bool run_as_non_root = 1;
+  bool drop_all_capabilities = 2;
+  bool no_new_privileges = 3;
+  bool read_only_root_fs = 4;
+  // Block egress to cloud metadata endpoints (e.g. 169.254.169.254).
+  bool block_metadata_egress = 5;
+  // Optional seccomp profile name (empty == runtime default, which must be at
+  // least "RuntimeDefault"-equivalent).
+  string seccomp_profile = 6;
+}
+
+message LaunchSpec {
+  // OCI image reference for the plugin.
+  string image = 1;
+  ResourceQuantities requests = 2;
+  ResourceQuantities limits = 3;
+  IsolationProfile isolation = 4;
+  // Environment the plugin needs (NEVER secrets — those come via secret-backend).
+  map<string, string> env = 5;
+}
+
+message LaunchRequest {
+  rat.common.v1.RequestContext context = 1;
+  // Logical plugin id this instance serves (for healthcheck/terminate).
+  string plugin_id = 2;
+  LaunchSpec spec = 3;
+}
+
+message LaunchResponse {
+  // Opaque handle the runtime uses to identify this instance later.
+  string instance_id = 1;
+  // Address the core/API gateway dials to reach the launched plugin.
+  string endpoint = 2;
+}
+
+message TerminateRequest {
+  rat.common.v1.RequestContext context = 1;
+  string instance_id = 2;
+}
+
+message TerminateResponse {
+  bool terminated = 1;
+}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTH_STATUS_HEALTHY = 1;
+  HEALTH_STATUS_UNHEALTHY = 2;
+  HEALTH_STATUS_UNKNOWN = 3;
+}
+
+message HealthcheckRequest {
+  rat.common.v1.RequestContext context = 1;
+  string instance_id = 2;
+}
+
+message HealthcheckResponse {
+  HealthStatus status = 1;
+  string detail = 2;
+}

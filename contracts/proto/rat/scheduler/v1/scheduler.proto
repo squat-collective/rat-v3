@@ -1,0 +1,62 @@
+// Scheduler-backend axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: scheduler-backend` plugin (in-process timer, cron, Temporal,
+// cloud scheduler) owns "fire this at this time / on this interval". The
+// reconciler asks it WHEN; the reconciler still decides WHAT (overview.md
+// reconciliation model — the scheduler is a clock, not an orchestrator).
+//
+// Capability mapping:
+//   rat://scheduler/v1/schedule   -> Schedule
+//   rat://scheduler/v1/cancel     -> Cancel
+//   rat://scheduler/v1/watch-due  -> WatchDue (stream of fired triggers)
+syntax = "proto3";
+
+package rat.scheduler.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/scheduler/v1;schedulerv1";
+
+service SchedulerService {
+  // rat://scheduler/v1/schedule — register a trigger (cron expr or one-shot).
+  rpc Schedule(ScheduleRequest) returns (ScheduleResponse);
+
+  // rat://scheduler/v1/cancel — remove a previously-registered trigger.
+  rpc Cancel(CancelRequest) returns (CancelResponse);
+
+  // rat://scheduler/v1/watch-due — stream of triggers as they fire. The
+  // reconciler consumes this to know a pipeline is due.
+  rpc WatchDue(WatchDueRequest) returns (stream WatchDueResponse);
+}
+
+message ScheduleRequest {
+  rat.common.v1.RequestContext context = 1;
+  // Caller-chosen id, used to cancel + to correlate fired triggers.
+  string trigger_id = 2;
+  // Cron expression; if empty, `at_unix_ms` is used for a one-shot.
+  string cron = 3;
+  int64 at_unix_ms = 4;
+}
+
+message ScheduleResponse {
+  string trigger_id = 1;
+}
+
+message CancelRequest {
+  rat.common.v1.RequestContext context = 1;
+  string trigger_id = 2;
+}
+
+message CancelResponse {
+  bool cancelled = 1;
+}
+
+message WatchDueRequest {
+  rat.common.v1.RequestContext context = 1;
+}
+
+// One fired trigger.
+message WatchDueResponse {
+  string trigger_id = 1;
+  int64 fired_at_unix_ms = 2;
+}

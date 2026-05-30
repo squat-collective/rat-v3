@@ -4,6 +4,41 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Phase 0 sub-phase 0b cont'd (batch 3): 5 control-plane axes
+
+**What:** Added the remaining bootstrap/ops control-plane axes. Data plane was
+already complete; this finishes most of the control plane.
+
+**New protos (`contracts/proto/rat/`):**
+- `deploymentruntime/v1` — Launch/Terminate/Healthcheck; **tier-0** (where plugins
+  run); **I9 minimum isolation profile** is wire-level contract (non-root,
+  cap_drop ALL, no-new-privileges, read-only FS, blocked metadata egress) — the
+  trust boundary the "install many 3rd-party plugins" bet leans on.
+- `scheduler/v1` — Schedule/Cancel/WatchDue (a clock, not an orchestrator).
+- `secret/v1` — Resolve; **I13 secret contract**: refs in manifests/events/logs,
+  values resolved on demand with TTL, never persisted, redaction a core duty.
+- `observability/v1` — Ingest (client-stream). **Export sink only** — the core's
+  own `/metrics` + OTel are NATIVE and do not depend on this plugin (reviews/03
+  I1); "observability: none" still leaves the core self-observable.
+- `auditlog/v1` — Append; **I8 mandatory audit**: append-only, hash-chained
+  (prev_hash) tamper-evident records. Audit ALWAYS emits (core-local fallback);
+  this axis decides WHERE the trail goes, never WHETHER it exists.
+
+**Verified (containerized):** `buf lint` 0 findings (exit 0), `buf build` 0
+errors, `buf generate` 30 Go files, dup-scan clean. No streaming-name issues this
+batch (watched the *Response rule proactively).
+
+**Phase status:** 0b now has **14 of ~20 axis protos** — data plane complete (6),
+control plane nearly complete (8: state, identity, tenancy, deployment-runtime,
+scheduler, secret, observability, audit-log). Remaining: experience axes (ui,
+notifications, marketplace) + billing. Critical concerns now wired: C1, C2, C3,
+C5, C7, plus I8/I9/I13 isolation/audit/secret contracts.
+
+**Files:** `contracts/proto/rat/{deploymentruntime,scheduler,secret,observability,auditlog}/v1/*.proto`,
+`contracts/README.md`, `roadmap/*`.
+
+---
+
 ## 2026-05-30 — Phase 0 sub-phase 0b cont'd: 6 more axis protos + lint fix
 
 **What:** Added six more axis service contracts (rest of the data plane + the

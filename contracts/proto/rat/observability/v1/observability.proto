@@ -1,0 +1,55 @@
+// Observability axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: observability` plugin (Prometheus, OTel collector, Datadog) RECEIVES
+// telemetry the core + plugins emit and ships it onward.
+//
+// IMPORTANT (reviews/00 Theme 1 + reviews/03 I1): the core's OWN observability
+// (its `/metrics`, its OTel spans, its reconcile-loop SLIs) is NATIVE — it does
+// NOT depend on any observability plugin being installed. This axis is for
+// EXPORT/fan-out + enriching with plugin-supplied telemetry, not for making the
+// platform's own health opt-in. "observability: none" must still leave the core
+// self-observable. This proto is therefore an export sink, not the source of
+// truth for core health.
+//
+// Capability mapping:
+//   rat://observability/v1/ingest -> Ingest (stream of telemetry points)
+syntax = "proto3";
+
+package rat.observability.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/observability/v1;observabilityv1";
+
+service ObservabilityService {
+  // rat://observability/v1/ingest — client-stream telemetry into the sink.
+  // Client-streaming: emitters push batches; the sink acks once at the end.
+  rpc Ingest(stream IngestRequest) returns (IngestResponse);
+}
+
+enum SignalType {
+  SIGNAL_TYPE_UNSPECIFIED = 0;
+  SIGNAL_TYPE_METRIC = 1;
+  SIGNAL_TYPE_SPAN = 2;
+  SIGNAL_TYPE_LOG = 3;
+}
+
+message TelemetryPoint {
+  SignalType type = 1;
+  string name = 2;
+  // Numeric value for metrics; ignored for spans/logs.
+  double value = 3;
+  // Structured attributes (incl. trace_id/run_id for correlation — C1).
+  map<string, string> attributes = 4;
+  int64 timestamp_unix_ms = 5;
+}
+
+message IngestRequest {
+  rat.common.v1.RequestContext context = 1;
+  repeated TelemetryPoint points = 2;
+}
+
+message IngestResponse {
+  int64 accepted = 1;
+  int64 rejected = 2;
+}

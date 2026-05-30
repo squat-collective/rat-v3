@@ -1,0 +1,65 @@
+// Audit-log axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: audit-log` plugin (file, syslog, SIEM, immutable object store) is a
+// SINK for the core's audit stream.
+//
+// CRITICAL (reviews/04 I8 — mandatory audit trail): unlike most axes, audit
+// emission is NOT optional. The core ALWAYS emits an append-only, tamper-evident
+// record of security-relevant events (plugin installs, binding changes,
+// credential vends, auth decisions) — even when NO audit-log plugin is installed
+// (it falls back to a core-local append-only store). "audit-log: none" must NOT
+// mean "no audit". This plugin axis decides WHERE the trail goes, never WHETHER
+// it exists. That is why audit is in the core's enforcement layer
+// (plugin-architecture.md cross-cutting concerns), and this axis is only the
+// export sink.
+//
+// Capability mapping:
+//   rat://auditlog/v1/append -> Append
+syntax = "proto3";
+
+package rat.auditlog.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/auditlog/v1;auditlogv1";
+
+service AuditLogService {
+  // rat://auditlog/v1/append — append audit records to the sink. The core calls
+  // this; records are also retained core-locally so the sink is a fan-out, not
+  // the only copy.
+  rpc Append(AppendRequest) returns (AppendResponse);
+}
+
+enum AuditOutcome {
+  AUDIT_OUTCOME_UNSPECIFIED = 0;
+  AUDIT_OUTCOME_SUCCESS = 1;
+  AUDIT_OUTCOME_DENIED = 2;
+  AUDIT_OUTCOME_ERROR = 3;
+}
+
+// One audit record. Append-only; the sink must not allow mutation/deletion of
+// prior records (tamper-evidence is the point).
+message AuditRecord {
+  // Stable id; with prev_hash forms a hash chain for tamper-evidence.
+  string id = 1;
+  // Hash of the previous record (chain link). Empty for the first record.
+  string prev_hash = 2;
+  int64 timestamp_unix_ms = 3;
+  // Who (subject) did what (action) to which (resource), and the result.
+  string subject = 4;
+  string tenant = 5;
+  string action = 6;
+  string resource = 7;
+  AuditOutcome outcome = 8;
+  // Correlation back to the operation (C1).
+  string correlation_id = 9;
+}
+
+message AppendRequest {
+  rat.common.v1.RequestContext context = 1;
+  repeated AuditRecord records = 2;
+}
+
+message AppendResponse {
+  int64 appended = 1;
+}

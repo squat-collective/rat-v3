@@ -20,14 +20,13 @@ Entered Phase 0 on 2026-05-30 (exploratory mode — see commitment-gate note abo
 **Done so far:**
 - `contracts/` workspace created (`schema/`, `proto/`, `examples/`).
 - **0a:** `contracts/schema/plugin.v1.json` — manifest envelope schema (JSON Schema 2020-12), Critical fields C4/C5/C8 baked in. Two valid example manifests + negative-vector doc; container-validated (all green). Per-kind-schema decision recorded.
-- **0b (in progress):** **9 axis protos** drafted + cross-cutting context/data — `common/v1/{context,data}`, plus `engine`, `runtime`, `format`, `strategy`, `catalog`, `storage`, `state`, `identity`, `tenancy`. `buf` toolchain stood up. **buf lint + build + generate all pass clean** (verified in container; corrected a lint miss from commit `e79910c` — see done.md).
-- Critical concerns now with a wire home: C1 (context), C2 (identity), C3 (state namespacing), C5 (provides/enforcement), C7 (tenant in context + storage scope + tenancy plugin).
+- **0b (in progress):** **14 axis protos** drafted + cross-cutting context/data. Data plane complete (`engine`, `runtime`, `format`, `strategy`, `catalog`, `storage`); control plane: `state`, `identity`, `tenancy`, `deployment-runtime`, `scheduler`, `secret`, `observability`, `audit-log`. **buf lint + build + generate all pass clean** (verified in container).
+- Critical concerns now with a wire home: C1 (context), C2 (identity), C3 (state namespacing), C5 (provides/enforcement), C7 (tenant in context + storage scope + tenancy plugin), I8 (audit append hash-chain), I9 (deployment isolation profile), I13 (secret contract).
 
-**Next concrete step:** finish **0b** — remaining ~11 axes. Highest-value next:
-1. `deployment-runtime/v1` (where plugins run — tier-0), `scheduler-backend/v1`, `secret-backend/v1`.
-2. Experience axes: `ui/v1`, `notifications/v1`; control: `observability/v1`, `audit-log/v1`, `billing/v1`, `marketplace/v1`.
-3. As each axis lands, derive its **per-kind manifest schema** (the 0a→0b handoff in `contracts/schema/README.md`).
-4. **0c:** audit-event envelope proto (mandatory audit emission, C-I8) + the event-bus envelope (C1 trace in events, not just RPCs).
+**Next concrete step:** finish **0b** — remaining ~6 axes, all experience/business:
+1. `ui/v1` (what an experience plugin exposes + portal-slot contribution), `notifications/v1` (Send), `marketplace/v1` (advertise capabilities + conformance + signature — reviews/02 N2).
+2. `billing/v1` (metering hook).
+3. Then the 0a→0b handoff: derive **per-kind manifest schemas** from the now-large proto set, and **0c**: event-bus envelope (C1 trace in events, not just RPCs) — the audit *record* now exists (auditlog.proto), but the generic event envelope does not yet.
 
 **Deferred but now triggerable:** the `gofmt`/`buf format` `PostToolUse` hook (backlog) — the first `.proto` files now exist, so it can land. Also: pick the manifest-validator container image to make `rat plugin validate` (0f) real.
 
