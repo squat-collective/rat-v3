@@ -40,10 +40,12 @@ Three themes, each surfaced independently by 2–4 lenses (convergence = signal)
    eventually-consistent backend (DynamoDB) → split-brain leader election.
 
 **Verdict for the freeze gate:** the contract is **not ready to freeze**, but the blocking set
-is small and well-bounded. Most findings (even several Critical-severity ones) are
-*GA-blockers* — fixable post-freeze as additive fields + enforcement. Only a short list
-**must** be resolved pre-freeze because the fix redefines the meaning/shape of an existing
-field (see next section). Fix those, and the contract earns its freeze.
+is bounded — **15 freeze-blockers + 1 open design decision** (AUTH-2 invocation model, on which
+the two owning lenses disagree). Most of the *other* ~28 findings are *GA-blockers* — fixable
+post-freeze as additive fields + enforcement. The freeze-blockers must be resolved now because
+each fix redefines the meaning/shape of an existing field, is a breaking wire change, or pins a
+decision (like the invocation model) that later changes an existing field. Fix those, and the
+contract earns its freeze.
 
 ### The two-axis classification
 
@@ -73,6 +75,30 @@ These are the only items that genuinely cannot be fixed after freeze. This is th
 | 10 | **`observability.Ingest` streaming shape** (API-4) | api | client-streaming→bidi/unary is a breaking RPC-shape change |
 | 11 | **Timestamps: int64-ms vs `Timestamp`** (API-10) | api | int64↔Timestamp is a breaking type change; ratify the direction now (consistency is not the question — wire type is) |
 | 12 | **`slots.target` wrap** (API-17) | api | `string`↔`capabilityRef` object is breaking; pick the end-state (wrap) now |
+| 13 | **`state.Put` outcome tri-state** (API-1 state axis / ARCH) | arch, api, sec | `committed:bool` has no "UNKNOWN" state; on a timeout/partition the write may-or-may-not have committed → lease renewal can't fence safely. Adding COMMITTED/CONFLICT/UNKNOWN reinterprets the existing `committed` field → can't be done post-freeze (upgraded from GA after systems-architect's reconciler read) |
+| 14 | **Async event-bus envelope** (ARCH-1) | arch | No `common/v1/event.proto` exists, so the entire async/reconciliation plane (the backbone — "core emits events, plugins react") has no wire contract: no trace/correlation/tenant on async. You cannot freeze "the wire contract" with half the comms model unspecified. Minimum: the freeze must explicitly carve async out as unfrozen; better, add the envelope now |
+| 15 | **`MergeBranch` idempotency + expected snapshots** (ARCH-4) | arch | `MergeBranchRequest` takes only names → retried/concurrent merges double-apply or lose updates. Adding `expected_snapshot` + `idempotency_key` extends the existing message; the commit-linkage RPC itself is additive/GA, but the request-shape change is freeze-gated on catalog |
+
+**Open decision (owning lenses split — must be decided pre-freeze):**
+- **AUTH-2 / ARCH-2 — capability invocation model.** A `strategy`/`engine` has no wire handle to
+  call a capability it `requires` (Critical severity; the headline "call-by-capability" feature
+  is unbuildable today). The two lenses that own it **disagree on the fix**, and the choice is
+  freeze-gated because it determines whether `RequestContext` must carry `{endpoint, token}`:
+  - **systems-architect → core-mediated.** Control calls proxied through the core API gateway
+    (caller sends a capability URI + payload; core resolves provider, enforces
+    capability/identity/tenancy, emits audit, stamps trace, proxies). Rationale: the six
+    cross-cutting enforcement properties (C1/C2/C3/C5/C7/C8) can *only* be enforced if the core
+    sits on the control path; direct-dial forces every plugin pair to re-implement all six. The
+    missing artifact is a **core-facing capability-invoke proto** (the API gateway's own contract
+    is absent from all 20 files). Bytes still bypass core via `ArrowStream`.
+  - **plugin-author → direct-dial with core-issued scoped tokens.** Core resolves at plan time
+    and hands the requirer `{endpoint, short-TTL token scoped to the capability URI}`; callee
+    enforces C5 by validating token scope. Rationale: proxy makes the 6-thing core a per-call
+    SPOF + forces generic-payload forwarding (core-surface bloat); direct-dial mirrors the
+    existing `storage.VendCredentials` pattern and preserves "bypass core for work."
+  - **Lead note:** unresolved. Both fixes are additive once the model is chosen, but the *choice*
+    is freeze-blocking. The per-hop identity rule (keystone) holds under either. This warrants its
+    own ADR before freeze.
 
 **Freeze-slivers** (look GA, but one decision must be pinned now): `options` bytes encoding
 (API-12: declare "UTF-8 JSON validated against `metadata_schema`"); sentinel→`optional`
@@ -201,13 +227,20 @@ core); (c) free-text reason → **log/audit-only, never returned** to untrusted 
 (anti-enumeration-oracle); (d) **`secret.Resolve.found` → also means exists-but-unauthorized**
 (collapse denial into not-found for sensitive lookups). The same enum should populate the
 audit record's currently-missing machine-readable cause.
-**Freeze:** a/b/c + `VendCredentials` = GA (additive fields, behavioral). **API-1d
-(`secret.Resolve.found` meaning) = FREEZE** (pins an existing field). The error-handling
-*convention* choice should also be pinned at freeze so authors build one model.
+**Freeze:** a/b/c + `VendCredentials` = GA (additive fields, behavioral). **TWO freeze-blockers**
+(both confirmed by systems-architect's reconciler read): **API-1d** (`secret.Resolve.found` also
+means exists-but-unauthorized — pins an existing field), and **`state.Put` outcome tri-state**
+(freeze-blocker #13). systems-architect: idempotent retry does NOT paper over the latter —
+"lost CAS race" (ABORTED → step down) vs "backend unavailable" (UNAVAILABLE → backoff) demand
+opposite lease behaviors, and the killer is the *ambiguous* `committed=false` on a
+timeout/partition (write may-or-may-not have landed; lease fencing needs a third UNKNOWN state).
+`committed:bool` has no UNKNOWN → giving `PutResponse` an explicit outcome enum
+(COMMITTED/CONFLICT/UNKNOWN) reinterprets the existing field. The error-handling *convention*
+choice should also be pinned at freeze so authors build one model.
 
-### C-6 · No wire handle to invoke a required capability ("call-by-capability" unexpressible)
-**AUTH-2 ⊕ ARCH-2** · plugin-author + systems-architect · **CRITICAL · GA-BLOCKER** (additive)
-**Files:** `strategy/v1/strategy.proto`, `engine/v1/engine.proto`, `common/v1/context.proto`
+### C-6 · No wire handle to invoke a required capability ("call-by-capability" unexpressible) — ⚠️ OPEN DECISION
+**AUTH-2 ⊕ ARCH-2** · plugin-author + systems-architect · **CRITICAL** · **decision is freeze-blocking; chosen impl is additive**
+**Files:** `strategy/v1/strategy.proto`, `engine/v1/engine.proto`, `common/v1/context.proto`, (missing) core API-gateway proto
 
 `strategy.Apply`'s comment says providers are "wired in via the RequestContext + registry
 resolution," but neither `RequestContext` nor `ApplyRequest` carries any provider
@@ -215,16 +248,32 @@ identity/endpoint/token. A strategy that `requires` `format-capability/merge` + 
 has, at `Apply` time, no endpoint and no auth handle to call them. The cleanest idea in the
 design — call-by-capability — is literally not expressible on the wire. Same gap for
 `engine`→`storage`/`catalog`.
-**Recommended fix (plugin-author, pending systems-architect's formal co-sign):** **direct-dial
-with core-issued capability-scoped tokens** — at resolve time the core hands the requiring
-plugin `{endpoint, short-TTL token scoped to the exact capability URI}`; the plugin direct-dials;
-the callee enforces C5 by validating token scope; `caller_plugin` re-derived per hop. Chosen
-over a core-mediated proxy because proxy makes the six-thing core a per-call SPOF and forces
-generic-payload forwarding (core bloat), whereas direct-dial mirrors the existing
-`storage.VendCredentials` pattern and preserves "bypass core for work."
-**Freeze:** **GA** — add a `ResolvedProviders` field (capability URI → {endpoint, token}) to
-orchestrating requests; redefines no existing field. The one meaning-question it touched
-(per-hop identity) is absorbed by the keystone (C-1), so it freezes clean.
+
+**The two owning lenses disagree on the fix — this is an unresolved design decision, not a
+settled recommendation.** (An earlier draft of this report wrongly recorded direct-dial as team
+consensus; that was before systems-architect's ballot was received — see appendix.)
+
+- **systems-architect → CORE-MEDIATED.** Each capability *call* is proxied through the core API
+  gateway (caller sends capability URI + payload; core resolves the provider via the registry,
+  checks capability/identity/tenancy, emits audit, stamps trace, proxies). The strategy still
+  *orchestrates the sequence* — "core never commands" is preserved; the core is a switchboard,
+  not an imperative orchestrator. Rationale: the six cross-cutting enforcement properties
+  (C1/C2/C3/C5/C7/C8) can only be enforced if the core sits on the control-call path; direct-dial
+  forces every plugin pair to re-implement all six (exactly what `plugin-architecture.md`
+  forbids). The missing artifact is a **core-facing capability-invoke proto** — the API gateway's
+  own contract is absent from all 20 files. Bytes still bypass the core via `ArrowStream`.
+- **plugin-author → DIRECT-DIAL with core-issued scoped tokens.** At resolve time the core hands
+  the requirer `{endpoint, short-TTL token scoped to the capability URI}`; the plugin
+  direct-dials; the callee enforces C5 by validating token scope. Rationale: proxy makes the
+  6-thing core a per-call SPOF and forces generic-payload forwarding (core-surface bloat);
+  direct-dial mirrors the existing `storage.VendCredentials` pattern and preserves "bypass core
+  for work."
+
+**Freeze:** the **decision is freeze-blocking** (mediated vs direct-dial determines whether
+`RequestContext`/requests must carry `{endpoint, token}` — an existing-shape question). Whichever
+is chosen, the *implementation* is then additive (a new core-invoke proto, or a `ResolvedProviders`
+field). The per-hop identity rule from the keystone (C-1) holds under either. **Recommendation:
+resolve via a dedicated ADR before freeze.**
 
 ---
 
@@ -249,7 +298,7 @@ orchestrating requests; redefines no existing field. The one meaning-question it
 | I-15 | **No registration/handshake RPC** (AUTH-4): identity.proto promises a "per-plugin token at registration," but no `Register` exists — how does a plugin obtain its token? | author | IMPORTANT · GA |
 | I-16 | **No app-level readiness/version RPC** (AUTH-7⊕ARCH-7⊕API-9): only `deploymentruntime.Healthcheck` (process liveness); can't ask a plugin "ready to serve capability X?"; liveness conflated with readiness | author, arch, api | IMPORTANT · GA |
 | I-17 | **No idempotency key on mutating RPCs** (AUTH-13): `Write`/`Apply`/`Execute`/`MergeBranch` retried by the reconciler with no dedupe key | author | IMPORTANT · GA |
-| I-18 | **catalog↔format commit linkage undefined; `MergeBranch` not idempotent** (ARCH-4): nothing registers what `format.Write` wrote into the catalog's branch; `MergeBranch` takes only names (no expected snapshots) → retried merge double-applies, concurrent merges lose updates (half-commit) | arch | IMPORTANT · GA |
+| I-18 | **catalog↔format commit linkage undefined; `MergeBranch` not idempotent** (ARCH-4): nothing registers what `format.Write` wrote into the catalog's branch; `MergeBranch` takes only names (no expected snapshots) → retried merge double-applies, concurrent merges lose updates. (NB: half-commit *on a branch* is by design — the merge is the gate.) **Split:** the `MergeBranch` request-shape change (`expected_snapshot`+`idempotency_key`) is **freeze-blocker #15**; the commit-linkage RPC is additive/GA | arch | IMPORTANT · split (see #15) |
 | I-19 | **Out-of-band ArrowStream has no lifecycle/cancellation/EOS-error** (ARCH-5): bulk transfer happens after the descriptor RPC returns, so the call's deadline doesn't govern it; no clean-EOS vs truncation signal, no flow control | arch | IMPORTANT · GA (overlaps I-1) |
 | I-20 | **Launched-instance lifecycle has no lease/owner token** (ARCH-9): nothing binds an instance's lifetime to the core that launched it → core crash between Launch and persisting instance_id = orphan, no GC | arch | IMPORTANT · GA |
 | I-21 | **catalog/format ref-resolution division unclear** (AUTH-11): if `Resolve` gets only `identifier`, must the format call the catalog (it can't — C-6), or is `uri` pre-resolved? Unspecified | author | IMPORTANT · GA (CONTRACT.md) |
@@ -298,7 +347,7 @@ The protos got real things correct, and the review credits them:
 
 ## Recommended next actions
 
-**Before freeze (the 12 freeze-blockers + slivers above), in dependency order:**
+**Before freeze (the 15 freeze-blockers + the AUTH-2 open decision + slivers above), in dependency order:**
 1. **Rewrite `common/v1/context.proto`** for the three-principal keystone (C-1) — this unblocks
    C3, C7, secret/audit/billing attribution, and the C-6 invocation identity. Everything keys
    off it; do it first.
@@ -310,17 +359,22 @@ The protos got real things correct, and the review credits them:
 7. **Pin `ArrowStream` protocol + role field** (I-1), **`Ingest` shape** (I-5), **timestamp type** (I-6), **`slots.target` wrap** (API-17), and the freeze-slivers (options encoding, pagination default, scheduler delivery doc, optional-presence).
 8. **Add the cheap additive placeholders now** (audit signature field, manifest `image` digest, `debug_redact`) even though enforcement is GA — they're free insurance and avoid a later schema bump.
 
-**Defer to GA (additive + enforcement):** the invocation `ResolvedProviders` field (C-6),
-registration RPC (I-15), readiness RPC (I-16), idempotency keys (I-17), watch control frames
-(I-14), cred/secret scope echoes (I-9/I-10), isolation attestation (I-11), sink-exfil controls
-(I-12), catalog/format commit linkage (I-18), instance lease (I-20), event-bus envelope
-enforcement (see below).
+Also resolve, in the same pre-freeze pass:
+- **AUTH-2 invocation model (C-6)** — pick mediated vs direct-dial via an ADR; the decision is
+  freeze-blocking even though the implementation is then additive.
+- **`state.Put` outcome tri-state** (#13) and **`MergeBranch` request shape** (#15) — both extend
+  existing messages.
+- **Async event-bus envelope** (#14, ARCH-1) — add `common/v1/event.proto` (trace + correlation +
+  tenant + event_id + dedup/ordering) **or** explicitly carve the async plane out of the `rat/1`
+  freeze. systems-architect's position (adopted): you cannot freeze "the wire contract" while the
+  backbone async/reconciliation comms model is unspecified — so this is freeze-blocking *by scope*,
+  upgraded from the first draft's GA reading.
 
-**One gap to resolve separately — the async path (ARCH-1):** there is no `common/v1/event.proto`,
-so the event bus (core thing #4, the backbone of the reconciliation model) carries no
-trace/correlation/tenant/idempotency. Net-new file = additive = GA-classifiable, **but** the
-async path is half the platform; define the envelope early so the async tracing/tenant story
-isn't an afterthought. Treat as a near-term design item even though it doesn't block freeze.
+**Defer to GA (additive + enforcement):** registration RPC (I-15), readiness RPC (I-16),
+idempotency keys (I-17), watch control frames (I-14), cred/secret scope echoes (I-9/I-10),
+isolation attestation (I-11), sink-exfil controls (I-12), catalog/format commit-linkage RPC
+(I-18, distinct from the freeze-gated `MergeBranch` request-shape change), instance lease (I-20),
+and the chosen invocation model's wire fields (C-6, once the model is decided).
 
 **Process note for the freeze itself:** per ADR-003, none of this freezes on paper — the
 two-reference-implementation rule still applies. This review is the *paper* pass; the second
