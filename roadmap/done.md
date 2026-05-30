@@ -4,6 +4,28 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Freeze-blocker #7: common/v1/event.proto (async event-bus envelope)
+
+**What:** reviews/06 ARCH-1 — the async plane (event bus, one of the six core things) had NO wire envelope, so distributed tracing broke across the async boundary and multi-tenant event routing was undefined, while every sync RPC carried `RequestContext`. Added `common/v1/event.proto` defining the `Event` envelope.
+
+**Shape:** `Event` = `{ RequestContext context, string event_id, string type, int64 timestamp_unix_ms, string source, bytes payload, string partition_key }`:
+- `context` — the SAME trace+identity+tenant envelope sync RPCs carry, so a `pipeline_run_failed` traces back through its `pipeline_run_requested` within one `correlation_id`, across every reacting plugin; identity is core-stamped at emit time (non-forgeable, keystone rules).
+- `event_id` — idempotent redelivery (at-least-once transports redeliver; a subscriber that saw this id no-ops). Distinct from `correlation_id` (shared across an operation's events).
+- `type` — subscription match key (overview.md: subscriptions = [event, action]); open-set, lower_snake_case.
+- `source` — emitting component (core reconciler or core-mediated plugin id); async analogue of `identity.caller_plugin`.
+- `payload` — serialized type-specific message, opaque to the transport (routes by type+tenant without interpreting it, like invoke.proto's payload).
+- `partition_key` — optional ordered-delivery key (e.g. per-run-id), where the transport supports it.
+
+Protocol fixed, transport pluggable (ADR-002 D2/D4: NATS JetStream default / Kafka / Redis Streams).
+
+**Verified:** buf lint 0 / build 0 / generate 42 Go files (`event.pb.go`; message-only, no service); dup-free.
+
+**Next:** freeze-blocker #8 — `catalog.MergeBranch`: add `expected_snapshot` + `idempotency_key`.
+
+**Files:** `contracts/proto/rat/common/v1/event.proto` (new).
+
+---
+
 ## 2026-05-30 — Freeze-blocker #6: core/v1/invoke.proto (capability-invoke service)
 
 **What:** Added the wire artifact ADR-005 requires and reviews/06 C-6 (AUTH-2 ⊕ ARCH-2) flagged as missing — the mechanism by which a plugin actually CALLS a capability it `requires`. Before this, "the core wires providers via the registry" was comment-deep with no wire mechanism; the headline call-by-capability feature was unbuildable.
