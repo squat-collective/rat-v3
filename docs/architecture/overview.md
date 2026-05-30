@@ -195,7 +195,9 @@ Plugins react to events:
 | **Solo** (single binary, laptop) | sqlite | anonymous | local-process | local-FS | duckdb-embedded |
 | **Self-hosted team** | postgres | oidc-keycloak | docker | minio/s3 | duckdb-container |
 | **Hybrid (on-prem control, cloud data)** | postgres | oidc-okta | k8s on-prem + eks data | s3-aws | spark-on-eks |
-| **Full cloud (SaaS-style)** | dynamodb | auth0 | aws-fargate | s3 | snowflake or bigquery |
+| **Full cloud (SaaS-style)** | dynamodb¹ | auth0 | aws-fargate | s3 | snowflake or bigquery |
+
+¹ DynamoDB backs a **multi-replica** control plane only in **strongly-consistent read mode** — its default eventually-consistent reads would let two replicas both win the leader-election CAS (split-brain). The state-backend conformance suite gates on single-key linearizable CAS + ordered Watch; an eventually-consistent backend must run strongly-consistent or declare itself solo-only. See `contracts/proto/rat/state/v1/state.proto` (reviews/06 C-4 / freeze-blocker #3).
 
 Same `rat` binary; different `plugin.yaml` set. **No fork between freemium-open-source and multi-tenant-SaaS.**
 

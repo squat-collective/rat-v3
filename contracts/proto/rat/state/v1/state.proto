@@ -1,7 +1,7 @@
 // State-backend axis service contract. DRAFT — sub-phase 0b.
 //
-// A `kind: state-backend` plugin (sqlite, postgres, etcd, DynamoDB) backs the
-// core's State Gateway (one of the six core things). This is a TIER-0 plugin
+// A `kind: state-backend` plugin (sqlite, postgres, etcd, …) backs the core's
+// State Gateway (one of the six core things). This is a TIER-0 plugin
 // (bootstrap-critical, selected at boot — plugin-architecture.md): the core
 // cannot start without it.
 //
@@ -17,13 +17,35 @@
 // server-derived per hop — keystone, context.proto) + RequestContext.identity.tenant
 // and PREFIXES it onto `key` server-side; a plugin physically cannot address
 // another plugin's or another tenant's keys. Cross-plugin access is
-// deny-by-default. The `key` field below is therefore plugin-relative, NOT global.
-// NOTE: `key`/`prefix` grammar is itself constrained (no traversal) — that is a
-// separate freeze-blocker (reviews/06 SEC-2), tracked in the roadmap.
+// deny-by-default. The `key`/`prefix` fields below are plugin-relative, NOT global.
 //
-// C5 — the Put CAS (compare-and-set) primitive is what the reconciler's
-// leader-election lease (ADR-002 D5) is built on; state plugins MUST implement
-// it linearizably or they cannot back a multi-replica deployment.
+// KEY GRAMMAR (reviews/06 SEC-2, freeze-blocker #3): `key`/`prefix` are
+// constrained so namespace prefixing is a real boundary, not naive string concat
+// a crafted value can escape. A conformant gateway MUST reject any key/prefix
+// that:
+//   - is empty (key; prefix MAY be empty == "all of my namespace"),
+//   - exceeds 512 bytes,
+//   - is not valid UTF-8,
+//   - contains a NUL byte (\x00) or any ASCII control char (< 0x20),
+//   - contains a path-traversal segment: a "." or ".." path component, or the
+//     sequence "../" / "..\\" anywhere.
+// Allowed: printable UTF-8 with `/` as a logical separator (the gateway's own
+// namespace prefix is applied server-side and is NOT part of this grammar — the
+// plugin never writes the namespace). Rejection surfaces as INVALID_ARGUMENT.
+// This grammar is a CONFORMANCE obligation (see below), not just prose.
+//
+// C5 / CAS — the Put compare-and-set primitive is what the reconciler's
+// leader-election lease (ADR-002 D5) is built on. CONFORMANCE OBLIGATION
+// (reviews/06 C-4 / ARCH-3): a state-backend MUST provide single-key
+// LINEARIZABLE compare-and-set and ORDERED Watch to be eligible as the lease
+// backend of a multi-replica deployment, and the axis conformance suite
+// (sub-phase 0f) gates on it with golden vectors — it is NOT an honor-system
+// comment. A backend that can only offer eventually-consistent reads (e.g.
+// DynamoDB in its default read mode) MUST either run in a strongly-consistent
+// mode or declare itself solo-only; it MUST NOT silently back a multi-replica
+// lease, because two stale CAS reads → two leaders → split-brain reconcile.
+// DynamoDB is therefore NOT in the advertised multi-replica state-backend set
+// unless configured for strongly-consistent reads (overview.md topology note).
 syntax = "proto3";
 
 package rat.state.v1;
@@ -50,6 +72,7 @@ service StateService {
 
 message GetRequest {
   rat.common.v1.RequestContext context = 1;
+  // Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
   string key = 2;
 }
 
@@ -62,6 +85,7 @@ message GetResponse {
 
 message PutRequest {
   rat.common.v1.RequestContext context = 1;
+  // Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
   string key = 2;
   bytes value = 3;
   // CAS: if > 0, the put succeeds only if the current revision matches.
@@ -69,13 +93,37 @@ message PutRequest {
   int64 if_revision = 4;
 }
 
+// The outcome of a Put. The old `committed: bool` could not distinguish a lost
+// CAS race from an unavailable backend from a maybe-committed timeout — fatal for
+// lease fencing (reviews/06 C-4 / API-1 reconciler axis). PutOutcome makes the
+// three cases explicit on the wire.
+enum PutOutcome {
+  PUT_OUTCOME_UNSPECIFIED = 0;
+  // The write was durably committed. `revision` is the new revision.
+  PUT_OUTCOME_COMMITTED = 1;
+  // CAS precondition failed: current revision != if_revision. Deterministic —
+  // the caller should re-read and decide (a leader that loses this steps down).
+  // The write did NOT happen. `revision` carries the current (conflicting) rev.
+  PUT_OUTCOME_CONFLICT = 2;
+  // The backend could not confirm the result (timeout, partition, dropped
+  // response): the write may or may not have committed. The caller MUST treat
+  // its state as unknown — a lease renewal that returns UNKNOWN cannot be relied
+  // on for fencing and the holder must assume it may have lost the lease. NOT
+  // safe to blindly retry a CAS on this without re-reading the revision first.
+  PUT_OUTCOME_UNKNOWN = 3;
+}
+
 message PutResponse {
-  bool committed = 1;
+  PutOutcome outcome = 1;
+  // New revision on COMMITTED; the current conflicting revision on CONFLICT;
+  // unspecified (0) on UNKNOWN.
   int64 revision = 2;
 }
 
 message ListRequest {
   rat.common.v1.RequestContext context = 1;
+  // Plugin-relative prefix; subject to KEY GRAMMAR (file header). MAY be empty
+  // (== list all of this plugin+tenant namespace).
   string prefix = 2;
 }
 
@@ -85,12 +133,12 @@ message ListResponse {
 
 message WatchRequest {
   rat.common.v1.RequestContext context = 1;
+  // Plugin-relative prefix; subject to KEY GRAMMAR (file header). MAY be empty.
   string prefix = 2;
   // Resume from this revision (0 == from now).
   int64 from_revision = 3;
 }
 
-// One change event in a Watch stream.
 message WatchResponse {
   enum Type {
     TYPE_UNSPECIFIED = 0;

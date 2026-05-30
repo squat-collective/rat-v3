@@ -4,6 +4,22 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Freeze-blocker #3: state.proto (key grammar + Put tri-state + CAS conformance)
+
+**What:** reviews/06 #3 — three coupled fixes to `state.proto` (the tier-0 state backend the reconciler depends on):
+
+1. **Key/prefix grammar (SEC-2):** `key`/`prefix` were unconstrained strings → naive namespace-prefix concat could be escaped. Now a stated conformance rule: reject empty key / >512B / non-UTF-8 / NUL+control chars / `.`+`..` traversal segments → `INVALID_ARGUMENT`. Makes C3 isolation a real boundary, not comment-deep.
+2. **Put outcome tri-state (C-4 / API-1 reconciler axis):** replaced `PutResponse.committed:bool` with a `PutOutcome` enum — `COMMITTED` / `CONFLICT` (lost CAS race, deterministic, didn't write) / `UNKNOWN` (timeout/partition, may-or-may-not have committed). `committed:bool` couldn't express UNKNOWN, which is fatal for lease fencing (a "maybe-committed" renewal can't be relied on).
+3. **CAS conformance + DynamoDB (C-4 / ARCH-3):** turned "MUST be linearizable" from prose into a stated conformance obligation (single-key linearizable CAS + ordered Watch, gated by the 0f suite); resolved the contradiction where overview.md advertised DynamoDB (eventually-consistent default) as a cloud state backend → split-brain leader election. DynamoDB now annotated as strongly-consistent-mode-or-solo-only in the topology table; removed it from the proto's plugin-examples list.
+
+**Verified:** buf lint 0 / build 0 / generate 38. No remaining references to the old `committed` field.
+
+**Next:** freeze-blocker #4 — audit `AppendResponse` → per-record `RecordAck` (prefix-only) + canonical-serialization pin + core-assigned id/prev_hash.
+
+**Files:** `contracts/proto/rat/state/v1/state.proto`, `docs/architecture/overview.md` (topology footnote).
+
+---
+
 ## 2026-05-30 — Freeze-blocker #2: format capability URI rename
 
 **What:** reviews/06 C-2 (API-7 ⊕ AUTH-1) — `format` was the one axis whose capability URI (`rat://format-capability/v1/*`) didn't match its proto package (`rat.format.v1`), breaking the contract-triple's "URI mirrors the package coordinate" invariant for the most-referenced axis. Renamed `rat://format-capability/v1/*` → `rat://format/v1/*`.
