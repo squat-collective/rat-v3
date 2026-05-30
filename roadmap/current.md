@@ -35,8 +35,10 @@ Entered Phase 0 on 2026-05-30 (exploratory mode — see commitment-gate note abo
 9. 🔶 **IN PROGRESS** — the small-wire-fix cluster, split into sub-commits:
    - ✅ **9a** (`22b76e2`) — `secret.Resolve.found` semantics pinned (anti-enumeration).
    - ✅ **9b** (`fcbe8bb`) — decision-RPC error model: `deny_code` enum on `identity.Authorize` + `tenancy.Decide`; `reason` demoted to log-only.
-   - ⬜ **9c** (data-plane) — `data.proto` ArrowStream: pin protocol (Flight) + add role/direction field; `observability.Ingest` streaming shape. ← **DO NEXT**
-   - ⬜ **9d** (schema/slivers) — `slots.target` wrap (string→capabilityRef) in `plugin.v1.json`; `options` encoding pin; timestamp-type ratification; `state.List`/`marketplace.Search` pagination-default; scheduler delivery-semantics doc; sentinel→`optional` presence.
+   - ✅ **9c** (`4f4e3a2`) — `data.proto` ArrowStream protocol (`transport`=FLIGHT) + role/direction field; `observability.Ingest` → bidi-streaming.
+   - ✅ **9d** (`1f7e8b2`) — `slots.target` wrapped in `capabilityRef` (schema + scd2 example, re-validated).
+   - ✅ **9e** (`9c39f47`) — sentinel→`optional` (rows_affected, fraction); `options` UTF-8-JSON encoding pin; scheduler at-least-once delivery doc.
+   - ⬜ **9f** (optional doc-pins, low value) — `state.List`/`marketplace.Search` pagination-default note; timestamp int64-ms ratification note. Comments only, arguably post-freeze-safe. ← deferred; **#10 next**
 10. Land cheap additive placeholders (manifest `image` digest, `debug_redact`; audit signature already done in #4).
 
 Re-run `buf lint/build/generate` (containerized) after each. Then 0c event-bus envelope + per-kind schemas, then 0d reference implementations.

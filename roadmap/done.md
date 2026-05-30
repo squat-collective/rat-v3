@@ -4,6 +4,22 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Freeze-blocker #9c/9d/9e: data-plane shapes + schema/proto slivers
+
+Continued the #9 small-wire-fix cluster (reviews/06). All buf-verified (lint 0 / build 0 / generate 42); each its own commit.
+
+**9c (`4f4e3a2`) — data-plane shapes.** `data.proto` ArrowStream: pinned the wire protocol (new `ArrowTransport` enum = FLIGHT + `transport` field — "gRPC/Flight-style" was not a spec) and encoded host-vs-dial (new `ArrowStreamRole` enum PRODUCER_HOSTED/CONSUMER_HOSTED + `role` field — same type used in opposite directions); ticket-security note (short-TTL/single-use/bound, SEC-14; detailed spec is GA). `observability.proto` Ingest: client-streaming → **bidi-streaming** (the old single terminal ack gave no backpressure/partial-failure feedback; bidi acks per batch).
+
+**9d (`1f7e8b2`) — schema shape.** `plugin.v1.json` `contributes.slots[].target`: bare `capabilityUri` → `capabilityRef` (API-17, consistency with provides/requires; string↔object is breaking). scd2 example updated to the wrapped shape; both manifests re-validate.
+
+**9e (`9c39f47`) — proto slivers.** API-13 sentinel → proto3 `optional` presence: `WriteResult.rows_affected` (absent==unknown) + `ExecuteProgress.fraction` (absent==indeterminate). API-12: `strategy.Apply.options` encoding pinned (UTF-8 JSON vs metadata_schema). API-11: `scheduler.WatchDue` delivery pinned at-least-once (reconciler dedupes by trigger_id+fired_at).
+
+**Remaining in #9 (low-value doc-pins, optional):** pagination-default note on `state.List` / `marketplace.Search` (v1 returns unbounded; a future `page_size` default must preserve that) and the timestamp-type ratification note (int64 unix-ms is the deliberate, final rat/1 choice). Both are comments, not wire changes — arguably addable post-freeze; deferred.
+
+**Files:** `contracts/proto/rat/common/v1/data.proto`, `contracts/proto/rat/observability/v1/observability.proto`, `contracts/proto/rat/runtime/v1/runtime.proto`, `contracts/proto/rat/strategy/v1/strategy.proto`, `contracts/proto/rat/scheduler/v1/scheduler.proto`, `contracts/schema/plugin.v1.json`, `contracts/examples/rat-strategy-scd2.plugin.yaml`.
+
+---
+
 ## 2026-05-30 — Freeze-blocker #9a+9b: secret found semantics + decision error model
 
 Freeze-blocker #9 (the small-wire-fix cluster, reviews/06 C-5 + API-1d) is being landed in sub-commits. First two done:
