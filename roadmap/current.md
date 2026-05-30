@@ -32,8 +32,12 @@ Entered Phase 0 on 2026-05-30 (exploratory mode — see commitment-gate note abo
 6. ✅ **DONE** — Added `core/v1/invoke.proto`: `CapabilityInvokeService.Invoke(capability URI + opaque payload bytes) → opaque result bytes` (ADR-005 core-mediated). Generic proxy — gateway routes by capability + resolves provider via registry + (rat.capability) annotation, enforces C2/C5/C7/C3 + stamps C1 + emits C8 audit, relays the serialized axis request/response without interpreting it. Bulk data still bypasses core via ArrowStream. buf clean (generate 41).
 7. ✅ **DONE** — Added `common/v1/event.proto`: the `Event` envelope for the async plane (ARCH-1). Carries the same `RequestContext` sync RPCs carry (trace+identity+tenant) so tracing/tenant-isolation work across the async boundary, plus `event_id` (idempotent redelivery), `type` (subscription match), `timestamp`, `source`, opaque `payload`, optional `partition_key` (ordered delivery). Core-stamped identity; transport pluggable (ADR-002 D2/D4), routes by type+tenant without interpreting payload. buf clean (generate 42).
 8. ✅ **DONE** — `catalog.MergeBranch`: added `expected_into_snapshot` (optimistic-concurrency guard vs lost-update from concurrent merges) + `idempotency_key` (no-op on reconciler retry) to `MergeBranchRequest`; added `already_applied` bool to the response. The separate commit-linkage RPC (how catalog learns what format.Write wrote) stays GA-deferred. buf clean (generate 42).
-9. Error convention + `secret.Resolve.found` semantics; Arrow protocol+role field; `Ingest` streaming shape; timestamp type; `slots.target` wrap; the freeze-slivers (options encoding, pagination default, scheduler delivery doc, optional-presence). ← **DO NEXT**
-10. Land cheap additive placeholders now (audit signature field, manifest `image` digest, `debug_redact`).
+9. 🔶 **IN PROGRESS** — the small-wire-fix cluster, split into sub-commits:
+   - ✅ **9a** (`22b76e2`) — `secret.Resolve.found` semantics pinned (anti-enumeration).
+   - ✅ **9b** (`7c8e90a`) — decision-RPC error model: `deny_code` enum on `identity.Authorize` + `tenancy.Decide`; `reason` demoted to log-only.
+   - ⬜ **9c** (data-plane) — `data.proto` ArrowStream: pin protocol (Flight) + add role/direction field; `observability.Ingest` streaming shape. ← **DO NEXT**
+   - ⬜ **9d** (schema/slivers) — `slots.target` wrap (string→capabilityRef) in `plugin.v1.json`; `options` encoding pin; timestamp-type ratification; `state.List`/`marketplace.Search` pagination-default; scheduler delivery-semantics doc; sentinel→`optional` presence.
+10. Land cheap additive placeholders (manifest `image` digest, `debug_redact`; audit signature already done in #4).
 
 Re-run `buf lint/build/generate` (containerized) after each. Then 0c event-bus envelope + per-kind schemas, then 0d reference implementations.
 

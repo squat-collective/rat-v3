@@ -4,6 +4,24 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Freeze-blocker #9a+9b: secret found semantics + decision error model
+
+Freeze-blocker #9 (the small-wire-fix cluster, reviews/06 C-5 + API-1d) is being landed in sub-commits. First two done:
+
+**9a (`22b76e2`) — `secret.Resolve.found` semantics.** Pinned at freeze: `found=false` deliberately conflates "ref does not exist" with "ref exists but unauthorized" (anti-enumeration). Auth failures return `found=false` + empty value, NOT `PERMISSION_DENIED`. Comment-only but freeze-gated (pins the meaning of the existing `found` field).
+
+**9b (`7c8e90a`) — decision-RPC error model.** A deny on a *successful* decision rpc can't be carried by a gRPC status code, so `identity.Authorize` + `tenancy.Decide` get an in-band enumerated `deny_code` alongside `allowed`; free-text `reason` demoted to log/audit-only (field 3), MUST NOT drive caller logic (enumeration-oracle, reviews/04). Per-package `DenyCode` enums. Header ERROR MODEL note on both: transport failures → gRPC status; decisions → `allowed` + `deny_code`.
+
+**Process note:** an earlier attempt committed only the secret change while claiming all three (a linter re-applied my reverted identity/tenancy edits asynchronously, and my re-edits failed on the stale-file guard). Caught on verification: amended the 9a commit message to match its actual content (secret only), then landed identity+tenancy cleanly as 9b with fresh reads. No false claim remains in history.
+
+**Verified:** buf lint 0 / build 0 / generate 42 Go files; dup-free.
+
+**Remaining for #9:** 9c (ArrowStream protocol+role, Ingest shape) + 9d (slots.target wrap, options encoding, timestamp ratification, pagination default, scheduler delivery doc, optional-presence).
+
+**Files:** `contracts/proto/rat/secret/v1/secret.proto`, `contracts/proto/rat/identity/v1/identity.proto`, `contracts/proto/rat/tenancy/v1/tenancy.proto`.
+
+---
+
 ## 2026-05-30 — Freeze-blocker #8: catalog.MergeBranch idempotency + concurrency
 
 **What:** reviews/06 #8 (ARCH-4 / I-18) — `MergeBranch` is the publish gate of the pipeline model and the reconciler retries it, but it took only branch names: a retried merge could double-apply and concurrent merges into main could lose updates. Added two request fields + one response field.
