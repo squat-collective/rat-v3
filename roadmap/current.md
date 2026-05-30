@@ -34,7 +34,7 @@ Entered Phase 0 on 2026-05-30 (exploratory mode — see commitment-gate note abo
 8. ✅ **DONE** — `catalog.MergeBranch`: added `expected_into_snapshot` (optimistic-concurrency guard vs lost-update from concurrent merges) + `idempotency_key` (no-op on reconciler retry) to `MergeBranchRequest`; added `already_applied` bool to the response. The separate commit-linkage RPC (how catalog learns what format.Write wrote) stays GA-deferred. buf clean (generate 42).
 9. 🔶 **IN PROGRESS** — the small-wire-fix cluster, split into sub-commits:
    - ✅ **9a** (`22b76e2`) — `secret.Resolve.found` semantics pinned (anti-enumeration).
-   - ✅ **9b** (`7c8e90a`) — decision-RPC error model: `deny_code` enum on `identity.Authorize` + `tenancy.Decide`; `reason` demoted to log-only.
+   - ✅ **9b** (`fcbe8bb`) — decision-RPC error model: `deny_code` enum on `identity.Authorize` + `tenancy.Decide`; `reason` demoted to log-only.
    - ⬜ **9c** (data-plane) — `data.proto` ArrowStream: pin protocol (Flight) + add role/direction field; `observability.Ingest` streaming shape. ← **DO NEXT**
    - ⬜ **9d** (schema/slivers) — `slots.target` wrap (string→capabilityRef) in `plugin.v1.json`; `options` encoding pin; timestamp-type ratification; `state.List`/`marketplace.Search` pagination-default; scheduler delivery-semantics doc; sentinel→`optional` presence.
 10. Land cheap additive placeholders (manifest `image` digest, `debug_redact`; audit signature already done in #4).
