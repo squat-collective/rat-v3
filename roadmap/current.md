@@ -5,7 +5,7 @@
 
 ## Status one-liner
 
-**Phase 0 in-flight (entered 2026-05-30).** Sub-phase 0a (manifest schema) drafted + container-validated. First contract artifact landed in `contracts/`. Next: per-kind schemas + the first axis protos (0b).
+**Phase 0 in-flight (entered 2026-05-30).** 0a manifest schema + all 20 0b axis protos drafted & buf-clean. **Adversarial agent-team review ([reviews/06](../reviews/06-proto-contract-review.md)) found the contract is NOT freeze-ready — 12 freeze-blockers to fix first.** Next: apply those fixes, starting with the identity keystone (`context.proto`).
 
 > Commitment-gate note: `phases.md` flags a 12–18mo runway + GTM commitment as a pre-Phase-0 gate. Tom chose to proceed in exploratory/sandbox mode. Gate acknowledged, not formally cleared — revisit before investing the full 4–6mo of Phase 0.
 
@@ -23,14 +23,18 @@ Entered Phase 0 on 2026-05-30 (exploratory mode — see commitment-gate note abo
 - **0b axis protos COMPLETE:** **20 proto files** (18 axis services + 2 common). Every v1 axis from ADR-001 has a wire contract. Data plane (engine, runtime, format, strategy, catalog, storage), control plane (state, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log), experience (ui, notifications, marketplace), business (billing). **buf lint + build + generate all clean**, verified in container across every batch.
 - Critical concerns with a wire home: C1 (context), C2 (identity), C3 (state namespacing), C5 (provides/enforcement), C7 (tenant: context + storage scope + tenancy + billing), I8 (audit hash-chain), I9 (deployment isolation profile), I13 (secret contract).
 
-**Next concrete step:** two threads to close out 0b/0c, then 0d:
-1. **Per-kind manifest schemas** (the 0a→0b handoff): for each axis, a schema asserting "a `kind: X` must provide capabilities [...]" derived from its proto. This is what catches the semantic gaps the envelope schema can't (see `schema/README.md`). Start with the 6 critical axes (engine, runtime, format, catalog, storage, state).
-2. **0c event-bus envelope:** a `common/v1/event.proto` so async events carry the same trace/correlation context as RPCs (C1 applies to events too, not just RPCs). The audit *record* exists (auditlog.proto) but the generic event envelope doesn't.
-3. Then **0d** — first reference implementations (ADR-003: 2 per critical axis before freeze). This is where the Go SDK + a real plugin first exercise the contracts.
+**Next concrete step:** apply the 12 freeze-blockers from [reviews/06](../reviews/06-proto-contract-review.md), in dependency order:
+1. **Rewrite `common/v1/context.proto`** for the three-principal keystone (caller_plugin server-derived per-hop; subject = core-signed, correlation_id-bound, re-validated per hop; tenant server-stamped; trace fields structurally separated). Everything keys off this — do it first.
+2. **Rename `format` capability URIs** `rat://format-capability/v1/*` → `rat://format/v1/*` (match package; fix examples).
+3. **State**: constrain `key`/`prefix` grammar (no traversal) + make linearizable-CAS a conformance gate + resolve the DynamoDB-vs-linearizability contradiction.
+4. **Audit**: replace `AppendResponse.appended` with per-record `RecordAck` (prefix-only) + pin canonical serialization + core-assigns id/prev_hash.
+5. **annotations.proto + `(rat.capability)` method option + split `Write`/`engine.Execute` per-mode** (do together).
+6. Error convention + `secret.Resolve.found` semantics; Arrow protocol+role field; `Ingest` streaming shape; timestamp type; `slots.target` wrap; the freeze-slivers (options encoding, pagination default, scheduler delivery doc, optional-presence).
+7. Land cheap additive placeholders now (audit signature field, manifest `image` digest, `debug_redact`).
 
-**Deferred-but-triggerable:** the `gofmt`/`buf format` PostToolUse hook (backlog) — 20 proto files now exist, so it's well past its trigger; worth landing before 0d adds Go plugin code.
+Re-run `buf lint/build/generate` (containerized) after each. Then 0c event-bus envelope + per-kind schemas, then 0d reference implementations.
 
-**Deferred but now triggerable:** the `gofmt`/`buf format` `PostToolUse` hook (backlog) — the first `.proto` files now exist, so it can land. Also: pick the manifest-validator container image to make `rat plugin validate` (0f) real.
+**Note:** the `gofmt`/`buf format` PostToolUse hook was evaluated and **rejected** (containerized formatter per-edit is 10–40× the tool cost; batch `buf format` before commits instead — see done.md). Manifest-validator container image for `rat plugin validate` (0f) still TBD.
 
 ### Stream 2 — Roadmap + ADR upkeep
 

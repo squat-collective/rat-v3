@@ -4,6 +4,43 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Agent-teams flag pinned into project settings
+
+Declared `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in the project-committed `.claude/settings.json` `env` block so the repo self-documents its reliance on the experimental agent-teams feature (previously set only in user-global `~/.claude/settings.json`). Flag is experimental/unofficial — may change on product update. Doc: `https://code.claude.com/docs/en/settings.md` (`env` block pattern).
+
+**Files:** `.claude/settings.json`, `roadmap/done.md`.
+
+---
+
+## 2026-05-30 — PostToolUse auto-format hook: evaluated and rejected
+
+**What:** Evaluated the deferred `PostToolUse` auto-format hook from `backlog.md` (the
+trigger condition — 20 `.proto` files committed — was met). Decision: **do not land the
+hook; adopt manual-batch formatting instead.**
+
+**Decision rationale:** Containerized formatter in a synchronous `PostToolUse` hook is a
+latency antipattern for this project. Each `Edit|Write` call would spin up a Podman
+container (500ms–2s startup) even though `gofmt` itself runs in <50ms and `buf format`
+in <200ms. The container overhead is 10–40x the tool cost, paid after every single file
+edit, blocking Claude from proceeding to the next tool call. At this project's
+development pace (heavy multi-file sessions), that latency accumulates into real friction.
+
+**Alternative landed:** none needed in `.claude/`. The `permissions.allow` array already
+permits `buf format *` and `go fmt *` via Bash tool. The model is expected to run a
+batch format (`buf format -w` via the established Podman invocation) before committing,
+consistent with how every other containerized tool is used in this project. A
+`scripts/fmt.sh` helper can be added when Go code is actively being written — a Bash
+script, not a hook.
+
+**Doc citation:** `https://code.claude.com/docs/en/hooks-guide.md` — PostToolUse +
+`Edit|Write` matcher pattern confirmed; latency tradeoff is Claude Code engineer judgment,
+not a doc constraint.
+
+**Files:** `roadmap/backlog.md` (hook row cut, decision noted), `roadmap/done.md` (this
+entry).
+
+---
+
 ## 2026-05-30 — Phase 0 sub-phase 0b complete: long tail (experience + billing)
 
 **What:** Drafted the final four axes — all v1 axes now have a proto.
