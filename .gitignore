@@ -1,0 +1,27 @@
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Local notes (not committed)
+NOTES.md
+SCRATCH.md
+.notes/
+
+# When code starts landing:
+target/
+node_modules/
+dist/
+build/
+*.pyc
+__pycache__/
+.venv/
+.env
+.env.local
+
+# Generated artefacts
+*.pb.go
+*_pb2.py
+gen/
