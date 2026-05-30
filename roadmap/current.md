@@ -5,7 +5,7 @@
 
 ## Status one-liner
 
-**Phase 0 in-flight (entered 2026-05-30).** 0a manifest schema + all 20 0b axis protos drafted & buf-clean. **Adversarial agent-team review ([reviews/06](../reviews/06-proto-contract-review.md)) found the contract is NOT freeze-ready — 15 freeze-blockers + 1 open design decision (AUTH-2 invocation model) to resolve first.** Next: apply those fixes, starting with the identity keystone (`context.proto`).
+**Phase 0 in-flight (entered 2026-05-30).** 0a manifest schema + all 20 0b axis protos drafted & buf-clean. **Adversarial agent-team review ([reviews/06](../reviews/06-proto-contract-review.md)) found the contract is NOT freeze-ready — 15 freeze-blockers.** The 1 open design decision (AUTH-2 invocation model) is now resolved → [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md) (core-mediated). Next: apply the 15 fixes, starting with the identity keystone (`context.proto`).
 
 > Commitment-gate note: `phases.md` flags a 12–18mo runway + GTM commitment as a pre-Phase-0 gate. Tom chose to proceed in exploratory/sandbox mode. Gate acknowledged, not formally cleared — revisit before investing the full 4–6mo of Phase 0.
 
@@ -23,13 +23,13 @@ Entered Phase 0 on 2026-05-30 (exploratory mode — see commitment-gate note abo
 - **0b axis protos COMPLETE:** **20 proto files** (18 axis services + 2 common). Every v1 axis from ADR-001 has a wire contract. Data plane (engine, runtime, format, strategy, catalog, storage), control plane (state, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log), experience (ui, notifications, marketplace), business (billing). **buf lint + build + generate all clean**, verified in container across every batch.
 - Critical concerns with a wire home: C1 (context), C2 (identity), C3 (state namespacing), C5 (provides/enforcement), C7 (tenant: context + storage scope + tenancy + billing), I8 (audit hash-chain), I9 (deployment isolation profile), I13 (secret contract).
 
-**Next concrete step:** apply the 15 freeze-blockers + resolve the AUTH-2 open decision from [reviews/06](../reviews/06-proto-contract-review.md), in dependency order:
-1. **Rewrite `common/v1/context.proto`** for the three-principal keystone (caller_plugin server-derived per-hop; subject = core-signed, correlation_id-bound, re-validated per hop; tenant server-stamped; trace fields structurally separated). Everything keys off this — do it first.
+**Next concrete step:** apply the 15 freeze-blockers from [reviews/06](../reviews/06-proto-contract-review.md). The AUTH-2 invocation-model open decision is now **resolved → [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md): core-mediated** (its impl, `core/v1/invoke.proto`, is item 6 below). Dependency order:
+1. **Rewrite `common/v1/context.proto`** for the three-principal keystone (caller_plugin server-derived per-hop; subject = core-signed, correlation_id-bound, re-validated per hop; tenant server-stamped; trace fields structurally separated). Everything keys off this — do it first. ← **DO NEXT**
 2. **Rename `format` capability URIs** `rat://format-capability/v1/*` → `rat://format/v1/*` (match package; fix examples).
 3. **State**: constrain `key`/`prefix` grammar (no traversal); `state.Put` outcome tri-state (COMMITTED/CONFLICT/UNKNOWN — replaces `committed:bool`); make linearizable-CAS a conformance gate + resolve the DynamoDB-vs-linearizability contradiction.
 4. **Audit**: replace `AppendResponse.appended` with per-record `RecordAck` (prefix-only) + pin canonical serialization + core-assigns id/prev_hash.
 5. **annotations.proto + `(rat.capability)` method option + split `Write`/`engine.Execute` per-mode** (do together).
-6. **AUTH-2 invocation model — DECIDE via ADR** (core-mediated vs direct-dial; the two owning lenses disagree). Freeze-blocking because it determines whether `RequestContext`/requests carry `{endpoint,token}`.
+6. **Add `core/v1/invoke.proto`** — the core-mediated capability-invoke service (ADR-005). The missing API-gateway contract; routes by capability URI, enforces C2/C3/C5/C7/C8 + stamps C1.
 7. **Async event-bus envelope** (`common/v1/event.proto`: trace+correlation+tenant+event_id+dedup) OR explicitly carve the async plane out of the `rat/1` freeze.
 8. **`catalog.MergeBranch`**: add `expected_snapshot` + `idempotency_key` to the request.
 9. Error convention + `secret.Resolve.found` semantics; Arrow protocol+role field; `Ingest` streaming shape; timestamp type; `slots.target` wrap; the freeze-slivers (options encoding, pagination default, scheduler delivery doc, optional-presence).

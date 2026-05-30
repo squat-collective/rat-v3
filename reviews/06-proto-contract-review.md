@@ -238,8 +238,10 @@ timeout/partition (write may-or-may-not have landed; lease fencing needs a third
 (COMMITTED/CONFLICT/UNKNOWN) reinterprets the existing field. The error-handling *convention*
 choice should also be pinned at freeze so authors build one model.
 
-### C-6 · No wire handle to invoke a required capability ("call-by-capability" unexpressible) — ⚠️ OPEN DECISION
-**AUTH-2 ⊕ ARCH-2** · plugin-author + systems-architect · **CRITICAL** · **decision is freeze-blocking; chosen impl is additive**
+### C-6 · No wire handle to invoke a required capability ("call-by-capability" unexpressible) — ✅ RESOLVED by [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md)
+**AUTH-2 ⊕ ARCH-2** · plugin-author + systems-architect · **CRITICAL** · **decision made (core-mediated); impl is additive (`core/v1/invoke.proto`)**
+
+> **Resolution (2026-05-30):** [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md) chose **core-mediated** (systems-architect's position) over direct-dial. Rationale: it's the only model under which the cross-cutting properties (C2/C3/C5/C7/C8 + C1) are *enforced* rather than left to each callee's good behavior — direct-dial would reintroduce the honor-system the security review condemned. The freeze artifact is a new `rat/core/v1/invoke.proto`; `RequestContext` does NOT gain provider-routing fields. The original disagreement is retained below as the record.
 **Files:** `strategy/v1/strategy.proto`, `engine/v1/engine.proto`, `common/v1/context.proto`, (missing) core API-gateway proto
 
 `strategy.Apply`'s comment says providers are "wired in via the RequestContext + registry

@@ -4,6 +4,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — ADR-005: capability invocation model — core-mediated
+
+**What:** Resolved the one open design decision from [reviews/06](../reviews/06-proto-contract-review.md) C-6 (AUTH-2 ⊕ ARCH-2) — how a plugin actually *calls* a capability it `requires`, which the protos never expressed on the wire. Wrote [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md).
+
+**Decision:** **core-mediated** (systems-architect's position) over direct-dial (plugin-author's). Control-plane capability calls go through a new core capability-invoke service (`core/v1/invoke.proto`); the core resolves capability→provider via the registry, enforces C2/C3/C5/C7/C8 + stamps C1 trace, and proxies. The calling plugin still orchestrates the *sequence* (core is a switchboard, not an orchestrator). Bulk Arrow bytes still bypass the core (the data-plane exception is preserved).
+
+**Why not direct-dial:** scoped-token direct-dial distributes enforcement to every callee → re-introduces the honor-system the security review condemned (the first plugin that validates loosely or skips audit silently breaks a platform invariant, with nothing central to catch it). Latency — the only thing direct-dial wins — is the dimension a control plane cares least about, and bytes already bypass the core. A direct-dial fast-path stays available as a future superseding ADR *if* profiling proves a need.
+
+**Freeze impact:** the freeze artifact is the new `core/v1/invoke.proto` (now freeze-blocker item #6 in current.md); `RequestContext` does NOT gain provider-routing fields. reviews/06 C-6 updated open → resolved.
+
+**Files:** `docs/architecture/adrs/005-capability-invocation-model.md` (new), `docs/architecture/adrs/README.md`, `reviews/06-proto-contract-review.md`, `roadmap/*`.
+
+---
+
 ## 2026-05-30 — Proto contract review (adversarial agent-team) → reviews/06
 
 **What:** Ran a 4-expert agent-team peer review of the 20 sub-phase-0b proto files +

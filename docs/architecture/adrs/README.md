@@ -10,6 +10,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [002](002-founding-tech-stack.md) | Founding tech stack + strategy decisions | Accepted | 2026-05-30 |
 | [003](003-two-references-before-contract-freeze.md) | Two independent reference implementations before any contract freezes | Accepted | 2026-05-30 |
 | [004](004-core-language-go.md) | Core language locked — Go | Accepted | 2026-05-30 |
+| [005](005-capability-invocation-model.md) | Capability invocation model — core-mediated control plane | Accepted | 2026-05-30 |
 
 ## Template
 
