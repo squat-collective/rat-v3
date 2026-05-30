@@ -92,6 +92,26 @@ These came up during ADR-002's locking session and are tracked in [ideas/inbox.m
 
 ---
 
+## Claude Code config: deferred until first code file
+
+These two additions to `.claude/` were audited and recommended but deliberately not landed yet — they need real code to exist first so patterns can crystallize rather than being speculative.
+
+**Trigger:** land both when the first `.go`, `.rs`, or `.proto` file is committed.
+
+| Item | What | Why deferred |
+|---|---|---|
+| `PostToolUse` auto-format hook | `PostToolUse` + `Edit\|Write` matcher in `settings.json`. Runs `gofmt -w` on `.go` files, `cargo fmt` on `.rs` files, `buf format -w` on `.proto` files after every edit. Prevents the model from forgetting to format after edits — formatting failures in Go/Rust block CI. | No Go/Rust/proto files exist yet. The hook targets specific file extensions; adding it now would be a no-op with stale intent. |
+| Path-scoped proto/manifest rule | A new `.claude/rules/proto-contracts.md` with `paths: ["**/*.proto", "**/plugin.yaml", "**/plugin/v1.json"]` capturing proto-authoring conventions: field naming, message nesting, service naming for Go/Rust gRPC, `buf.yaml` layout, capability URI format per ADR-002 D4. | The always-load `plugin-architecture.md` already captures architectural invariants. The path-scoped rule earns its place only once real proto files reveal tool-specific style patterns that don't belong in the always-load rule. Write after the first proto pass (sub-phase 0b). |
+
+**How to land when ready:**
+1. Spawn `claude-engineer` agent with "add the deferred PostToolUse format hook from backlog."
+2. For the proto rule: draft the rule content from actual proto authoring experience first, then add the `paths:`-frontmatter file.
+3. Update this backlog entry → cut it + append to `done.md`.
+
+Source: `claude-engineer` audit 2026-05-30. Doc citations: `https://code.claude.com/docs/en/hooks-guide.md` (PostToolUse pattern), `https://code.claude.com/docs/en/sub-agents.md` (rules path-scoping).
+
+---
+
 ## GTM / non-engineering work (deferred until commitment)
 
 These need the project commitment decision before they make sense to start:

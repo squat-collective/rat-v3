@@ -4,6 +4,33 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — `.claude/settings.json` coding-phase allowlist
+
+Pre-coding permissions audit (via `claude-engineer` agent). Expanded the `permissions.allow` array to cover both candidate toolchains — the Go vs Rust language decision from ADR-002 is still open ("Both / undecided"), so both are pre-allowed so Phase 0 can start in either direction without permission-prompt friction.
+
+### Changes
+
+- **`.claude/settings.json`** — added `$schema` key (IDE autocomplete); populated `permissions.allow` with 26 command rules:
+  - **Go:** `go build/test/vet/mod/generate/run/fmt`
+  - **Rust/Cargo:** `cargo build/test/check/clippy/run/fmt/doc`
+  - **Protobuf (buf):** `buf generate/lint/breaking/format`
+  - **Podman:** `podman build/run/compose` (per Tom's container-only rule in root CLAUDE.md)
+  - **Git (safe):** `git commit/add/diff/log/status`
+
+### Deliberately omitted (keep prompting)
+
+`git push`, `git reset`, `git rebase`, `podman rm`, `podman rmi` — destructive or remote-affecting; prompt behavior preserved.
+
+### Two deferred items queued in backlog
+
+(See `backlog.md` — "Claude Code config: deferred until first code file" section.)
+
+### Rationale
+
+`go test ./...`, `cargo clippy`, `buf generate` etc. are not in Claude Code's built-in read-only set and would prompt on every invocation. Listing them in `permissions.allow` removes the friction without relaxing any destructive-command guardrails. Cite: `https://code.claude.com/docs/en/permissions.md`.
+
+---
+
 ## 2026-05-30 — `.claude/` configuration landed
 
 Project-specific Claude Code setup created. Same minimalist discipline as the architecture: built-ins first, custom additions justified, docs cited.

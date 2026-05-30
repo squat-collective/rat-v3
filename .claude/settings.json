@@ -1,5 +1,33 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
-    "allow": []
+    "allow": [
+      "Bash(go build *)",
+      "Bash(go test *)",
+      "Bash(go vet *)",
+      "Bash(go mod *)",
+      "Bash(go generate *)",
+      "Bash(go run *)",
+      "Bash(go fmt *)",
+      "Bash(cargo build *)",
+      "Bash(cargo test *)",
+      "Bash(cargo check *)",
+      "Bash(cargo clippy *)",
+      "Bash(cargo run *)",
+      "Bash(cargo fmt *)",
+      "Bash(cargo doc *)",
+      "Bash(buf generate *)",
+      "Bash(buf lint *)",
+      "Bash(buf breaking *)",
+      "Bash(buf format *)",
+      "Bash(podman build *)",
+      "Bash(podman run *)",
+      "Bash(podman compose *)",
+      "Bash(git commit *)",
+      "Bash(git add *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git status)"
+    ]
   }
 }
