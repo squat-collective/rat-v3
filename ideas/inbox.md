@@ -66,11 +66,61 @@ Related: v2's ADR-017 (Python pipeline trust model) — same pattern.
 
 ## 2026-05-30 — [migration] Bridge plugins from v2 to v3
 
-How does v2 → v3 migration work for users?
-- Option A: hard cutover — operators export v2 state, import to v3. Painful.
-- Option B: bridge plugins — v3 plugins that wrap v2 services (e.g. v3 calls into v2's runner). Smoother but holds v2 hostage.
-- Option C: v3 reads v2's postgres state directly + serves both APIs during transition. Most user-friendly; most engineering.
+**Resolved in [ADR-002](../docs/architecture/adrs/002-founding-tech-stack.md) D7**: no migration plan now; build a tool reactively if a real production user surfaces. v2 has no production users today, so pre-building optimizes for users who don't exist.
 
-Probably (C) for v3 GA, (A) for early adopters who can re-import.
+---
 
-Related: Q07 in [ADR-001](../docs/architecture/adrs/001-everything-is-a-plugin.md).
+## 2026-05-30 — [meta-principle, language-choice] AI-assisted rewriting lowers language-choice stakes
+
+Tom's reasoning during Q01: *"let's go with Go we could rewrite it with AI if we want to go rust someday"*. This is a load-bearing meta-principle worth banking. When picking foundational tech (language, framework, etc.), the cost of "wrong choice" has shifted dramatically — AI-assisted refactoring of a 10k-LOC codebase is genuinely viable. So: bias toward velocity-friendly + ecosystem-aligned choices NOW; accept that re-language is a 2-4 week project later if needed. **Don't over-optimize for "perfect long-term language."** This applies recursively to framework choices, ORM choices, serialization choices, etc.
+
+Save as principle for the project; cite in future ADRs when stuck on "this technology choice is hard."
+
+---
+
+## 2026-05-30 — [v2, strategy] Should v2 keep shipping?
+
+**Q11 in [ADR-002](../docs/architecture/adrs/002-founding-tech-stack.md).** Implication of D7: if v2 has no production users and v3 is the real target, should we still implement v2's ADR-025 (on-demand planes) and ADR-026 (manifest+registry)? Those ADRs were valuable as *thinking* — they shaped v3's design — but actually building them in v2 might be wasted effort. Worth a separate decision when there's bandwidth.
+
+Open question: when do we declare v2 feature-frozen?
+
+---
+
+## 2026-05-30 — [bundles] Default `rat-bundle-solo` composition
+
+**Q12 in [ADR-002](../docs/architecture/adrs/002-founding-tech-stack.md).** What exact plugin set ships in the default solo bundle? Probably:
+- state-backend: sqlite
+- secret-backend: env
+- scheduler-backend: in-process
+- identity: anonymous
+- deployment-runtime: local-process
+- ui: web-portal
+- engine: duckdb-embedded
+- runtime: pyarrow-embedded
+- format: iceberg-embedded
+- catalog: sqlite-iceberg-catalog (or simpler — file-based catalog?)
+- storage: local-fs
+- observability: stdout
+- marketplace: community-marketplace
+
+But each is a real choice. Becomes ADR-003 (or similar) when Phase 0 lands. Versions matter — bundle pins specific plugin versions for reproducibility.
+
+---
+
+## 2026-05-30 — [security] Plugin authentication to core
+
+**Q13 in [ADR-002](../docs/architecture/adrs/002-founding-tech-stack.md).** When a plugin contacts the core (or core contacts a plugin), what auth model? Options:
+- Mutual TLS (cluster-style)
+- Bearer tokens (simple but rotation matters)
+- Both (mTLS for production, bearer for dev)
+- None for solo (in-process), upgrade for team+
+
+Probably the last — auth model varies by deployment-runtime. Future ADR when core API hardens.
+
+---
+
+## 2026-05-30 — [marketplace, UX] Marketplace plugin's discovery shape
+
+**Q14 in [ADR-002](../docs/architecture/adrs/002-founding-tech-stack.md).** The marketplace plugin needs a UX: search by capability, by name, by author? Trust badges? Reviews? Compatibility checking (does this plugin work on my deployment)?
+
+Worth a dedicated ADR when the marketplace plugin is being built. Look at: VSCode marketplace UX, Cargo's crates.io, Helm Hub, OperatorHub.io for patterns.

@@ -7,6 +7,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | # | Title | Status | Date |
 |---|---|---|---|
 | [001](001-everything-is-a-plugin.md) | Everything is a plugin | Accepted | 2026-05-30 |
+| [002](002-founding-tech-stack.md) | Founding tech stack + strategy decisions | Accepted | 2026-05-30 |
 
 ## Template
 

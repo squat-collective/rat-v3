@@ -93,14 +93,18 @@ Three principles:
 
 - The 16-axis taxonomy *will* evolve. Some axes will be merged, some will be split, some will be discovered. Expect 2-3 axis-level changes per year. This is fine if each change comes with an ADR.
 
-## Open questions (decide before Phase 1)
+## Open questions — RESOLVED in [ADR-002](002-founding-tech-stack.md)
 
-- **Q01:** Core language — Rust or Go? Affects ecosystem + performance tradeoffs.
-- **Q02:** Event bus default — NATS, Redis Streams, Kafka, or build-our-own minimal one?
-- **Q03:** Reconciler durability model — leader election + lease, or active-active with optimistic concurrency?
-- **Q04:** How do plugins authenticate to the core? Mutual TLS? Bearer tokens? Both?
-- **Q05:** Manifest source-of-truth — in-image baked, separate registry, or operator-side?
-- **Q06:** Default bundle composition — what plugins ship in `rat-bundle-solo` to make the single-binary experience work?
+The original open questions (Q01-Q06 below) were resolved in ADR-002 on 2026-05-30. Summary:
+
+- **Q01 — Core language:** Go.
+- **Q02 — Event bus default:** NATS JetStream, embedded for solo + external for team+.
+- **Q03 — Reconciler durability:** Leader election + lease (K8s pattern).
+- **Q04 — Plugin authentication to core:** Deferred; tracked as Q13 in ADR-002.
+- **Q05 — Manifest source-of-truth:** In-image with operator override.
+- **Q06 — Default bundle composition:** Deferred to a future ADR; tracked as Q12 in ADR-002.
+
+See [ADR-002](002-founding-tech-stack.md) for the full reasoning + the rejected alternatives.
 
 ## Alternatives considered
 

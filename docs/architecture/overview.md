@@ -228,19 +228,19 @@ The core itself doesn't change between scales. It's *plugin composition* that ch
 - **Event bus is first-class.** Today's ratd:8090 internal listener becomes a NATS-style stream.
 - **No language-specific SDKs.** Contract is `.proto` + `plugin.yaml`. SDKs are generated.
 
-## Known unknowns
+## Known unknowns — RESOLVED in [ADR-002](adrs/002-founding-tech-stack.md)
 
-These are big questions we'll need ADRs for. Tracking here so they're not lost:
+All ten Q01-Q10 below were resolved on 2026-05-30. Summary:
 
-- **Q01:** Core language — Rust or Go? (Rust for safety/perf; Go for ecosystem + faster contributors.)
-- **Q02:** Event bus default — NATS, Redis Streams, Kafka, or build-our-own minimal one?
-- **Q03:** Manifest validation — JSON Schema standalone, or schema-from-proto generation?
-- **Q04:** Capability versioning — strict SemVer ranges or capability flags?
-- **Q05:** Reconciler durability — leader election + lease, or active-active with optimistic concurrency?
-- **Q06:** Where do plugin manifests live — in-image, separate registry, or operator-side?
-- **Q07:** Migration path from v2 — bridge plugins that talk both protocols, or hard cutover with import tool?
-- **Q08:** Cross-plane queries — federation engine plugin (ADR-027 in v2 thinking) or always require materialization?
-- **Q09:** Marketplace governance — pure community, curated tier, or both?
-- **Q10:** Licensing — Apache 2.0, MIT, AGPL? (License choice affects who can build on top.)
+- **Q01 — Core language:** Go.
+- **Q02 — Event bus default:** NATS JetStream, embedded.
+- **Q03 — Manifest validation:** Standalone JSON Schema, proto referenced by URI.
+- **Q04 — Capability versioning:** Major version only (K8s-style).
+- **Q05 — Reconciler durability:** Leader election + lease.
+- **Q06 — Manifest source:** In-image with operator override.
+- **Q07 — v2 migration:** No plan; build a tool reactively if a real production user surfaces.
+- **Q08 — Cross-engine queries:** Core raises typed errors; federation is plugin territory.
+- **Q09 — Marketplace:** Plugin axis; community marketplace plugin in default solo bundle.
+- **Q10 — License:** Apache 2.0.
 
-Each becomes a numbered ADR when it's time to commit.
+See [ADR-002](adrs/002-founding-tech-stack.md) for full reasoning + rejected alternatives. New questions raised by these decisions (Q11-Q15, e.g. plugin sandboxing, default bundle composition) are deferred to future ADRs; tracked in [ideas/inbox.md](../../ideas/inbox.md).
