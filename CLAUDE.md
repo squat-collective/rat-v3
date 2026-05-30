@@ -35,6 +35,7 @@ This repo holds the **architectural thinking, ADRs, and ongoing design** for RAT
 7. **Save the conversations that matter.** Long Claude sessions where architectural shape emerged → distill into `docs/conversations/YYYY-MM-DD-<topic>.md`. Future-us needs to know how we got here.
 8. **Test the deployment topology, not the feature.** When we ship code, the test is "can a solo user `chmod +x && ./rat` AND can a hybrid-cloud team compose a plane?" — not "does feature X work." Architecture proves itself across topologies.
 9. **Keep the roadmap fresh.** [`roadmap/`](roadmap/) is the single source of truth for *what we're doing, what's done, what's next.* **After every working session that produces concrete output, update the roadmap** in this order: `done.md` → `current.md` → `phases.md` (if a phase moved) → `backlog.md` (if new work surfaced). A stale roadmap is worse than no roadmap. Full rules in [`roadmap/CLAUDE.md`](roadmap/CLAUDE.md).
+10. **Maintain the Claude Code environment as architecture, not afterthought.** [`.claude/`](.claude/) holds project-specific Claude config (agents, rules, settings). Same minimalist discipline as the codebase: **built-in first, custom second**; cite the [official docs](https://code.claude.com/docs/) when adding things; quarterly audits. For any Claude Code setup task (new agent, rule, hook, skill, MCP, settings change), **spawn the [`claude-engineer`](.claude/agents/claude-engineer.md) agent** — it knows the discipline and the docs. Full rules in [`.claude/rules/claude-environment.md`](.claude/rules/claude-environment.md).
 
 ## Directory map
 
@@ -42,6 +43,14 @@ This repo holds the **architectural thinking, ADRs, and ongoing design** for RAT
 rat/
 ├── CLAUDE.md                 # this file
 ├── README.md                 # human-facing project overview
+├── .claude/                  # Claude Code configuration
+│   ├── README.md             # explains the .claude/ layout
+│   ├── settings.json         # project permissions allowlist (committed)
+│   ├── agents/
+│   │   └── claude-engineer.md  # specialized agent for Claude Code config work
+│   └── rules/
+│       ├── plugin-architecture.md  # founding invariant (always-load)
+│       └── claude-environment.md   # discipline for .claude/ itself (always-load)
 ├── docs/
 │   ├── vision.md             # the core thesis (read this first)
 │   ├── architecture/

@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-30 (after the 5-perspective synthesis + ADR-003 + roadmap structure landed)
+> Updated: 2026-05-30 (after `.claude/` configuration + ADR-003 + roadmap structure + synthesis landed)
 
 ## Status one-liner
 

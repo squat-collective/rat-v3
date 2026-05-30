@@ -5,6 +5,9 @@
 *.swp
 *~
 
+# Claude Code per-user settings (project-shared settings.json IS committed)
+.claude/settings.local.json
+
 # Local notes (not committed)
 NOTES.md
 SCRATCH.md
