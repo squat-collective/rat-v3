@@ -17,6 +17,16 @@
 // NOTE: authz here is COARSE (is this subject allowed this action at all). The
 // per-capability call authorization (C5) is enforced by the API gateway against
 // the manifest `provides`/`requires`, not re-litigated per identity plugin.
+//
+// ERROR MODEL (reviews/06 C-5 / freeze-blocker #9), pinned at freeze so authors
+// build ONE model:
+//   - TRANSPORT/operational failures (backend down, malformed request) -> gRPC
+//     canonical status codes.
+//   - DECISION outcomes on a SUCCESSFUL rpc (a deny is a successful Authorize, so
+//     a status code can't carry it) -> in-band `allowed` bool + enumerated
+//     `deny_code`. Free-text `reason` is LOG/AUDIT-ONLY and MUST NOT drive caller
+//     logic (returning rich reasons to an untrusted caller is an enumeration
+//     oracle, reviews/04). Callers branch on `deny_code`, not `reason`.
 syntax = "proto3";
 
 package rat.identity.v1;
@@ -57,8 +67,21 @@ message AuthorizeRequest {
   string resource = 3;
 }
 
+// Machine-readable deny reason for Authorize. Callers branch on this, never on
+// the free-text reason (anti-enumeration-oracle; see ERROR MODEL above).
+enum DenyCode {
+  DENY_CODE_UNSPECIFIED = 0; // not a deny (allowed=true) OR reason not supplied
+  DENY_CODE_NOT_AUTHENTICATED = 1; // no/invalid subject established
+  DENY_CODE_INSUFFICIENT_ROLE = 2; // authenticated but lacks the required role
+  DENY_CODE_ACTION_FORBIDDEN = 3; // the action is denied for this subject
+  DENY_CODE_RESOURCE_FORBIDDEN = 4; // the specific resource is denied
+}
+
 message AuthorizeResponse {
   bool allowed = 1;
-  // Optional human-readable reason on deny (for diagnostics, not enforcement).
-  string reason = 2;
+  // Machine-readable deny reason when allowed=false. UNSPECIFIED when allowed.
+  DenyCode deny_code = 2;
+  // Human-readable reason — LOG/AUDIT-ONLY, never returned to drive caller logic
+  // (enumeration-oracle risk). Callers branch on deny_code.
+  string reason = 3;
 }

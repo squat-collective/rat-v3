@@ -15,6 +15,11 @@
 // reading the review flagged — "isolation is an emergent property of 4 plugins
 // agreeing" — is rejected: isolation is the core's job; this plugin is policy on
 // top of an already-enforced boundary.
+//
+// ERROR MODEL (reviews/06 C-5 / freeze-blocker #9): same convention as
+// identity.Authorize — transport/operational failures use gRPC status; a deny on
+// a successful Decide uses the in-band `allowed` bool + enumerated `deny_code`;
+// `reason` is LOG/AUDIT-ONLY and MUST NOT drive caller logic (enumeration oracle).
 syntax = "proto3";
 
 package rat.tenancy.v1;
@@ -45,7 +50,20 @@ message DecideRequest {
   string counterparty_tenant = 4;
 }
 
+// Machine-readable deny reason for Decide. Callers branch on this, never on the
+// free-text reason (anti-enumeration-oracle; see ERROR MODEL above).
+enum DenyCode {
+  DENY_CODE_UNSPECIFIED = 0; // not a deny (allowed=true) OR reason not supplied
+  DENY_CODE_POLICY_FORBIDDEN = 1; // a tenancy policy forbids it
+  DENY_CODE_QUOTA_EXCEEDED = 2; // a quota/limit was exceeded
+  DENY_CODE_CROSS_TENANT_DENIED = 3; // the cross-tenant share/access is denied
+}
+
 message DecideResponse {
   bool allowed = 1;
-  string reason = 2;
+  // Machine-readable deny reason when allowed=false. UNSPECIFIED when allowed.
+  DenyCode deny_code = 2;
+  // Human-readable reason — LOG/AUDIT-ONLY (enumeration-oracle risk). Callers
+  // branch on deny_code.
+  string reason = 3;
 }
