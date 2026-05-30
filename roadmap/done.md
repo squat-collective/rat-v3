@@ -4,6 +4,24 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Freeze-blocker #6: core/v1/invoke.proto (capability-invoke service)
+
+**What:** Added the wire artifact ADR-005 requires and reviews/06 C-6 (AUTH-2 ⊕ ARCH-2) flagged as missing — the mechanism by which a plugin actually CALLS a capability it `requires`. Before this, "the core wires providers via the registry" was comment-deep with no wire mechanism; the headline call-by-capability feature was unbuildable.
+
+**Shape (core-mediated per ADR-005):** new `CapabilityInvokeService.Invoke(InvokeRequest) → InvokeResponse`:
+- `InvokeRequest` = `{ RequestContext context, string capability, bytes payload }` — the capability URI (e.g. `rat://format/v1/merge`) + the serialized request message for the target axis method.
+- `InvokeResponse` = `{ bytes result }` — the serialized provider response.
+
+**How it works:** a generic proxy. The plugin calls `Invoke` on the core API gateway instead of dialing the provider. The core resolves capability→provider (registry + the `(rat.common.v1.capability)` method annotation from #5), enforces C2/C5/C7/C3, re-derives `identity.caller_plugin` for the downstream hop, stamps C1 trace, emits the C8 audit record, then forwards `payload` to the provider's method without interpreting it (no per-axis core knowledge → no 7th core thing). Bulk Arrow data still bypasses the core via `ArrowStream`; `Invoke` carries only control RPCs. Enforcement failures surface as gRPC status, not a response field.
+
+**Verified:** buf lint 0 / build 0 / generate 41 Go files (`invoke.pb.go` + `invoke_grpc.pb.go`); dup-free.
+
+**Next:** freeze-blocker #7 — async event-bus envelope (`common/v1/event.proto`) OR explicitly carve the async plane out of the `rat/1` freeze.
+
+**Files:** `contracts/proto/rat/core/v1/invoke.proto` (new).
+
+---
+
 ## 2026-05-30 — Freeze-blocker #5: capability annotations + format.Write split
 
 **What:** reviews/06 I-3 + I-4 (AUTH-8 + AUTH-9). Freeze-critical parts done; cross-axis annotation rollout deferred as additive.

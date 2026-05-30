@@ -1,0 +1,78 @@
+// Core capability-invoke service. DRAFT — freeze-blocker #6.
+//
+// This is the wire artifact ADR-005 requires and reviews/06 C-6 (AUTH-2 ⊕
+// ARCH-2) flagged as missing: the mechanism by which a plugin actually CALLS a
+// capability it `requires`. Before this, "the core wires providers in via the
+// registry" was asserted in comments with no wire mechanism — the headline
+// call-by-capability feature was unbuildable.
+//
+// MODEL — CORE-MEDIATED (ADR-005). A plugin does NOT dial providers directly.
+// It calls Invoke on the core's API gateway with a capability URI + the
+// already-serialized request for the target axis method. The core:
+//   1. resolves the capability URI -> concrete provider via the registry,
+//   2. enforces the cross-cutting properties on this hop — C2 (caller
+//      authenticated), C5 (caller's manifest `requires` this capability AND the
+//      provider `provides` it; the capability⇄method binding comes from the
+//      (rat.common.v1.capability) method option, freeze-blocker #5),
+//      C7 (tenant scoping), C3 (state-namespace derivation),
+//   3. stamps/propagates C1 trace + re-derives identity.caller_plugin for the
+//      downstream hop (keystone, context.proto), and emits the C8 audit record,
+//   4. proxies `payload` to the provider's method and relays its response.
+//
+// GENERIC PROXY: the gateway routes by `capability` and forwards `payload`
+// WITHOUT interpreting it — it gains no per-axis knowledge, so the six-thing core
+// stays minimal (no 7th thing; this is the API gateway + registry doing their
+// existing jobs). `payload` is the serialized axis request message (e.g. a
+// rat.format.v1.MergeRequest); `result` is the serialized axis response.
+//
+// NOT here: the bulk-data path. Per "data plane bypasses core for bytes"
+// (overview.md), Arrow byte transfer still flows plugin-to-plugin via
+// common/v1/data.proto ArrowStream and never traverses this service — Invoke
+// carries only control RPCs (refs, metadata, stream descriptors).
+//
+// Status: DRAFT (pre-freeze). Must exist in the frozen rat/1 surface.
+syntax = "proto3";
+
+package rat.core.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/core/v1;corev1";
+
+service CapabilityInvokeService {
+  // Invoke one capability on its resolved provider, mediated + enforced by the
+  // core. Unary control call; bulk data (if any) flows out-of-band via the
+  // ArrowStream descriptors inside the relayed payload/result.
+  rpc Invoke(InvokeRequest) returns (InvokeResponse);
+}
+
+message InvokeRequest {
+  // The calling plugin's context. The core re-derives identity.caller_plugin for
+  // the downstream hop from THIS request's authenticated channel; wire-supplied
+  // identity values are not trusted (keystone, context.proto).
+  rat.common.v1.RequestContext context = 1;
+
+  // The capability being invoked, e.g. "rat://format/v1/merge". MUST match the
+  // rat://<axis>/v<major>/<capability> grammar. The core resolves this to a
+  // concrete provider + method via the registry + the (rat.common.v1.capability)
+  // method annotation, and checks the caller's manifest `requires` it.
+  string capability = 2;
+
+  // The serialized request message for the target axis method (e.g. an encoded
+  // rat.format.v1.MergeRequest). Opaque to the core — routed, not interpreted.
+  // The target method is determined by `capability`, so the message type is
+  // implied by the capability, not carried here.
+  bytes payload = 3;
+}
+
+message InvokeResponse {
+  // The serialized response message from the provider's method (e.g. an encoded
+  // rat.format.v1.MergeResponse). Opaque to the core.
+  //
+  // Note: this contract returns the provider's success payload; failures surface
+  // via gRPC status (transport/enforcement) per the error-model convention
+  // (reviews/06 C-5, freeze-blocker #9). Capability-not-found, caller-not-
+  // -authorized, and provider-unavailable are core-side enforcement failures
+  // returned as gRPC status codes, not as a field here.
+  bytes result = 1;
+}
