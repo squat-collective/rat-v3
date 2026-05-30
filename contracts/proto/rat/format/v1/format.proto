@@ -3,11 +3,22 @@
 // A `kind: format` plugin (Iceberg, Delta, Hudi, …) implements table-format
 // semantics: resolving refs to physical files, writing data, doing maintenance.
 //
-// Capability mapping (the manifest `provides` URIs resolve to these RPCs):
-//   rat://format/v1/scan     -> Resolve (read path: ref -> stream)
-//   rat://format/v1/merge    -> Write with mode=MERGE
-//   rat://format/v1/append   -> Write with mode=APPEND
-//   rat://format/v1/maintain -> Maintain (compaction, expiry)
+// Capability mapping (machine-readable via (rat.common.v1.capability) on each
+// method — freeze-blocker #5 / reviews/06 I-3+I-4):
+//   rat://format/v1/scan      -> Resolve
+//   rat://format/v1/append    -> Append
+//   rat://format/v1/merge     -> Merge
+//   rat://format/v1/overwrite -> Overwrite
+//   rat://format/v1/maintain  -> Maintain
+//
+// WHY Append/Merge/Overwrite are SEPARATE RPCs (reviews/06 I-3 / AUTH-8): the
+// earlier draft had one `Write` RPC keyed by a `WriteMode` enum, so a plugin that
+// `provides` only `append` could not be enforced at the method level — the C5
+// gateway would have to inspect the payload's mode field to deny a MERGE
+// (payload-level authz). Splitting per mode makes each capability a distinct
+// method, so capability-enforcement is method-level and the manifest `provides`
+// set maps 1:1 to callable methods. It also gives WRITE_MODE_OVERWRITE the
+// capability URI it previously lacked (it was unreachable).
 //
 // C6: each capability above has a golden-data conformance vector. A plugin that
 // lists `merge` in its manifest but fails the merge vector is NOT a valid format
@@ -17,30 +28,39 @@ syntax = "proto3";
 
 package rat.format.v1;
 
+import "rat/common/v1/annotations.proto";
 import "rat/common/v1/context.proto";
 import "rat/common/v1/data.proto";
 
 option go_package = "github.com/rat-dev/rat/gen/rat/format/v1;formatv1";
 
 service FormatService {
-  // rat://format/v1/scan — resolve a table ref to a readable Arrow
-  // stream descriptor. Bulk bytes flow out-of-band via the returned ArrowStream.
-  rpc Resolve(ResolveRequest) returns (ResolveResponse);
+  // Resolve a table ref to a readable Arrow stream descriptor. Bulk bytes flow
+  // out-of-band via the returned ArrowStream.
+  rpc Resolve(ResolveRequest) returns (ResolveResponse) {
+    option (rat.common.v1.capability) = "rat://format/v1/scan";
+  }
 
-  // rat://format/v1/{merge,append} — write data into the table. The
-  // caller hands an ArrowStream to pull from; the format does the rest.
-  rpc Write(WriteRequest) returns (WriteResponse);
+  // Append rows (no key matching). Caller hands an ArrowStream to pull from.
+  rpc Append(AppendRequest) returns (AppendResponse) {
+    option (rat.common.v1.capability) = "rat://format/v1/append";
+  }
 
-  // rat://format/v1/maintain — format upkeep (compaction, snapshot
-  // expiry, manifest rewrite). Idempotent; safe to retry.
-  rpc Maintain(MaintainRequest) returns (MaintainResponse);
-}
+  // Merge (upsert) rows matched on `merge_keys`.
+  rpc Merge(MergeRequest) returns (MergeResponse) {
+    option (rat.common.v1.capability) = "rat://format/v1/merge";
+  }
 
-enum WriteMode {
-  WRITE_MODE_UNSPECIFIED = 0;
-  WRITE_MODE_APPEND = 1;
-  WRITE_MODE_MERGE = 2;
-  WRITE_MODE_OVERWRITE = 3;
+  // Overwrite the target (replace existing data).
+  rpc Overwrite(OverwriteRequest) returns (OverwriteResponse) {
+    option (rat.common.v1.capability) = "rat://format/v1/overwrite";
+  }
+
+  // Format upkeep (compaction, snapshot expiry, manifest rewrite). Idempotent;
+  // safe to retry.
+  rpc Maintain(MaintainRequest) returns (MaintainResponse) {
+    option (rat.common.v1.capability) = "rat://format/v1/maintain";
+  }
 }
 
 message ResolveRequest {
@@ -56,17 +76,36 @@ message ResolveResponse {
   rat.common.v1.ArrowStream stream = 1;
 }
 
-message WriteRequest {
+message AppendRequest {
   rat.common.v1.RequestContext context = 1;
   rat.common.v1.TableRef table = 2;
-  WriteMode mode = 3;
   // Source Arrow stream the format pulls rows from.
-  rat.common.v1.ArrowStream source = 4;
-  // For MERGE: the key columns to match on.
-  repeated string merge_keys = 5;
+  rat.common.v1.ArrowStream source = 3;
 }
 
-message WriteResponse {
+message AppendResponse {
+  rat.common.v1.WriteResult result = 1;
+}
+
+message MergeRequest {
+  rat.common.v1.RequestContext context = 1;
+  rat.common.v1.TableRef table = 2;
+  rat.common.v1.ArrowStream source = 3;
+  // The key columns to match existing rows on.
+  repeated string merge_keys = 4;
+}
+
+message MergeResponse {
+  rat.common.v1.WriteResult result = 1;
+}
+
+message OverwriteRequest {
+  rat.common.v1.RequestContext context = 1;
+  rat.common.v1.TableRef table = 2;
+  rat.common.v1.ArrowStream source = 3;
+}
+
+message OverwriteResponse {
   rat.common.v1.WriteResult result = 1;
 }
 

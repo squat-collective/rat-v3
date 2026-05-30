@@ -4,10 +4,16 @@
 // SQL into Arrow. It is the compute axis: the strategy/runtime hand it SQL +
 // table refs; it executes and returns an Arrow stream descriptor.
 //
-// Capability mapping:
+// Capability mapping (machine-readable via (rat.common.v1.capability) — #5):
 //   rat://engine/v1/execute -> Execute (run a statement, no rows expected back)
 //   rat://engine/v1/query   -> Query   (SELECT -> Arrow stream)
 //   rat://engine/v1/preview -> Preview (bounded sample, for UI/inspection)
+//
+// NOTE (reviews/06 I-3 "split engine.Execute"): engine needs NO per-mode split —
+// unlike format.Write (which was one RPC keyed by a WriteMode enum), engine's
+// three methods are ALREADY distinct RPCs mapping 1:1 to three capabilities. The
+// fix engine needed was the machine-readable capability binding (below), not a
+// split. Recorded so the deviation from the blocker's wording is explicit.
 //
 // C6: each capability has a golden-data conformance vector (the engine ↔ format
 // handoff is where "fits != works" bites hardest — reviews/00 Theme 4).
@@ -15,20 +21,27 @@ syntax = "proto3";
 
 package rat.engine.v1;
 
+import "rat/common/v1/annotations.proto";
 import "rat/common/v1/context.proto";
 import "rat/common/v1/data.proto";
 
 option go_package = "github.com/rat-dev/rat/gen/rat/engine/v1;enginev1";
 
 service EngineService {
-  // rat://engine/v1/execute — run a statement for effect (DDL, INSERT…SELECT).
-  rpc Execute(ExecuteRequest) returns (ExecuteResponse);
+  // Run a statement for effect (DDL, INSERT…SELECT).
+  rpc Execute(ExecuteRequest) returns (ExecuteResponse) {
+    option (rat.common.v1.capability) = "rat://engine/v1/execute";
+  }
 
-  // rat://engine/v1/query — run a SELECT; results stream out-of-band as Arrow.
-  rpc Query(QueryRequest) returns (QueryResponse);
+  // Run a SELECT; results stream out-of-band as Arrow.
+  rpc Query(QueryRequest) returns (QueryResponse) {
+    option (rat.common.v1.capability) = "rat://engine/v1/query";
+  }
 
-  // rat://engine/v1/preview — bounded sample of a query/table for inspection.
-  rpc Preview(PreviewRequest) returns (PreviewResponse);
+  // Bounded sample of a query/table for inspection.
+  rpc Preview(PreviewRequest) returns (PreviewResponse) {
+    option (rat.common.v1.capability) = "rat://engine/v1/preview";
+  }
 }
 
 message ExecuteRequest {

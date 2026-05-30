@@ -6,6 +6,12 @@ When an item moves to active work, promote it: cut it from here, add it to [curr
 
 ---
 
+## Additive (NOT freeze-blocking) — roll `(rat.capability)` across remaining axes
+
+Freeze-blocker #5 created `contracts/proto/rat/common/v1/annotations.proto` (the `(rat.common.v1.capability)` method option) and applied it to **format** + **engine**. Applying it to the other 14 axis services (runtime, strategy, catalog, storage, state, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log, ui, notifications, marketplace, billing) is **additive** — adding a method option is wire-compatible (`buf breaking` FILE does not flag it), so it does NOT block the `rat/1` freeze. But the C5 gateway + C6 conformance harness need it on every method to function, so it should land before those are built. Per method: add `import "rat/common/v1/annotations.proto";` + `option (rat.common.v1.capability) = "rat://<axis>/v1/<cap>";` inside each rpc (capability URIs already documented in each proto's header comment). Source: reviews/06 I-4 (AUTH-9).
+
+---
+
 ## ADRs to write (from synthesis — 23 of 26 not yet written)
 
 Numbered as proposed in [reviews/00-synthesis.md](../reviews/00-synthesis.md). Most are Phase 0 wire-breaking concerns that land *during* Phase 0 as the contracts get drafted, NOT before. They're listed here so they're not lost.

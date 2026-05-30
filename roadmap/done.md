@@ -4,6 +4,26 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Freeze-blocker #5: capability annotations + format.Write split
+
+**What:** reviews/06 I-3 + I-4 (AUTH-8 + AUTH-9). Freeze-critical parts done; cross-axis annotation rollout deferred as additive.
+
+1. **`common/v1/annotations.proto` (new):** `extend google.protobuf.MethodOptions { string capability = 70001; }` — the machine-readable capability⇄method binding. The mapping from capability URI → `(service, method)` previously lived only in comments, unreadable by the C5 enforcement gateway (ADR-005) and C6 conformance harness. Must be in the frozen `rat/1` surface (freeze-dependency). buf accepts the custom option; `annotations.pb.go` generates.
+
+2. **Split `format.Write` → `Append`/`Merge`/`Overwrite` (breaking → freeze):** the single `Write` RPC keyed by a `WriteMode` enum meant a plugin that `provides` only `append` couldn't be enforced at method level. Now each is a distinct RPC 1:1 with a capability; `overwrite` gets the `rat://format/v1/overwrite` URI it previously lacked. `WriteMode` removed; per-RPC request+response messages (`{Append,Merge,Overwrite}Request/Response` — buf STANDARD requires a unique response type per RPC, so no shared `WriteResponse`); `merge_keys` only on Merge.
+
+3. **Annotated format (5 methods) + engine (3).** **Engine needed NO split** — execute/query/preview were already 3 distinct RPCs 1:1 with capabilities; the blocker's "split engine.Execute" wording didn't apply, so engine just got the annotation. Noted in-proto.
+
+**Deferred (additive, NOT freeze-blocking):** roll `(rat.capability)` across the other 14 axis services — adding a method option is wire-compatible (`buf breaking` FILE doesn't flag it). Tracked in backlog; land before the C5 gateway / C6 harness.
+
+**Verified:** buf lint 0 / build 0 / generate 42 Go files; both example manifests re-validate (deltalake's scan/merge/append capabilities all survive the split); dup-free. (Caught + fixed a buf STANDARD failure pre-commit — initial shared `WriteResponse` violated "unique response type per RPC".)
+
+**Next:** freeze-blocker #6 — add `core/v1/invoke.proto` (the ADR-005 core-mediated capability-invoke service).
+
+**Files:** `contracts/proto/rat/common/v1/annotations.proto` (new), `contracts/proto/rat/format/v1/format.proto` (split + annotate), `contracts/proto/rat/engine/v1/engine.proto` (annotate).
+
+---
+
 ## 2026-05-30 — Freeze-blocker #4: auditlog.proto tamper-evidence + completeness
 
 **What:** reviews/06 C-3 (SEC-5 ⊕ API-5) — the audit trail was "tamper-evident" in name only and couldn't report partial failure. Four coupled fixes to `auditlog.proto`:

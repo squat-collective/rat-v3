@@ -1,0 +1,30 @@
+// Custom proto annotations for RAT contracts. DRAFT — freeze-blocker #5.
+//
+// This file defines the MACHINE-READABLE capability⇄method binding that
+// reviews/06 I-4 (AUTH-9) requires. Before this, the mapping from a capability
+// URI (rat://<axis>/v<major>/<capability>) to the concrete (service, method)
+// lived only in proto COMMENTS — unreadable by the two components that need it:
+//   - the C5 capability-enforcement gateway (ADR-005), which must check that a
+//     caller's manifest `requires`/`provides` the capability a method serves;
+//   - the C6 conformance harness, which must know which golden-data vectors apply
+//     to which method.
+//
+// Every axis RPC carries `option (rat.common.v1.capability) = "rat://…";`. The
+// gateway + harness read it from the method descriptor. This file MUST be part of
+// the frozen `rat/1` surface (the option's existence is freeze-load-bearing);
+// applying the option to additional methods later is additive/wire-compatible.
+syntax = "proto3";
+
+package rat.common.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/common/v1;commonv1";
+
+// The capability URI a method serves, e.g. "rat://format/v1/scan". The value
+// MUST match the rat://<axis>/v<major>/<capability> grammar (the same grammar the
+// manifest `provides`/`requires` use — schema/plugin.v1.json $defs.capabilityUri).
+// Exactly one capability per method.
+extend google.protobuf.MethodOptions {
+  string capability = 70001;
+}
