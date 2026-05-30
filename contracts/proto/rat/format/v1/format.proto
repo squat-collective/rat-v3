@@ -4,10 +4,10 @@
 // semantics: resolving refs to physical files, writing data, doing maintenance.
 //
 // Capability mapping (the manifest `provides` URIs resolve to these RPCs):
-//   rat://format-capability/v1/scan     -> Resolve (read path: ref -> stream)
-//   rat://format-capability/v1/merge    -> Write with mode=MERGE
-//   rat://format-capability/v1/append   -> Write with mode=APPEND
-//   rat://format-capability/v1/maintain -> Maintain (compaction, expiry)
+//   rat://format/v1/scan     -> Resolve (read path: ref -> stream)
+//   rat://format/v1/merge    -> Write with mode=MERGE
+//   rat://format/v1/append   -> Write with mode=APPEND
+//   rat://format/v1/maintain -> Maintain (compaction, expiry)
 //
 // C6: each capability above has a golden-data conformance vector. A plugin that
 // lists `merge` in its manifest but fails the merge vector is NOT a valid format
@@ -23,15 +23,15 @@ import "rat/common/v1/data.proto";
 option go_package = "github.com/rat-dev/rat/gen/rat/format/v1;formatv1";
 
 service FormatService {
-  // rat://format-capability/v1/scan — resolve a table ref to a readable Arrow
+  // rat://format/v1/scan — resolve a table ref to a readable Arrow
   // stream descriptor. Bulk bytes flow out-of-band via the returned ArrowStream.
   rpc Resolve(ResolveRequest) returns (ResolveResponse);
 
-  // rat://format-capability/v1/{merge,append} — write data into the table. The
+  // rat://format/v1/{merge,append} — write data into the table. The
   // caller hands an ArrowStream to pull from; the format does the rest.
   rpc Write(WriteRequest) returns (WriteResponse);
 
-  // rat://format-capability/v1/maintain — format upkeep (compaction, snapshot
+  // rat://format/v1/maintain — format upkeep (compaction, snapshot
   // expiry, manifest rewrite). Idempotent; safe to retry.
   rpc Maintain(MaintainRequest) returns (MaintainResponse);
 }

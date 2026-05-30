@@ -124,7 +124,7 @@ provides:
     schema: { options: {...} }
 
 requires:
-  - kind: format-capability
+  - kind: format
     capabilities: [scan, merge, append]
     version: v1
   - kind: runtime
@@ -144,7 +144,7 @@ JSON-Schema-validated. One schema for every plugin kind. Plugin authors edit one
 
 ### 3. URI-shaped capability strings
 
-`rat://strategy/v1/scd2`, `rat://format-capability/v1/merge`, `rat://com.example/their-capability/v1/...`
+`rat://strategy/v1/scd2`, `rat://format/v1/merge`, `rat://com.example/their-capability/v1/...`
 
 Naturally namespaced (community avoids collisions), versioned, lookup-able. Open-set — never enumerated centrally.
 

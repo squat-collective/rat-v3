@@ -26,7 +26,7 @@ capability-URI grammar). It deliberately does **not** encode per-kind rules like
 1. **Per-kind capability obligations** — "does this `format` provide the
    capabilities a `format` must?" Needs the axis proto (0b) to define the
    required set. → layered per-kind schemas, written alongside each axis proto.
-2. **Semantic capability validity** — the regex accepts `rat://format-capability/v1/iceberg`
+2. **Semantic capability validity** — the regex accepts `rat://format/v1/iceberg`
    (syntactically fine) even though `iceberg` is an *implementation name*, not a
    capability verb (INVALID-examples.md #4). Catching "you coupled to an impl"
    requires a curated capability registry + lint, not pure schema. → `rat plugin

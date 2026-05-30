@@ -50,7 +50,7 @@ metadata: { name: rat-strategy-coupled, version: 0.1.0 }
 provides:
   - capability: rat://strategy/v1/apply
 requires:
-  - capability: rat://format-capability/v1/iceberg   # naming an impl, not a capability
+  - capability: rat://format/v1/iceberg   # naming an impl, not a capability
 resources: { requests: { cpu: "100m" } }
 ```
 **Expected rejection:** `iceberg` is an implementation name, not a capability verb.

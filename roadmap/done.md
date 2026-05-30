@@ -4,6 +4,22 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Freeze-blocker #2: format capability URI rename
+
+**What:** reviews/06 C-2 (API-7 ⊕ AUTH-1) — `format` was the one axis whose capability URI (`rat://format-capability/v1/*`) didn't match its proto package (`rat.format.v1`), breaking the contract-triple's "URI mirrors the package coordinate" invariant for the most-referenced axis. Renamed `rat://format-capability/v1/*` → `rat://format/v1/*`.
+
+**Changed (live contract + architecture doc):** `format.proto` (capability map + RPC comments), `strategy.proto` (prose), `rat-format-deltalake.plugin.yaml` + `rat-strategy-scd2.plugin.yaml` (the `provides`/`requires` URIs), `INVALID-examples.md`, `schema/README.md`, and `docs/architecture/overview.md` (`kind: format-capability` → `kind: format` + the URI string).
+
+**Deliberately NOT changed:** historical records — `reviews/00,02,06` and `docs/conversations/*` keep `format-capability` (reviews/06 literally documents it as the bug; rewriting history would be dishonest).
+
+**Verified:** buf lint 0 / build 0 / generate 38; both example manifests re-validate against the schema (containerized).
+
+**Next:** freeze-blocker #3 — state.proto (key/prefix grammar + Put tri-state + CAS conformance/DynamoDB).
+
+**Files:** `contracts/proto/rat/format/v1/format.proto`, `contracts/proto/rat/strategy/v1/strategy.proto`, `contracts/examples/{rat-format-deltalake,rat-strategy-scd2}.plugin.yaml`, `contracts/examples/INVALID-examples.md`, `contracts/schema/README.md`, `docs/architecture/overview.md`.
+
+---
+
 ## 2026-05-30 — Freeze-blocker #1: context.proto keystone rewrite (3-principal identity)
 
 **What:** Applied the first + highest-leverage freeze-blocker from [reviews/06](../reviews/06-proto-contract-review.md) C-1 (SEC-1 ⊕ AUTH-12, the keystone). Rewrote `contracts/proto/rat/common/v1/context.proto`, replacing the single forgeable, semantically-ambiguous `subject` string with three distinct principals + structural trace/identity separation. Commit `322126c`.

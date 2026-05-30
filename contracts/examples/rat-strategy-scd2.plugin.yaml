@@ -14,7 +14,7 @@ compatible_core: ["rat/1"]
 provides:
   - capability: rat://strategy/v1/apply
 requires:
-  - capability: rat://format-capability/v1/merge
+  - capability: rat://format/v1/merge
   - capability: rat://runtime/v1/execute
 suggests:
   - capability: rat://catalog/v1/register
