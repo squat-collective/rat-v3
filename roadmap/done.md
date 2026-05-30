@@ -4,6 +4,38 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Phase 0 sub-phase 0b complete: long tail (experience + billing)
+
+**What:** Drafted the final four axes — all v1 axes now have a proto.
+
+**New protos (`contracts/proto/rat/`):**
+- `ui/v1` — Describe/RenderSlot. Deliberately thin (a UI mostly consumes the API
+  gateway); the contract is about exposing surfaces + hosting `contributes.slots`
+  portal contributions (overview.md contract triple).
+- `notifications/v1` — Send (severity + target + attributes; secrets-redaction
+  obligation noted, I13).
+- `marketplace/v1` — Search/Get. **reviews/02 N2**: provided/required capabilities,
+  conformance results, and signature are MANDATORY listing fields so any
+  marketplace can answer the "works on MY deployment?" capability-fit question —
+  the one hard job of a marketplace on a pluggable-everything platform.
+- `billing/v1` — Record (per-tenant metering by construction via context.tenant, C7).
+
+**Verified (containerized):** `buf lint` 0 findings (exit 0), `buf build` 0
+errors, `buf generate` **38 Go files**, dup-scan clean.
+
+**Milestone:** **sub-phase 0b axis protos COMPLETE — 20 proto files total** (18
+axis services + 2 common). Every v1 plugin axis from ADR-001 now has a wire
+contract. Critical concerns with a wire home: C1, C2, C3, C5, C7 + I8/I9/I13.
+
+**What 0b still needs before it's fully done:** per-kind manifest schemas derived
+from these protos (the 0a→0b handoff in `schema/README.md`). Then 0c: the
+event-bus envelope (C1 trace in async events, not just RPCs).
+
+**Files:** `contracts/proto/rat/{ui,notifications,marketplace,billing}/v1/*.proto`,
+`contracts/README.md`, `roadmap/*`.
+
+---
+
 ## 2026-05-30 — Phase 0 sub-phase 0b cont'd (batch 3): 5 control-plane axes
 
 **What:** Added the remaining bootstrap/ops control-plane axes. Data plane was

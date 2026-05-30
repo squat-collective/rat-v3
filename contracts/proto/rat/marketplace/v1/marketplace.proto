@@ -1,0 +1,80 @@
+// Marketplace axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: marketplace` plugin (community-open, curated, enterprise-internal)
+// is a discovery surface for plugins. Multiple marketplaces coexist (ADR-002 D9);
+// the solo bundle ships a community one.
+//
+// CRITICAL DESIGN (reviews/02 N2 + Stage 7): the marketplace's load-bearing job
+// on a pluggable-everything platform is the COMPATIBILITY question — "does this
+// plugin work on MY deployment?" That is answerable BECAUSE of the capability
+// model: a listing advertises its required + provided capabilities, and the
+// marketplace can compute fit against what the user's deployment provides. So
+// this contract makes provided/required capabilities, conformance results, and
+// signature MANDATORY listing fields — not optional metadata. A marketplace that
+// can't answer "works on your deployment?" has failed its one hard job.
+//
+// Capability mapping:
+//   rat://marketplace/v1/search   -> Search  (capability-aware discovery)
+//   rat://marketplace/v1/get      -> Get     (one listing's full detail)
+syntax = "proto3";
+
+package rat.marketplace.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/marketplace/v1;marketplacev1";
+
+service MarketplaceService {
+  // rat://marketplace/v1/search — find plugins, optionally filtered to those
+  // compatible with the caller's advertised deployment capabilities.
+  rpc Search(SearchRequest) returns (SearchResponse);
+
+  // rat://marketplace/v1/get — full detail for one listing.
+  rpc Get(GetRequest) returns (GetResponse);
+}
+
+// What a marketplace advertises about a plugin. Capability sets + conformance +
+// signature are MANDATORY (reviews/02 N2) so any marketplace impl can do
+// capability-aware "works on your deployment?" filtering.
+message Listing {
+  string plugin_id = 1;
+  string kind = 2;
+  string version = 3;
+  string description = 4;
+  // Capability URIs this plugin provides / requires (mirrors plugin.v1.json).
+  repeated string provided_capabilities = 5;
+  repeated string required_capabilities = 6;
+  // Conformance: which capabilities have passed their axis golden-data suite
+  // (C6). An empty set means "unverified" and the UI must surface that.
+  repeated string conformed_capabilities = 7;
+  // Supply-chain trust (C8): whether the listing is signed + by whom.
+  bool signed = 8;
+  string signed_by = 9;
+  // Where users file issues (reviews/02 Stage 8 support attribution).
+  string support_url = 10;
+}
+
+message SearchRequest {
+  rat.common.v1.RequestContext context = 1;
+  // Free-text query.
+  string query = 2;
+  // Optional axis filter.
+  string kind = 3;
+  // The caller's deployment-provided capabilities. When non-empty, the
+  // marketplace returns only listings whose required_capabilities are all
+  // satisfied — the "works on my deployment?" filter.
+  repeated string deployment_capabilities = 4;
+}
+
+message SearchResponse {
+  repeated Listing listings = 1;
+}
+
+message GetRequest {
+  rat.common.v1.RequestContext context = 1;
+  string plugin_id = 2;
+}
+
+message GetResponse {
+  Listing listing = 1;
+}

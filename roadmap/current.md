@@ -20,13 +20,15 @@ Entered Phase 0 on 2026-05-30 (exploratory mode — see commitment-gate note abo
 **Done so far:**
 - `contracts/` workspace created (`schema/`, `proto/`, `examples/`).
 - **0a:** `contracts/schema/plugin.v1.json` — manifest envelope schema (JSON Schema 2020-12), Critical fields C4/C5/C8 baked in. Two valid example manifests + negative-vector doc; container-validated (all green). Per-kind-schema decision recorded.
-- **0b (in progress):** **14 axis protos** drafted + cross-cutting context/data. Data plane complete (`engine`, `runtime`, `format`, `strategy`, `catalog`, `storage`); control plane: `state`, `identity`, `tenancy`, `deployment-runtime`, `scheduler`, `secret`, `observability`, `audit-log`. **buf lint + build + generate all pass clean** (verified in container).
-- Critical concerns now with a wire home: C1 (context), C2 (identity), C3 (state namespacing), C5 (provides/enforcement), C7 (tenant in context + storage scope + tenancy plugin), I8 (audit append hash-chain), I9 (deployment isolation profile), I13 (secret contract).
+- **0b axis protos COMPLETE:** **20 proto files** (18 axis services + 2 common). Every v1 axis from ADR-001 has a wire contract. Data plane (engine, runtime, format, strategy, catalog, storage), control plane (state, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log), experience (ui, notifications, marketplace), business (billing). **buf lint + build + generate all clean**, verified in container across every batch.
+- Critical concerns with a wire home: C1 (context), C2 (identity), C3 (state namespacing), C5 (provides/enforcement), C7 (tenant: context + storage scope + tenancy + billing), I8 (audit hash-chain), I9 (deployment isolation profile), I13 (secret contract).
 
-**Next concrete step:** finish **0b** — remaining ~6 axes, all experience/business:
-1. `ui/v1` (what an experience plugin exposes + portal-slot contribution), `notifications/v1` (Send), `marketplace/v1` (advertise capabilities + conformance + signature — reviews/02 N2).
-2. `billing/v1` (metering hook).
-3. Then the 0a→0b handoff: derive **per-kind manifest schemas** from the now-large proto set, and **0c**: event-bus envelope (C1 trace in events, not just RPCs) — the audit *record* now exists (auditlog.proto), but the generic event envelope does not yet.
+**Next concrete step:** two threads to close out 0b/0c, then 0d:
+1. **Per-kind manifest schemas** (the 0a→0b handoff): for each axis, a schema asserting "a `kind: X` must provide capabilities [...]" derived from its proto. This is what catches the semantic gaps the envelope schema can't (see `schema/README.md`). Start with the 6 critical axes (engine, runtime, format, catalog, storage, state).
+2. **0c event-bus envelope:** a `common/v1/event.proto` so async events carry the same trace/correlation context as RPCs (C1 applies to events too, not just RPCs). The audit *record* exists (auditlog.proto) but the generic event envelope doesn't.
+3. Then **0d** — first reference implementations (ADR-003: 2 per critical axis before freeze). This is where the Go SDK + a real plugin first exercise the contracts.
+
+**Deferred-but-triggerable:** the `gofmt`/`buf format` PostToolUse hook (backlog) — 20 proto files now exist, so it's well past its trigger; worth landing before 0d adds Go plugin code.
 
 **Deferred but now triggerable:** the `gofmt`/`buf format` `PostToolUse` hook (backlog) — the first `.proto` files now exist, so it can land. Also: pick the manifest-validator container image to make `rat plugin validate` (0f) real.
 

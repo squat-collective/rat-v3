@@ -1,0 +1,45 @@
+// Billing axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: billing` plugin (none/noop, usage-metering, cloud-marketplace billing)
+// records meterable usage so a deployment can be costed/charged. It is a metering
+// SINK; the core emits usage events at well-defined points (pipeline run,
+// credential vend, storage bytes) and this plugin records/aggregates them.
+//
+// Capability mapping:
+//   rat://billing/v1/record -> Record (a usage event)
+//
+// Per-tenant by construction (C7): every usage event carries the tenant from
+// RequestContext, so multi-tenant deployments meter per tenant without the
+// billing plugin re-deriving the boundary.
+syntax = "proto3";
+
+package rat.billing.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/billing/v1;billingv1";
+
+service BillingService {
+  // rat://billing/v1/record — record one meterable usage event.
+  rpc Record(RecordRequest) returns (RecordResponse);
+}
+
+message UsageEvent {
+  // Metric name, e.g. "pipeline.run", "storage.bytes", "credential.vend".
+  string meter = 1;
+  // Quantity in the meter's natural unit (runs=1, bytes=N, etc.).
+  double quantity = 2;
+  int64 timestamp_unix_ms = 3;
+  // Dimensions for breakdown (pipeline id, plugin id, etc.).
+  map<string, string> dimensions = 4;
+}
+
+message RecordRequest {
+  rat.common.v1.RequestContext context = 1;
+  // Tenant is taken from context.tenant (C7); events meter per tenant.
+  repeated UsageEvent events = 2;
+}
+
+message RecordResponse {
+  int64 recorded = 1;
+}

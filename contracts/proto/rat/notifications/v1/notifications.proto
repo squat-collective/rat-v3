@@ -1,0 +1,48 @@
+// Notifications axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: notifications` plugin (slack, email, webhook, PagerDuty) delivers
+// messages triggered by platform events (pipeline failed, plane warmed, etc.).
+// It is a delivery sink; WHAT to notify on is the operator's subscription config
+// (overview.md reconciliation: subscriptions = [event, action]), not this plugin.
+//
+// Capability mapping:
+//   rat://notifications/v1/send -> Send
+syntax = "proto3";
+
+package rat.notifications.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/notifications/v1;notificationsv1";
+
+service NotificationsService {
+  // rat://notifications/v1/send — deliver one notification.
+  rpc Send(SendRequest) returns (SendResponse);
+}
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_INFO = 1;
+  SEVERITY_WARNING = 2;
+  SEVERITY_ERROR = 3;
+  SEVERITY_CRITICAL = 4;
+}
+
+message SendRequest {
+  rat.common.v1.RequestContext context = 1;
+  Severity severity = 2;
+  // Short title + longer body. Plugins MUST NOT include secrets (I13); the core
+  // redacts, but emitters share the obligation.
+  string title = 3;
+  string body = 4;
+  // Optional routing target (channel, address) — plugin-specific interpretation.
+  string target = 5;
+  // Structured context for templating + correlation (incl. correlation_id, C1).
+  map<string, string> attributes = 6;
+}
+
+message SendResponse {
+  bool delivered = 1;
+  // Provider message id, if any (for delivery tracking).
+  string message_id = 2;
+}

@@ -1,0 +1,64 @@
+// UI (experience) axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: ui` plugin (web-portal, CLI, Slack bot, VS Code extension) is an
+// experience surface. The platform's multi-UI story (overview.md / Phase 5) is
+// "each UI is a separate ui plugin" — so this contract is deliberately thin: a
+// UI plugin mostly CONSUMES the API gateway like any other client. What the core
+// needs from it is (a) discovery of what surfaces/slots it exposes, and (b) the
+// ability to render contributions other plugins declare via `contributes.slots`
+// in their manifest (the portal-slot mechanism — overview.md contract triple).
+//
+// Capability mapping:
+//   rat://ui/v1/describe -> Describe (what this UI exposes + which slots it hosts)
+//   rat://ui/v1/render-slot -> RenderSlot (resolve a contributed slot to render info)
+//
+// Slot targets are capability-shaped URIs (e.g. rat://ui/v1/pipeline-detail), the
+// same ones plugins name in `contributes.slots[].target` in plugin.v1.json.
+syntax = "proto3";
+
+package rat.ui.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/ui/v1;uiv1";
+
+service UiService {
+  // rat://ui/v1/describe — enumerate the surfaces this UI exposes and the slots
+  // it can host contributions into.
+  rpc Describe(DescribeRequest) returns (DescribeResponse);
+
+  // rat://ui/v1/render-slot — given a slot + the contributing component, return
+  // what the UI needs to render it (asset ref, props schema).
+  rpc RenderSlot(RenderSlotRequest) returns (RenderSlotResponse);
+}
+
+message DescribeRequest {
+  rat.common.v1.RequestContext context = 1;
+}
+
+// A slot this UI can host plugin-contributed components into.
+message HostedSlot {
+  // Capability-shaped slot id, e.g. "rat://ui/v1/pipeline-detail".
+  string slot = 1;
+  string description = 2;
+}
+
+message DescribeResponse {
+  // Human label for this UI surface (e.g. "Web Portal").
+  string display_name = 1;
+  repeated HostedSlot slots = 2;
+}
+
+message RenderSlotRequest {
+  rat.common.v1.RequestContext context = 1;
+  string slot = 2;
+  // The contributing component name (from another plugin's contributes.slots).
+  string component = 3;
+}
+
+message RenderSlotResponse {
+  // Asset reference the UI loads (e.g. a JS bundle URL or an OCI asset ref).
+  string asset_ref = 1;
+  // JSON Schema (serialized) describing the props the component accepts.
+  bytes props_schema = 2;
+}

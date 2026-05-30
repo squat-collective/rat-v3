@@ -37,7 +37,11 @@ contracts/
 │       ├── scheduler/v1/scheduler.proto    # Schedule/Cancel/WatchDue ✅
 │       ├── secret/v1/secret.proto          # Resolve (I13 secret contract) ✅
 │       ├── observability/v1/…          # Ingest (export sink; core self-observes) ✅
-│       └── auditlog/v1/auditlog.proto  # Append (I8 mandatory audit, hash-chain) ✅
+│       ├── auditlog/v1/auditlog.proto  # Append (I8 mandatory audit, hash-chain) ✅
+│       ├── ui/v1/ui.proto              # Describe/RenderSlot (portal slots) ✅
+│       ├── notifications/v1/…          # Send ✅
+│       ├── marketplace/v1/…            # Search/Get (capability-aware, N2) ✅
+│       └── billing/v1/billing.proto    # Record (per-tenant metering) ✅
 └── examples/
     ├── rat-strategy-scd2.plugin.yaml     # canonical valid manifest
     ├── rat-format-deltalake.plugin.yaml  # second valid manifest (signed)
@@ -50,9 +54,9 @@ contracts/
 |---|---|---|
 | 0a | Manifest envelope schema (`plugin.v1.json`) | ✅ draft |
 | 0a | Example + negative manifests | ✅ draft |
-| 0b | 14 axis protos (data plane 6 + control plane 8) | ✅ draft — buf lint + build + generate clean |
-| 0b | Remaining ~6 axis protos (ui, notifications, marketplace, billing, + any new) | ⬜ not started |
-| 0c | Cross-cutting protos (`common/v1/context.proto` ✅, audit envelope ⬜) | 🔶 context+data drafted |
+| 0b | 18 axis protos + 2 common (all v1 axes drafted) | ✅ draft — buf lint + build + generate clean |
+| 0b | Per-kind manifest schemas (derive from protos) | ⬜ not started |
+| 0c | Cross-cutting protos (`common/v1/context.proto` ✅ + `data.proto` ✅; event-bus envelope ⬜) | 🔶 context+data drafted |
 | 0d–0e | 12 reference implementations | ⬜ not started |
 | 0f | Conformance harness + `rat plugin validate` | ⬜ not started |
 | 0g | Per-axis `CONTRACT.md` | ⬜ not started |
