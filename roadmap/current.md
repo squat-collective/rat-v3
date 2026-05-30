@@ -5,7 +5,7 @@
 
 ## Status one-liner
 
-**Phase 0 in-flight (entered 2026-05-30).** 0a manifest schema + all 20 0b axis protos drafted & buf-clean. **Adversarial agent-team review ([reviews/06](../reviews/06-proto-contract-review.md)) found the contract is NOT freeze-ready — 15 freeze-blockers.** The 1 open design decision (AUTH-2 invocation model) is now resolved → [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md) (core-mediated). Next: apply the 15 fixes, starting with the identity keystone (`context.proto`).
+**Phase 0 in-flight (entered 2026-05-30).** 0a schema + all 20 0b axis protos drafted; adversarial agent-team review ([reviews/06](../reviews/06-proto-contract-review.md)) found 15 freeze-blockers + the AUTH-2 open decision (resolved → [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md), core-mediated). **Freeze-blocker remediation: #1–#9 done (the keystone + all structural wire fixes) + #10a (debug_redact); every change buf lint/build/generate-clean.** Remaining is the *additive/GA-safe* tail only — #10b (manifest `artifact`/digest block) + #9f doc-pins — which can land after the `rat/1` freeze without breaking plugins. So: **all freeze-BLOCKING structural changes are complete; the contract is materially freeze-ready** pending the additive tail + the ADR-003 two-reference rule (0d).
 
 > Commitment-gate note: `phases.md` flags a 12–18mo runway + GTM commitment as a pre-Phase-0 gate. Tom chose to proceed in exploratory/sandbox mode. Gate acknowledged, not formally cleared — revisit before investing the full 4–6mo of Phase 0.
 

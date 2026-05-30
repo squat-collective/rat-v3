@@ -4,6 +4,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Freeze-blocker #10a: debug_redact on sensitive bytes fields
+
+reviews/06 SEC-8 (part of #10): "never logged" was a comment; `[debug_redact = true]` makes redaction structural (reflection/text-marshal omit the field). Applied to the four sensitive bytes fields: `secret.ResolveResponse.value`, `identity.AuthenticateRequest.credential`, `storage.VendCredentialsResponse.credentials`, `common.ArrowStream.ticket`. Confirmed buf 1.47.2 accepts the option via an isolated test first.
+
+**Verified:** buf lint 0 / build 0 / generate 42 Go files. Commit `(10a)`.
+
+### #10 remaining — `artifact`/digest manifest block (AUTH-14⊕SEC-15) — NOT YET DONE
+
+The other half of #10 (add a top-level `runtime` discriminator + `artifact` {ref, digest} block to `plugin.v1.json`, required for out-of-process plugins; update examples; tie `trust.signature` to `artifact.digest` + the authz envelope) is **deliberately deferred**. Rationale: per reviews/06 this is **additive/GA-safe** — adding a property to a schema we own does not break any plugin's wire contract (unlike the structural #1–9 changes), so it can land after the `rat/1` freeze without a flag-day. Only the "what the signature covers" *decision* carried a freeze rider, and that decision is recorded (sign artifact.digest + provides/requires/resources). Pairs with the two #9f doc-pins (pagination default, timestamp ratification) as the additive tail.
+
+---
+
 ## 2026-05-30 — Freeze-blocker #9c/9d/9e: data-plane shapes + schema/proto slivers
 
 Continued the #9 small-wire-fix cluster (reviews/06). All buf-verified (lint 0 / build 0 / generate 42); each its own commit.
