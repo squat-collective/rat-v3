@@ -19,11 +19,16 @@ Entered Phase 0 on 2026-05-30 (exploratory mode — see commitment-gate note abo
 
 **Done so far:**
 - `contracts/` workspace created (`schema/`, `proto/`, `examples/`).
-- `contracts/schema/plugin.v1.json` — manifest envelope schema (JSON Schema 2020-12), Critical fields C4/C5/C8 baked in.
-- Two valid example manifests + a negative-vector doc; container-validated (all green).
-- Per-kind-schema decision recorded in `contracts/schema/README.md` (envelope-first; per-kind layered in 0b).
+- **0a:** `contracts/schema/plugin.v1.json` — manifest envelope schema (JSON Schema 2020-12), Critical fields C4/C5/C8 baked in. Two valid example manifests + negative-vector doc; container-validated (all green). Per-kind-schema decision recorded.
+- **0b (started):** first 3 axis protos drafted + the cross-cutting context — `common/v1/context.proto` (C1 trace/identity/tenant), `common/v1/data.proto`, `format/v1`, `runtime/v1`, `strategy/v1`. `buf` toolchain stood up (`buf.yaml`/`buf.gen.yaml`). **buf lint + build pass clean (0 findings)**, verified in container.
 
-**Next concrete step:** sub-phase **0b** — draft the first axis protos in `contracts/proto/`. Start with the axes the examples already reference (`strategy/v1`, `format-capability/v1`, `runtime/v1`) so the schema's capability URIs gain real service definitions. Each axis proto then drives its per-kind manifest schema.
+**Next concrete step:** continue **0b** — draft the remaining axis protos. Priority order to keep closing loops:
+1. `engine/v1` (Execute/Query/Preview), `catalog/v1` (CreateBranch/GetTable/MergeBranch), `storage/v1` (VendCredentials) — the rest of the data plane.
+2. Then control-plane axes: `state/v1` (Get/Put/Watch/List — also the C3 namespacing surface), `identity/v1` (Authenticate/Authorize — C2), `tenancy/v1` (DecisionHook — C7).
+3. As each axis lands, derive its **per-kind manifest schema** (the 0a→0b handoff in `contracts/schema/README.md`).
+4. **0c next:** audit-event envelope proto (mandatory audit emission) + descriptors.
+
+**Deferred but now triggerable:** the `gofmt`/`buf format` `PostToolUse` hook (backlog) — the first `.proto` files now exist, so it can land. Also: pick the manifest-validator container image to make `rat plugin validate` (0f) real.
 
 ### Stream 2 — Roadmap + ADR upkeep
 

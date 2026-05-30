@@ -1,0 +1,54 @@
+// Runtime axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: runtime` plugin (pyarrow, a container exec runtime, a WASM host, …)
+// executes a unit of work on behalf of a strategy/engine. It is the "where does
+// the code run" axis — distinct from `deployment-runtime` (where PLUGINS run).
+//
+// Capability mapping:
+//   rat://runtime/v1/execute -> Execute
+syntax = "proto3";
+
+package rat.runtime.v1;
+
+import "rat/common/v1/context.proto";
+import "rat/common/v1/data.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/runtime/v1;runtimev1";
+
+service RuntimeService {
+  // rat://runtime/v1/execute — run a unit of work. Streams progress so the
+  // reconciler/UI can show liveness on long tasks; terminal event carries the
+  // outcome.
+  rpc Execute(ExecuteRequest) returns (stream ExecuteEvent);
+}
+
+message ExecuteRequest {
+  rat.common.v1.RequestContext context = 1;
+  // Opaque work spec the runtime knows how to run (e.g. a serialized plan, a
+  // script ref, a container entrypoint). The control plane does not interpret.
+  bytes work_spec = 2;
+  // Optional input data streams the work consumes.
+  repeated rat.common.v1.ArrowStream inputs = 3;
+}
+
+// Streamed liveness update during Execute.
+message ExecuteProgress {
+  // 0.0–1.0 if known; negative == indeterminate.
+  double fraction = 1;
+  string message = 2;
+}
+
+// Terminal event of an Execute stream.
+message ExecuteCompleted {
+  bool success = 1;
+  // Populated on failure.
+  string error = 2;
+  rat.common.v1.WriteResult result = 3;
+}
+
+message ExecuteEvent {
+  oneof event {
+    ExecuteProgress progress = 1;
+    ExecuteCompleted completed = 2;
+  }
+}

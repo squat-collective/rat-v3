@@ -13,10 +13,20 @@ This directory is **Phase 0** work (see [`../roadmap/phases.md`](../roadmap/phas
 ```
 contracts/
 ├── README.md              # this file
+├── buf.yaml               # buf module + lint(STANDARD) + breaking(FILE) config
+├── buf.gen.yaml           # codegen config (Go wired; other SDKs in 0d/0e)
+├── .gitignore             # excludes generated gen/ SDKs
 ├── schema/
 │   ├── plugin.v1.json     # the manifest envelope schema (sub-phase 0a) ✅
 │   └── README.md          # schema design notes + the per-kind decision
-├── proto/                 # axis service contracts (sub-phase 0b) — empty
+├── proto/                 # axis service contracts (sub-phase 0b)
+│   └── rat/
+│       ├── common/v1/
+│       │   ├── context.proto   # C1: RequestContext (trace+identity+tenant) ✅
+│       │   └── data.proto      # shared TableRef / ArrowStream / WriteResult ✅
+│       ├── format/v1/format.proto      # Resolve/Write/Maintain ✅
+│       ├── runtime/v1/runtime.proto    # Execute (streaming) ✅
+│       └── strategy/v1/strategy.proto  # Apply ✅
 └── examples/
     ├── rat-strategy-scd2.plugin.yaml     # canonical valid manifest
     ├── rat-format-deltalake.plugin.yaml  # second valid manifest (signed)
@@ -29,26 +39,34 @@ contracts/
 |---|---|---|
 | 0a | Manifest envelope schema (`plugin.v1.json`) | ✅ draft |
 | 0a | Example + negative manifests | ✅ draft |
-| 0b | ~20 axis protos | ⬜ not started |
-| 0c | Cross-cutting protos (`common/v1/context.proto`, audit envelope) | ⬜ not started |
+| 0b | First 3 axis protos (format, runtime, strategy) | ✅ draft — buf lint + build clean |
+| 0b | Remaining ~17 axis protos | ⬜ not started |
+| 0c | Cross-cutting protos (`common/v1/context.proto` ✅, audit envelope ⬜) | 🔶 context+data drafted |
 | 0d–0e | 12 reference implementations | ⬜ not started |
 | 0f | Conformance harness + `rat plugin validate` | ⬜ not started |
 | 0g | Per-axis `CONTRACT.md` | ⬜ not started |
 | 0h | `rat/1` freeze | ⬜ not started |
 
-## Validating a manifest (manual, until tooling lands)
+## Validating the contracts (container-only, per Tom's rule)
 
-No `rat plugin validate` yet (sub-phase 0f). For now, any JSON Schema 2020-12
-validator works. Per Tom's container-only rule, run it in a container — e.g.:
+**Protos** — lint + compile via buf. The image needs a writable HOME and
+`--userns=keep-id` so its cache dir is writable:
 
 ```bash
-# convert YAML → JSON and validate against the schema
-podman run --rm -v "$PWD:/w:Z" -w /w <a-json-schema-validator-image> \
-  validate --schema contracts/schema/plugin.v1.json \
-           --instance contracts/examples/rat-strategy-scd2.plugin.yaml
+cd contracts
+podman run --rm --userns=keep-id -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
+  -v "$PWD:/workspace:Z" -w /workspace docker.io/bufbuild/buf:1.47.2 lint
+podman run --rm --userns=keep-id -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
+  -v "$PWD:/workspace:Z" -w /workspace docker.io/bufbuild/buf:1.47.2 build
 ```
 
-(The concrete validator image is TBD — picking it is part of sub-phase 0f.)
+Both pass clean (0 findings) as of 0b. `buf generate` (codegen) additionally
+needs network for the remote plugins on buf.build — deferred to 0d when the
+reference plugins are built; the SDKs are git-ignored build artifacts.
+
+**Manifests** — no `rat plugin validate` yet (sub-phase 0f). Any JSON Schema
+2020-12 validator works; we used a containerized `python:3.12-slim` + `jsonschema`
+to confirm the two example manifests pass and the negative vectors are rejected.
 
 ## Critical concerns baked in (from [`../reviews/00-synthesis.md`](../reviews/00-synthesis.md))
 

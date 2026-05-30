@@ -1,0 +1,53 @@
+// Cross-cutting request context — the C1 bake-in (reviews/00-synthesis.md).
+//
+// EVERY RPC in EVERY axis takes a RequestContext as its first-class carrier of
+// trace + identity + tenancy. This is not optional and not per-axis: it is the
+// uniform envelope that makes cross-plugin debugging, authz, and multi-tenancy
+// possible. A plugin that ignores it still must accept it on the wire.
+//
+// Status: DRAFT (sub-phase 0c, pulled forward into 0b because the axis protos
+// reference it). Not frozen until the rat/1 freeze gate (0h).
+syntax = "proto3";
+
+package rat.common.v1;
+
+option go_package = "github.com/rat-dev/rat/gen/rat/common/v1;commonv1";
+
+// RequestContext travels as the first field of every request message.
+//
+// Why a message field and not just gRPC metadata: making it a typed, required
+// part of the contract means conformance suites can assert its presence and SDKs
+// in all five languages surface it identically — rather than relying on each
+// author to remember to read headers. The core's API gateway populates/validates
+// it; plugins propagate it unchanged to any downstream calls they make.
+message RequestContext {
+  // C1: W3C Trace Context `traceparent` (e.g.
+  // "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01").
+  // MANDATORY. The core rejects RPCs without a well-formed traceparent.
+  string traceparent = 1;
+
+  // C1: W3C `tracestate` — optional vendor trace data, propagated verbatim.
+  string tracestate = 2;
+
+  // C1: Correlation ID stable across a whole logical operation (one pipeline
+  // run, one user action) even as it fans out across many plugins + spans.
+  // MANDATORY.
+  string correlation_id = 3;
+
+  // C2/C5: the authenticated caller identity, as resolved by the identity
+  // gateway. Plugins MUST NOT trust this blindly for authz of THEIR resources —
+  // the core enforces capability-level authz — but it is available for
+  // plugin-level decisions and audit. Empty only for pre-auth bootstrap calls.
+  string subject = 4;
+
+  // C7: the tenant this request operates within. Tenancy is a STRUCTURAL
+  // dimension (not an advisory hook): the state gateway namespaces by it and the
+  // core refuses cross-tenant access. Empty string == the single-tenant/solo
+  // deployment's implicit default tenant.
+  string tenant = 5;
+
+  // Soft deadline hint (unix epoch millis) for downstream propagation. The
+  // authoritative deadline is still gRPC's; this lets plugins make
+  // shed-load/early-abort decisions. 0 == no hint.
+  int64 deadline_unix_ms = 6;
+}

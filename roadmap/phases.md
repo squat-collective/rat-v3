@@ -31,8 +31,8 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | Sub-phase | Work | Effort |
 |---|---|---|
 | 0a | Manifest schema (`contracts/schema/plugin.v1.json`) — including resources, trust, capabilities blocks | 2-3 weeks — **envelope drafted ✅; per-kind schemas deferred to 0b** |
-| 0b | ~20 axis protos (data + control + experience) | 4-6 weeks, parallelizable |
-| 0c | Cross-cutting concern protos (`common/v1/context.proto` for trace/identity, audit envelope, descriptors) | 2-3 weeks |
+| 0b | ~20 axis protos (data + control + experience) | 4-6 weeks, parallelizable — **first 3 (format/runtime/strategy) drafted ✅, buf lint+build clean; ~17 to go** |
+| 0c | Cross-cutting concern protos (`common/v1/context.proto` ✅ for trace/identity/tenant + `common/v1/data.proto` ✅ done early; audit envelope, descriptors ⬜) | 2-3 weeks |
 | 0d | Reference implementations round 1 — 1 per critical axis (6 plugins) | 6-8 weeks, parallelizable |
 | 0e | Reference implementations round 2 — 1 per critical axis (6 more) | 3-5 weeks |
 | 0f | Conformance suites + per-RPC latency benchmark | 3 weeks |

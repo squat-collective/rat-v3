@@ -1,0 +1,12 @@
+# Code generation config (sub-phase 0b/0d). DRAFT.
+# Go is the core language (ADR-004); other SDKs (Python, Rust, TS, Java) are
+# generated for plugin authors per ADR-001's any-language promise. Only Go is
+# wired now; the rest land as reference plugins in those languages appear (0d/0e).
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: gen
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: gen
+    opt: paths=source_relative

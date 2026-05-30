@@ -1,0 +1,3 @@
+# Generated SDKs (buf generate) — build artifacts, not committed.
+# Regenerate with: buf generate (needs network for remote plugins).
+/gen/

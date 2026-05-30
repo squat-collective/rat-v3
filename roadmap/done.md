@@ -4,6 +4,49 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Phase 0 sub-phase 0b started: first axis protos + buf toolchain
+
+**What:** Drafted the first three axis service contracts + the cross-cutting
+request context, and stood up the `buf` proto toolchain (containerized).
+
+**Protos (`contracts/proto/rat/`):**
+- `common/v1/context.proto` — **C1 bake-in**: `RequestContext` (traceparent +
+  tracestate + correlation_id mandatory; subject for C2/C5; tenant for C7;
+  deadline hint). Travels as field 1 of every RPC. Pulled forward from 0c
+  because every axis proto imports it.
+- `common/v1/data.proto` — shared data-plane handoff types (`TableRef`,
+  `ArrowStream`, `WriteResult`). Encodes the "control plane carries refs, bulk
+  bytes go out-of-band as Arrow" invariant from overview.md.
+- `format/v1/format.proto` — `Resolve`/`Write`/`Maintain` ⇒
+  `rat://format-capability/v1/{scan,merge,append,maintain}`.
+- `runtime/v1/runtime.proto` — `Execute` (server-streaming) ⇒
+  `rat://runtime/v1/execute`.
+- `strategy/v1/strategy.proto` — `Apply` ⇒ `rat://strategy/v1/apply`.
+
+These three axes were chosen first because the example manifests (0a) already
+reference their capability URIs — so the manifest↔wire loop now closes.
+
+**Toolchain:** `contracts/buf.yaml` (lint STANDARD, breaking FILE),
+`contracts/buf.gen.yaml` (Go SDK wired; other SDKs in 0d/0e),
+`contracts/.gitignore` (generated `gen/` excluded as build artifacts).
+
+**Verified (containerized, per container-only rule):** `buf lint` and
+`buf build` both pass **0 findings / 0 errors** (`docker.io/bufbuild/buf:1.47.2`,
+run with `--userns=keep-id` + writable HOME). Fixed two real STANDARD lint
+findings en route (hoisted `runtime`'s nested messages to top-level; confirmed
+package-version-suffix compliance). `buf generate` (codegen) deferred to 0d — it
+needs network for buf.build remote plugins, which the sandbox blocks; SDKs are
+git-ignored artifacts anyway.
+
+**Note:** several Write calls glitched mid-session (duplicated lines / wrong
+paths); caught via dup-scan + buf, all files rewritten clean and re-verified.
+
+**Files:** `contracts/proto/**` (5 protos), `contracts/buf.yaml`,
+`contracts/buf.gen.yaml`, `contracts/.gitignore`, `contracts/README.md`,
+`roadmap/*`.
+
+---
+
 ## 2026-05-30 — Phase 0 entered: sub-phase 0a manifest schema drafted
 
 **What:** Entered Phase 0 (Lock the contracts) and produced the first contract artifact — the manifest envelope schema. Created the `contracts/` workspace.

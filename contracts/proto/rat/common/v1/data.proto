@@ -1,0 +1,44 @@
+// Shared data-plane handoff types referenced across data-plane axes
+// (strategy ↔ runtime ↔ format). DRAFT — sub-phase 0b.
+//
+// Design invariant (overview.md "Data plane bypasses core for bytes"): the
+// CONTROL-plane RPCs carry references + small metadata, NEVER bulk row data.
+// Bulk data moves out-of-band as Arrow IPC over a side channel the plugins
+// negotiate. So these messages describe WHERE/HOW to get the data, not the data.
+syntax = "proto3";
+
+package rat.common.v1;
+
+option go_package = "github.com/rat-dev/rat/gen/rat/common/v1;commonv1";
+
+// A reference to a table/dataset, resolvable by a format/catalog plugin.
+// Deliberately opaque-ish: the format plugin interprets `uri` per its own
+// scheme; the control plane just routes it.
+message TableRef {
+  // Catalog-qualified identifier, e.g. "warehouse.sales.orders".
+  string identifier = 1;
+  // Optional storage/format URI hint, e.g. "s3://bucket/warehouse/orders".
+  string uri = 2;
+  // Optional catalog branch/snapshot selector (catalog plugins that support it).
+  string branch = 3;
+}
+
+// An Arrow data stream endpoint — the out-of-band side channel for bulk bytes.
+// The producer plugin stands this up; the consumer dials it. The control-plane
+// RPC only exchanges this descriptor, keeping bulk data off the core path.
+message ArrowStream {
+  // gRPC/Flight-style endpoint the consumer dials for record batches.
+  string endpoint = 1;
+  // Opaque ticket the producer issues to authorize + identify this stream.
+  bytes ticket = 2;
+  // Arrow IPC schema (serialized) so the consumer can validate before pulling.
+  bytes ipc_schema = 3;
+}
+
+// Outcome envelope reused by data-plane mutating RPCs.
+message WriteResult {
+  // Rows affected, if the engine/format can report it (-1 == unknown).
+  int64 rows_affected = 1;
+  // Resulting snapshot/version id, if the format is versioned (else empty).
+  string snapshot_id = 2;
+}
