@@ -35,8 +35,10 @@ message ExecuteRequest {
 
 // Streamed liveness update during Execute.
 message ExecuteProgress {
-  // 0.0–1.0 if known; negative == indeterminate.
-  double fraction = 1;
+  // Completion fraction 0.0–1.0. proto3 `optional` for explicit presence: ABSENT
+  // == indeterminate progress (replaces the old negative sentinel — reviews/06
+  // API-13).
+  optional double fraction = 1;
   string message = 2;
 }
 

@@ -72,8 +72,10 @@ message ArrowStream {
 
 // Outcome envelope reused by data-plane mutating RPCs.
 message WriteResult {
-  // Rows affected, if the engine/format can report it (-1 == unknown).
-  int64 rows_affected = 1;
+  // Rows affected. proto3 `optional` for explicit presence: ABSENT == the
+  // engine/format cannot report a count (replaces the old -1 sentinel —
+  // reviews/06 API-13). Present 0 means "zero rows", distinctly from "unknown".
+  optional int64 rows_affected = 1;
   // Resulting snapshot/version id, if the format is versioned (else empty).
   string snapshot_id = 2;
 }

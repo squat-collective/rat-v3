@@ -26,6 +26,16 @@ service SchedulerService {
 
   // rat://scheduler/v1/watch-due — stream of triggers as they fire. The
   // reconciler consumes this to know a pipeline is due.
+  //
+  // DELIVERY SEMANTICS (reviews/06 API-11, pinned at freeze): AT-LEAST-ONCE. A
+  // fired trigger MAY be redelivered (e.g. if the consumer reconnects), so the
+  // reconciler MUST treat WatchDue delivery as idempotent — it keys actions by
+  // (trigger_id, fired_at_unix_ms) and ignores a duplicate. The scheduler does
+  // NOT guarantee a trigger is delivered exactly once or that a missed delivery
+  // is dropped; a consumer that was disconnected when a trigger fired re-derives
+  // due-ness from declared schedule state on reconnect (the reconciler already
+  // re-evaluates schedules each loop). A richer ack/lease mechanism is additive
+  // (GA); the at-least-once guarantee is what's pinned now.
   rpc WatchDue(WatchDueRequest) returns (stream WatchDueResponse);
 }
 

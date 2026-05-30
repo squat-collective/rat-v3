@@ -33,8 +33,10 @@ message ApplyRequest {
   rat.common.v1.TableRef source = 2;
   // Target dataset to write into.
   rat.common.v1.TableRef target = 3;
-  // Strategy-specific options, validated against the plugin's own
-  // metadata_schema (see manifest). Opaque to the core.
+  // Strategy-specific options. ENCODING PINNED (reviews/06 API-12): these bytes
+  // are UTF-8 JSON, validated against the plugin's own metadata_schema (manifest).
+  // Opaque to the core (it does not parse them); the strategy decodes per its
+  // declared schema. Pinned at freeze so the bytes field's meaning can't shift.
   bytes options = 4;
 }
 
