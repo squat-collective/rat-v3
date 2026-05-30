@@ -13,10 +13,13 @@
 //
 // C3 — STATE-GATEWAY ISOLATION: every key is namespaced per-plugin and
 // per-tenant. The gateway derives the effective namespace from
-// RequestContext.subject (the calling plugin) + RequestContext.tenant and
-// PREFIXES it onto `key` server-side; a plugin physically cannot address another
-// plugin's or another tenant's keys. Cross-plugin access is deny-by-default.
-// The `key` field below is therefore plugin-relative, NOT global.
+// RequestContext.identity.caller_plugin (the immediate calling plugin,
+// server-derived per hop — keystone, context.proto) + RequestContext.identity.tenant
+// and PREFIXES it onto `key` server-side; a plugin physically cannot address
+// another plugin's or another tenant's keys. Cross-plugin access is
+// deny-by-default. The `key` field below is therefore plugin-relative, NOT global.
+// NOTE: `key`/`prefix` grammar is itself constrained (no traversal) — that is a
+// separate freeze-blocker (reviews/06 SEC-2), tracked in the roadmap.
 //
 // C5 — the Put CAS (compare-and-set) primitive is what the reconciler's
 // leader-election lease (ADR-002 D5) is built on; state plugins MUST implement

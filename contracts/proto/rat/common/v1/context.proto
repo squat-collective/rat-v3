@@ -1,53 +1,134 @@
-// Cross-cutting request context — the C1 bake-in (reviews/00-synthesis.md).
+// Cross-cutting request context — the C1 + keystone (C-1) bake-in.
 //
-// EVERY RPC in EVERY axis takes a RequestContext as its first-class carrier of
-// trace + identity + tenancy. This is not optional and not per-axis: it is the
-// uniform envelope that makes cross-plugin debugging, authz, and multi-tenancy
-// possible. A plugin that ignores it still must accept it on the wire.
+// EVERY RPC in EVERY axis takes a RequestContext as its first field. It is the
+// uniform carrier of trace + identity + tenancy that makes cross-plugin
+// debugging, authz, and multi-tenancy possible. A plugin that ignores its
+// contents still must accept it on the wire.
 //
-// Status: DRAFT (sub-phase 0c, pulled forward into 0b because the axis protos
-// reference it). Not frozen until the rat/1 freeze gate (0h).
+// THIS FILE IS THE KEYSTONE FIX (reviews/06 C-1 = SEC-1 ⊕ AUTH-12). The earlier
+// draft had a single forgeable, semantically-ambiguous `subject` string. It is
+// replaced by THREE distinct principals with distinct trust sources, and the
+// trace fields are STRUCTURALLY SEPARATED from the identity fields so the core
+// can apply two different rules:
+//   - TraceContext  → propagate verbatim (caller-supplied, untrusted-but-relayed)
+//   - Identity      → derive/verify server-side, NEVER trust wire-supplied values
+//
+// Invocation is core-mediated (ADR-005): the core's capability-invoke gateway
+// stamps Identity on every hop, so these rules are enforced centrally rather
+// than left to each plugin.
+//
+// Status: DRAFT (pre-freeze). Resolving freeze-blocker #1 from reviews/06.
 syntax = "proto3";
 
 package rat.common.v1;
 
 option go_package = "github.com/rat-dev/rat/gen/rat/common/v1;commonv1";
 
-// RequestContext travels as the first field of every request message.
+// RequestContext travels as field 1 of every request message.
 //
-// Why a message field and not just gRPC metadata: making it a typed, required
-// part of the contract means conformance suites can assert its presence and SDKs
-// in all five languages surface it identically — rather than relying on each
-// author to remember to read headers. The core's API gateway populates/validates
-// it; plugins propagate it unchanged to any downstream calls they make.
+// The split is deliberate: `trace` is relayed verbatim across hops; `identity`
+// is (re)stamped by the core every hop and its wire-supplied values are ignored
+// by trusting components. Keeping them in separate sub-messages makes the
+// "propagate this / never-trust that" boundary structural, not a per-field
+// convention an author might misread.
 message RequestContext {
-  // C1: W3C Trace Context `traceparent` (e.g.
-  // "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01").
-  // MANDATORY. The core rejects RPCs without a well-formed traceparent.
+  // Distributed-trace correlation. Caller-propagated verbatim (C1).
+  TraceContext trace = 1;
+
+  // Authenticated principals for this hop. Core-stamped; see Identity (C2/C3/C7).
+  Identity identity = 2;
+
+  // Soft deadline hint (unix epoch millis). The authoritative deadline is still
+  // gRPC's; this lets plugins make shed-load / early-abort decisions. 0 == none.
+  int64 deadline_unix_ms = 3;
+}
+
+// W3C-style trace correlation. These fields are caller-supplied and PROPAGATED
+// UNCHANGED across every hop — they are diagnostic, not authorization-bearing,
+// so relaying them verbatim is safe and required. (They are still attacker-
+// influenced strings: sinks that log them must treat them as untrusted input —
+// see reviews/06 SEC-12, log-injection.)
+message TraceContext {
+  // W3C `traceparent`, e.g.
+  // "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01". MANDATORY — the
+  // core rejects RPCs without a well-formed traceparent.
   string traceparent = 1;
 
-  // C1: W3C `tracestate` — optional vendor trace data, propagated verbatim.
+  // W3C `tracestate` — optional vendor trace data, propagated verbatim.
   string tracestate = 2;
 
-  // C1: Correlation ID stable across a whole logical operation (one pipeline
-  // run, one user action) even as it fans out across many plugins + spans.
-  // MANDATORY.
+  // Correlation ID stable across one whole logical operation (a pipeline run, a
+  // user action) even as it fans out across many plugins + spans. MANDATORY.
+  // Also the anti-replay binding target for SubjectAssertion (see below).
   string correlation_id = 3;
+}
 
-  // C2/C5: the authenticated caller identity, as resolved by the identity
-  // gateway. Plugins MUST NOT trust this blindly for authz of THEIR resources —
-  // the core enforces capability-level authz — but it is available for
-  // plugin-level decisions and audit. Empty only for pre-auth bootstrap calls.
-  string subject = 4;
+// The three principals. EVERY field here is set by the CORE, never trusted from
+// the wire by a component making an authorization decision. The core's
+// capability-invoke gateway (ADR-005) derives/verifies these on each hop before
+// proxying. A plugin may READ them (for its own logic + audit) but a plugin's
+// own writes to them are ignored/overwritten by the core on the next hop.
+message Identity {
+  // PRINCIPAL 1 — the immediate authenticated caller of THIS hop.
+  //
+  // DERIVED server-side from this hop's channel credential (C2), RE-DERIVED
+  // every hop, and NEVER propagated end-to-end. On strategy→format,
+  // caller_plugin=strategy; on the core-mediated format→state hop,
+  // caller_plugin=format. This is load-bearing for C3: the state gateway's
+  // per-plugin namespace = (caller_plugin, tenant), so each plugin can only
+  // address its own state. If this propagated instead of re-deriving, `format`
+  // would write into `strategy`'s namespace — the exact cross-plugin leak C3
+  // forbids. Plugins MUST NOT set this; the core stamps it.
+  string caller_plugin = 1;
 
-  // C7: the tenant this request operates within. Tenancy is a STRUCTURAL
-  // dimension (not an advisory hook): the state gateway namespaces by it and the
-  // core refuses cross-tenant access. Empty string == the single-tenant/solo
+  // PRINCIPAL 2 — the end user on whose behalf the operation runs.
+  //
+  // A CORE-SIGNED assertion, not a bare string (the forgeability fix). Verified
+  // against the core's key at every consuming hop, AND bound to the operation so
+  // it cannot be stockpiled and replayed (see SubjectAssertion). Propagated
+  // end-to-end (unlike caller_plugin) because downstream authz/audit needs to
+  // know "who triggered this", but its authority is the signature, not presence.
+  // Empty only for pre-auth bootstrap calls (e.g. identity.Authenticate itself).
+  SubjectAssertion subject = 2;
+
+  // PRINCIPAL 3 — the tenant this operation runs within.
+  //
+  // STRUCTURAL, not advisory (C7): server-stamped from the authenticated
+  // principal, propagated, never caller-writable. The state gateway namespaces
+  // by it, storage vends creds scoped to it, billing meters by it, and the core
+  // refuses cross-tenant access. Empty string == the single-tenant/solo
   // deployment's implicit default tenant.
-  string tenant = 5;
+  string tenant = 3;
+}
 
-  // Soft deadline hint (unix epoch millis) for downstream propagation. The
-  // authoritative deadline is still gRPC's; this lets plugins make
-  // shed-load/early-abort decisions. 0 == no hint.
-  int64 deadline_unix_ms = 6;
+// A core-signed assertion that an end-user principal is authenticated, bound to
+// one operation and short-lived. This is the anti-forgery + anti-replay core of
+// the keystone (reviews/06 C-1, confused-deputy refinement).
+//
+// VERIFICATION CONTRACT — every hop that consumes this assertion MUST:
+//   1. verify `signature` over (principal, tenant, bound_correlation_id,
+//      expires_unix_ms) against the core's published verification key;
+//   2. check bound_correlation_id == inbound TraceContext.correlation_id
+//      (an assertion is valid only for the operation it was minted for — a
+//      downstream plugin cannot bank it and reuse it for an unrelated op within
+//      the same tenant);
+//   3. check now <= expires_unix_ms (short-TTL belt-and-braces).
+// A `principal` value not covered by a valid signature MUST NOT be trusted —
+// the bare string is a convenience mirror of the signed payload, nothing more.
+message SubjectAssertion {
+  // The authenticated end-user principal id (the signed, authoritative value
+  // mirrored here for convenience). Empty for bootstrap/pre-auth calls.
+  string principal = 1;
+
+  // The core's detached signature over (principal, tenant, bound_correlation_id,
+  // expires_unix_ms). The authority of this assertion. NEVER trust `principal`
+  // without verifying this.
+  bytes signature = 2;
+
+  // The correlation_id this assertion is bound to — must equal the inbound
+  // TraceContext.correlation_id at every consuming hop (anti-stockpile).
+  string bound_correlation_id = 3;
+
+  // Expiry (unix epoch millis). Short-TTL; re-mint rather than cache past this.
+  int64 expires_unix_ms = 4;
 }

@@ -12,7 +12,7 @@
 //
 // SECURITY (reviews/01 Finding 3 + reviews/04): credential vending is the one
 // place a mis-scoped grant defeats an otherwise-correct tenancy boundary. Creds
-// MUST be scoped to the RequestContext.tenant + the requested prefix, and
+// MUST be scoped to the RequestContext.identity.tenant + the requested prefix, and
 // short-TTL. This is a C7 (tenancy-structural) enforcement point — the proto
 // carries tenant via context so the storage plugin cannot vend cross-tenant.
 syntax = "proto3";
@@ -39,7 +39,7 @@ enum AccessMode {
 message VendCredentialsRequest {
   rat.common.v1.RequestContext context = 1;
   // Storage prefix the creds are scoped to (e.g. "s3://bucket/warehouse/orders").
-  // The plugin MUST further constrain by context.tenant.
+  // The plugin MUST further constrain by context.identity.tenant.
   string prefix = 2;
   AccessMode mode = 3;
 }

@@ -36,7 +36,7 @@ message UsageEvent {
 
 message RecordRequest {
   rat.common.v1.RequestContext context = 1;
-  // Tenant is taken from context.tenant (C7); events meter per tenant.
+  // Tenant is taken from context.identity.tenant (C7); events meter per tenant.
   repeated UsageEvent events = 2;
 }
 

@@ -7,7 +7,7 @@
 //   rat://tenancy/v1/decide -> Decide (a generic decision hook)
 //
 // C7 — TENANCY IS STRUCTURAL, NOT ADVISORY (reviews/00 Theme 4, reviews/01
-// Finding 3): the tenant dimension lives in core primitives (RequestContext.tenant
+// Finding 3): the tenant dimension lives in core primitives (RequestContext.identity.tenant
 // threads every RPC; the state gateway namespaces by it; storage vends creds
 // scoped to it). This plugin does NOT re-implement isolation — the core enforces
 // it structurally. The plugin only answers POLICY questions the core can't
