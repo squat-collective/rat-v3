@@ -15,6 +15,37 @@
 //
 // Capability mapping:
 //   rat://auditlog/v1/append -> Append
+//
+// FREEZE-BLOCKER #4 (reviews/06 C-3 = SEC-5 ⊕ API-5). The earlier draft was
+// "tamper-evident" in name only. Four fixes, all on the wire here:
+//
+//   1. CORE AUTHORS THE CHAIN, NOT THE SINK OR AN ARBITRARY CALLER. `id` and
+//      `prev_hash` are assigned by the core, which serializes all audit events
+//      into ONE linear chain. Append is CORE-ONLY: the capability is not
+//      grantable to ordinary plugins, so no plugin can inject records or fork
+//      the chain, and concurrent emitters can't race `prev_hash`.
+//   2. EACH RECORD IS CORE-SIGNED (Ed25519 over the canonical serialization).
+//      A third-party sink can VERIFY the chain but cannot FORGE or silently
+//      rewrite/reorder/drop records without detection. "must not allow mutation"
+//      is now cryptographically checkable, not a comment the sink may ignore.
+//   3. CANONICAL SERIALIZATION IS PINNED (see AuditRecord) so every
+//      implementation hashes+signs the same bytes — cross-impl verification is
+//      well-defined. This is un-retrofittable once chains exist, hence pre-freeze.
+//   4. THE RESPONSE REPORTS PER-RECORD STATUS, COMMIT IS PREFIX-ONLY. The old
+//      `appended: int64` hid partial failure — committing records[0]+[2] while
+//      rejecting [1] forks the chain. Now `AppendResponse.acks` is per-record and
+//      commit is a contiguous PREFIX: a REJECTED entry means every later record
+//      in the request is uncommitted. A chain-head watermark lets a reconnecting
+//      emitter resume with no gap/fork.
+//
+// Two prose invariants the contract assumes:
+//   - A REJECTED or DROPPED audit record is ITSELF an auditable event — the core
+//     emits a meta-audit entry; "mandatory" means a record cannot be lost
+//     silently.
+//   - APPEND_STATUS_DUPLICATE is the idempotent-retry safety valve: the core-only
+//     + signed model forces retry on transport failure, so re-appending an
+//     already-stored record MUST NOT double-append or fork — the sink acks
+//     DUPLICATE.
 syntax = "proto3";
 
 package rat.auditlog.v1;
@@ -24,9 +55,10 @@ import "rat/common/v1/context.proto";
 option go_package = "github.com/rat-dev/rat/gen/rat/auditlog/v1;auditlogv1";
 
 service AuditLogService {
-  // rat://auditlog/v1/append — append audit records to the sink. The core calls
-  // this; records are also retained core-locally so the sink is a fan-out, not
-  // the only copy.
+  // rat://auditlog/v1/append — append core-authored, core-signed audit records
+  // to the sink. CORE-ONLY: this capability is not grantable to ordinary
+  // plugins. Records are also retained core-locally, so the sink is a fan-out,
+  // not the only copy.
   rpc Append(AppendRequest) returns (AppendResponse);
 }
 
@@ -37,12 +69,21 @@ enum AuditOutcome {
   AUDIT_OUTCOME_ERROR = 3;
 }
 
-// One audit record. Append-only; the sink must not allow mutation/deletion of
-// prior records (tamper-evidence is the point).
+// One audit record. Append-only; tamper-evidence is enforced by the core
+// signature + hash chain, not by trusting the sink.
+//
+// CANONICAL SERIALIZATION (pinned — the bytes `signature` covers and `prev_hash`
+// of the NEXT record chains over): the proto3 wire encoding of all fields EXCEPT
+// `signature` (field 10), emitted in ascending field-number order, each field
+// present exactly once, no unknown fields, varints in minimal form, default-valued
+// fields omitted. This deterministic form is the canonical record bytes; the
+// core hashes/signs exactly these bytes and verifiers recompute them identically.
 message AuditRecord {
-  // Stable id; with prev_hash forms a hash chain for tamper-evidence.
+  // Core-assigned chain position id (monotonic). Set by the CORE, never the
+  // caller. With prev_hash this forms the linear hash chain.
   string id = 1;
-  // Hash of the previous record (chain link). Empty for the first record.
+  // Core-computed hash of the previous record's canonical bytes (chain link).
+  // Empty for the first record in the chain.
   string prev_hash = 2;
   int64 timestamp_unix_ms = 3;
   // Who (subject) did what (action) to which (resource), and the result.
@@ -53,13 +94,60 @@ message AuditRecord {
   AuditOutcome outcome = 8;
   // Correlation back to the operation (C1).
   string correlation_id = 9;
+  // Core's Ed25519 signature over this record's canonical serialization (all
+  // fields above; this field itself is excluded from the signed bytes). The
+  // authority of the record — a sink verifies against the core's published key
+  // and rejects any record whose signature does not verify.
+  bytes signature = 10;
 }
 
 message AppendRequest {
   rat.common.v1.RequestContext context = 1;
+  // Core-authored, core-signed records to append, in chain order.
   repeated AuditRecord records = 2;
 }
 
+// Per-record disposition of an Append.
+enum AppendStatus {
+  APPEND_STATUS_UNSPECIFIED = 0;
+  // Durably stored and chain-linked.
+  APPEND_STATUS_COMMITTED = 1;
+  // Already stored (idempotent retry) — NOT an error; the chain is intact.
+  APPEND_STATUS_DUPLICATE = 2;
+  // Not stored. See reject_code. Implies prefix-only: every later record in the
+  // same request is also uncommitted.
+  APPEND_STATUS_REJECTED = 3;
+}
+
+enum RejectCode {
+  REJECT_CODE_UNSPECIFIED = 0;
+  // Signature did not verify against the core's key.
+  REJECT_CODE_BAD_SIGNATURE = 1;
+  // prev_hash does not match the sink's current chain head (gap/fork attempt).
+  REJECT_CODE_CHAIN_BREAK = 2;
+  // Sink-side durable-storage failure (retryable).
+  REJECT_CODE_STORAGE_ERROR = 3;
+}
+
+// Ack for one record in the request; acks[i] corresponds to records[i].
+message RecordAck {
+  // The core-assigned id this ack refers to (mirrors records[i].id).
+  string id = 1;
+  AppendStatus status = 2;
+  // Set only when status == APPEND_STATUS_REJECTED.
+  RejectCode reject_code = 3;
+}
+
 message AppendResponse {
-  int64 appended = 1;
+  // Per-record acks in request order. COMMIT IS PREFIX-ONLY: once a record is
+  // REJECTED, all later records in the request are uncommitted (never acked
+  // COMMITTED), so the committed set is always a contiguous prefix — the chain
+  // can't fork on partial failure.
+  repeated RecordAck acks = 1;
+  // Chain head after this append: the id + canonical-hash of the last durably
+  // committed record. A reconnecting emitter resumes deterministically from here
+  // with no gap/fork; also distinguishes "dropped" (absent from the chain) from
+  // "in-flight".
+  string last_committed_id = 2;
+  string last_committed_hash = 3;
 }

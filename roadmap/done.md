@@ -4,6 +4,23 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Freeze-blocker #4: auditlog.proto tamper-evidence + completeness
+
+**What:** reviews/06 C-3 (SEC-5 ⊕ API-5) — the audit trail was "tamper-evident" in name only and couldn't report partial failure. Four coupled fixes to `auditlog.proto`:
+
+1. **Core authors the chain, not the sink/caller:** `id` + `prev_hash` are core-assigned; `Append` is **core-only** (capability not grantable to ordinary plugins) → no plugin can inject records or fork the chain, no `prev_hash` races.
+2. **Each record core-signed:** added `AuditRecord.signature` (Ed25519 over the canonical bytes) → a third-party sink can *verify* the chain but can't forge/reorder/drop without detection.
+3. **Canonical serialization pinned in-contract:** specified the deterministic proto3 form the signature/hash cover (ascending field order, each field once, minimal varints, defaults omitted, no unknowns) → cross-impl verification is well-defined. Un-retrofittable once chains exist → pre-freeze.
+4. **Per-record response, prefix-only commit:** replaced `AppendResponse.appended:int64` with `repeated RecordAck` (`AppendStatus` COMMITTED/DUPLICATE/REJECTED + `RejectCode` BAD_SIGNATURE/CHAIN_BREAK/STORAGE_ERROR); commit is a contiguous prefix (a REJECTED entry ⇒ all later uncommitted, so no fork on partial failure); `last_committed_id`/`last_committed_hash` watermark lets a reconnecting emitter resume with no gap. `APPEND_STATUS_DUPLICATE` is the idempotent-retry valve. Two prose invariants captured: a dropped/rejected record is itself a meta-audit event; duplicate-on-retry must not double-append.
+
+**Verified:** buf lint 0 / build 0 / generate 40 Go files (new RecordAck + 2 enums); dup-free; no stale `appended` refs.
+
+**Next:** freeze-blocker #5 — `annotations.proto` + `(rat.capability)` method option + split `Write`/`engine.Execute` per-mode (do together).
+
+**Files:** `contracts/proto/rat/auditlog/v1/auditlog.proto`.
+
+---
+
 ## 2026-05-30 — Freeze-blocker #3: state.proto (key grammar + Put tri-state + CAS conformance)
 
 **What:** reviews/06 #3 — three coupled fixes to `state.proto` (the tier-0 state backend the reconciler depends on):
