@@ -45,8 +45,9 @@ message VendCredentialsRequest {
 }
 
 message VendCredentialsResponse {
-  // Opaque, provider-specific credential blob (e.g. STS token set). Never logged.
-  bytes credentials = 1;
+  // Opaque, provider-specific credential blob (e.g. STS token set). Never logged;
+  // `debug_redact` makes that structural (reviews/06 SEC-8).
+  bytes credentials = 1 [debug_redact = true];
   // Expiry (unix epoch millis). Callers must re-vend after this.
   int64 expires_unix_ms = 2;
 }

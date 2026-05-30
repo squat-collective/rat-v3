@@ -60,7 +60,7 @@ message ArrowStream {
   // bytes leg bypasses the core, so the ticket is the only gate.) The detailed
   // ticket-format spec is enforcement-layer (GA); the field is here so it's in
   // the frozen shape.
-  bytes ticket = 2;
+  bytes ticket = 2 [debug_redact = true];
   // Arrow IPC schema (serialized) so the dialing party can validate before
   // transferring.
   bytes ipc_schema = 3;

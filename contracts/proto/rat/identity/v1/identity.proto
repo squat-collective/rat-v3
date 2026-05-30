@@ -47,8 +47,9 @@ message AuthenticateRequest {
   // No RequestContext.subject yet — this is what establishes it. Trace fields
   // still apply, so the gateway passes context for correlation only.
   rat.common.v1.RequestContext context = 1;
-  // Opaque credential (bearer token, client-cert chain, etc.). Never logged.
-  bytes credential = 2;
+  // Opaque credential (bearer token, client-cert chain, etc.). Never logged;
+  // `debug_redact` makes that structural (reviews/06 SEC-8).
+  bytes credential = 2 [debug_redact = true];
 }
 
 message AuthenticateResponse {
