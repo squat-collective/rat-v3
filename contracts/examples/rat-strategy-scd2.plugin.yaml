@@ -20,7 +20,8 @@ suggests:
   - capability: rat://catalog/v1/register
 contributes:
   slots:
-    - target: rat://ui/v1/pipeline-detail
+    - target:
+        capability: rat://ui/v1/pipeline-detail
       component: scd2-config-panel
 metadata_schema: ./config-schema.json
 resources:

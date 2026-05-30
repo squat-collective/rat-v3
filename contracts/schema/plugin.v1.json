@@ -124,7 +124,7 @@
             "required": ["target", "component"],
             "additionalProperties": false,
             "properties": {
-              "target": { "$ref": "#/$defs/capabilityUri" },
+              "target": { "$ref": "#/$defs/capabilityRef" },
               "component": { "type": "string" }
             }
           },
