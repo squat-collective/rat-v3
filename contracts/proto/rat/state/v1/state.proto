@@ -1,0 +1,101 @@
+// State-backend axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: state-backend` plugin (sqlite, postgres, etcd, DynamoDB) backs the
+// core's State Gateway (one of the six core things). This is a TIER-0 plugin
+// (bootstrap-critical, selected at boot — plugin-architecture.md): the core
+// cannot start without it.
+//
+// Capability mapping:
+//   rat://state/v1/get   -> Get
+//   rat://state/v1/put   -> Put
+//   rat://state/v1/list  -> List
+//   rat://state/v1/watch -> Watch
+//
+// C3 — STATE-GATEWAY ISOLATION: every key is namespaced per-plugin and
+// per-tenant. The gateway derives the effective namespace from
+// RequestContext.subject (the calling plugin) + RequestContext.tenant and
+// PREFIXES it onto `key` server-side; a plugin physically cannot address another
+// plugin's or another tenant's keys. Cross-plugin access is deny-by-default.
+// The `key` field below is therefore plugin-relative, NOT global.
+//
+// C5 — the Put CAS (compare-and-set) primitive is what the reconciler's
+// leader-election lease (ADR-002 D5) is built on; state plugins MUST implement
+// it linearizably or they cannot back a multi-replica deployment.
+syntax = "proto3";
+
+package rat.state.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/state/v1;statev1";
+
+service StateService {
+  // rat://state/v1/get — read one key (plugin+tenant relative).
+  rpc Get(GetRequest) returns (GetResponse);
+
+  // rat://state/v1/put — write one key, optionally compare-and-set on revision.
+  rpc Put(PutRequest) returns (PutResponse);
+
+  // rat://state/v1/list — list keys under a plugin+tenant-relative prefix.
+  rpc List(ListRequest) returns (ListResponse);
+
+  // rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
+  // Each streamed message is a WatchResponse — named per the *Response convention
+  // buf STANDARD requires, even for streaming RPCs.
+  rpc Watch(WatchRequest) returns (stream WatchResponse);
+}
+
+message GetRequest {
+  rat.common.v1.RequestContext context = 1;
+  string key = 2;
+}
+
+message GetResponse {
+  bool found = 1;
+  bytes value = 2;
+  // Monotonic revision for CAS / optimistic concurrency.
+  int64 revision = 3;
+}
+
+message PutRequest {
+  rat.common.v1.RequestContext context = 1;
+  string key = 2;
+  bytes value = 3;
+  // CAS: if > 0, the put succeeds only if the current revision matches.
+  // 0 == unconditional write. This backs leader-election leases (ADR-002 D5).
+  int64 if_revision = 4;
+}
+
+message PutResponse {
+  bool committed = 1;
+  int64 revision = 2;
+}
+
+message ListRequest {
+  rat.common.v1.RequestContext context = 1;
+  string prefix = 2;
+}
+
+message ListResponse {
+  repeated string keys = 1;
+}
+
+message WatchRequest {
+  rat.common.v1.RequestContext context = 1;
+  string prefix = 2;
+  // Resume from this revision (0 == from now).
+  int64 from_revision = 3;
+}
+
+// One change event in a Watch stream.
+message WatchResponse {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    TYPE_PUT = 1;
+    TYPE_DELETE = 2;
+  }
+  Type type = 1;
+  string key = 2;
+  bytes value = 3;
+  int64 revision = 4;
+}

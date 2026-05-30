@@ -1,0 +1,67 @@
+// Engine axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: engine` plugin (DuckDB, ClickHouse, Spark, Trino, BigQuery) turns
+// SQL into Arrow. It is the compute axis: the strategy/runtime hand it SQL +
+// table refs; it executes and returns an Arrow stream descriptor.
+//
+// Capability mapping:
+//   rat://engine/v1/execute -> Execute (run a statement, no rows expected back)
+//   rat://engine/v1/query   -> Query   (SELECT -> Arrow stream)
+//   rat://engine/v1/preview -> Preview (bounded sample, for UI/inspection)
+//
+// C6: each capability has a golden-data conformance vector (the engine ↔ format
+// handoff is where "fits != works" bites hardest — reviews/00 Theme 4).
+syntax = "proto3";
+
+package rat.engine.v1;
+
+import "rat/common/v1/context.proto";
+import "rat/common/v1/data.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/engine/v1;enginev1";
+
+service EngineService {
+  // rat://engine/v1/execute — run a statement for effect (DDL, INSERT…SELECT).
+  rpc Execute(ExecuteRequest) returns (ExecuteResponse);
+
+  // rat://engine/v1/query — run a SELECT; results stream out-of-band as Arrow.
+  rpc Query(QueryRequest) returns (QueryResponse);
+
+  // rat://engine/v1/preview — bounded sample of a query/table for inspection.
+  rpc Preview(PreviewRequest) returns (PreviewResponse);
+}
+
+message ExecuteRequest {
+  rat.common.v1.RequestContext context = 1;
+  string sql = 2;
+  // Tables referenced by the statement, so the core can resolve providers and
+  // the engine can bind them without parsing SQL for refs.
+  repeated rat.common.v1.TableRef tables = 3;
+}
+
+message ExecuteResponse {
+  rat.common.v1.WriteResult result = 1;
+}
+
+message QueryRequest {
+  rat.common.v1.RequestContext context = 1;
+  string sql = 2;
+  repeated rat.common.v1.TableRef tables = 3;
+}
+
+message QueryResponse {
+  // Out-of-band Arrow endpoint to pull result batches from.
+  rat.common.v1.ArrowStream stream = 1;
+}
+
+message PreviewRequest {
+  rat.common.v1.RequestContext context = 1;
+  string sql = 2;
+  repeated rat.common.v1.TableRef tables = 3;
+  // Max rows to return in the sample.
+  int64 limit = 4;
+}
+
+message PreviewResponse {
+  rat.common.v1.ArrowStream stream = 1;
+}

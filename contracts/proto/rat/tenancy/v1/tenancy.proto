@@ -1,0 +1,51 @@
+// Tenancy axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: tenancy` plugin decides tenant-boundary questions the core asks at
+// decision points (a permission check, a sharing grant, a quota test).
+//
+// Capability mapping:
+//   rat://tenancy/v1/decide -> Decide (a generic decision hook)
+//
+// C7 — TENANCY IS STRUCTURAL, NOT ADVISORY (reviews/00 Theme 4, reviews/01
+// Finding 3): the tenant dimension lives in core primitives (RequestContext.tenant
+// threads every RPC; the state gateway namespaces by it; storage vends creds
+// scoped to it). This plugin does NOT re-implement isolation — the core enforces
+// it structurally. The plugin only answers POLICY questions the core can't
+// hardcode (e.g. "may tenant A share dataset X with tenant B?"). The dangerous
+// reading the review flagged — "isolation is an emergent property of 4 plugins
+// agreeing" — is rejected: isolation is the core's job; this plugin is policy on
+// top of an already-enforced boundary.
+syntax = "proto3";
+
+package rat.tenancy.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/tenancy/v1;tenancyv1";
+
+service TenancyService {
+  // rat://tenancy/v1/decide — answer a policy decision the core poses at a hook
+  // point. The core enforces the verdict; the plugin only computes it.
+  rpc Decide(DecideRequest) returns (DecideResponse);
+}
+
+enum DecisionKind {
+  DECISION_KIND_UNSPECIFIED = 0;
+  DECISION_KIND_PERMISSION = 1;
+  DECISION_KIND_SHARING = 2;
+  DECISION_KIND_QUOTA = 3;
+}
+
+message DecideRequest {
+  rat.common.v1.RequestContext context = 1;
+  DecisionKind kind = 2;
+  // The action/resource under question (e.g. "share:dataset/orders").
+  string subject_action = 3;
+  // For cross-tenant decisions: the other tenant involved (empty otherwise).
+  string counterparty_tenant = 4;
+}
+
+message DecideResponse {
+  bool allowed = 1;
+  string reason = 2;
+}

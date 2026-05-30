@@ -1,0 +1,64 @@
+// Identity axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: identity` plugin (static-token, OIDC, mTLS) backs the core's Identity
+// Gateway (one of the six core things). Every request the API gateway accepts is
+// authenticated here before routing.
+//
+// Capability mapping:
+//   rat://identity/v1/authenticate -> Authenticate (credential -> subject)
+//   rat://identity/v1/authorize    -> Authorize    (subject + action -> allow?)
+//
+// C2 — PLUGIN-TO-CORE AUTH: this axis also resolves the plugin's OWN identity.
+// Per reviews/00 Theme 3, v2 already solved this (ADR-020: per-startup platform
+// token, constant-time compare). v3 inherits it as a CONTRACT: the default
+// identity plugin issues a per-plugin token at registration; Authenticate
+// constant-time-compares it. The default is NOT anonymous-root (reviews/04).
+//
+// NOTE: authz here is COARSE (is this subject allowed this action at all). The
+// per-capability call authorization (C5) is enforced by the API gateway against
+// the manifest `provides`/`requires`, not re-litigated per identity plugin.
+syntax = "proto3";
+
+package rat.identity.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/identity/v1;identityv1";
+
+service IdentityService {
+  // rat://identity/v1/authenticate — validate a credential, resolve the subject.
+  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+
+  // rat://identity/v1/authorize — coarse allow/deny for a subject + action.
+  rpc Authorize(AuthorizeRequest) returns (AuthorizeResponse);
+}
+
+message AuthenticateRequest {
+  // No RequestContext.subject yet — this is what establishes it. Trace fields
+  // still apply, so the gateway passes context for correlation only.
+  rat.common.v1.RequestContext context = 1;
+  // Opaque credential (bearer token, client-cert chain, etc.). Never logged.
+  bytes credential = 2;
+}
+
+message AuthenticateResponse {
+  bool authenticated = 1;
+  // The resolved subject to stamp onto downstream RequestContext.subject.
+  string subject = 2;
+  // The tenant this subject belongs to (stamped onto RequestContext.tenant).
+  string tenant = 3;
+}
+
+message AuthorizeRequest {
+  rat.common.v1.RequestContext context = 1;
+  // Action being attempted, e.g. "pipeline.run", "plane.create".
+  string action = 2;
+  // Optional resource the action targets.
+  string resource = 3;
+}
+
+message AuthorizeResponse {
+  bool allowed = 1;
+  // Optional human-readable reason on deny (for diagnostics, not enforcement).
+  string reason = 2;
+}

@@ -1,0 +1,69 @@
+// Catalog axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: catalog` plugin (Nessie, Unity, Lakekeeper, Glue, Polaris) owns
+// table metadata + branch/version semantics. It is what makes "branch-isolated
+// pipeline runs" (the v2 pipeline model we keep — overview.md) possible.
+//
+// Capability mapping:
+//   rat://catalog/v1/get-table    -> GetTable
+//   rat://catalog/v1/create-branch-> CreateBranch
+//   rat://catalog/v1/merge-branch -> MergeBranch
+//
+// Not every catalog supports branching (Glue doesn't); those plugins simply do
+// not `provide` the branch capabilities, and the registry won't wire a
+// branch-requiring strategy to them. Capability negotiation, not feature flags.
+syntax = "proto3";
+
+package rat.catalog.v1;
+
+import "rat/common/v1/context.proto";
+import "rat/common/v1/data.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/catalog/v1;catalogv1";
+
+service CatalogService {
+  // rat://catalog/v1/get-table — resolve a table identifier to a TableRef
+  // (physical location + current snapshot/branch).
+  rpc GetTable(GetTableRequest) returns (GetTableResponse);
+
+  // rat://catalog/v1/create-branch — open an isolated branch for a pipeline run.
+  rpc CreateBranch(CreateBranchRequest) returns (CreateBranchResponse);
+
+  // rat://catalog/v1/merge-branch — merge a completed run's branch back to main,
+  // after quality tests pass (the pre-merge gate of the v2 pipeline model).
+  rpc MergeBranch(MergeBranchRequest) returns (MergeBranchResponse);
+}
+
+message GetTableRequest {
+  rat.common.v1.RequestContext context = 1;
+  string identifier = 2;
+  // Optional branch to read from (empty == main).
+  string branch = 3;
+}
+
+message GetTableResponse {
+  rat.common.v1.TableRef table = 1;
+}
+
+message CreateBranchRequest {
+  rat.common.v1.RequestContext context = 1;
+  // Branch name to create (e.g. a run id).
+  string branch = 2;
+  // Branch point (empty == tip of main).
+  string from_branch = 3;
+}
+
+message CreateBranchResponse {
+  string branch = 1;
+}
+
+message MergeBranchRequest {
+  rat.common.v1.RequestContext context = 1;
+  string branch = 2;
+  string into_branch = 3;
+}
+
+message MergeBranchResponse {
+  // Resulting snapshot id on the target branch.
+  string snapshot_id = 1;
+}

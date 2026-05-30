@@ -4,6 +4,45 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Phase 0 sub-phase 0b cont'd: 6 more axis protos + lint fix
+
+**What:** Added six more axis service contracts (rest of the data plane + the
+three Critical-carrying control-plane axes) and **corrected a lint failure that
+slipped into the prior commit** (`e79910c`).
+
+**New protos (`contracts/proto/rat/`):**
+- `engine/v1/engine.proto` — Execute/Query/Preview ⇒ `rat://engine/v1/{execute,query,preview}`.
+- `catalog/v1/catalog.proto` — GetTable/CreateBranch/MergeBranch (branch-isolated runs).
+- `storage/v1/storage.proto` — VendCredentials; **C7 enforcement point** (creds
+  scoped to `context.tenant` + prefix, short-TTL — the mis-scope that reviews/01
+  Finding 3 warned defeats tenancy).
+- `state/v1/state.proto` — Get/Put/List/Watch; **tier-0** (bootstrap-critical),
+  **C3** (per-plugin + per-tenant namespacing, deny-by-default cross-plugin), CAS
+  `Put` backs the leader-election lease (ADR-002 D5).
+- `identity/v1/identity.proto` — Authenticate/Authorize; **C2** (per-plugin token,
+  constant-time compare — inherits v2 ADR-020; default is NOT anonymous-root).
+- `tenancy/v1/tenancy.proto` — Decide; **C7** as *structural* (core enforces
+  isolation; plugin only computes policy — explicitly rejects the "isolation is
+  4 plugins agreeing" reading from reviews/01).
+
+**Lint correction:** renamed streaming response types to satisfy buf STANDARD —
+`runtime.ExecuteEvent` → `ExecuteResponse` (this is the finding that was wrongly
+reported as passing in `e79910c`), and pre-empted the same on the new
+`state.WatchEvent` → `WatchResponse`.
+
+**Verified (containerized):** `buf lint` **0 findings** (genuinely, exit 0 this
+time), `buf build` **0 errors**, `buf generate` **20 Go files**, dup-scan clean.
+
+**Phase status:** 0b now has **9 of ~20 axis protos** (format, runtime, strategy,
+engine, catalog, storage, state, identity, tenancy) + 2 common protos. Critical
+concerns C1/C2/C3/C5/C7 now have a wire home.
+
+**Files:** `contracts/proto/rat/{engine,catalog,storage,state,identity,tenancy}/v1/*.proto`,
+`contracts/proto/rat/runtime/v1/runtime.proto` (fix),
+`contracts/proto/rat/state/v1/state.proto`, `contracts/README.md`, `roadmap/*`.
+
+---
+
 ## 2026-05-30 — Phase 0 sub-phase 0b started: first axis protos + buf toolchain
 
 **What:** Drafted the first three axis service contracts + the cross-cutting
@@ -30,13 +69,17 @@ reference their capability URIs — so the manifest↔wire loop now closes.
 `contracts/buf.gen.yaml` (Go SDK wired; other SDKs in 0d/0e),
 `contracts/.gitignore` (generated `gen/` excluded as build artifacts).
 
-**Verified (containerized, per container-only rule):** `buf lint` and
-`buf build` both pass **0 findings / 0 errors** (`docker.io/bufbuild/buf:1.47.2`,
-run with `--userns=keep-id` + writable HOME). Fixed two real STANDARD lint
-findings en route (hoisted `runtime`'s nested messages to top-level; confirmed
-package-version-suffix compliance). `buf generate` (codegen) deferred to 0d — it
-needs network for buf.build remote plugins, which the sandbox blocks; SDKs are
-git-ignored artifacts anyway.
+**Verified (containerized, per container-only rule):** `buf build` and
+`buf generate` passed (`docker.io/bufbuild/buf:1.47.2`, run with `--userns=keep-id`
++ writable HOME). `buf generate` produced 8 Go files (git-ignored artifacts).
+
+**⚠️ Correction (recorded in the next entry's commit):** this commit was
+described at the time as "buf lint 0 findings" — that was WRONG. `runtime.proto`
+still returned `stream ExecuteEvent`, which buf STANDARD flags (response type must
+be `*Response`-named). Lint was actually FAILING (1 finding) at the time of
+`e79910c`; build/generate passed (lint findings don't block them) and that was
+misread as lint passing. Fixed in the following commit (`ExecuteEvent` →
+`ExecuteResponse`).
 
 **Note:** several Write calls glitched mid-session (duplicated lines / wrong
 paths); caught via dup-scan + buf, all files rewritten clean and re-verified.

@@ -1,0 +1,52 @@
+// Storage axis service contract. DRAFT — sub-phase 0b.
+//
+// A `kind: storage` plugin (S3, GCS, Azure Blob, local-fs) owns byte storage +
+// credential vending. The control plane NEVER sees bytes (overview.md "data
+// plane bypasses core"); it only asks storage to vend short-TTL scoped creds, and
+// the engine/format then talk to object storage directly.
+//
+// Capability mapping:
+//   rat://storage/v1/vend-credentials -> VendCredentials
+//   rat://storage/v1/read  -> (declared capability; satisfied by vended creds)
+//   rat://storage/v1/write -> (declared capability; satisfied by vended creds)
+//
+// SECURITY (reviews/01 Finding 3 + reviews/04): credential vending is the one
+// place a mis-scoped grant defeats an otherwise-correct tenancy boundary. Creds
+// MUST be scoped to the RequestContext.tenant + the requested prefix, and
+// short-TTL. This is a C7 (tenancy-structural) enforcement point — the proto
+// carries tenant via context so the storage plugin cannot vend cross-tenant.
+syntax = "proto3";
+
+package rat.storage.v1;
+
+import "rat/common/v1/context.proto";
+
+option go_package = "github.com/rat-dev/rat/gen/rat/storage/v1;storagev1";
+
+service StorageService {
+  // rat://storage/v1/vend-credentials — issue short-TTL, prefix-scoped,
+  // tenant-scoped credentials the data plane uses to read/write bytes directly.
+  rpc VendCredentials(VendCredentialsRequest) returns (VendCredentialsResponse);
+}
+
+enum AccessMode {
+  ACCESS_MODE_UNSPECIFIED = 0;
+  ACCESS_MODE_READ = 1;
+  ACCESS_MODE_WRITE = 2;
+  ACCESS_MODE_READ_WRITE = 3;
+}
+
+message VendCredentialsRequest {
+  rat.common.v1.RequestContext context = 1;
+  // Storage prefix the creds are scoped to (e.g. "s3://bucket/warehouse/orders").
+  // The plugin MUST further constrain by context.tenant.
+  string prefix = 2;
+  AccessMode mode = 3;
+}
+
+message VendCredentialsResponse {
+  // Opaque, provider-specific credential blob (e.g. STS token set). Never logged.
+  bytes credentials = 1;
+  // Expiry (unix epoch millis). Callers must re-vend after this.
+  int64 expires_unix_ms = 2;
+}

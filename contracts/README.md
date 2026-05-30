@@ -24,9 +24,15 @@ contracts/
 │       ├── common/v1/
 │       │   ├── context.proto   # C1: RequestContext (trace+identity+tenant) ✅
 │       │   └── data.proto      # shared TableRef / ArrowStream / WriteResult ✅
-│       ├── format/v1/format.proto      # Resolve/Write/Maintain ✅
+│       ├── engine/v1/engine.proto      # Execute/Query/Preview ✅
 │       ├── runtime/v1/runtime.proto    # Execute (streaming) ✅
-│       └── strategy/v1/strategy.proto  # Apply ✅
+│       ├── format/v1/format.proto      # Resolve/Write/Maintain ✅
+│       ├── strategy/v1/strategy.proto  # Apply ✅
+│       ├── catalog/v1/catalog.proto    # GetTable/CreateBranch/MergeBranch ✅
+│       ├── storage/v1/storage.proto    # VendCredentials (C7 scope) ✅
+│       ├── state/v1/state.proto        # Get/Put/List/Watch (tier-0, C3) ✅
+│       ├── identity/v1/identity.proto  # Authenticate/Authorize (C2) ✅
+│       └── tenancy/v1/tenancy.proto    # Decide (C7 structural) ✅
 └── examples/
     ├── rat-strategy-scd2.plugin.yaml     # canonical valid manifest
     ├── rat-format-deltalake.plugin.yaml  # second valid manifest (signed)
@@ -39,8 +45,8 @@ contracts/
 |---|---|---|
 | 0a | Manifest envelope schema (`plugin.v1.json`) | ✅ draft |
 | 0a | Example + negative manifests | ✅ draft |
-| 0b | First 3 axis protos (format, runtime, strategy) | ✅ draft — buf lint + build clean |
-| 0b | Remaining ~17 axis protos | ⬜ not started |
+| 0b | 9 axis protos (format, runtime, strategy, engine, catalog, storage, state, identity, tenancy) | ✅ draft — buf lint + build + generate clean |
+| 0b | Remaining ~11 axis protos | ⬜ not started |
 | 0c | Cross-cutting protos (`common/v1/context.proto` ✅, audit envelope ⬜) | 🔶 context+data drafted |
 | 0d–0e | 12 reference implementations | ⬜ not started |
 | 0f | Conformance harness + `rat plugin validate` | ⬜ not started |

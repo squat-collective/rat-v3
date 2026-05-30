@@ -17,9 +17,11 @@ option go_package = "github.com/rat-dev/rat/gen/rat/runtime/v1;runtimev1";
 
 service RuntimeService {
   // rat://runtime/v1/execute — run a unit of work. Streams progress so the
-  // reconciler/UI can show liveness on long tasks; terminal event carries the
-  // outcome.
-  rpc Execute(ExecuteRequest) returns (stream ExecuteEvent);
+  // reconciler/UI can show liveness on long tasks; terminal message carries the
+  // outcome. Each streamed message is an ExecuteResponse (a progress-or-completed
+  // oneof) — named per the *Response convention buf STANDARD requires, even for
+  // streaming RPCs.
+  rpc Execute(ExecuteRequest) returns (stream ExecuteResponse);
 }
 
 message ExecuteRequest {
@@ -46,7 +48,9 @@ message ExecuteCompleted {
   rat.common.v1.WriteResult result = 3;
 }
 
-message ExecuteEvent {
+// One message in the Execute stream: either an interim progress update or the
+// terminal completion.
+message ExecuteResponse {
   oneof event {
     ExecuteProgress progress = 1;
     ExecuteCompleted completed = 2;

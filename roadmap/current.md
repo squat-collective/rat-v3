@@ -20,13 +20,14 @@ Entered Phase 0 on 2026-05-30 (exploratory mode — see commitment-gate note abo
 **Done so far:**
 - `contracts/` workspace created (`schema/`, `proto/`, `examples/`).
 - **0a:** `contracts/schema/plugin.v1.json` — manifest envelope schema (JSON Schema 2020-12), Critical fields C4/C5/C8 baked in. Two valid example manifests + negative-vector doc; container-validated (all green). Per-kind-schema decision recorded.
-- **0b (started):** first 3 axis protos drafted + the cross-cutting context — `common/v1/context.proto` (C1 trace/identity/tenant), `common/v1/data.proto`, `format/v1`, `runtime/v1`, `strategy/v1`. `buf` toolchain stood up (`buf.yaml`/`buf.gen.yaml`). **buf lint + build pass clean (0 findings)**, verified in container.
+- **0b (in progress):** **9 axis protos** drafted + cross-cutting context/data — `common/v1/{context,data}`, plus `engine`, `runtime`, `format`, `strategy`, `catalog`, `storage`, `state`, `identity`, `tenancy`. `buf` toolchain stood up. **buf lint + build + generate all pass clean** (verified in container; corrected a lint miss from commit `e79910c` — see done.md).
+- Critical concerns now with a wire home: C1 (context), C2 (identity), C3 (state namespacing), C5 (provides/enforcement), C7 (tenant in context + storage scope + tenancy plugin).
 
-**Next concrete step:** continue **0b** — draft the remaining axis protos. Priority order to keep closing loops:
-1. `engine/v1` (Execute/Query/Preview), `catalog/v1` (CreateBranch/GetTable/MergeBranch), `storage/v1` (VendCredentials) — the rest of the data plane.
-2. Then control-plane axes: `state/v1` (Get/Put/Watch/List — also the C3 namespacing surface), `identity/v1` (Authenticate/Authorize — C2), `tenancy/v1` (DecisionHook — C7).
+**Next concrete step:** finish **0b** — remaining ~11 axes. Highest-value next:
+1. `deployment-runtime/v1` (where plugins run — tier-0), `scheduler-backend/v1`, `secret-backend/v1`.
+2. Experience axes: `ui/v1`, `notifications/v1`; control: `observability/v1`, `audit-log/v1`, `billing/v1`, `marketplace/v1`.
 3. As each axis lands, derive its **per-kind manifest schema** (the 0a→0b handoff in `contracts/schema/README.md`).
-4. **0c next:** audit-event envelope proto (mandatory audit emission) + descriptors.
+4. **0c:** audit-event envelope proto (mandatory audit emission, C-I8) + the event-bus envelope (C1 trace in events, not just RPCs).
 
 **Deferred but now triggerable:** the `gofmt`/`buf format` `PostToolUse` hook (backlog) — the first `.proto` files now exist, so it can land. Also: pick the manifest-validator container image to make `rat plugin validate` (0f) real.
 
