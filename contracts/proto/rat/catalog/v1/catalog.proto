@@ -12,6 +12,22 @@
 // Not every catalog supports branching (Glue doesn't); those plugins simply do
 // not `provide` the branch capabilities, and the registry won't wire a
 // branch-requiring strategy to them. Capability negotiation, not feature flags.
+//
+// MERGE SAFETY (reviews/06 #8 = ARCH-4 / I-18): MergeBranch is the publish gate
+// of the pipeline model and the reconciler RETRIES it, so it must be safe under
+// retry AND concurrency. Two fields make it so:
+//   - `expected_into_snapshot` — optimistic concurrency on the target. The merge
+//     applies only if `into_branch` is still at this snapshot; otherwise it fails
+//     (the caller re-reads + re-tests). Without it, two concurrent merges into
+//     main silently lose one side's updates (lost-update).
+//   - `idempotency_key` — a stable id for THIS logical merge (e.g. the run id).
+//     A retry with the same key that already committed is a no-op that returns
+//     the original result (MergeBranchResponse.already_applied = true), so a
+//     reconciler retry can't double-apply.
+// NOTE: this is the branch-MERGE linkage. The separate gap — how the catalog
+// learns what format.Write put on a branch — is the additive commit-linkage RPC
+// (reviews/06 I-18), GA-deferred; only the request-shape change here is
+// freeze-gated.
 syntax = "proto3";
 
 package rat.catalog.v1;
@@ -61,9 +77,21 @@ message MergeBranchRequest {
   rat.common.v1.RequestContext context = 1;
   string branch = 2;
   string into_branch = 3;
+  // Optimistic-concurrency guard: the snapshot `into_branch` is expected to be at
+  // for this merge to apply. Empty == unconditional (no concurrency guard — only
+  // safe when the caller knows it's the sole writer). See MERGE SAFETY above.
+  string expected_into_snapshot = 4;
+  // Stable id for this logical merge (e.g. the pipeline run id). Makes MergeBranch
+  // idempotent under reconciler retry: re-submitting a key that already committed
+  // is a no-op returning the original result. Empty == not idempotent (each call
+  // is a fresh merge attempt).
+  string idempotency_key = 5;
 }
 
 message MergeBranchResponse {
   // Resulting snapshot id on the target branch.
   string snapshot_id = 1;
+  // True if this response reflects a previously-committed merge with the same
+  // idempotency_key (the retry was a no-op), rather than a merge applied now.
+  bool already_applied = 2;
 }

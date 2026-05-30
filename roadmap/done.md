@@ -4,6 +4,26 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-30 — Freeze-blocker #8: catalog.MergeBranch idempotency + concurrency
+
+**What:** reviews/06 #8 (ARCH-4 / I-18) — `MergeBranch` is the publish gate of the pipeline model and the reconciler retries it, but it took only branch names: a retried merge could double-apply and concurrent merges into main could lose updates. Added two request fields + one response field.
+
+**`MergeBranchRequest` gains:**
+- `expected_into_snapshot` (4) — optimistic-concurrency guard; the merge applies only if `into_branch` is still at this snapshot, else it fails and the caller re-reads/re-tests. Closes the lost-update window between concurrent merges. Empty == unconditional (sole-writer only).
+- `idempotency_key` (5) — stable id for the logical merge (e.g. run id); a retry with a key that already committed is a no-op returning the original result. Closes the double-apply window under reconciler retry.
+
+**`MergeBranchResponse` gains:** `already_applied` (2) — true when the response reflects a previously-committed merge (idempotent retry) rather than a fresh apply.
+
+**Scope:** only the request-shape change is freeze-gated. The separate I-18 gap — how the catalog learns what `format.Write` wrote to a branch (a new commit-linkage RPC) — is additive and stays GA-deferred.
+
+**Verified:** buf lint 0 / build 0 / generate 42 Go files (fields compile into existing catalog package files); dup-free.
+
+**Next:** freeze-blocker #9 — the smaller-wire-fix cluster (error convention, `secret.Resolve.found`, Arrow role field, `Ingest` shape, timestamp type, `slots.target` wrap + freeze-slivers).
+
+**Files:** `contracts/proto/rat/catalog/v1/catalog.proto`.
+
+---
+
 ## 2026-05-30 — Freeze-blocker #7: common/v1/event.proto (async event-bus envelope)
 
 **What:** reviews/06 ARCH-1 — the async plane (event bus, one of the six core things) had NO wire envelope, so distributed tracing broke across the async boundary and multi-tenant event routing was undefined, while every sync RPC carried `RequestContext`. Added `common/v1/event.proto` defining the `Event` envelope.
