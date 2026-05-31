@@ -10,6 +10,13 @@
 // core's C8 emission from depending on an axis contract — the layering the synthesis
 // cross-cutting rule requires (reviews/00 C1–C10; plugin-architecture.md).
 //
+// AUDIT-ON-DENY IS MANDATORY (S3, reviews/07 — a C8 conformance obligation, not a
+// best-effort): the gateway emits EXACTLY ONE AuditRecord per enforcement decision,
+// INCLUDING denials — a DENIED outcome (AUDIT_OUTCOME_DENIED) on a failed C2/C5/C7
+// check MUST still produce a record, never a silent drop. (A gateway that audits
+// only the allow-path lets denied access go unrecorded — the exact gap a freeze
+// review flagged in the throwaway stub.) For streams: one record at open (ADR-008).
+//
 // Moved here from rat.auditlog.v1 in sub-phase 0c (finalize cross-cutting protos).
 // WIRE-COMPATIBLE: field numbers are unchanged, so the canonical serialization +
 // signatures + hash chain are byte-identical; only the proto package (and the
