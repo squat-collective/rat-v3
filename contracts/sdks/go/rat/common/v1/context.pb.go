@@ -301,30 +301,51 @@ func (x *Identity) GetTenant() string {
 // the keystone (reviews/06 C-1, confused-deputy refinement).
 //
 // VERIFICATION CONTRACT — every hop that consumes this assertion MUST:
-//  1. verify `signature` over (principal, tenant, bound_correlation_id,
-//     expires_unix_ms) against the core's published verification key;
+//  1. select the verification key by `key_id` from the core's published keyring
+//     (which also pins the algorithm — so rotation/agility is a new key_id), then
+//     verify `signature` over (principal, tenant, bound_correlation_id,
+//     expires_unix_ms, key_id) against that key;
 //  2. check bound_correlation_id == inbound TraceContext.correlation_id
 //     (an assertion is valid only for the operation it was minted for — a
 //     downstream plugin cannot bank it and reuse it for an unrelated op within
 //     the same tenant);
-//  3. check now <= expires_unix_ms (short-TTL belt-and-braces).
+//  3. check now <= expires_unix_ms (short-TTL belt-and-braces);
+//  4. CROSS-CHECK THE BARE MIRRORS (M4, reviews/07): the bare Identity.tenant and
+//     this `principal` MUST equal the signature-covered tenant + principal, else
+//     reject. The bare strings are convenience mirrors of the signed payload; a
+//     hop that reads them (instead of the verified values) must not be handed a
+//     value the signature does not cover.
 //
 // A `principal` value not covered by a valid signature MUST NOT be trusted —
 // the bare string is a convenience mirror of the signed payload, nothing more.
+//
+// TRUST BASIS for the UNSIGNED principals (M4): `caller_plugin` and `tenant` in
+// Identity are NOT individually signed — `caller_plugin` is re-derived by the core
+// per hop and `tenant` is server-stamped (and additionally covered by THIS
+// assertion's signature, cross-checked in step 4). Their integrity therefore rests
+// on AUTHENTICATED TRANSPORT (C2: mTLS / per-plugin token on the core↔plugin
+// channel). On an unauthenticated channel they are forgeable — so a non-mTLS
+// transport is out of contract for any multi-tenant deployment.
 type SubjectAssertion struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The authenticated end-user principal id (the signed, authoritative value
 	// mirrored here for convenience). Empty for bootstrap/pre-auth calls.
 	Principal string `protobuf:"bytes,1,opt,name=principal,proto3" json:"principal,omitempty"`
 	// The core's detached signature over (principal, tenant, bound_correlation_id,
-	// expires_unix_ms). The authority of this assertion. NEVER trust `principal`
-	// without verifying this.
+	// expires_unix_ms, key_id). The authority of this assertion. NEVER trust
+	// `principal` without verifying this.
 	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
 	// The correlation_id this assertion is bound to — must equal the inbound
 	// TraceContext.correlation_id at every consuming hop (anti-stockpile).
 	BoundCorrelationId string `protobuf:"bytes,3,opt,name=bound_correlation_id,json=boundCorrelationId,proto3" json:"bound_correlation_id,omitempty"`
 	// Expiry (unix epoch millis). Short-TTL; re-mint rather than cache past this.
 	ExpiresUnixMs int64 `protobuf:"varint,4,opt,name=expires_unix_ms,json=expiresUnixMs,proto3" json:"expires_unix_ms,omitempty"`
+	// Identifier of the core key that signed this assertion (M3, reviews/07).
+	// Resolves in the core's published keyring to {public key, algorithm}; a verifier
+	// picks the key by this id (step 1). Key ROTATION and algorithm AGILITY are both
+	// "mint under a new key_id" — no separate on-wire `alg` field. Covered by the
+	// signature. Empty only for a single-key deployment that never rotates.
+	KeyId         string `protobuf:"bytes,5,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -387,6 +408,13 @@ func (x *SubjectAssertion) GetExpiresUnixMs() int64 {
 	return 0
 }
 
+func (x *SubjectAssertion) GetKeyId() string {
+	if x != nil {
+		return x.KeyId
+	}
+	return ""
+}
+
 var File_rat_common_v1_context_proto protoreflect.FileDescriptor
 
 const file_rat_common_v1_context_proto_rawDesc = "" +
@@ -405,12 +433,13 @@ const file_rat_common_v1_context_proto_rawDesc = "" +
 	"\bIdentity\x12#\n" +
 	"\rcaller_plugin\x18\x01 \x01(\tR\fcallerPlugin\x129\n" +
 	"\asubject\x18\x02 \x01(\v2\x1f.rat.common.v1.SubjectAssertionR\asubject\x12\x16\n" +
-	"\x06tenant\x18\x03 \x01(\tR\x06tenant\"\xa8\x01\n" +
+	"\x06tenant\x18\x03 \x01(\tR\x06tenant\"\xbf\x01\n" +
 	"\x10SubjectAssertion\x12\x1c\n" +
 	"\tprincipal\x18\x01 \x01(\tR\tprincipal\x12\x1c\n" +
 	"\tsignature\x18\x02 \x01(\fR\tsignature\x120\n" +
 	"\x14bound_correlation_id\x18\x03 \x01(\tR\x12boundCorrelationId\x12&\n" +
-	"\x0fexpires_unix_ms\x18\x04 \x01(\x03R\rexpiresUnixMsB3Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1b\x06proto3"
+	"\x0fexpires_unix_ms\x18\x04 \x01(\x03R\rexpiresUnixMs\x12\x15\n" +
+	"\x06key_id\x18\x05 \x01(\tR\x05keyIdB3Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1b\x06proto3"
 
 var (
 	file_rat_common_v1_context_proto_rawDescOnce sync.Once

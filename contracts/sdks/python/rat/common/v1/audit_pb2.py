@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19rat/common/v1/audit.proto\x12\rrat.common.v1\"\xc8\x02\n\x0b\x41uditRecord\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n\tprev_hash\x18\x02 \x01(\tR\x08prevHash\x12*\n\x11timestamp_unix_ms\x18\x03 \x01(\x03R\x0ftimestampUnixMs\x12\x18\n\x07subject\x18\x04 \x01(\tR\x07subject\x12\x16\n\x06tenant\x18\x05 \x01(\tR\x06tenant\x12\x16\n\x06\x61\x63tion\x18\x06 \x01(\tR\x06\x61\x63tion\x12\x1a\n\x08resource\x18\x07 \x01(\tR\x08resource\x12\x35\n\x07outcome\x18\x08 \x01(\x0e\x32\x1b.rat.common.v1.AuditOutcomeR\x07outcome\x12%\n\x0e\x63orrelation_id\x18\t \x01(\tR\rcorrelationId\x12\x1c\n\tsignature\x18\n \x01(\x0cR\tsignature*{\n\x0c\x41uditOutcome\x12\x1d\n\x19\x41UDIT_OUTCOME_UNSPECIFIED\x10\x00\x12\x19\n\x15\x41UDIT_OUTCOME_SUCCESS\x10\x01\x12\x18\n\x14\x41UDIT_OUTCOME_DENIED\x10\x02\x12\x17\n\x13\x41UDIT_OUTCOME_ERROR\x10\x03\x42\x33Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19rat/common/v1/audit.proto\x12\rrat.common.v1\"\xdf\x02\n\x0b\x41uditRecord\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n\tprev_hash\x18\x02 \x01(\tR\x08prevHash\x12*\n\x11timestamp_unix_ms\x18\x03 \x01(\x03R\x0ftimestampUnixMs\x12\x18\n\x07subject\x18\x04 \x01(\tR\x07subject\x12\x16\n\x06tenant\x18\x05 \x01(\tR\x06tenant\x12\x16\n\x06\x61\x63tion\x18\x06 \x01(\tR\x06\x61\x63tion\x12\x1a\n\x08resource\x18\x07 \x01(\tR\x08resource\x12\x35\n\x07outcome\x18\x08 \x01(\x0e\x32\x1b.rat.common.v1.AuditOutcomeR\x07outcome\x12%\n\x0e\x63orrelation_id\x18\t \x01(\tR\rcorrelationId\x12\x1c\n\tsignature\x18\n \x01(\x0cR\tsignature\x12\x15\n\x06key_id\x18\x0b \x01(\tR\x05keyId*{\n\x0c\x41uditOutcome\x12\x1d\n\x19\x41UDIT_OUTCOME_UNSPECIFIED\x10\x00\x12\x19\n\x15\x41UDIT_OUTCOME_SUCCESS\x10\x01\x12\x18\n\x14\x41UDIT_OUTCOME_DENIED\x10\x02\x12\x17\n\x13\x41UDIT_OUTCOME_ERROR\x10\x03\x42\x33Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,8 +32,8 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rat.common.v1.audit_pb2', _
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1'
-  _globals['_AUDITOUTCOME']._serialized_start=375
-  _globals['_AUDITOUTCOME']._serialized_end=498
+  _globals['_AUDITOUTCOME']._serialized_start=398
+  _globals['_AUDITOUTCOME']._serialized_end=521
   _globals['_AUDITRECORD']._serialized_start=45
-  _globals['_AUDITRECORD']._serialized_end=373
+  _globals['_AUDITRECORD']._serialized_end=396
 # @@protoc_insertion_point(module_scope)

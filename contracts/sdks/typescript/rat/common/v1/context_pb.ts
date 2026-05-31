@@ -46,7 +46,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/common/v1/context.proto.
  */
 export const file_rat_common_v1_context: GenFile = /*@__PURE__*/
-  fileDesc("ChtyYXQvY29tbW9uL3YxL2NvbnRleHQucHJvdG8SDXJhdC5jb21tb24udjEigQEKDlJlcXVlc3RDb250ZXh0EioKBXRyYWNlGAEgASgLMhsucmF0LmNvbW1vbi52MS5UcmFjZUNvbnRleHQSKQoIaWRlbnRpdHkYAiABKAsyFy5yYXQuY29tbW9uLnYxLklkZW50aXR5EhgKEGRlYWRsaW5lX3VuaXhfbXMYAyABKAMiTwoMVHJhY2VDb250ZXh0EhMKC3RyYWNlcGFyZW50GAEgASgJEhIKCnRyYWNlc3RhdGUYAiABKAkSFgoOY29ycmVsYXRpb25faWQYAyABKAkiYwoISWRlbnRpdHkSFQoNY2FsbGVyX3BsdWdpbhgBIAEoCRIwCgdzdWJqZWN0GAIgASgLMh8ucmF0LmNvbW1vbi52MS5TdWJqZWN0QXNzZXJ0aW9uEg4KBnRlbmFudBgDIAEoCSJvChBTdWJqZWN0QXNzZXJ0aW9uEhEKCXByaW5jaXBhbBgBIAEoCRIRCglzaWduYXR1cmUYAiABKAwSHAoUYm91bmRfY29ycmVsYXRpb25faWQYAyABKAkSFwoPZXhwaXJlc191bml4X21zGAQgASgDQjNaMWdpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9jb21tb24vdjE7Y29tbW9udjFiBnByb3RvMw");
+  fileDesc("ChtyYXQvY29tbW9uL3YxL2NvbnRleHQucHJvdG8SDXJhdC5jb21tb24udjEigQEKDlJlcXVlc3RDb250ZXh0EioKBXRyYWNlGAEgASgLMhsucmF0LmNvbW1vbi52MS5UcmFjZUNvbnRleHQSKQoIaWRlbnRpdHkYAiABKAsyFy5yYXQuY29tbW9uLnYxLklkZW50aXR5EhgKEGRlYWRsaW5lX3VuaXhfbXMYAyABKAMiTwoMVHJhY2VDb250ZXh0EhMKC3RyYWNlcGFyZW50GAEgASgJEhIKCnRyYWNlc3RhdGUYAiABKAkSFgoOY29ycmVsYXRpb25faWQYAyABKAkiYwoISWRlbnRpdHkSFQoNY2FsbGVyX3BsdWdpbhgBIAEoCRIwCgdzdWJqZWN0GAIgASgLMh8ucmF0LmNvbW1vbi52MS5TdWJqZWN0QXNzZXJ0aW9uEg4KBnRlbmFudBgDIAEoCSJ/ChBTdWJqZWN0QXNzZXJ0aW9uEhEKCXByaW5jaXBhbBgBIAEoCRIRCglzaWduYXR1cmUYAiABKAwSHAoUYm91bmRfY29ycmVsYXRpb25faWQYAyABKAkSFwoPZXhwaXJlc191bml4X21zGAQgASgDEg4KBmtleV9pZBgFIAEoCUIzWjFnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvY29tbW9uL3YxO2NvbW1vbnYxYgZwcm90bzM");
 
 /**
  * RequestContext is carried in the `rat-callmeta-bin` transport-metadata header
@@ -206,15 +206,30 @@ export const IdentitySchema: GenMessage<Identity> = /*@__PURE__*/
  * the keystone (reviews/06 C-1, confused-deputy refinement).
  *
  * VERIFICATION CONTRACT — every hop that consumes this assertion MUST:
- *   1. verify `signature` over (principal, tenant, bound_correlation_id,
- *      expires_unix_ms) against the core's published verification key;
+ *   1. select the verification key by `key_id` from the core's published keyring
+ *      (which also pins the algorithm — so rotation/agility is a new key_id), then
+ *      verify `signature` over (principal, tenant, bound_correlation_id,
+ *      expires_unix_ms, key_id) against that key;
  *   2. check bound_correlation_id == inbound TraceContext.correlation_id
  *      (an assertion is valid only for the operation it was minted for — a
  *      downstream plugin cannot bank it and reuse it for an unrelated op within
  *      the same tenant);
- *   3. check now <= expires_unix_ms (short-TTL belt-and-braces).
+ *   3. check now <= expires_unix_ms (short-TTL belt-and-braces);
+ *   4. CROSS-CHECK THE BARE MIRRORS (M4, reviews/07): the bare Identity.tenant and
+ *      this `principal` MUST equal the signature-covered tenant + principal, else
+ *      reject. The bare strings are convenience mirrors of the signed payload; a
+ *      hop that reads them (instead of the verified values) must not be handed a
+ *      value the signature does not cover.
  * A `principal` value not covered by a valid signature MUST NOT be trusted —
  * the bare string is a convenience mirror of the signed payload, nothing more.
+ *
+ * TRUST BASIS for the UNSIGNED principals (M4): `caller_plugin` and `tenant` in
+ * Identity are NOT individually signed — `caller_plugin` is re-derived by the core
+ * per hop and `tenant` is server-stamped (and additionally covered by THIS
+ * assertion's signature, cross-checked in step 4). Their integrity therefore rests
+ * on AUTHENTICATED TRANSPORT (C2: mTLS / per-plugin token on the core↔plugin
+ * channel). On an unauthenticated channel they are forgeable — so a non-mTLS
+ * transport is out of contract for any multi-tenant deployment.
  *
  * @generated from message rat.common.v1.SubjectAssertion
  */
@@ -229,8 +244,8 @@ export type SubjectAssertion = Message<"rat.common.v1.SubjectAssertion"> & {
 
   /**
    * The core's detached signature over (principal, tenant, bound_correlation_id,
-   * expires_unix_ms). The authority of this assertion. NEVER trust `principal`
-   * without verifying this.
+   * expires_unix_ms, key_id). The authority of this assertion. NEVER trust
+   * `principal` without verifying this.
    *
    * @generated from field: bytes signature = 2;
    */
@@ -250,6 +265,17 @@ export type SubjectAssertion = Message<"rat.common.v1.SubjectAssertion"> & {
    * @generated from field: int64 expires_unix_ms = 4;
    */
   expiresUnixMs: bigint;
+
+  /**
+   * Identifier of the core key that signed this assertion (M3, reviews/07).
+   * Resolves in the core's published keyring to {public key, algorithm}; a verifier
+   * picks the key by this id (step 1). Key ROTATION and algorithm AGILITY are both
+   * "mint under a new key_id" — no separate on-wire `alg` field. Covered by the
+   * signature. Empty only for a single-key deployment that never rotates.
+   *
+   * @generated from field: string key_id = 5;
+   */
+  keyId: string;
 };
 
 /**

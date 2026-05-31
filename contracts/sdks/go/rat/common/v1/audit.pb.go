@@ -100,6 +100,8 @@ func (AuditOutcome) EnumDescriptor() ([]byte, []int) {
 // present exactly once, no unknown fields, varints in minimal form, default-valued
 // fields omitted. This deterministic form is the canonical record bytes; the core
 // hashes/signs exactly these bytes and verifiers recompute them identically.
+// `key_id` (field 11) is INCLUDED in these signed bytes — the signature commits to
+// which key it claims to be from, defeating key-substitution.
 type AuditRecord struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Core-assigned chain position id (monotonic). Set by the CORE, never the caller.
@@ -117,11 +119,19 @@ type AuditRecord struct {
 	Outcome  AuditOutcome `protobuf:"varint,8,opt,name=outcome,proto3,enum=rat.common.v1.AuditOutcome" json:"outcome,omitempty"`
 	// Correlation back to the operation (C1).
 	CorrelationId string `protobuf:"bytes,9,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
-	// Core's Ed25519 signature over this record's canonical serialization (all fields
-	// above; this field itself is excluded from the signed bytes). The authority of
-	// the record — a sink verifies against the core's published key and rejects any
+	// Core's signature over this record's canonical serialization (all fields above
+	// PLUS key_id; this field itself is excluded from the signed bytes). The authority
+	// of the record — a sink verifies against the core's published key and rejects any
 	// record whose signature does not verify.
-	Signature     []byte `protobuf:"bytes,10,opt,name=signature,proto3" json:"signature,omitempty"`
+	Signature []byte `protobuf:"bytes,10,opt,name=signature,proto3" json:"signature,omitempty"`
+	// Identifier of the core verification key that signed this record (M3,
+	// reviews/07). Resolves, in the core's PUBLISHED keyring, to {public key,
+	// signature algorithm} — so a verifier picks the right key without out-of-band
+	// agreement, key ROTATION is a new key_id on new records (old records still verify
+	// against the retired key, which the keyring retains), and algorithm AGILITY is a
+	// new key_id bound to a new algorithm (no separate on-wire `alg` field needed).
+	// Empty is permitted ONLY for a single-key deployment that never rotates.
+	KeyId         string `protobuf:"bytes,11,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -226,11 +236,18 @@ func (x *AuditRecord) GetSignature() []byte {
 	return nil
 }
 
+func (x *AuditRecord) GetKeyId() string {
+	if x != nil {
+		return x.KeyId
+	}
+	return ""
+}
+
 var File_rat_common_v1_audit_proto protoreflect.FileDescriptor
 
 const file_rat_common_v1_audit_proto_rawDesc = "" +
 	"\n" +
-	"\x19rat/common/v1/audit.proto\x12\rrat.common.v1\"\xc8\x02\n" +
+	"\x19rat/common/v1/audit.proto\x12\rrat.common.v1\"\xdf\x02\n" +
 	"\vAuditRecord\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tprev_hash\x18\x02 \x01(\tR\bprevHash\x12*\n" +
@@ -242,7 +259,8 @@ const file_rat_common_v1_audit_proto_rawDesc = "" +
 	"\aoutcome\x18\b \x01(\x0e2\x1b.rat.common.v1.AuditOutcomeR\aoutcome\x12%\n" +
 	"\x0ecorrelation_id\x18\t \x01(\tR\rcorrelationId\x12\x1c\n" +
 	"\tsignature\x18\n" +
-	" \x01(\fR\tsignature*{\n" +
+	" \x01(\fR\tsignature\x12\x15\n" +
+	"\x06key_id\x18\v \x01(\tR\x05keyId*{\n" +
 	"\fAuditOutcome\x12\x1d\n" +
 	"\x19AUDIT_OUTCOME_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15AUDIT_OUTCOME_SUCCESS\x10\x01\x12\x18\n" +

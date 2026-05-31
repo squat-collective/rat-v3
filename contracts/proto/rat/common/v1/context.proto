@@ -127,23 +127,38 @@ message Identity {
 // the keystone (reviews/06 C-1, confused-deputy refinement).
 //
 // VERIFICATION CONTRACT — every hop that consumes this assertion MUST:
-//   1. verify `signature` over (principal, tenant, bound_correlation_id,
-//      expires_unix_ms) against the core's published verification key;
+//   1. select the verification key by `key_id` from the core's published keyring
+//      (which also pins the algorithm — so rotation/agility is a new key_id), then
+//      verify `signature` over (principal, tenant, bound_correlation_id,
+//      expires_unix_ms, key_id) against that key;
 //   2. check bound_correlation_id == inbound TraceContext.correlation_id
 //      (an assertion is valid only for the operation it was minted for — a
 //      downstream plugin cannot bank it and reuse it for an unrelated op within
 //      the same tenant);
-//   3. check now <= expires_unix_ms (short-TTL belt-and-braces).
+//   3. check now <= expires_unix_ms (short-TTL belt-and-braces);
+//   4. CROSS-CHECK THE BARE MIRRORS (M4, reviews/07): the bare Identity.tenant and
+//      this `principal` MUST equal the signature-covered tenant + principal, else
+//      reject. The bare strings are convenience mirrors of the signed payload; a
+//      hop that reads them (instead of the verified values) must not be handed a
+//      value the signature does not cover.
 // A `principal` value not covered by a valid signature MUST NOT be trusted —
 // the bare string is a convenience mirror of the signed payload, nothing more.
+//
+// TRUST BASIS for the UNSIGNED principals (M4): `caller_plugin` and `tenant` in
+// Identity are NOT individually signed — `caller_plugin` is re-derived by the core
+// per hop and `tenant` is server-stamped (and additionally covered by THIS
+// assertion's signature, cross-checked in step 4). Their integrity therefore rests
+// on AUTHENTICATED TRANSPORT (C2: mTLS / per-plugin token on the core↔plugin
+// channel). On an unauthenticated channel they are forgeable — so a non-mTLS
+// transport is out of contract for any multi-tenant deployment.
 message SubjectAssertion {
   // The authenticated end-user principal id (the signed, authoritative value
   // mirrored here for convenience). Empty for bootstrap/pre-auth calls.
   string principal = 1;
 
   // The core's detached signature over (principal, tenant, bound_correlation_id,
-  // expires_unix_ms). The authority of this assertion. NEVER trust `principal`
-  // without verifying this.
+  // expires_unix_ms, key_id). The authority of this assertion. NEVER trust
+  // `principal` without verifying this.
   bytes signature = 2;
 
   // The correlation_id this assertion is bound to — must equal the inbound
@@ -152,4 +167,11 @@ message SubjectAssertion {
 
   // Expiry (unix epoch millis). Short-TTL; re-mint rather than cache past this.
   int64 expires_unix_ms = 4;
+
+  // Identifier of the core key that signed this assertion (M3, reviews/07).
+  // Resolves in the core's published keyring to {public key, algorithm}; a verifier
+  // picks the key by this id (step 1). Key ROTATION and algorithm AGILITY are both
+  // "mint under a new key_id" — no separate on-wire `alg` field. Covered by the
+  // signature. Empty only for a single-key deployment that never rotates.
+  string key_id = 5;
 }

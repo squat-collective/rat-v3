@@ -75,6 +75,13 @@ export const GetTableRequestSchema: GenMessage<GetTableRequest> = /*@__PURE__*/
  */
 export type GetTableResponse = Message<"rat.catalog.v1.GetTableResponse"> & {
   /**
+   * NO `found` field BY DESIGN (error-model M2, common/v1/ERROR_MODEL.md): a
+   * GetTable on a named table the caller asserts exists is not normal control flow
+   * and is not enumeration-sensitive, so an unknown identifier is an ERROR —
+   * `NOT_FOUND` status, not a `found=false` outcome. (Contrast state.Get /
+   * secret.Resolve, which DO use a `found` bool — read-miss is normal there, and
+   * secret additionally collapses forbidden into absent for anti-enumeration.)
+   *
    * @generated from field: rat.common.v1.TableRef table = 1;
    */
   table?: TableRef | undefined;

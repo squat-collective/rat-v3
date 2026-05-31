@@ -107,8 +107,14 @@ func (x *GetTableRequest) GetBranch() string {
 }
 
 type GetTableResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Table         *v1.TableRef           `protobuf:"bytes,1,opt,name=table,proto3" json:"table,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// NO `found` field BY DESIGN (error-model M2, common/v1/ERROR_MODEL.md): a
+	// GetTable on a named table the caller asserts exists is not normal control flow
+	// and is not enumeration-sensitive, so an unknown identifier is an ERROR —
+	// `NOT_FOUND` status, not a `found=false` outcome. (Contrast state.Get /
+	// secret.Resolve, which DO use a `found` bool — read-miss is normal there, and
+	// secret additionally collapses forbidden into absent for anti-enumeration.)
+	Table         *v1.TableRef `protobuf:"bytes,1,opt,name=table,proto3" json:"table,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

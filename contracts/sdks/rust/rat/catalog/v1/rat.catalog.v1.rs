@@ -10,6 +10,12 @@ pub struct GetTableRequest {
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetTableResponse {
+    /// NO `found` field BY DESIGN (error-model M2, common/v1/ERROR_MODEL.md): a
+    /// GetTable on a named table the caller asserts exists is not normal control flow
+    /// and is not enumeration-sensitive, so an unknown identifier is an ERROR —
+    /// `NOT_FOUND` status, not a `found=false` outcome. (Contrast state.Get /
+    /// secret.Resolve, which DO use a `found` bool — read-miss is normal there, and
+    /// secret additionally collapses forbidden into absent for anti-enumeration.)
     #[prost(message, optional, tag="1")]
     pub table: ::core::option::Option<super::super::common::v1::TableRef>,
 }

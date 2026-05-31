@@ -37,6 +37,8 @@ enum AuditOutcome {
 // present exactly once, no unknown fields, varints in minimal form, default-valued
 // fields omitted. This deterministic form is the canonical record bytes; the core
 // hashes/signs exactly these bytes and verifiers recompute them identically.
+// `key_id` (field 11) is INCLUDED in these signed bytes — the signature commits to
+// which key it claims to be from, defeating key-substitution.
 message AuditRecord {
   // Core-assigned chain position id (monotonic). Set by the CORE, never the caller.
   // With prev_hash this forms the linear hash chain.
@@ -53,9 +55,17 @@ message AuditRecord {
   AuditOutcome outcome = 8;
   // Correlation back to the operation (C1).
   string correlation_id = 9;
-  // Core's Ed25519 signature over this record's canonical serialization (all fields
-  // above; this field itself is excluded from the signed bytes). The authority of
-  // the record — a sink verifies against the core's published key and rejects any
+  // Core's signature over this record's canonical serialization (all fields above
+  // PLUS key_id; this field itself is excluded from the signed bytes). The authority
+  // of the record — a sink verifies against the core's published key and rejects any
   // record whose signature does not verify.
   bytes signature = 10;
+  // Identifier of the core verification key that signed this record (M3,
+  // reviews/07). Resolves, in the core's PUBLISHED keyring, to {public key,
+  // signature algorithm} — so a verifier picks the right key without out-of-band
+  // agreement, key ROTATION is a new key_id on new records (old records still verify
+  // against the retired key, which the keyring retains), and algorithm AGILITY is a
+  // new key_id bound to a new algorithm (no separate on-wire `alg` field needed).
+  // Empty is permitted ONLY for a single-key deployment that never rotates.
+  string key_id = 11;
 }

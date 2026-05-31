@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1brat/common/v1/context.proto\x12\rrat.common.v1\"\xa2\x01\n\x0eRequestContext\x12\x31\n\x05trace\x18\x01 \x01(\x0b\x32\x1b.rat.common.v1.TraceContextR\x05trace\x12\x33\n\x08identity\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.IdentityR\x08identity\x12(\n\x10\x64\x65\x61\x64line_unix_ms\x18\x03 \x01(\x03R\x0e\x64\x65\x61\x64lineUnixMs\"w\n\x0cTraceContext\x12 \n\x0btraceparent\x18\x01 \x01(\tR\x0btraceparent\x12\x1e\n\ntracestate\x18\x02 \x01(\tR\ntracestate\x12%\n\x0e\x63orrelation_id\x18\x03 \x01(\tR\rcorrelationId\"\x82\x01\n\x08Identity\x12#\n\rcaller_plugin\x18\x01 \x01(\tR\x0c\x63\x61llerPlugin\x12\x39\n\x07subject\x18\x02 \x01(\x0b\x32\x1f.rat.common.v1.SubjectAssertionR\x07subject\x12\x16\n\x06tenant\x18\x03 \x01(\tR\x06tenant\"\xa8\x01\n\x10SubjectAssertion\x12\x1c\n\tprincipal\x18\x01 \x01(\tR\tprincipal\x12\x1c\n\tsignature\x18\x02 \x01(\x0cR\tsignature\x12\x30\n\x14\x62ound_correlation_id\x18\x03 \x01(\tR\x12\x62oundCorrelationId\x12&\n\x0f\x65xpires_unix_ms\x18\x04 \x01(\x03R\rexpiresUnixMsB3Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1brat/common/v1/context.proto\x12\rrat.common.v1\"\xa2\x01\n\x0eRequestContext\x12\x31\n\x05trace\x18\x01 \x01(\x0b\x32\x1b.rat.common.v1.TraceContextR\x05trace\x12\x33\n\x08identity\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.IdentityR\x08identity\x12(\n\x10\x64\x65\x61\x64line_unix_ms\x18\x03 \x01(\x03R\x0e\x64\x65\x61\x64lineUnixMs\"w\n\x0cTraceContext\x12 \n\x0btraceparent\x18\x01 \x01(\tR\x0btraceparent\x12\x1e\n\ntracestate\x18\x02 \x01(\tR\ntracestate\x12%\n\x0e\x63orrelation_id\x18\x03 \x01(\tR\rcorrelationId\"\x82\x01\n\x08Identity\x12#\n\rcaller_plugin\x18\x01 \x01(\tR\x0c\x63\x61llerPlugin\x12\x39\n\x07subject\x18\x02 \x01(\x0b\x32\x1f.rat.common.v1.SubjectAssertionR\x07subject\x12\x16\n\x06tenant\x18\x03 \x01(\tR\x06tenant\"\xbf\x01\n\x10SubjectAssertion\x12\x1c\n\tprincipal\x18\x01 \x01(\tR\tprincipal\x12\x1c\n\tsignature\x18\x02 \x01(\x0cR\tsignature\x12\x30\n\x14\x62ound_correlation_id\x18\x03 \x01(\tR\x12\x62oundCorrelationId\x12&\n\x0f\x65xpires_unix_ms\x18\x04 \x01(\x03R\rexpiresUnixMs\x12\x15\n\x06key_id\x18\x05 \x01(\tR\x05keyIdB3Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -39,5 +39,5 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_IDENTITY']._serialized_start=333
   _globals['_IDENTITY']._serialized_end=463
   _globals['_SUBJECTASSERTION']._serialized_start=466
-  _globals['_SUBJECTASSERTION']._serialized_end=634
+  _globals['_SUBJECTASSERTION']._serialized_end=657
 # @@protoc_insertion_point(module_scope)

@@ -10,6 +10,8 @@
 /// present exactly once, no unknown fields, varints in minimal form, default-valued
 /// fields omitted. This deterministic form is the canonical record bytes; the core
 /// hashes/signs exactly these bytes and verifiers recompute them identically.
+/// `key_id` (field 11) is INCLUDED in these signed bytes — the signature commits to
+/// which key it claims to be from, defeating key-substitution.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AuditRecord {
     /// Core-assigned chain position id (monotonic). Set by the CORE, never the caller.
@@ -36,12 +38,21 @@ pub struct AuditRecord {
     /// Correlation back to the operation (C1).
     #[prost(string, tag="9")]
     pub correlation_id: ::prost::alloc::string::String,
-    /// Core's Ed25519 signature over this record's canonical serialization (all fields
-    /// above; this field itself is excluded from the signed bytes). The authority of
-    /// the record — a sink verifies against the core's published key and rejects any
+    /// Core's signature over this record's canonical serialization (all fields above
+    /// PLUS key_id; this field itself is excluded from the signed bytes). The authority
+    /// of the record — a sink verifies against the core's published key and rejects any
     /// record whose signature does not verify.
     #[prost(bytes="vec", tag="10")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
+    /// Identifier of the core verification key that signed this record (M3,
+    /// reviews/07). Resolves, in the core's PUBLISHED keyring, to {public key,
+    /// signature algorithm} — so a verifier picks the right key without out-of-band
+    /// agreement, key ROTATION is a new key_id on new records (old records still verify
+    /// against the retired key, which the keyring retains), and algorithm AGILITY is a
+    /// new key_id bound to a new algorithm (no separate on-wire `alg` field needed).
+    /// Empty is permitted ONLY for a single-key deployment that never rotates.
+    #[prost(string, tag="11")]
+    pub key_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -289,15 +300,30 @@ pub struct Identity {
 /// the keystone (reviews/06 C-1, confused-deputy refinement).
 ///
 /// VERIFICATION CONTRACT — every hop that consumes this assertion MUST:
-///    1. verify `signature` over (principal, tenant, bound_correlation_id,
-///       expires_unix_ms) against the core's published verification key;
+///    1. select the verification key by `key_id` from the core's published keyring
+///       (which also pins the algorithm — so rotation/agility is a new key_id), then
+///       verify `signature` over (principal, tenant, bound_correlation_id,
+///       expires_unix_ms, key_id) against that key;
 ///    2. check bound_correlation_id == inbound TraceContext.correlation_id
 ///       (an assertion is valid only for the operation it was minted for — a
 ///       downstream plugin cannot bank it and reuse it for an unrelated op within
 ///       the same tenant);
-///    3. check now <= expires_unix_ms (short-TTL belt-and-braces).
+///    3. check now <= expires_unix_ms (short-TTL belt-and-braces);
+///    4. CROSS-CHECK THE BARE MIRRORS (M4, reviews/07): the bare Identity.tenant and
+///       this `principal` MUST equal the signature-covered tenant + principal, else
+///       reject. The bare strings are convenience mirrors of the signed payload; a
+///       hop that reads them (instead of the verified values) must not be handed a
+///       value the signature does not cover.
 /// A `principal` value not covered by a valid signature MUST NOT be trusted —
 /// the bare string is a convenience mirror of the signed payload, nothing more.
+///
+/// TRUST BASIS for the UNSIGNED principals (M4): `caller_plugin` and `tenant` in
+/// Identity are NOT individually signed — `caller_plugin` is re-derived by the core
+/// per hop and `tenant` is server-stamped (and additionally covered by THIS
+/// assertion's signature, cross-checked in step 4). Their integrity therefore rests
+/// on AUTHENTICATED TRANSPORT (C2: mTLS / per-plugin token on the core↔plugin
+/// channel). On an unauthenticated channel they are forgeable — so a non-mTLS
+/// transport is out of contract for any multi-tenant deployment.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SubjectAssertion {
     /// The authenticated end-user principal id (the signed, authoritative value
@@ -305,8 +331,8 @@ pub struct SubjectAssertion {
     #[prost(string, tag="1")]
     pub principal: ::prost::alloc::string::String,
     /// The core's detached signature over (principal, tenant, bound_correlation_id,
-    /// expires_unix_ms). The authority of this assertion. NEVER trust `principal`
-    /// without verifying this.
+    /// expires_unix_ms, key_id). The authority of this assertion. NEVER trust
+    /// `principal` without verifying this.
     #[prost(bytes="vec", tag="2")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
     /// The correlation_id this assertion is bound to — must equal the inbound
@@ -316,6 +342,13 @@ pub struct SubjectAssertion {
     /// Expiry (unix epoch millis). Short-TTL; re-mint rather than cache past this.
     #[prost(int64, tag="4")]
     pub expires_unix_ms: i64,
+    /// Identifier of the core key that signed this assertion (M3, reviews/07).
+    /// Resolves in the core's published keyring to {public key, algorithm}; a verifier
+    /// picks the key by this id (step 1). Key ROTATION and algorithm AGILITY are both
+    /// "mint under a new key_id" — no separate on-wire `alg` field. Covered by the
+    /// signature. Empty only for a single-key deployment that never rotates.
+    #[prost(string, tag="5")]
+    pub key_id: ::prost::alloc::string::String,
 }
 /// One event on the bus. Published by the core (or a core-mediated plugin),
 /// delivered to every subscriber whose subscription matches `type`.

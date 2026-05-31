@@ -27,7 +27,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/common/v1/audit.proto.
  */
 export const file_rat_common_v1_audit: GenFile = /*@__PURE__*/
-  fileDesc("ChlyYXQvY29tbW9uL3YxL2F1ZGl0LnByb3RvEg1yYXQuY29tbW9uLnYxIuMBCgtBdWRpdFJlY29yZBIKCgJpZBgBIAEoCRIRCglwcmV2X2hhc2gYAiABKAkSGQoRdGltZXN0YW1wX3VuaXhfbXMYAyABKAMSDwoHc3ViamVjdBgEIAEoCRIOCgZ0ZW5hbnQYBSABKAkSDgoGYWN0aW9uGAYgASgJEhAKCHJlc291cmNlGAcgASgJEiwKB291dGNvbWUYCCABKA4yGy5yYXQuY29tbW9uLnYxLkF1ZGl0T3V0Y29tZRIWCg5jb3JyZWxhdGlvbl9pZBgJIAEoCRIRCglzaWduYXR1cmUYCiABKAwqewoMQXVkaXRPdXRjb21lEh0KGUFVRElUX09VVENPTUVfVU5TUEVDSUZJRUQQABIZChVBVURJVF9PVVRDT01FX1NVQ0NFU1MQARIYChRBVURJVF9PVVRDT01FX0RFTklFRBACEhcKE0FVRElUX09VVENPTUVfRVJST1IQA0IzWjFnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvY29tbW9uL3YxO2NvbW1vbnYxYgZwcm90bzM");
+  fileDesc("ChlyYXQvY29tbW9uL3YxL2F1ZGl0LnByb3RvEg1yYXQuY29tbW9uLnYxIvMBCgtBdWRpdFJlY29yZBIKCgJpZBgBIAEoCRIRCglwcmV2X2hhc2gYAiABKAkSGQoRdGltZXN0YW1wX3VuaXhfbXMYAyABKAMSDwoHc3ViamVjdBgEIAEoCRIOCgZ0ZW5hbnQYBSABKAkSDgoGYWN0aW9uGAYgASgJEhAKCHJlc291cmNlGAcgASgJEiwKB291dGNvbWUYCCABKA4yGy5yYXQuY29tbW9uLnYxLkF1ZGl0T3V0Y29tZRIWCg5jb3JyZWxhdGlvbl9pZBgJIAEoCRIRCglzaWduYXR1cmUYCiABKAwSDgoGa2V5X2lkGAsgASgJKnsKDEF1ZGl0T3V0Y29tZRIdChlBVURJVF9PVVRDT01FX1VOU1BFQ0lGSUVEEAASGQoVQVVESVRfT1VUQ09NRV9TVUNDRVNTEAESGAoUQVVESVRfT1VUQ09NRV9ERU5JRUQQAhIXChNBVURJVF9PVVRDT01FX0VSUk9SEANCM1oxZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L2NvbW1vbi92MTtjb21tb252MWIGcHJvdG8z");
 
 /**
  * One audit record. Append-only; tamper-evidence is enforced by the core signature +
@@ -40,6 +40,8 @@ export const file_rat_common_v1_audit: GenFile = /*@__PURE__*/
  * present exactly once, no unknown fields, varints in minimal form, default-valued
  * fields omitted. This deterministic form is the canonical record bytes; the core
  * hashes/signs exactly these bytes and verifiers recompute them identically.
+ * `key_id` (field 11) is INCLUDED in these signed bytes — the signature commits to
+ * which key it claims to be from, defeating key-substitution.
  *
  * @generated from message rat.common.v1.AuditRecord
  */
@@ -100,14 +102,27 @@ export type AuditRecord = Message<"rat.common.v1.AuditRecord"> & {
   correlationId: string;
 
   /**
-   * Core's Ed25519 signature over this record's canonical serialization (all fields
-   * above; this field itself is excluded from the signed bytes). The authority of
-   * the record — a sink verifies against the core's published key and rejects any
+   * Core's signature over this record's canonical serialization (all fields above
+   * PLUS key_id; this field itself is excluded from the signed bytes). The authority
+   * of the record — a sink verifies against the core's published key and rejects any
    * record whose signature does not verify.
    *
    * @generated from field: bytes signature = 10;
    */
   signature: Uint8Array;
+
+  /**
+   * Identifier of the core verification key that signed this record (M3,
+   * reviews/07). Resolves, in the core's PUBLISHED keyring, to {public key,
+   * signature algorithm} — so a verifier picks the right key without out-of-band
+   * agreement, key ROTATION is a new key_id on new records (old records still verify
+   * against the retired key, which the keyring retains), and algorithm AGILITY is a
+   * new key_id bound to a new algorithm (no separate on-wire `alg` field needed).
+   * Empty is permitted ONLY for a single-key deployment that never rotates.
+   *
+   * @generated from field: string key_id = 11;
+   */
+  keyId: string;
 };
 
 /**

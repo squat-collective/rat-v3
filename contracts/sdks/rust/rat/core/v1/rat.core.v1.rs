@@ -27,10 +27,11 @@ pub struct InvokeResponse {
     /// rat.format.v1.MergeResponse). Opaque to the core.
     ///
     /// Note: this contract returns the provider's success payload; failures surface
-    /// via gRPC status (transport/enforcement) per the error-model convention
-    /// (reviews/06 C-5, freeze-blocker #9). Capability-not-found, caller-not-
-    /// -authorized, and provider-unavailable are core-side enforcement failures
-    /// returned as gRPC status codes, not as a field here.
+    /// via gRPC status (transport/enforcement) per the canonical error model
+    /// (\[common/v1/ERROR_MODEL.md\], pinned at rat/1). Capability-not-authorized
+    /// (PERMISSION_DENIED), provider-unavailable (UNAVAILABLE), and unauthenticated
+    /// caller (UNAUTHENTICATED) are core-side enforcement failures returned as those
+    /// gRPC status codes, not as a field here.
     #[prost(bytes="vec", tag="1")]
     pub result: ::prost::alloc::vec::Vec<u8>,
 }
