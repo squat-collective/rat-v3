@@ -4,6 +4,23 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 0d: `state` axis (Go + Python) → `state/v1` wire-contract gate MET → 🎉 ROUND 1 COMPLETE (all 6 data-plane axes)
+
+Sixth + final data-plane axis through the 0d wire-contract two-reference gate — and the **capstone**: a tier-0 plugin with 4 RPCs (Get/Put/List unary + Watch server-streaming) and the axis's two pointed obligations.
+
+- **contracts/conformance/state-v1.json** — STATEFUL lifecycle: Put(create) → Get(found) → Put CAS-MATCH (COMMITTED) → Put CAS-CONFLICT (the `PutOutcome.CONFLICT` enum, NOT a gRPC error, with the conflicting revision) → Get(unchanged, proving the conflict didn't write) → Get(missing) → two more Puts → List(all)/List(prefix) → ordered Watch replay of the change log. + 6 KEY-GRAMMAR error vectors (empty / oversize / NUL / control-char / traversal / dot-component → INVALID_ARGUMENT). Deterministic revision scheme keeps the impls in lockstep; control-char keys are built from `key_len`/`key_inject` so the vector file stays pure-ASCII.
+- **First reference to use BOTH gateway relays:** unary `Invoke` (Get/Put/List) AND the ADR-008 `InvokeServerStream` (Watch) — a shared `openCall` does enforce/route/stamp/audit once for both.
+- **state.proto:** added `(rat.common.v1.capability)` to all 4 RPCs + annotations import (was comment-only). SDKs regenerated (Go/Python/TS; Rust emits no method options).
+- **inmemory-go** (grammar/store/server/main + dual-relay stub gateway + harness): green in `golang:1.25`. **inmemory-py** (mirrored grammar + model): green in `python:3.12`.
+
+**🎉 0d ROUND 1 COMPLETE.** All six data-plane axes — format, engine, storage, runtime, catalog, state — now have two independently-written references (Go + Python) passing one shared golden-vector file. **Verified: all TWELVE references green together.** Cross-cutting work that fell out of round 1: ADR-007 (call-context transport) + ADR-008 (streaming invocation), both decided AND migrated; the SDK-vendoring fix; the round-1/round-2 framing correction.
+
+**What round 1 is NOT (per the scope caveat):** all twelve are in-memory twins — the WIRE-contract gate. The technologically-divergent real-backend pair (round 2: state=sqlite, storage=local-fs, …) + the typed-Arrow pass are still required before any axis → `v1`. See [backlog.md](backlog.md).
+
+**Files:** `contracts/conformance/state-v1.json`, `contracts/proto/rat/state/v1/state.proto`, `contracts/sdks/**`, `examples/state/inmemory-go/**`, `examples/state/inmemory-py/**`.
+
+---
+
 ## 2026-05-31 — 0d: `catalog` axis — two references (Go + Python) + shared golden vectors → `catalog/v1` wire-contract gate MET
 
 Fifth data-plane axis through the 0d two-reference (wire-contract) gate. The richest axis so far — git-like branch/version semantics with a real safety contract.

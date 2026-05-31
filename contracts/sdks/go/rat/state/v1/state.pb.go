@@ -56,6 +56,7 @@
 package statev1
 
 import (
+	_ "github.com/rat-dev/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -623,7 +624,7 @@ var File_rat_state_v1_state_proto protoreflect.FileDescriptor
 
 const file_rat_state_v1_state_proto_rawDesc = "" +
 	"\n" +
-	"\x18rat/state/v1/state.proto\x12\frat.state.v1\"$\n" +
+	"\x18rat/state/v1/state.proto\x12\frat.state.v1\x1a\x1frat/common/v1/annotations.proto\"$\n" +
 	"\n" +
 	"GetRequest\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03keyJ\x04\b\x01\x10\x02\"U\n" +
@@ -661,12 +662,12 @@ const file_rat_state_v1_state_proto_rawDesc = "" +
 	"\x17PUT_OUTCOME_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15PUT_OUTCOME_COMMITTED\x10\x01\x12\x18\n" +
 	"\x14PUT_OUTCOME_CONFLICT\x10\x02\x12\x17\n" +
-	"\x13PUT_OUTCOME_UNKNOWN\x10\x032\x89\x02\n" +
-	"\fStateService\x12:\n" +
-	"\x03Get\x12\x18.rat.state.v1.GetRequest\x1a\x19.rat.state.v1.GetResponse\x12:\n" +
-	"\x03Put\x12\x18.rat.state.v1.PutRequest\x1a\x19.rat.state.v1.PutResponse\x12=\n" +
-	"\x04List\x12\x19.rat.state.v1.ListRequest\x1a\x1a.rat.state.v1.ListResponse\x12B\n" +
-	"\x05Watch\x12\x1a.rat.state.v1.WatchRequest\x1a\x1b.rat.state.v1.WatchResponse0\x01B1Z/github.com/rat-dev/rat/gen/rat/state/v1;statev1b\x06proto3"
+	"\x13PUT_OUTCOME_UNKNOWN\x10\x032\xec\x02\n" +
+	"\fStateService\x12R\n" +
+	"\x03Get\x12\x18.rat.state.v1.GetRequest\x1a\x19.rat.state.v1.GetResponse\"\x16\x8a\x97\"\x12rat://state/v1/get\x12R\n" +
+	"\x03Put\x12\x18.rat.state.v1.PutRequest\x1a\x19.rat.state.v1.PutResponse\"\x16\x8a\x97\"\x12rat://state/v1/put\x12V\n" +
+	"\x04List\x12\x19.rat.state.v1.ListRequest\x1a\x1a.rat.state.v1.ListResponse\"\x17\x8a\x97\"\x13rat://state/v1/list\x12\\\n" +
+	"\x05Watch\x12\x1a.rat.state.v1.WatchRequest\x1a\x1b.rat.state.v1.WatchResponse\"\x18\x8a\x97\"\x14rat://state/v1/watch0\x01B1Z/github.com/rat-dev/rat/gen/rat/state/v1;statev1b\x06proto3"
 
 var (
 	file_rat_state_v1_state_proto_rawDescOnce sync.Once

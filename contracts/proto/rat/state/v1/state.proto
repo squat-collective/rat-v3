@@ -50,22 +50,33 @@ syntax = "proto3";
 
 package rat.state.v1;
 
+import "rat/common/v1/annotations.proto";
+
 option go_package = "github.com/rat-dev/rat/gen/rat/state/v1;statev1";
 
 service StateService {
   // rat://state/v1/get — read one key (plugin+tenant relative).
-  rpc Get(GetRequest) returns (GetResponse);
+  rpc Get(GetRequest) returns (GetResponse) {
+    option (rat.common.v1.capability) = "rat://state/v1/get";
+  }
 
   // rat://state/v1/put — write one key, optionally compare-and-set on revision.
-  rpc Put(PutRequest) returns (PutResponse);
+  rpc Put(PutRequest) returns (PutResponse) {
+    option (rat.common.v1.capability) = "rat://state/v1/put";
+  }
 
   // rat://state/v1/list — list keys under a plugin+tenant-relative prefix.
-  rpc List(ListRequest) returns (ListResponse);
+  rpc List(ListRequest) returns (ListResponse) {
+    option (rat.common.v1.capability) = "rat://state/v1/list";
+  }
 
   // rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
   // Each streamed message is a WatchResponse — named per the *Response convention
-  // buf STANDARD requires, even for streaming RPCs.
-  rpc Watch(WatchRequest) returns (stream WatchResponse);
+  // buf STANDARD requires, even for streaming RPCs. Mediated via core
+  // InvokeServerStream (ADR-008).
+  rpc Watch(WatchRequest) returns (stream WatchResponse) {
+    option (rat.common.v1.capability) = "rat://state/v1/watch";
+  }
 }
 
 message GetRequest {

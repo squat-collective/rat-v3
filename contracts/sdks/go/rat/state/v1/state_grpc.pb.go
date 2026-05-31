@@ -86,7 +86,8 @@ type StateServiceClient interface {
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	// rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
 	// Each streamed message is a WatchResponse — named per the *Response convention
-	// buf STANDARD requires, even for streaming RPCs.
+	// buf STANDARD requires, even for streaming RPCs. Mediated via core
+	// InvokeServerStream (ADR-008).
 	Watch(ctx context.Context, in *WatchRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[WatchResponse], error)
 }
 
@@ -159,7 +160,8 @@ type StateServiceServer interface {
 	List(context.Context, *ListRequest) (*ListResponse, error)
 	// rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
 	// Each streamed message is a WatchResponse — named per the *Response convention
-	// buf STANDARD requires, even for streaming RPCs.
+	// buf STANDARD requires, even for streaming RPCs. Mediated via core
+	// InvokeServerStream (ADR-008).
 	Watch(*WatchRequest, grpc.ServerStreamingServer[WatchResponse]) error
 	mustEmbedUnimplementedStateServiceServer()
 }

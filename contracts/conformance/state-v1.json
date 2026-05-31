@@ -1,0 +1,98 @@
+{
+  "_comment": "RAT state/v1 conformance vectors — ADR-003 shared golden data. The SINGLE source of truth for the state-backend axis (a tier-0 plugin). Both independent references (Go: examples/state/inmemory-go, Python: examples/state/inmemory-py) load THIS file and drive StateService (Get/Put/List unary + Watch server-streaming, the latter via the ADR-008 InvokeServerStream relay) over real gRPC. The STATEFUL lifecycle exercises: compare-and-set via the PutOutcome enum (COMMITTED on match/unconditional, CONFLICT on revision mismatch — a CAS conflict is a NORMAL outcome, not a gRPC error), Get found/not-found + revision, List under a prefix, and an ordered Watch replay of the change log. The errors array exercises the KEY GRAMMAR (freeze-blocker #3 / SEC-2): empty / oversize(>512B via key_len) / NUL / control-char / path-traversal keys -> INVALID_ARGUMENT. NOTE on encoding: control-char keys are specified via key_len (build 'a'*N) and key_inject (build 'a' + chr(N) + 'b') so this file stays pure-ASCII valid JSON — no raw control bytes. Round-1 scope: in-memory (CAS is trivially linearizable, never UNKNOWN); the semantic CAS-under-contention test is round-2 (state=sqlite). The revision sequence is deterministic so both impls stay in lockstep: each COMMITTED Put bumps a global counter (first commit -> revision 1); a CONFLICT does NOT bump.",
+  "axis": "state/v1",
+  "lifecycle": [
+    {
+      "step": "put_create",
+      "op": "put",
+      "key": "app/config",
+      "value": "v1",
+      "if_revision": 0,
+      "expect": {"outcome": "COMMITTED", "revision": 1}
+    },
+    {
+      "step": "get_found",
+      "op": "get",
+      "key": "app/config",
+      "expect": {"found": true, "value": "v1", "revision": 1}
+    },
+    {
+      "step": "put_cas_match",
+      "op": "put",
+      "key": "app/config",
+      "value": "v2",
+      "if_revision": 1,
+      "expect": {"outcome": "COMMITTED", "revision": 2}
+    },
+    {
+      "step": "put_cas_conflict",
+      "op": "put",
+      "key": "app/config",
+      "value": "v3",
+      "if_revision": 1,
+      "expect": {"outcome": "CONFLICT", "revision": 2}
+    },
+    {
+      "step": "get_unchanged_after_conflict",
+      "op": "get",
+      "key": "app/config",
+      "expect": {"found": true, "value": "v2", "revision": 2}
+    },
+    {
+      "step": "get_missing",
+      "op": "get",
+      "key": "missing/key",
+      "expect": {"found": false, "revision": 0}
+    },
+    {
+      "step": "put_second_key",
+      "op": "put",
+      "key": "app/state",
+      "value": "s1",
+      "if_revision": 0,
+      "expect": {"outcome": "COMMITTED", "revision": 3}
+    },
+    {
+      "step": "put_third_key",
+      "op": "put",
+      "key": "sys/leader",
+      "value": "node-1",
+      "if_revision": 0,
+      "expect": {"outcome": "COMMITTED", "revision": 4}
+    },
+    {
+      "step": "list_all",
+      "op": "list",
+      "prefix": "",
+      "expect": {"keys": ["app/config", "app/state", "sys/leader"]}
+    },
+    {
+      "step": "list_prefix",
+      "op": "list",
+      "prefix": "app/",
+      "expect": {"keys": ["app/config", "app/state"]}
+    },
+    {
+      "step": "watch_replay_ordered",
+      "op": "watch",
+      "prefix": "",
+      "from_revision": 1,
+      "expect": {
+        "watch_events": [
+          {"type": "PUT", "key": "app/config", "revision": 1},
+          {"type": "PUT", "key": "app/config", "revision": 2},
+          {"type": "PUT", "key": "app/state", "revision": 3},
+          {"type": "PUT", "key": "sys/leader", "revision": 4}
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {"step": "get_empty_key", "op": "get", "key": "", "expect": {"code": "INVALID_ARGUMENT"}},
+    {"step": "get_oversize_key", "op": "get", "key_len": 600, "expect": {"code": "INVALID_ARGUMENT"}},
+    {"step": "get_nul_byte", "op": "get", "key_inject": 0, "expect": {"code": "INVALID_ARGUMENT"}},
+    {"step": "get_control_char", "op": "get", "key_inject": 1, "expect": {"code": "INVALID_ARGUMENT"}},
+    {"step": "get_traversal", "op": "get", "key": "../escape", "expect": {"code": "INVALID_ARGUMENT"}},
+    {"step": "get_dot_component", "op": "get", "key": "a/./b", "expect": {"code": "INVALID_ARGUMENT"}}
+  ]
+}

@@ -63,7 +63,8 @@ class StateServiceServicer(object):
     def Watch(self, request, context):
         """rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
         Each streamed message is a WatchResponse — named per the *Response convention
-        buf STANDARD requires, even for streaming RPCs.
+        buf STANDARD requires, even for streaming RPCs. Mediated via core
+        InvokeServerStream (ADR-008).
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

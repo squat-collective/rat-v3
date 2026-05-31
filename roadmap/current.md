@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (0d: 5 of 6 data-plane axes' WIRE-CONTRACT gate MET — format/engine/storage/runtime/catalog; ADR-007 + ADR-008 decided AND migrated; all 10 refs green. Only `state` left. NOTE: refs are inmemory twins — ADR-003's real-backend round-2 still pending before v1; see scope caveat below.)
+> Updated: 2026-05-31 (🎉 0d ROUND 1 COMPLETE — all 6 data-plane axes' WIRE-CONTRACT gate MET: format/engine/storage/runtime/catalog/state; all 12 refs green. ADR-007 + ADR-008 decided AND migrated. NOTE: refs are inmemory twins — ADR-003's real-backend round-2 still pending before v1; see scope caveat below.)
 
 ## Status one-liner
 
@@ -59,13 +59,12 @@ The 23 other prospective ADRs are in [backlog.md](backlog.md). They land as they
 
 ## Immediate next concrete step
 
-Sub-phase **0d is underway. FOUR data-plane axes are through the ADR-003 two-reference gate: `format/v1`, `engine/v1`, `storage/v1`, `runtime/v1`** — each has two independent references (Go + Python) passing one shared golden-vector file. `format`/`engine`/`storage` route through the stub ADR-005/007 gateway; `runtime` is driven **directly** (the gateway can't mediate its streaming Execute — see the finding below). ADR-007 is decided + migrated; `storage` reads tenant from the envelope (C7); `runtime` is the first streaming axis. The harness pattern is proven + repeatable. The next concrete step:
+**🎉 0d ROUND 1 is COMPLETE.** All six data-plane axes — `format` `engine` `storage` `runtime` `catalog` `state` — have two independently-written references (Go + Python) passing one shared golden-vector file; all 12 green together. The gateway mediates unary + server-streaming; ADR-007 + ADR-008 are decided AND migrated. The harness/reference pattern is fully proven. Candidate next steps (pick per appetite):
 
-1. **The SIXTH (last) data-plane axis: `state`** — the only remaining of the six (engine ✅ format ✅ storage ✅ runtime ✅ catalog ✅, state). Same pattern. `state` is the richest yet: unary Get/Put/List **plus** a server-streaming `Watch`, and its proto carries a real conformance obligation — **linearizable CAS + ordered Watch** (freeze-blocker #3). An in-memory impl can satisfy the wire contract (round 1), but the *semantic* test (does CAS actually serialize?) is exactly what round-2 `state`=sqlite is for. `state` needs its `(rat.common.v1.capability)` annotations added (11 axes remain unannotated), and the `Watch` capability routes through the ADR-008 `InvokeServerStream` relay (lift the code from `examples/runtime/inmemory-go/gateway_test.go`). Completing `state` MEETS the wire-contract gate for all 6 data-plane axes → 0d round-1 done.
-2. **(Carry-over polish, optional)** a real **SDK metadata interceptor** so plugin code gets the reconstructed context object automatically; and wiring `InvokeBidiStream` (the `observability.Ingest` bidi relay) when that axis is referenced.
-3. **(Before any data-plane axis → `v1`)** the typed-Arrow conformance pass — format + engine refs still carry the bulk leg as an in-process stand-in.
-3. **(Carry-over polish, optional)** a real **SDK metadata interceptor** so plugin code gets the reconstructed context object automatically.
-4. **(Before any data-plane axis → `v1`)** the typed-Arrow conformance pass — format + engine refs still carry the bulk leg as an in-process stand-in (storage + runtime have no bulk leg under test).
+1. **Round 2 — the first technologically-divergent real backend** (the highest-value next step; see [backlog.md](backlog.md)). Make ONE reference per axis a real backend with a different consistency/semantic profile, starting cheap + high-value: **`state`=sqlite** (actually tests linearizable-CAS, which the in-memory twin can only fake) and **`storage`=local-fs**. This is where ADR-003's orthogonality-assumption failures surface. Reuse the SAME shared golden vectors — a real backend that passes them is the real ADR-003 evidence.
+2. **Typed-Arrow conformance pass** — `format` + `engine` still carry the bulk leg as an in-process stand-in. A real format/engine backend (round 2) forces the real Arrow Flight data leg, so this folds into round 2 naturally.
+3. **Polish (optional, not blocking):** a real **SDK metadata interceptor** so plugin code gets the reconstructed context automatically; wire `InvokeBidiStream` (the `observability.Ingest` bidi relay) when that axis is referenced; roll `(rat.capability)` across the remaining unannotated axis services (strategy, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log, ui, notifications, marketplace, billing).
+4. **Beyond 0d:** sub-phases 0c (cross-cutting protos finalize), 0f (conformance suite + benchmarks), 0g (per-axis CONTRACT.md), 0h (peer review + `rat/1` freeze).
 
 SDK distribution + layout + codegen are decided in **[ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md)**: vendored `contracts/sdks/<lang>/` (Go/Python/TS peers), reference plugins under `examples/<axis>/<impl>-<lang>/`, containerized `buf generate` via `scripts/gen-sdks.sh`.
 

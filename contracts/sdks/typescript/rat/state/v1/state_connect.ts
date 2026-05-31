@@ -97,7 +97,8 @@ export const StateService = {
     /**
      * rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
      * Each streamed message is a WatchResponse — named per the *Response convention
-     * buf STANDARD requires, even for streaming RPCs.
+     * buf STANDARD requires, even for streaming RPCs. Mediated via core
+     * InvokeServerStream (ADR-008).
      *
      * @generated from rpc rat.state.v1.StateService.Watch
      */

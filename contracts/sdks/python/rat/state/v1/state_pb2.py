@@ -22,9 +22,10 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18rat/state/v1/state.proto\x12\x0crat.state.v1\"$\n\nGetRequest\x12\x10\n\x03key\x18\x02 \x01(\tR\x03keyJ\x04\x08\x01\x10\x02\"U\n\x0bGetResponse\x12\x14\n\x05\x66ound\x18\x01 \x01(\x08R\x05\x66ound\x12\x14\n\x05value\x18\x02 \x01(\x0cR\x05value\x12\x1a\n\x08revision\x18\x03 \x01(\x03R\x08revision\"[\n\nPutRequest\x12\x10\n\x03key\x18\x02 \x01(\tR\x03key\x12\x14\n\x05value\x18\x03 \x01(\x0cR\x05value\x12\x1f\n\x0bif_revision\x18\x04 \x01(\x03R\nifRevisionJ\x04\x08\x01\x10\x02\"]\n\x0bPutResponse\x12\x32\n\x07outcome\x18\x01 \x01(\x0e\x32\x18.rat.state.v1.PutOutcomeR\x07outcome\x12\x1a\n\x08revision\x18\x02 \x01(\x03R\x08revision\"+\n\x0bListRequest\x12\x16\n\x06prefix\x18\x02 \x01(\tR\x06prefixJ\x04\x08\x01\x10\x02\"\"\n\x0cListResponse\x12\x12\n\x04keys\x18\x01 \x03(\tR\x04keys\"Q\n\x0cWatchRequest\x12\x16\n\x06prefix\x18\x02 \x01(\tR\x06prefix\x12#\n\rfrom_revision\x18\x03 \x01(\x03R\x0c\x66romRevisionJ\x04\x08\x01\x10\x02\"\xc6\x01\n\rWatchResponse\x12\x34\n\x04type\x18\x01 \x01(\x0e\x32 .rat.state.v1.WatchResponse.TypeR\x04type\x12\x10\n\x03key\x18\x02 \x01(\tR\x03key\x12\x14\n\x05value\x18\x03 \x01(\x0cR\x05value\x12\x1a\n\x08revision\x18\x04 \x01(\x03R\x08revision\";\n\x04Type\x12\x14\n\x10TYPE_UNSPECIFIED\x10\x00\x12\x0c\n\x08TYPE_PUT\x10\x01\x12\x0f\n\x0bTYPE_DELETE\x10\x02*w\n\nPutOutcome\x12\x1b\n\x17PUT_OUTCOME_UNSPECIFIED\x10\x00\x12\x19\n\x15PUT_OUTCOME_COMMITTED\x10\x01\x12\x18\n\x14PUT_OUTCOME_CONFLICT\x10\x02\x12\x17\n\x13PUT_OUTCOME_UNKNOWN\x10\x03\x32\x89\x02\n\x0cStateService\x12:\n\x03Get\x12\x18.rat.state.v1.GetRequest\x1a\x19.rat.state.v1.GetResponse\x12:\n\x03Put\x12\x18.rat.state.v1.PutRequest\x1a\x19.rat.state.v1.PutResponse\x12=\n\x04List\x12\x19.rat.state.v1.ListRequest\x1a\x1a.rat.state.v1.ListResponse\x12\x42\n\x05Watch\x12\x1a.rat.state.v1.WatchRequest\x1a\x1b.rat.state.v1.WatchResponse0\x01\x42\x31Z/github.com/rat-dev/rat/gen/rat/state/v1;statev1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18rat/state/v1/state.proto\x12\x0crat.state.v1\x1a\x1frat/common/v1/annotations.proto\"$\n\nGetRequest\x12\x10\n\x03key\x18\x02 \x01(\tR\x03keyJ\x04\x08\x01\x10\x02\"U\n\x0bGetResponse\x12\x14\n\x05\x66ound\x18\x01 \x01(\x08R\x05\x66ound\x12\x14\n\x05value\x18\x02 \x01(\x0cR\x05value\x12\x1a\n\x08revision\x18\x03 \x01(\x03R\x08revision\"[\n\nPutRequest\x12\x10\n\x03key\x18\x02 \x01(\tR\x03key\x12\x14\n\x05value\x18\x03 \x01(\x0cR\x05value\x12\x1f\n\x0bif_revision\x18\x04 \x01(\x03R\nifRevisionJ\x04\x08\x01\x10\x02\"]\n\x0bPutResponse\x12\x32\n\x07outcome\x18\x01 \x01(\x0e\x32\x18.rat.state.v1.PutOutcomeR\x07outcome\x12\x1a\n\x08revision\x18\x02 \x01(\x03R\x08revision\"+\n\x0bListRequest\x12\x16\n\x06prefix\x18\x02 \x01(\tR\x06prefixJ\x04\x08\x01\x10\x02\"\"\n\x0cListResponse\x12\x12\n\x04keys\x18\x01 \x03(\tR\x04keys\"Q\n\x0cWatchRequest\x12\x16\n\x06prefix\x18\x02 \x01(\tR\x06prefix\x12#\n\rfrom_revision\x18\x03 \x01(\x03R\x0c\x66romRevisionJ\x04\x08\x01\x10\x02\"\xc6\x01\n\rWatchResponse\x12\x34\n\x04type\x18\x01 \x01(\x0e\x32 .rat.state.v1.WatchResponse.TypeR\x04type\x12\x10\n\x03key\x18\x02 \x01(\tR\x03key\x12\x14\n\x05value\x18\x03 \x01(\x0cR\x05value\x12\x1a\n\x08revision\x18\x04 \x01(\x03R\x08revision\";\n\x04Type\x12\x14\n\x10TYPE_UNSPECIFIED\x10\x00\x12\x0c\n\x08TYPE_PUT\x10\x01\x12\x0f\n\x0bTYPE_DELETE\x10\x02*w\n\nPutOutcome\x12\x1b\n\x17PUT_OUTCOME_UNSPECIFIED\x10\x00\x12\x19\n\x15PUT_OUTCOME_COMMITTED\x10\x01\x12\x18\n\x14PUT_OUTCOME_CONFLICT\x10\x02\x12\x17\n\x13PUT_OUTCOME_UNKNOWN\x10\x03\x32\xec\x02\n\x0cStateService\x12R\n\x03Get\x12\x18.rat.state.v1.GetRequest\x1a\x19.rat.state.v1.GetResponse\"\x16\x8a\x97\"\x12rat://state/v1/get\x12R\n\x03Put\x12\x18.rat.state.v1.PutRequest\x1a\x19.rat.state.v1.PutResponse\"\x16\x8a\x97\"\x12rat://state/v1/put\x12V\n\x04List\x12\x19.rat.state.v1.ListRequest\x1a\x1a.rat.state.v1.ListResponse\"\x17\x8a\x97\"\x13rat://state/v1/list\x12\\\n\x05Watch\x12\x1a.rat.state.v1.WatchRequest\x1a\x1b.rat.state.v1.WatchResponse\"\x18\x8a\x97\"\x14rat://state/v1/watch0\x01\x42\x31Z/github.com/rat-dev/rat/gen/rat/state/v1;statev1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,26 +33,34 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rat.state.v1.state_pb2', _g
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z/github.com/rat-dev/rat/gen/rat/state/v1;statev1'
-  _globals['_PUTOUTCOME']._serialized_start=720
-  _globals['_PUTOUTCOME']._serialized_end=839
-  _globals['_GETREQUEST']._serialized_start=42
-  _globals['_GETREQUEST']._serialized_end=78
-  _globals['_GETRESPONSE']._serialized_start=80
-  _globals['_GETRESPONSE']._serialized_end=165
-  _globals['_PUTREQUEST']._serialized_start=167
-  _globals['_PUTREQUEST']._serialized_end=258
-  _globals['_PUTRESPONSE']._serialized_start=260
-  _globals['_PUTRESPONSE']._serialized_end=353
-  _globals['_LISTREQUEST']._serialized_start=355
-  _globals['_LISTREQUEST']._serialized_end=398
-  _globals['_LISTRESPONSE']._serialized_start=400
-  _globals['_LISTRESPONSE']._serialized_end=434
-  _globals['_WATCHREQUEST']._serialized_start=436
-  _globals['_WATCHREQUEST']._serialized_end=517
-  _globals['_WATCHRESPONSE']._serialized_start=520
-  _globals['_WATCHRESPONSE']._serialized_end=718
-  _globals['_WATCHRESPONSE_TYPE']._serialized_start=659
-  _globals['_WATCHRESPONSE_TYPE']._serialized_end=718
-  _globals['_STATESERVICE']._serialized_start=842
-  _globals['_STATESERVICE']._serialized_end=1107
+  _globals['_STATESERVICE'].methods_by_name['Get']._loaded_options = None
+  _globals['_STATESERVICE'].methods_by_name['Get']._serialized_options = b'\212\227\"\022rat://state/v1/get'
+  _globals['_STATESERVICE'].methods_by_name['Put']._loaded_options = None
+  _globals['_STATESERVICE'].methods_by_name['Put']._serialized_options = b'\212\227\"\022rat://state/v1/put'
+  _globals['_STATESERVICE'].methods_by_name['List']._loaded_options = None
+  _globals['_STATESERVICE'].methods_by_name['List']._serialized_options = b'\212\227\"\023rat://state/v1/list'
+  _globals['_STATESERVICE'].methods_by_name['Watch']._loaded_options = None
+  _globals['_STATESERVICE'].methods_by_name['Watch']._serialized_options = b'\212\227\"\024rat://state/v1/watch'
+  _globals['_PUTOUTCOME']._serialized_start=753
+  _globals['_PUTOUTCOME']._serialized_end=872
+  _globals['_GETREQUEST']._serialized_start=75
+  _globals['_GETREQUEST']._serialized_end=111
+  _globals['_GETRESPONSE']._serialized_start=113
+  _globals['_GETRESPONSE']._serialized_end=198
+  _globals['_PUTREQUEST']._serialized_start=200
+  _globals['_PUTREQUEST']._serialized_end=291
+  _globals['_PUTRESPONSE']._serialized_start=293
+  _globals['_PUTRESPONSE']._serialized_end=386
+  _globals['_LISTREQUEST']._serialized_start=388
+  _globals['_LISTREQUEST']._serialized_end=431
+  _globals['_LISTRESPONSE']._serialized_start=433
+  _globals['_LISTRESPONSE']._serialized_end=467
+  _globals['_WATCHREQUEST']._serialized_start=469
+  _globals['_WATCHREQUEST']._serialized_end=550
+  _globals['_WATCHRESPONSE']._serialized_start=553
+  _globals['_WATCHRESPONSE']._serialized_end=751
+  _globals['_WATCHRESPONSE_TYPE']._serialized_start=692
+  _globals['_WATCHRESPONSE_TYPE']._serialized_end=751
+  _globals['_STATESERVICE']._serialized_start=875
+  _globals['_STATESERVICE']._serialized_end=1239
 # @@protoc_insertion_point(module_scope)
