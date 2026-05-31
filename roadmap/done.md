@@ -4,6 +4,29 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 🎉 ROUND 2 COMPLETE: `format` = REAL pair (Parquet + Delta) — real Arrow files + time travel
+
+Sixth + final round-2 axis, via option (b) two REAL backends. **Round 2 is now complete — all six data-plane axes have a technologically-divergent real backend.**
+
+- **Real Arrow data leg, BOTH directions:** unlike the toy refs (string-row registry), the source rows for Append/Merge/Overwrite are staged as real Arrow (Arrow IPC) and Resolve results pulled back as real Arrow — `streams.py` (shared with the engine pair). This is the full typed-Arrow data leg for format, retiring the last in-process-stand-in for these refs.
+- **`examples/format/parquet-py`** (pyarrow): writes real `.parquet` files per table; full Append→scan→Merge(upsert)→Overwrite→Maintain(compact) lifecycle on real files; backend test asserts real Parquet files land on disk + readable.
+- **`examples/format/delta-py`** (`deltalake`): backs the table with a real **Delta Lake** table (transaction log over Parquet). Earns **time travel** (`test_delta_time_travel`: two appends → versions 0/1; read v0 back → prior state) — the versioned-snapshot substrate the `catalog` axis's branches sit on. Only `store.py` differs from parquet; `server.py`/`streams.py` identical. (deltalake's Rust runtime aborts at interpreter teardown after all logic ran → `os._exit(0)` after PASS.)
+- **Both pass the SAME shared `format-v1.json`** the in-memory + Parquet refs use (format data is provider-neutral rows). All FOUR format refs green (inmemory-go, inmemory-py, parquet-py, delta-py). Verified in `python:3.12` / `golang:1.25`.
+
+**🎉 ROUND 2 COMPLETE — 6/6 data-plane axes with a real divergent backend, each passing its shared golden vectors + a backend-specific semantic test:**
+- `state`=sqlite (durability + linearizable CAS)
+- `storage`=local-fs (path containment + tenant isolation)
+- `catalog`=sqlite (durable branches/ledger + concurrent-merge safety)
+- `runtime`=subprocess (OS process isolation)
+- `engine`=duckdb+datafusion (real SQL + typed Arrow)
+- `format`=parquet+delta (real Arrow files + time travel)
+
+This is the full ADR-003 rigor: every data-plane contract is now validated by running code in two languages (round 1, wire contract) AND a technologically-divergent real backend (round 2, semantic). The typed-Arrow gap is retired for engine + format. **The remaining gap before `v1`** is just the real Arrow Flight transport (all data legs still use an in-process IPC registry stand-in) + 0f conformance-suite formalization + 0h peer review/freeze.
+
+**Files:** `examples/format/{parquet-py,delta-py}/**`. No proto/SDK/vector change.
+
+---
+
 ## 2026-05-31 — Round 2 (option b): `engine` = REAL pair — DuckDB + DataFusion on real SQL + typed Arrow
 
 The first round-2 axis done via **option (b): two REAL backends** (ADR-003's literal "duckdb + datafusion" example), not toy + real. Two genuinely different SQL engine technologies agree on one shared golden-vector file.

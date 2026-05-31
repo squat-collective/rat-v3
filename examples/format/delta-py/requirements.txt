@@ -1,0 +1,5 @@
+# Runtime deps for rat-format-delta-py (round-2 real backend; the 2nd format).
+grpcio==1.80.0
+protobuf==7.35.0
+pyarrow==24.0.0
+deltalake==1.6.0

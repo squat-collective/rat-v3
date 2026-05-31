@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (Round 1 COMPLETE. ROUND 2: 5 of 6 axes — `state`=sqlite, `storage`=local-fs, `catalog`=sqlite, `runtime`=subprocess, and `engine`=REAL pair (DuckDB+DataFusion on real SQL + typed Arrow, ADR-003 option b). Remaining: `format` (parquet+delta, real Arrow files). ADR-007 + ADR-008 decided AND migrated.)
+> Updated: 2026-05-31 (🎉 ROUND 1 + ROUND 2 BOTH COMPLETE. All 6 data-plane axes have two language refs (wire contract) AND a technologically-divergent real backend (semantic): state=sqlite, storage=local-fs, catalog=sqlite, runtime=subprocess, engine=duckdb+datafusion, format=parquet+delta. ADR-007 + ADR-008 decided AND migrated. Typed-Arrow gap retired for engine+format. Next: real Arrow Flight transport + 0f conformance suite + 0h freeze.)
 
 ## Status one-liner
 
@@ -59,16 +59,17 @@ The 23 other prospective ADRs are in [backlog.md](backlog.md). They land as they
 
 ## Immediate next concrete step
 
-**🎉 0d ROUND 1 is COMPLETE.** All six data-plane axes — `format` `engine` `storage` `runtime` `catalog` `state` — have two independently-written references (Go + Python) passing one shared golden-vector file; all 12 green together. The gateway mediates unary + server-streaming; ADR-007 + ADR-008 are decided AND migrated. The harness/reference pattern is fully proven. Candidate next steps (pick per appetite):
+**🎉 0d ROUND 1 + ROUND 2 are BOTH COMPLETE.** All six data-plane axes have:
+- **Round 1 (wire contract):** two independently-written language refs (Go + Python) passing one shared golden-vector file — 12 refs, all green; routed through the stub gateway (unary + server-streaming).
+- **Round 2 (semantic):** a technologically-divergent REAL backend passing the same vectors + a backend-specific test: `state`=sqlite (durability + linearizable CAS), `storage`=local-fs (containment + isolation), `catalog`=sqlite (durable branches + concurrent-merge safety), `runtime`=subprocess (process isolation), `engine`=duckdb+datafusion (real SQL + typed Arrow), `format`=parquet+delta (real Arrow files + time travel).
 
-1. **Round 2 — 4 of 6 done** (see [backlog.md](backlog.md)): **`state`=sqlite ✅**, **`storage`=local-fs ✅**, **`catalog`=sqlite ✅**, **`runtime`=subprocess ✅**. **Remaining: `format` + `engine` — and these are NOT drop-in** like the other four. Their round-1 conformance data is provider-SPECIFIC, so a real backend can't just join the shared vectors:
-   - **`engine`**: the shared vectors use a toy mini-SQL (`CREATE TABLE orders (id, region, amount)` — no types). Real DuckDB needs typed SQL; the toy regex parser can't run typed SQL. So either rewrite the engine vectors as real SQL (and the in-memory toy engine can no longer pass them → breaks the round-1 pair) OR give DuckDB its own vectors (weaker ADR-003 cross-run). **Decision needed:** provider-neutral engine conformance shape, or a real second engine pair (duckdb + datafusion) replacing the toy.
-   - **`format`**: the bulk leg is an in-process stream-registry stand-in in ALL current refs; a real Parquet/Iceberg backend forces the **real Arrow Flight data leg** (the deferred typed-Arrow pass). That's a genuinely larger build (Arrow IPC + a Flight or file handoff), not a one-file backend swap.
-   **`engine` ✅ DONE via option (b):** the toy refs stay (wire contract on `engine-v1.json`); a REAL pair — **DuckDB + DataFusion** (`examples/engine/{duckdb-py,datafusion-py}`) — passes a new real-SQL conformance set (`engine-real-v1.json`) with **real typed Arrow** (Arrow IPC result leg via `streams.py`), retiring the typed-Arrow gap for engine.
-   **`format` is the last one.** Same approach (option b): a real pair — **parquet** (pyarrow) + **delta** (`deltalake`) — writing real Arrow data files, sharing a `format-real-v1.json`. This is the heaviest (real file IO + the Append/Merge/Overwrite/Resolve data lifecycle on real files); the `streams.py` Arrow-IPC pattern from engine carries over. Then round 2 is complete (6/6).
-2. **Typed-Arrow conformance pass** — `format` + `engine` still carry the bulk leg as an in-process stand-in. A real format/engine backend (round 2) forces the real Arrow Flight data leg, so this folds into round 2 naturally.
-3. **Polish (optional, not blocking):** a real **SDK metadata interceptor** so plugin code gets the reconstructed context automatically; wire `InvokeBidiStream` (the `observability.Ingest` bidi relay) when that axis is referenced; roll `(rat.capability)` across the remaining unannotated axis services (strategy, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log, ui, notifications, marketplace, billing).
-4. **Beyond 0d:** sub-phases 0c (cross-cutting protos finalize), 0f (conformance suite + benchmarks), 0g (per-axis CONTRACT.md), 0h (peer review + `rat/1` freeze).
+ADR-007 + ADR-008 decided AND migrated; typed-Arrow gap retired for engine+format (real Arrow IPC). The full ADR-003 rigor is satisfied for every data-plane contract.
+
+**Genuinely remaining toward `rat/1` freeze (no longer reference-impl work):**
+1. **Real Arrow Flight transport** — every data leg still uses an in-process Arrow-IPC registry stand-in (the DATA is real typed Arrow; only the TRANSPORT is in-process). A real Flight (or file-handoff) server would retire the last stand-in. The cleanest single remaining "make it real" item.
+2. **Sub-phase 0f** — formalize the conformance suite (the per-axis golden vectors + a runner) + per-RPC latency benchmark.
+3. **Sub-phase 0c / 0g / 0h** — finalize cross-cutting protos; per-axis `CONTRACT.md`; peer review + `rat/1` freeze.
+4. **Polish (not blocking):** real **SDK metadata interceptor** (so plugin code gets the reconstructed context automatically); wire `InvokeBidiStream` (`observability.Ingest` bidi relay) when referenced; roll `(rat.capability)` across the remaining control/experience axis services (strategy, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log, ui, notifications, marketplace, billing).
 
 SDK distribution + layout + codegen are decided in **[ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md)**: vendored `contracts/sdks/<lang>/` (Go/Python/TS peers), reference plugins under `examples/<axis>/<impl>-<lang>/`, containerized `buf generate` via `scripts/gen-sdks.sh`.
 
