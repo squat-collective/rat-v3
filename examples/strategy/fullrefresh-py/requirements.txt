@@ -1,0 +1,5 @@
+# The strategy reference has NO backend dependency — it is pure capability
+# orchestration over the invoke seam. Only the gRPC runtime + the generated SDK
+# (on PYTHONPATH) are needed.
+grpcio==1.80.0
+protobuf==7.35.0

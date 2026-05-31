@@ -1,0 +1,24 @@
+{
+  "_comment": "RAT cross-axis COMPOSITION golden data — the ADR-003 'run against each other on golden data' gate (reviews/07 Part C). Unlike the per-axis <axis>-v1.json vectors (which test ONE axis in isolation), this drives a full data-plane PIPELINE — catalog (resolve refs) -> engine (SQL transform) -> format (write), wired by CAPABILITY through a mediating gateway, with the bulk Arrow moving over REAL Arrow Flight between axes. The pipeline is run for the four ADR-003 cross-combinations (baseline + one-axis substitution for format, catalog, engine; storage held at A) and every combination MUST produce this identical `expected_target`. That is what proves the contracts COMPOSE, not just that each axis conforms alone. See examples/composition/README.md.",
+  "axis": "composition/v1",
+  "source_table": "orders",
+  "target_table": "summary",
+  "source_rows": [
+    {"id": 1, "region": "west", "amount": 100},
+    {"id": 2, "region": "east", "amount": 200},
+    {"id": 3, "region": "west", "amount": 300},
+    {"id": 4, "region": "east", "amount": 50}
+  ],
+  "transform_sql": "SELECT region, CAST(SUM(amount) AS BIGINT) AS total FROM orders GROUP BY region ORDER BY region",
+  "sql_note": "CAST(... AS BIGINT) is deliberate: DuckDB's SUM(int) yields a 128-bit decimal/hugeint while DataFusion's yields int64 — a real cross-engine Arrow-dialect divergence (ADR-003's exact target). The CAST pins the output type so any conformant engine produces an identical int64 column; without it, an engine-substitution would change the result schema. This is a cross-axis assumption surfaced by composition, not by per-axis conformance.",
+  "expected_target": [
+    {"region": "east", "total": 250},
+    {"region": "west", "total": 400}
+  ],
+  "combinations": [
+    {"name": "baseline",        "engine": "duckdb-py",     "format": "parquet-py", "catalog": "sqlite-py"},
+    {"name": "format-sub",      "engine": "duckdb-py",     "format": "delta-py",   "catalog": "sqlite-py"},
+    {"name": "catalog-sub",     "engine": "duckdb-py",     "format": "parquet-py", "catalog": "inmemory-py"},
+    {"name": "engine-sub",      "engine": "datafusion-py", "format": "parquet-py", "catalog": "sqlite-py"}
+  ]
+}

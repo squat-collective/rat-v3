@@ -1,0 +1,9 @@
+# The composition harness loads EVERY data-plane backend in one process, so its deps
+# are the union of the per-axis real references' deps. Pinned to match scripts/
+# conformance.sh so the same wheels are reused from the pip cache.
+grpcio==1.80.0
+protobuf==7.35.0
+pyarrow==24.0.0
+duckdb==1.5.3
+datafusion==53.0.0
+deltalake==1.6.0

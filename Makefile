@@ -26,7 +26,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-check compile-sdks conformance bench help
+.PHONY: check verify lint build gen-sdks gen-check compile-sdks conformance composition bench help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -61,6 +61,10 @@ compile-sdks: ## Compile the generated Go SDK (proves it builds)
 ## --- conformance suite (0f) --------------------------------------------------
 conformance: ## Run EVERY reference plugin against its golden vectors → pass/fail matrix
 	@scripts/conformance.sh
+
+## --- cross-axis composition (0i / ADR-003 cross-combination gate) -------------
+composition: ## Boot catalog+engine+format together; run the strategy across 4 ADR-003 combos
+	@scripts/composition.sh
 
 bench: ## Per-RPC latency benchmark: core-mediated gateway overhead vs direct (0f)
 	@$(RUNTIME) run --rm $(RUNFLAGS) -v "$(CURDIR)":/work:Z -v rat-gocache:/go/pkg/mod \
