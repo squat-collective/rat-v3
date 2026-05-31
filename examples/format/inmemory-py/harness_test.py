@@ -62,14 +62,27 @@ class Rig:
     def _ref(self, identifier: str) -> data_pb2.TableRef:
         return data_pb2.TableRef(identifier=identifier)
 
-    def _ctx(self) -> context_pb2.RequestContext:
-        return context_pb2.RequestContext()
+    def _callmeta(self):
+        """The rat-callmeta-bin envelope a calling plugin's SDK sets on every
+        control call (ADR-007): context rides in transport metadata, NOT in the
+        request body (the request messages no longer have a context field). A
+        well-formed traceparent + the caller-supplied tenant the core re-stamps."""
+        rc = context_pb2.RequestContext(
+            trace=context_pb2.TraceContext(
+                traceparent="00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+                correlation_id="corr-golden",
+            ),
+            identity=context_pb2.Identity(tenant="acme"),
+        )
+        return [("rat-callmeta-bin", rc.SerializeToString())]
 
     def _source(self, rows):
         return self.servicer.streams.put([dict(r) for r in rows])
 
     def scan(self, table: str):
-        resp = self.stub.Resolve(format_pb2.ResolveRequest(context=self._ctx(), table=self._ref(table)))
+        resp = self.stub.Resolve(
+            format_pb2.ResolveRequest(table=self._ref(table)), metadata=self._callmeta()
+        )
         return self.servicer.streams.pull(resp.stream)
 
 
@@ -101,20 +114,24 @@ def run_lifecycle(rig: Rig, v) -> None:
     for s in v["lifecycle"]:
         op, expect = s["op"], s["expect"]
         if op == "append":
-            resp = rig.stub.Append(format_pb2.AppendRequest(
-                context=rig._ctx(), table=rig._ref(table), source=rig._source(s["source"])))
+            resp = rig.stub.Append(
+                format_pb2.AppendRequest(table=rig._ref(table), source=rig._source(s["source"])),
+                metadata=rig._callmeta())
             _assert_write(resp.result, expect)
         elif op == "merge":
-            resp = rig.stub.Merge(format_pb2.MergeRequest(
-                context=rig._ctx(), table=rig._ref(table), merge_keys=s.get("merge_keys", []),
-                source=rig._source(s["source"])))
+            resp = rig.stub.Merge(
+                format_pb2.MergeRequest(table=rig._ref(table), merge_keys=s.get("merge_keys", []),
+                                        source=rig._source(s["source"])),
+                metadata=rig._callmeta())
             _assert_write(resp.result, expect)
         elif op == "overwrite":
-            resp = rig.stub.Overwrite(format_pb2.OverwriteRequest(
-                context=rig._ctx(), table=rig._ref(table), source=rig._source(s["source"])))
+            resp = rig.stub.Overwrite(
+                format_pb2.OverwriteRequest(table=rig._ref(table), source=rig._source(s["source"])),
+                metadata=rig._callmeta())
             _assert_write(resp.result, expect)
         elif op == "maintain":
-            resp = rig.stub.Maintain(format_pb2.MaintainRequest(context=rig._ctx(), table=rig._ref(table)))
+            resp = rig.stub.Maintain(
+                format_pb2.MaintainRequest(table=rig._ref(table)), metadata=rig._callmeta())
             _assert_write(resp.result, expect)
         elif op == "scan":
             _assert_scan(rig.scan(table), expect)
@@ -130,9 +147,10 @@ def run_errors(rig: Rig, v) -> None:
             if s["op"] == "scan":
                 rig.scan(table)
             elif s["op"] == "merge":
-                rig.stub.Merge(format_pb2.MergeRequest(
-                    context=rig._ctx(), table=rig._ref(table), merge_keys=s.get("merge_keys", []),
-                    source=rig._source(s.get("source", []))))
+                rig.stub.Merge(
+                    format_pb2.MergeRequest(table=rig._ref(table), merge_keys=s.get("merge_keys", []),
+                                            source=rig._source(s.get("source", []))),
+                    metadata=rig._callmeta())
             else:
                 raise AssertionError(f"unknown error-op {s['op']!r}")
         except grpc.RpcError as e:

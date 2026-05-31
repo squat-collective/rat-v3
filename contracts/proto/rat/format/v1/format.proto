@@ -29,7 +29,6 @@ syntax = "proto3";
 package rat.format.v1;
 
 import "rat/common/v1/annotations.proto";
-import "rat/common/v1/context.proto";
 import "rat/common/v1/data.proto";
 
 option go_package = "github.com/rat-dev/rat/gen/rat/format/v1;formatv1";
@@ -64,7 +63,7 @@ service FormatService {
 }
 
 message ResolveRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   rat.common.v1.TableRef table = 2;
   // Optional column projection + predicate pushdown hints (opaque to core).
   repeated string columns = 3;
@@ -77,7 +76,7 @@ message ResolveResponse {
 }
 
 message AppendRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   rat.common.v1.TableRef table = 2;
   // Source Arrow stream the format pulls rows from.
   rat.common.v1.ArrowStream source = 3;
@@ -88,7 +87,7 @@ message AppendResponse {
 }
 
 message MergeRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   rat.common.v1.TableRef table = 2;
   rat.common.v1.ArrowStream source = 3;
   // The key columns to match existing rows on.
@@ -100,7 +99,7 @@ message MergeResponse {
 }
 
 message OverwriteRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   rat.common.v1.TableRef table = 2;
   rat.common.v1.ArrowStream source = 3;
 }
@@ -110,7 +109,7 @@ message OverwriteResponse {
 }
 
 message MaintainRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   rat.common.v1.TableRef table = 2;
 }
 

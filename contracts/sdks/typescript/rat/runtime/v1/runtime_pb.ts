@@ -13,8 +13,6 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { ArrowStream, WriteResult } from "../../common/v1/data_pb";
 import { file_rat_common_v1_data } from "../../common/v1/data_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -23,17 +21,12 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/runtime/v1/runtime.proto.
  */
 export const file_rat_runtime_v1_runtime: GenFile = /*@__PURE__*/
-  fileDesc("ChxyYXQvcnVudGltZS92MS9ydW50aW1lLnByb3RvEg5yYXQucnVudGltZS52MSJ/Cg5FeGVjdXRlUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBIRCgl3b3JrX3NwZWMYAiABKAwSKgoGaW5wdXRzGAMgAygLMhoucmF0LmNvbW1vbi52MS5BcnJvd1N0cmVhbSJGCg9FeGVjdXRlUHJvZ3Jlc3MSFQoIZnJhY3Rpb24YASABKAFIAIgBARIPCgdtZXNzYWdlGAIgASgJQgsKCV9mcmFjdGlvbiJeChBFeGVjdXRlQ29tcGxldGVkEg8KB3N1Y2Nlc3MYASABKAgSDQoFZXJyb3IYAiABKAkSKgoGcmVzdWx0GAMgASgLMhoucmF0LmNvbW1vbi52MS5Xcml0ZVJlc3VsdCKGAQoPRXhlY3V0ZVJlc3BvbnNlEjMKCHByb2dyZXNzGAEgASgLMh8ucmF0LnJ1bnRpbWUudjEuRXhlY3V0ZVByb2dyZXNzSAASNQoJY29tcGxldGVkGAIgASgLMiAucmF0LnJ1bnRpbWUudjEuRXhlY3V0ZUNvbXBsZXRlZEgAQgcKBWV2ZW50Ml4KDlJ1bnRpbWVTZXJ2aWNlEkwKB0V4ZWN1dGUSHi5yYXQucnVudGltZS52MS5FeGVjdXRlUmVxdWVzdBofLnJhdC5ydW50aW1lLnYxLkV4ZWN1dGVSZXNwb25zZTABQjVaM2dpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9ydW50aW1lL3YxO3J1bnRpbWV2MWIGcHJvdG8z", [file_rat_common_v1_context, file_rat_common_v1_data]);
+  fileDesc("ChxyYXQvcnVudGltZS92MS9ydW50aW1lLnByb3RvEg5yYXQucnVudGltZS52MSJVCg5FeGVjdXRlUmVxdWVzdBIRCgl3b3JrX3NwZWMYAiABKAwSKgoGaW5wdXRzGAMgAygLMhoucmF0LmNvbW1vbi52MS5BcnJvd1N0cmVhbUoECAEQAiJGCg9FeGVjdXRlUHJvZ3Jlc3MSFQoIZnJhY3Rpb24YASABKAFIAIgBARIPCgdtZXNzYWdlGAIgASgJQgsKCV9mcmFjdGlvbiJeChBFeGVjdXRlQ29tcGxldGVkEg8KB3N1Y2Nlc3MYASABKAgSDQoFZXJyb3IYAiABKAkSKgoGcmVzdWx0GAMgASgLMhoucmF0LmNvbW1vbi52MS5Xcml0ZVJlc3VsdCKGAQoPRXhlY3V0ZVJlc3BvbnNlEjMKCHByb2dyZXNzGAEgASgLMh8ucmF0LnJ1bnRpbWUudjEuRXhlY3V0ZVByb2dyZXNzSAASNQoJY29tcGxldGVkGAIgASgLMiAucmF0LnJ1bnRpbWUudjEuRXhlY3V0ZUNvbXBsZXRlZEgAQgcKBWV2ZW50Ml4KDlJ1bnRpbWVTZXJ2aWNlEkwKB0V4ZWN1dGUSHi5yYXQucnVudGltZS52MS5FeGVjdXRlUmVxdWVzdBofLnJhdC5ydW50aW1lLnYxLkV4ZWN1dGVSZXNwb25zZTABQjVaM2dpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9ydW50aW1lL3YxO3J1bnRpbWV2MWIGcHJvdG8z", [file_rat_common_v1_data]);
 
 /**
  * @generated from message rat.runtime.v1.ExecuteRequest
  */
 export type ExecuteRequest = Message<"rat.runtime.v1.ExecuteRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * Opaque work spec the runtime knows how to run (e.g. a serialized plan, a
    * script ref, a container entrypoint). The control plane does not interpret.

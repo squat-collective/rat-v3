@@ -17,8 +17,6 @@ pub struct TelemetryPoint {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct IngestRequest {
-    #[prost(message, optional, tag="1")]
-    pub context: ::core::option::Option<super::super::common::v1::RequestContext>,
     #[prost(message, repeated, tag="2")]
     pub points: ::prost::alloc::vec::Vec<TelemetryPoint>,
 }

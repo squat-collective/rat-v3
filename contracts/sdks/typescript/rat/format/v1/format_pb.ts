@@ -32,8 +32,6 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_rat_common_v1_annotations } from "../../common/v1/annotations_pb";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { ArrowStream, TableRef, WriteResult } from "../../common/v1/data_pb";
 import { file_rat_common_v1_data } from "../../common/v1/data_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -42,17 +40,12 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/format/v1/format.proto.
  */
 export const file_rat_format_v1_format: GenFile = /*@__PURE__*/
-  fileDesc("ChpyYXQvZm9ybWF0L3YxL2Zvcm1hdC5wcm90bxINcmF0LmZvcm1hdC52MSKMAQoOUmVzb2x2ZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSJgoFdGFibGUYAiABKAsyFy5yYXQuY29tbW9uLnYxLlRhYmxlUmVmEg8KB2NvbHVtbnMYAyADKAkSEQoJcHJlZGljYXRlGAQgASgJIj0KD1Jlc29sdmVSZXNwb25zZRIqCgZzdHJlYW0YASABKAsyGi5yYXQuY29tbW9uLnYxLkFycm93U3RyZWFtIpMBCg1BcHBlbmRSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS5yYXQuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0EiYKBXRhYmxlGAIgASgLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZhIqCgZzb3VyY2UYAyABKAsyGi5yYXQuY29tbW9uLnYxLkFycm93U3RyZWFtIjwKDkFwcGVuZFJlc3BvbnNlEioKBnJlc3VsdBgBIAEoCzIaLnJhdC5jb21tb24udjEuV3JpdGVSZXN1bHQipgEKDE1lcmdlUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBImCgV0YWJsZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYSKgoGc291cmNlGAMgASgLMhoucmF0LmNvbW1vbi52MS5BcnJvd1N0cmVhbRISCgptZXJnZV9rZXlzGAQgAygJIjsKDU1lcmdlUmVzcG9uc2USKgoGcmVzdWx0GAEgASgLMhoucmF0LmNvbW1vbi52MS5Xcml0ZVJlc3VsdCKWAQoQT3ZlcndyaXRlUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBImCgV0YWJsZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYSKgoGc291cmNlGAMgASgLMhoucmF0LmNvbW1vbi52MS5BcnJvd1N0cmVhbSI/ChFPdmVyd3JpdGVSZXNwb25zZRIqCgZyZXN1bHQYASABKAsyGi5yYXQuY29tbW9uLnYxLldyaXRlUmVzdWx0ImkKD01haW50YWluUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBImCgV0YWJsZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYiPgoQTWFpbnRhaW5SZXNwb25zZRIqCgZyZXN1bHQYASABKAsyGi5yYXQuY29tbW9uLnYxLldyaXRlUmVzdWx0Mo8ECg1Gb3JtYXRTZXJ2aWNlEmIKB1Jlc29sdmUSHS5yYXQuZm9ybWF0LnYxLlJlc29sdmVSZXF1ZXN0Gh4ucmF0LmZvcm1hdC52MS5SZXNvbHZlUmVzcG9uc2UiGIqXIhRyYXQ6Ly9mb3JtYXQvdjEvc2NhbhJhCgZBcHBlbmQSHC5yYXQuZm9ybWF0LnYxLkFwcGVuZFJlcXVlc3QaHS5yYXQuZm9ybWF0LnYxLkFwcGVuZFJlc3BvbnNlIhqKlyIWcmF0Oi8vZm9ybWF0L3YxL2FwcGVuZBJdCgVNZXJnZRIbLnJhdC5mb3JtYXQudjEuTWVyZ2VSZXF1ZXN0GhwucmF0LmZvcm1hdC52MS5NZXJnZVJlc3BvbnNlIhmKlyIVcmF0Oi8vZm9ybWF0L3YxL21lcmdlEm0KCU92ZXJ3cml0ZRIfLnJhdC5mb3JtYXQudjEuT3ZlcndyaXRlUmVxdWVzdBogLnJhdC5mb3JtYXQudjEuT3ZlcndyaXRlUmVzcG9uc2UiHYqXIhlyYXQ6Ly9mb3JtYXQvdjEvb3ZlcndyaXRlEmkKCE1haW50YWluEh4ucmF0LmZvcm1hdC52MS5NYWludGFpblJlcXVlc3QaHy5yYXQuZm9ybWF0LnYxLk1haW50YWluUmVzcG9uc2UiHIqXIhhyYXQ6Ly9mb3JtYXQvdjEvbWFpbnRhaW5CM1oxZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L2Zvcm1hdC92MTtmb3JtYXR2MWIGcHJvdG8z", [file_rat_common_v1_annotations, file_rat_common_v1_context, file_rat_common_v1_data]);
+  fileDesc("ChpyYXQvZm9ybWF0L3YxL2Zvcm1hdC5wcm90bxINcmF0LmZvcm1hdC52MSJiCg5SZXNvbHZlUmVxdWVzdBImCgV0YWJsZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYSDwoHY29sdW1ucxgDIAMoCRIRCglwcmVkaWNhdGUYBCABKAlKBAgBEAIiPQoPUmVzb2x2ZVJlc3BvbnNlEioKBnN0cmVhbRgBIAEoCzIaLnJhdC5jb21tb24udjEuQXJyb3dTdHJlYW0iaQoNQXBwZW5kUmVxdWVzdBImCgV0YWJsZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYSKgoGc291cmNlGAMgASgLMhoucmF0LmNvbW1vbi52MS5BcnJvd1N0cmVhbUoECAEQAiI8Cg5BcHBlbmRSZXNwb25zZRIqCgZyZXN1bHQYASABKAsyGi5yYXQuY29tbW9uLnYxLldyaXRlUmVzdWx0InwKDE1lcmdlUmVxdWVzdBImCgV0YWJsZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYSKgoGc291cmNlGAMgASgLMhoucmF0LmNvbW1vbi52MS5BcnJvd1N0cmVhbRISCgptZXJnZV9rZXlzGAQgAygJSgQIARACIjsKDU1lcmdlUmVzcG9uc2USKgoGcmVzdWx0GAEgASgLMhoucmF0LmNvbW1vbi52MS5Xcml0ZVJlc3VsdCJsChBPdmVyd3JpdGVSZXF1ZXN0EiYKBXRhYmxlGAIgASgLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZhIqCgZzb3VyY2UYAyABKAsyGi5yYXQuY29tbW9uLnYxLkFycm93U3RyZWFtSgQIARACIj8KEU92ZXJ3cml0ZVJlc3BvbnNlEioKBnJlc3VsdBgBIAEoCzIaLnJhdC5jb21tb24udjEuV3JpdGVSZXN1bHQiPwoPTWFpbnRhaW5SZXF1ZXN0EiYKBXRhYmxlGAIgASgLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZkoECAEQAiI+ChBNYWludGFpblJlc3BvbnNlEioKBnJlc3VsdBgBIAEoCzIaLnJhdC5jb21tb24udjEuV3JpdGVSZXN1bHQyjwQKDUZvcm1hdFNlcnZpY2USYgoHUmVzb2x2ZRIdLnJhdC5mb3JtYXQudjEuUmVzb2x2ZVJlcXVlc3QaHi5yYXQuZm9ybWF0LnYxLlJlc29sdmVSZXNwb25zZSIYipciFHJhdDovL2Zvcm1hdC92MS9zY2FuEmEKBkFwcGVuZBIcLnJhdC5mb3JtYXQudjEuQXBwZW5kUmVxdWVzdBodLnJhdC5mb3JtYXQudjEuQXBwZW5kUmVzcG9uc2UiGoqXIhZyYXQ6Ly9mb3JtYXQvdjEvYXBwZW5kEl0KBU1lcmdlEhsucmF0LmZvcm1hdC52MS5NZXJnZVJlcXVlc3QaHC5yYXQuZm9ybWF0LnYxLk1lcmdlUmVzcG9uc2UiGYqXIhVyYXQ6Ly9mb3JtYXQvdjEvbWVyZ2USbQoJT3ZlcndyaXRlEh8ucmF0LmZvcm1hdC52MS5PdmVyd3JpdGVSZXF1ZXN0GiAucmF0LmZvcm1hdC52MS5PdmVyd3JpdGVSZXNwb25zZSIdipciGXJhdDovL2Zvcm1hdC92MS9vdmVyd3JpdGUSaQoITWFpbnRhaW4SHi5yYXQuZm9ybWF0LnYxLk1haW50YWluUmVxdWVzdBofLnJhdC5mb3JtYXQudjEuTWFpbnRhaW5SZXNwb25zZSIcipciGHJhdDovL2Zvcm1hdC92MS9tYWludGFpbkIzWjFnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvZm9ybWF0L3YxO2Zvcm1hdHYxYgZwcm90bzM", [file_rat_common_v1_annotations, file_rat_common_v1_data]);
 
 /**
  * @generated from message rat.format.v1.ResolveRequest
  */
 export type ResolveRequest = Message<"rat.format.v1.ResolveRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * @generated from field: rat.common.v1.TableRef table = 2;
    */
@@ -102,11 +95,6 @@ export const ResolveResponseSchema: GenMessage<ResolveResponse> = /*@__PURE__*/
  */
 export type AppendRequest = Message<"rat.format.v1.AppendRequest"> & {
   /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
-  /**
    * @generated from field: rat.common.v1.TableRef table = 2;
    */
   table?: TableRef | undefined;
@@ -147,11 +135,6 @@ export const AppendResponseSchema: GenMessage<AppendResponse> = /*@__PURE__*/
  * @generated from message rat.format.v1.MergeRequest
  */
 export type MergeRequest = Message<"rat.format.v1.MergeRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * @generated from field: rat.common.v1.TableRef table = 2;
    */
@@ -199,11 +182,6 @@ export const MergeResponseSchema: GenMessage<MergeResponse> = /*@__PURE__*/
  */
 export type OverwriteRequest = Message<"rat.format.v1.OverwriteRequest"> & {
   /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
-  /**
    * @generated from field: rat.common.v1.TableRef table = 2;
    */
   table?: TableRef | undefined;
@@ -242,11 +220,6 @@ export const OverwriteResponseSchema: GenMessage<OverwriteResponse> = /*@__PURE_
  * @generated from message rat.format.v1.MaintainRequest
  */
 export type MaintainRequest = Message<"rat.format.v1.MaintainRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * @generated from field: rat.common.v1.TableRef table = 2;
    */

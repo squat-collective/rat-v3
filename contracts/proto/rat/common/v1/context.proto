@@ -1,9 +1,21 @@
 // Cross-cutting request context — the C1 + keystone (C-1) bake-in.
 //
-// EVERY RPC in EVERY axis takes a RequestContext as its first field. It is the
-// uniform carrier of trace + identity + tenancy that makes cross-plugin
-// debugging, authz, and multi-tenancy possible. A plugin that ignores its
-// contents still must accept it on the wire.
+// CARRIAGE (ADR-007): RequestContext is NOT a field in any request message. It
+// travels as a single binary transport-metadata header, `rat-callmeta-bin`, on
+// every control RPC — the serialized RequestContext below. It is the uniform
+// carrier of trace + identity + tenancy that makes cross-plugin debugging, authz,
+// and multi-tenancy possible.
+//
+// WHY METADATA, NOT FIELD 1 (ADR-007): the core's capability-invoke gateway is a
+// generic proxy that forwards the opaque request `payload` WITHOUT deserializing
+// it (ADR-005). But the gateway must VALIDATE traceparent and RE-STAMP identity
+// on every hop — impossible if the envelope is inside the payload it won't parse.
+// Putting the envelope in metadata lets the gateway read/validate/stamp it while
+// the body stays opaque. As a bonus there is no in-body identity field for a
+// careless plugin to trust: "never trust the wire copy" becomes "there is no wire
+// copy in the body." SDK interceptors marshal/unmarshal this header so plugin
+// code still receives a populated RequestContext in each method — reconstructed
+// from metadata, not read from the request.
 //
 // THIS FILE IS THE KEYSTONE FIX (reviews/06 C-1 = SEC-1 ⊕ AUTH-12). The earlier
 // draft had a single forgeable, semantically-ambiguous `subject` string. It is
@@ -12,25 +24,34 @@
 // can apply two different rules:
 //   - TraceContext  → propagate verbatim (caller-supplied, untrusted-but-relayed)
 //   - Identity      → derive/verify server-side, NEVER trust wire-supplied values
+// ADR-007 maps these two rules onto two metadata operations the payload-blind
+// gateway CAN perform: copy `trace` verbatim, stamp `identity` fresh per hop.
 //
 // Invocation is core-mediated (ADR-005): the core's capability-invoke gateway
 // stamps Identity on every hop, so these rules are enforced centrally rather
 // than left to each plugin.
 //
-// Status: DRAFT (pre-freeze). Resolving freeze-blocker #1 from reviews/06.
+// Status: DRAFT (pre-freeze). Resolves freeze-blocker #1 (reviews/06 C-1) +
+// ADR-007 (carriage).
 syntax = "proto3";
 
 package rat.common.v1;
 
 option go_package = "github.com/rat-dev/rat/gen/rat/common/v1;commonv1";
 
-// RequestContext travels as field 1 of every request message.
+// RequestContext is carried in the `rat-callmeta-bin` transport-metadata header
+// (ADR-007), not as a request field. Its shape is the keystone design, unchanged.
 //
 // The split is deliberate: `trace` is relayed verbatim across hops; `identity`
 // is (re)stamped by the core every hop and its wire-supplied values are ignored
 // by trusting components. Keeping them in separate sub-messages makes the
 // "propagate this / never-trust that" boundary structural, not a per-field
 // convention an author might misread.
+//
+// NOTE: the async plane (common/v1 Event) still embeds RequestContext in its
+// envelope body — a published event is core-stamped once at publish and has no
+// per-hop metadata channel, so in-body carriage is correct there. The metadata
+// carriage applies to the synchronous, gateway-mediated control RPCs.
 message RequestContext {
   // Distributed-trace correlation. Caller-propagated verbatim (C1).
   TraceContext trace = 1;

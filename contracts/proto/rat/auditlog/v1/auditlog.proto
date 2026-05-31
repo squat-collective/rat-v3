@@ -50,8 +50,6 @@ syntax = "proto3";
 
 package rat.auditlog.v1;
 
-import "rat/common/v1/context.proto";
-
 option go_package = "github.com/rat-dev/rat/gen/rat/auditlog/v1;auditlogv1";
 
 service AuditLogService {
@@ -102,7 +100,7 @@ message AuditRecord {
 }
 
 message AppendRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Core-authored, core-signed records to append, in chain order.
   repeated AuditRecord records = 2;
 }

@@ -20,15 +20,13 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/observability/v1/observability.proto.
  */
 export const file_rat_observability_v1_observability: GenFile = /*@__PURE__*/
-  fileDesc("CihyYXQvb2JzZXJ2YWJpbGl0eS92MS9vYnNlcnZhYmlsaXR5LnByb3RvEhRyYXQub2JzZXJ2YWJpbGl0eS52MSL1AQoOVGVsZW1ldHJ5UG9pbnQSLgoEdHlwZRgBIAEoDjIgLnJhdC5vYnNlcnZhYmlsaXR5LnYxLlNpZ25hbFR5cGUSDAoEbmFtZRgCIAEoCRINCgV2YWx1ZRgDIAEoARJICgphdHRyaWJ1dGVzGAQgAygLMjQucmF0Lm9ic2VydmFiaWxpdHkudjEuVGVsZW1ldHJ5UG9pbnQuQXR0cmlidXRlc0VudHJ5EhkKEXRpbWVzdGFtcF91bml4X21zGAUgASgDGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBInUKDUluZ2VzdFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSNAoGcG9pbnRzGAIgAygLMiQucmF0Lm9ic2VydmFiaWxpdHkudjEuVGVsZW1ldHJ5UG9pbnQiNAoOSW5nZXN0UmVzcG9uc2USEAoIYWNjZXB0ZWQYASABKAMSEAoIcmVqZWN0ZWQYAiABKAMqbAoKU2lnbmFsVHlwZRIbChdTSUdOQUxfVFlQRV9VTlNQRUNJRklFRBAAEhYKElNJR05BTF9UWVBFX01FVFJJQxABEhQKEFNJR05BTF9UWVBFX1NQQU4QAhITCg9TSUdOQUxfVFlQRV9MT0cQAzJvChRPYnNlcnZhYmlsaXR5U2VydmljZRJXCgZJbmdlc3QSIy5yYXQub2JzZXJ2YWJpbGl0eS52MS5Jbmdlc3RSZXF1ZXN0GiQucmF0Lm9ic2VydmFiaWxpdHkudjEuSW5nZXN0UmVzcG9uc2UoATABQkFaP2dpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9vYnNlcnZhYmlsaXR5L3YxO29ic2VydmFiaWxpdHl2MWIGcHJvdG8z", [file_rat_common_v1_context]);
+  fileDesc("CihyYXQvb2JzZXJ2YWJpbGl0eS92MS9vYnNlcnZhYmlsaXR5LnByb3RvEhRyYXQub2JzZXJ2YWJpbGl0eS52MSL1AQoOVGVsZW1ldHJ5UG9pbnQSLgoEdHlwZRgBIAEoDjIgLnJhdC5vYnNlcnZhYmlsaXR5LnYxLlNpZ25hbFR5cGUSDAoEbmFtZRgCIAEoCRINCgV2YWx1ZRgDIAEoARJICgphdHRyaWJ1dGVzGAQgAygLMjQucmF0Lm9ic2VydmFiaWxpdHkudjEuVGVsZW1ldHJ5UG9pbnQuQXR0cmlidXRlc0VudHJ5EhkKEXRpbWVzdGFtcF91bml4X21zGAUgASgDGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIksKDUluZ2VzdFJlcXVlc3QSNAoGcG9pbnRzGAIgAygLMiQucmF0Lm9ic2VydmFiaWxpdHkudjEuVGVsZW1ldHJ5UG9pbnRKBAgBEAIiNAoOSW5nZXN0UmVzcG9uc2USEAoIYWNjZXB0ZWQYASABKAMSEAoIcmVqZWN0ZWQYAiABKAMqbAoKU2lnbmFsVHlwZRIbChdTSUdOQUxfVFlQRV9VTlNQRUNJRklFRBAAEhYKElNJR05BTF9UWVBFX01FVFJJQxABEhQKEFNJR05BTF9UWVBFX1NQQU4QAhITCg9TSUdOQUxfVFlQRV9MT0cQAzJvChRPYnNlcnZhYmlsaXR5U2VydmljZRJXCgZJbmdlc3QSIy5yYXQub2JzZXJ2YWJpbGl0eS52MS5Jbmdlc3RSZXF1ZXN0GiQucmF0Lm9ic2VydmFiaWxpdHkudjEuSW5nZXN0UmVzcG9uc2UoATABQkFaP2dpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9vYnNlcnZhYmlsaXR5L3YxO29ic2VydmFiaWxpdHl2MWIGcHJvdG8z");
 
 /**
  * @generated from message rat.observability.v1.TelemetryPoint
@@ -75,11 +73,6 @@ export const TelemetryPointSchema: GenMessage<TelemetryPoint> = /*@__PURE__*/
  * @generated from message rat.observability.v1.IngestRequest
  */
 export type IngestRequest = Message<"rat.observability.v1.IngestRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * @generated from field: repeated rat.observability.v1.TelemetryPoint points = 2;
    */

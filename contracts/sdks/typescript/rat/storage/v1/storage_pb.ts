@@ -22,25 +22,18 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/storage/v1/storage.proto.
  */
 export const file_rat_storage_v1_storage: GenFile = /*@__PURE__*/
-  fileDesc("ChxyYXQvc3RvcmFnZS92MS9zdG9yYWdlLnByb3RvEg5yYXQuc3RvcmFnZS52MSKCAQoWVmVuZENyZWRlbnRpYWxzUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBIOCgZwcmVmaXgYAiABKAkSKAoEbW9kZRgDIAEoDjIaLnJhdC5zdG9yYWdlLnYxLkFjY2Vzc01vZGUiTAoXVmVuZENyZWRlbnRpYWxzUmVzcG9uc2USGAoLY3JlZGVudGlhbHMYASABKAxCA4ABARIXCg9leHBpcmVzX3VuaXhfbXMYAiABKAMqcgoKQWNjZXNzTW9kZRIbChdBQ0NFU1NfTU9ERV9VTlNQRUNJRklFRBAAEhQKEEFDQ0VTU19NT0RFX1JFQUQQARIVChFBQ0NFU1NfTU9ERV9XUklURRACEhoKFkFDQ0VTU19NT0RFX1JFQURfV1JJVEUQAzJ0Cg5TdG9yYWdlU2VydmljZRJiCg9WZW5kQ3JlZGVudGlhbHMSJi5yYXQuc3RvcmFnZS52MS5WZW5kQ3JlZGVudGlhbHNSZXF1ZXN0GicucmF0LnN0b3JhZ2UudjEuVmVuZENyZWRlbnRpYWxzUmVzcG9uc2VCNVozZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3N0b3JhZ2UvdjE7c3RvcmFnZXYxYgZwcm90bzM", [file_rat_common_v1_context]);
+  fileDesc("ChxyYXQvc3RvcmFnZS92MS9zdG9yYWdlLnByb3RvEg5yYXQuc3RvcmFnZS52MSJYChZWZW5kQ3JlZGVudGlhbHNSZXF1ZXN0Eg4KBnByZWZpeBgCIAEoCRIoCgRtb2RlGAMgASgOMhoucmF0LnN0b3JhZ2UudjEuQWNjZXNzTW9kZUoECAEQAiJMChdWZW5kQ3JlZGVudGlhbHNSZXNwb25zZRIYCgtjcmVkZW50aWFscxgBIAEoDEIDgAEBEhcKD2V4cGlyZXNfdW5peF9tcxgCIAEoAypyCgpBY2Nlc3NNb2RlEhsKF0FDQ0VTU19NT0RFX1VOU1BFQ0lGSUVEEAASFAoQQUNDRVNTX01PREVfUkVBRBABEhUKEUFDQ0VTU19NT0RFX1dSSVRFEAISGgoWQUNDRVNTX01PREVfUkVBRF9XUklURRADMnQKDlN0b3JhZ2VTZXJ2aWNlEmIKD1ZlbmRDcmVkZW50aWFscxImLnJhdC5zdG9yYWdlLnYxLlZlbmRDcmVkZW50aWFsc1JlcXVlc3QaJy5yYXQuc3RvcmFnZS52MS5WZW5kQ3JlZGVudGlhbHNSZXNwb25zZUI1WjNnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvc3RvcmFnZS92MTtzdG9yYWdldjFiBnByb3RvMw");
 
 /**
  * @generated from message rat.storage.v1.VendCredentialsRequest
  */
 export type VendCredentialsRequest = Message<"rat.storage.v1.VendCredentialsRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * Storage prefix the creds are scoped to (e.g. "s3://bucket/warehouse/orders").
    * The plugin MUST further constrain by context.identity.tenant.

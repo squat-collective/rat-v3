@@ -25,8 +25,6 @@
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_rat_common_v1_annotations } from "../../common/v1/annotations_pb";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { ArrowStream, TableRef, WriteResult } from "../../common/v1/data_pb";
 import { file_rat_common_v1_data } from "../../common/v1/data_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -35,17 +33,12 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/engine/v1/engine.proto.
  */
 export const file_rat_engine_v1_engine: GenFile = /*@__PURE__*/
-  fileDesc("ChpyYXQvZW5naW5lL3YxL2VuZ2luZS5wcm90bxINcmF0LmVuZ2luZS52MSJ2Cg5FeGVjdXRlUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBILCgNzcWwYAiABKAkSJwoGdGFibGVzGAMgAygLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZiI9Cg9FeGVjdXRlUmVzcG9uc2USKgoGcmVzdWx0GAEgASgLMhoucmF0LmNvbW1vbi52MS5Xcml0ZVJlc3VsdCJ0CgxRdWVyeVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSCwoDc3FsGAIgASgJEicKBnRhYmxlcxgDIAMoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYiOwoNUXVlcnlSZXNwb25zZRIqCgZzdHJlYW0YASABKAsyGi5yYXQuY29tbW9uLnYxLkFycm93U3RyZWFtIoUBCg5QcmV2aWV3UmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBILCgNzcWwYAiABKAkSJwoGdGFibGVzGAMgAygLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZhINCgVsaW1pdBgEIAEoAyI9Cg9QcmV2aWV3UmVzcG9uc2USKgoGc3RyZWFtGAEgASgLMhoucmF0LmNvbW1vbi52MS5BcnJvd1N0cmVhbTK8AgoNRW5naW5lU2VydmljZRJlCgdFeGVjdXRlEh0ucmF0LmVuZ2luZS52MS5FeGVjdXRlUmVxdWVzdBoeLnJhdC5lbmdpbmUudjEuRXhlY3V0ZVJlc3BvbnNlIhuKlyIXcmF0Oi8vZW5naW5lL3YxL2V4ZWN1dGUSXQoFUXVlcnkSGy5yYXQuZW5naW5lLnYxLlF1ZXJ5UmVxdWVzdBocLnJhdC5lbmdpbmUudjEuUXVlcnlSZXNwb25zZSIZipciFXJhdDovL2VuZ2luZS92MS9xdWVyeRJlCgdQcmV2aWV3Eh0ucmF0LmVuZ2luZS52MS5QcmV2aWV3UmVxdWVzdBoeLnJhdC5lbmdpbmUudjEuUHJldmlld1Jlc3BvbnNlIhuKlyIXcmF0Oi8vZW5naW5lL3YxL3ByZXZpZXdCM1oxZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L2VuZ2luZS92MTtlbmdpbmV2MWIGcHJvdG8z", [file_rat_common_v1_annotations, file_rat_common_v1_context, file_rat_common_v1_data]);
+  fileDesc("ChpyYXQvZW5naW5lL3YxL2VuZ2luZS5wcm90bxINcmF0LmVuZ2luZS52MSJMCg5FeGVjdXRlUmVxdWVzdBILCgNzcWwYAiABKAkSJwoGdGFibGVzGAMgAygLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZkoECAEQAiI9Cg9FeGVjdXRlUmVzcG9uc2USKgoGcmVzdWx0GAEgASgLMhoucmF0LmNvbW1vbi52MS5Xcml0ZVJlc3VsdCJKCgxRdWVyeVJlcXVlc3QSCwoDc3FsGAIgASgJEicKBnRhYmxlcxgDIAMoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWZKBAgBEAIiOwoNUXVlcnlSZXNwb25zZRIqCgZzdHJlYW0YASABKAsyGi5yYXQuY29tbW9uLnYxLkFycm93U3RyZWFtIlsKDlByZXZpZXdSZXF1ZXN0EgsKA3NxbBgCIAEoCRInCgZ0YWJsZXMYAyADKAsyFy5yYXQuY29tbW9uLnYxLlRhYmxlUmVmEg0KBWxpbWl0GAQgASgDSgQIARACIj0KD1ByZXZpZXdSZXNwb25zZRIqCgZzdHJlYW0YASABKAsyGi5yYXQuY29tbW9uLnYxLkFycm93U3RyZWFtMrwCCg1FbmdpbmVTZXJ2aWNlEmUKB0V4ZWN1dGUSHS5yYXQuZW5naW5lLnYxLkV4ZWN1dGVSZXF1ZXN0Gh4ucmF0LmVuZ2luZS52MS5FeGVjdXRlUmVzcG9uc2UiG4qXIhdyYXQ6Ly9lbmdpbmUvdjEvZXhlY3V0ZRJdCgVRdWVyeRIbLnJhdC5lbmdpbmUudjEuUXVlcnlSZXF1ZXN0GhwucmF0LmVuZ2luZS52MS5RdWVyeVJlc3BvbnNlIhmKlyIVcmF0Oi8vZW5naW5lL3YxL3F1ZXJ5EmUKB1ByZXZpZXcSHS5yYXQuZW5naW5lLnYxLlByZXZpZXdSZXF1ZXN0Gh4ucmF0LmVuZ2luZS52MS5QcmV2aWV3UmVzcG9uc2UiG4qXIhdyYXQ6Ly9lbmdpbmUvdjEvcHJldmlld0IzWjFnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvZW5naW5lL3YxO2VuZ2luZXYxYgZwcm90bzM", [file_rat_common_v1_annotations, file_rat_common_v1_data]);
 
 /**
  * @generated from message rat.engine.v1.ExecuteRequest
  */
 export type ExecuteRequest = Message<"rat.engine.v1.ExecuteRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * @generated from field: string sql = 2;
    */
@@ -89,11 +82,6 @@ export const ExecuteResponseSchema: GenMessage<ExecuteResponse> = /*@__PURE__*/
  */
 export type QueryRequest = Message<"rat.engine.v1.QueryRequest"> & {
   /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
-  /**
    * @generated from field: string sql = 2;
    */
   sql: string;
@@ -134,11 +122,6 @@ export const QueryResponseSchema: GenMessage<QueryResponse> = /*@__PURE__*/
  * @generated from message rat.engine.v1.PreviewRequest
  */
 export type PreviewRequest = Message<"rat.engine.v1.PreviewRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * @generated from field: string sql = 2;
    */

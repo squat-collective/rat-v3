@@ -14,25 +14,18 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/notifications/v1/notifications.proto.
  */
 export const file_rat_notifications_v1_notifications: GenFile = /*@__PURE__*/
-  fileDesc("CihyYXQvbm90aWZpY2F0aW9ucy92MS9ub3RpZmljYXRpb25zLnByb3RvEhRyYXQubm90aWZpY2F0aW9ucy52MSKWAgoLU2VuZFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSMAoIc2V2ZXJpdHkYAiABKA4yHi5yYXQubm90aWZpY2F0aW9ucy52MS5TZXZlcml0eRINCgV0aXRsZRgDIAEoCRIMCgRib2R5GAQgASgJEg4KBnRhcmdldBgFIAEoCRJFCgphdHRyaWJ1dGVzGAYgAygLMjEucmF0Lm5vdGlmaWNhdGlvbnMudjEuU2VuZFJlcXVlc3QuQXR0cmlidXRlc0VudHJ5GjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIjUKDFNlbmRSZXNwb25zZRIRCglkZWxpdmVyZWQYASABKAgSEgoKbWVzc2FnZV9pZBgCIAEoCSp4CghTZXZlcml0eRIYChRTRVZFUklUWV9VTlNQRUNJRklFRBAAEhEKDVNFVkVSSVRZX0lORk8QARIUChBTRVZFUklUWV9XQVJOSU5HEAISEgoOU0VWRVJJVFlfRVJST1IQAxIVChFTRVZFUklUWV9DUklUSUNBTBAEMmUKFE5vdGlmaWNhdGlvbnNTZXJ2aWNlEk0KBFNlbmQSIS5yYXQubm90aWZpY2F0aW9ucy52MS5TZW5kUmVxdWVzdBoiLnJhdC5ub3RpZmljYXRpb25zLnYxLlNlbmRSZXNwb25zZUJBWj9naXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvbm90aWZpY2F0aW9ucy92MTtub3RpZmljYXRpb25zdjFiBnByb3RvMw", [file_rat_common_v1_context]);
+  fileDesc("CihyYXQvbm90aWZpY2F0aW9ucy92MS9ub3RpZmljYXRpb25zLnByb3RvEhRyYXQubm90aWZpY2F0aW9ucy52MSLsAQoLU2VuZFJlcXVlc3QSMAoIc2V2ZXJpdHkYAiABKA4yHi5yYXQubm90aWZpY2F0aW9ucy52MS5TZXZlcml0eRINCgV0aXRsZRgDIAEoCRIMCgRib2R5GAQgASgJEg4KBnRhcmdldBgFIAEoCRJFCgphdHRyaWJ1dGVzGAYgAygLMjEucmF0Lm5vdGlmaWNhdGlvbnMudjEuU2VuZFJlcXVlc3QuQXR0cmlidXRlc0VudHJ5GjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBSgQIARACIjUKDFNlbmRSZXNwb25zZRIRCglkZWxpdmVyZWQYASABKAgSEgoKbWVzc2FnZV9pZBgCIAEoCSp4CghTZXZlcml0eRIYChRTRVZFUklUWV9VTlNQRUNJRklFRBAAEhEKDVNFVkVSSVRZX0lORk8QARIUChBTRVZFUklUWV9XQVJOSU5HEAISEgoOU0VWRVJJVFlfRVJST1IQAxIVChFTRVZFUklUWV9DUklUSUNBTBAEMmUKFE5vdGlmaWNhdGlvbnNTZXJ2aWNlEk0KBFNlbmQSIS5yYXQubm90aWZpY2F0aW9ucy52MS5TZW5kUmVxdWVzdBoiLnJhdC5ub3RpZmljYXRpb25zLnYxLlNlbmRSZXNwb25zZUJBWj9naXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvbm90aWZpY2F0aW9ucy92MTtub3RpZmljYXRpb25zdjFiBnByb3RvMw");
 
 /**
  * @generated from message rat.notifications.v1.SendRequest
  */
 export type SendRequest = Message<"rat.notifications.v1.SendRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * @generated from field: rat.notifications.v1.Severity severity = 2;
    */

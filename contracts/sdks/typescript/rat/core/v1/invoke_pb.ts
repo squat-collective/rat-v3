@@ -38,29 +38,18 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/core/v1/invoke.proto.
  */
 export const file_rat_core_v1_invoke: GenFile = /*@__PURE__*/
-  fileDesc("ChhyYXQvY29yZS92MS9pbnZva2UucHJvdG8SC3JhdC5jb3JlLnYxImQKDUludm9rZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSEgoKY2FwYWJpbGl0eRgCIAEoCRIPCgdwYXlsb2FkGAMgASgMIiAKDkludm9rZVJlc3BvbnNlEg4KBnJlc3VsdBgBIAEoDDJcChdDYXBhYmlsaXR5SW52b2tlU2VydmljZRJBCgZJbnZva2USGi5yYXQuY29yZS52MS5JbnZva2VSZXF1ZXN0GhsucmF0LmNvcmUudjEuSW52b2tlUmVzcG9uc2VCL1otZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L2NvcmUvdjE7Y29yZXYxYgZwcm90bzM", [file_rat_common_v1_context]);
+  fileDesc("ChhyYXQvY29yZS92MS9pbnZva2UucHJvdG8SC3JhdC5jb3JlLnYxIjoKDUludm9rZVJlcXVlc3QSEgoKY2FwYWJpbGl0eRgCIAEoCRIPCgdwYXlsb2FkGAMgASgMSgQIARACIiAKDkludm9rZVJlc3BvbnNlEg4KBnJlc3VsdBgBIAEoDDJcChdDYXBhYmlsaXR5SW52b2tlU2VydmljZRJBCgZJbnZva2USGi5yYXQuY29yZS52MS5JbnZva2VSZXF1ZXN0GhsucmF0LmNvcmUudjEuSW52b2tlUmVzcG9uc2VCL1otZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L2NvcmUvdjE7Y29yZXYxYgZwcm90bzM");
 
 /**
  * @generated from message rat.core.v1.InvokeRequest
  */
 export type InvokeRequest = Message<"rat.core.v1.InvokeRequest"> & {
-  /**
-   * The calling plugin's context. The core re-derives identity.caller_plugin for
-   * the downstream hop from THIS request's authenticated channel; wire-supplied
-   * identity values are not trusted (keystone, context.proto).
-   *
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * The capability being invoked, e.g. "rat://format/v1/merge". MUST match the
    * rat://<axis>/v<major>/<capability> grammar. The core resolves this to a

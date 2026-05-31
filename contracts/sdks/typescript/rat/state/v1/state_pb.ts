@@ -53,25 +53,18 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/state/v1/state.proto.
  */
 export const file_rat_state_v1_state: GenFile = /*@__PURE__*/
-  fileDesc("ChhyYXQvc3RhdGUvdjEvc3RhdGUucHJvdG8SDHJhdC5zdGF0ZS52MSJJCgpHZXRSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS5yYXQuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0EgsKA2tleRgCIAEoCSI9CgtHZXRSZXNwb25zZRINCgVmb3VuZBgBIAEoCBINCgV2YWx1ZRgCIAEoDBIQCghyZXZpc2lvbhgDIAEoAyJtCgpQdXRSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS5yYXQuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0EgsKA2tleRgCIAEoCRINCgV2YWx1ZRgDIAEoDBITCgtpZl9yZXZpc2lvbhgEIAEoAyJKCgtQdXRSZXNwb25zZRIpCgdvdXRjb21lGAEgASgOMhgucmF0LnN0YXRlLnYxLlB1dE91dGNvbWUSEAoIcmV2aXNpb24YAiABKAMiTQoLTGlzdFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSDgoGcHJlZml4GAIgASgJIhwKDExpc3RSZXNwb25zZRIMCgRrZXlzGAEgAygJImUKDFdhdGNoUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBIOCgZwcmVmaXgYAiABKAkSFQoNZnJvbV9yZXZpc2lvbhgDIAEoAyKqAQoNV2F0Y2hSZXNwb25zZRIuCgR0eXBlGAEgASgOMiAucmF0LnN0YXRlLnYxLldhdGNoUmVzcG9uc2UuVHlwZRILCgNrZXkYAiABKAkSDQoFdmFsdWUYAyABKAwSEAoIcmV2aXNpb24YBCABKAMiOwoEVHlwZRIUChBUWVBFX1VOU1BFQ0lGSUVEEAASDAoIVFlQRV9QVVQQARIPCgtUWVBFX0RFTEVURRACKncKClB1dE91dGNvbWUSGwoXUFVUX09VVENPTUVfVU5TUEVDSUZJRUQQABIZChVQVVRfT1VUQ09NRV9DT01NSVRURUQQARIYChRQVVRfT1VUQ09NRV9DT05GTElDVBACEhcKE1BVVF9PVVRDT01FX1VOS05PV04QAzKJAgoMU3RhdGVTZXJ2aWNlEjoKA0dldBIYLnJhdC5zdGF0ZS52MS5HZXRSZXF1ZXN0GhkucmF0LnN0YXRlLnYxLkdldFJlc3BvbnNlEjoKA1B1dBIYLnJhdC5zdGF0ZS52MS5QdXRSZXF1ZXN0GhkucmF0LnN0YXRlLnYxLlB1dFJlc3BvbnNlEj0KBExpc3QSGS5yYXQuc3RhdGUudjEuTGlzdFJlcXVlc3QaGi5yYXQuc3RhdGUudjEuTGlzdFJlc3BvbnNlEkIKBVdhdGNoEhoucmF0LnN0YXRlLnYxLldhdGNoUmVxdWVzdBobLnJhdC5zdGF0ZS52MS5XYXRjaFJlc3BvbnNlMAFCMVovZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3N0YXRlL3YxO3N0YXRldjFiBnByb3RvMw", [file_rat_common_v1_context]);
+  fileDesc("ChhyYXQvc3RhdGUvdjEvc3RhdGUucHJvdG8SDHJhdC5zdGF0ZS52MSIfCgpHZXRSZXF1ZXN0EgsKA2tleRgCIAEoCUoECAEQAiI9CgtHZXRSZXNwb25zZRINCgVmb3VuZBgBIAEoCBINCgV2YWx1ZRgCIAEoDBIQCghyZXZpc2lvbhgDIAEoAyJDCgpQdXRSZXF1ZXN0EgsKA2tleRgCIAEoCRINCgV2YWx1ZRgDIAEoDBITCgtpZl9yZXZpc2lvbhgEIAEoA0oECAEQAiJKCgtQdXRSZXNwb25zZRIpCgdvdXRjb21lGAEgASgOMhgucmF0LnN0YXRlLnYxLlB1dE91dGNvbWUSEAoIcmV2aXNpb24YAiABKAMiIwoLTGlzdFJlcXVlc3QSDgoGcHJlZml4GAIgASgJSgQIARACIhwKDExpc3RSZXNwb25zZRIMCgRrZXlzGAEgAygJIjsKDFdhdGNoUmVxdWVzdBIOCgZwcmVmaXgYAiABKAkSFQoNZnJvbV9yZXZpc2lvbhgDIAEoA0oECAEQAiKqAQoNV2F0Y2hSZXNwb25zZRIuCgR0eXBlGAEgASgOMiAucmF0LnN0YXRlLnYxLldhdGNoUmVzcG9uc2UuVHlwZRILCgNrZXkYAiABKAkSDQoFdmFsdWUYAyABKAwSEAoIcmV2aXNpb24YBCABKAMiOwoEVHlwZRIUChBUWVBFX1VOU1BFQ0lGSUVEEAASDAoIVFlQRV9QVVQQARIPCgtUWVBFX0RFTEVURRACKncKClB1dE91dGNvbWUSGwoXUFVUX09VVENPTUVfVU5TUEVDSUZJRUQQABIZChVQVVRfT1VUQ09NRV9DT01NSVRURUQQARIYChRQVVRfT1VUQ09NRV9DT05GTElDVBACEhcKE1BVVF9PVVRDT01FX1VOS05PV04QAzKJAgoMU3RhdGVTZXJ2aWNlEjoKA0dldBIYLnJhdC5zdGF0ZS52MS5HZXRSZXF1ZXN0GhkucmF0LnN0YXRlLnYxLkdldFJlc3BvbnNlEjoKA1B1dBIYLnJhdC5zdGF0ZS52MS5QdXRSZXF1ZXN0GhkucmF0LnN0YXRlLnYxLlB1dFJlc3BvbnNlEj0KBExpc3QSGS5yYXQuc3RhdGUudjEuTGlzdFJlcXVlc3QaGi5yYXQuc3RhdGUudjEuTGlzdFJlc3BvbnNlEkIKBVdhdGNoEhoucmF0LnN0YXRlLnYxLldhdGNoUmVxdWVzdBobLnJhdC5zdGF0ZS52MS5XYXRjaFJlc3BvbnNlMAFCMVovZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3N0YXRlL3YxO3N0YXRldjFiBnByb3RvMw");
 
 /**
  * @generated from message rat.state.v1.GetRequest
  */
 export type GetRequest = Message<"rat.state.v1.GetRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
    *
@@ -120,11 +113,6 @@ export const GetResponseSchema: GenMessage<GetResponse> = /*@__PURE__*/
  * @generated from message rat.state.v1.PutRequest
  */
 export type PutRequest = Message<"rat.state.v1.PutRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
    *
@@ -183,11 +171,6 @@ export const PutResponseSchema: GenMessage<PutResponse> = /*@__PURE__*/
  */
 export type ListRequest = Message<"rat.state.v1.ListRequest"> & {
   /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
-  /**
    * Plugin-relative prefix; subject to KEY GRAMMAR (file header). MAY be empty
    * (== list all of this plugin+tenant namespace).
    *
@@ -224,11 +207,6 @@ export const ListResponseSchema: GenMessage<ListResponse> = /*@__PURE__*/
  * @generated from message rat.state.v1.WatchRequest
  */
 export type WatchRequest = Message<"rat.state.v1.WatchRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * Plugin-relative prefix; subject to KEY GRAMMAR (file header). MAY be empty.
    *

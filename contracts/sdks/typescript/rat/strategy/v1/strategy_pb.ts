@@ -15,8 +15,6 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { TableRef, WriteResult } from "../../common/v1/data_pb";
 import { file_rat_common_v1_data } from "../../common/v1/data_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -25,17 +23,12 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/strategy/v1/strategy.proto.
  */
 export const file_rat_strategy_v1_strategy: GenFile = /*@__PURE__*/
-  fileDesc("Ch5yYXQvc3RyYXRlZ3kvdjEvc3RyYXRlZ3kucHJvdG8SD3JhdC5zdHJhdGVneS52MSKhAQoMQXBwbHlSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS5yYXQuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0EicKBnNvdXJjZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYSJwoGdGFyZ2V0GAMgASgLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZhIPCgdvcHRpb25zGAQgASgMIjsKDUFwcGx5UmVzcG9uc2USKgoGcmVzdWx0GAEgASgLMhoucmF0LmNvbW1vbi52MS5Xcml0ZVJlc3VsdDJZCg9TdHJhdGVneVNlcnZpY2USRgoFQXBwbHkSHS5yYXQuc3RyYXRlZ3kudjEuQXBwbHlSZXF1ZXN0Gh4ucmF0LnN0cmF0ZWd5LnYxLkFwcGx5UmVzcG9uc2VCN1o1Z2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3N0cmF0ZWd5L3YxO3N0cmF0ZWd5djFiBnByb3RvMw", [file_rat_common_v1_context, file_rat_common_v1_data]);
+  fileDesc("Ch5yYXQvc3RyYXRlZ3kvdjEvc3RyYXRlZ3kucHJvdG8SD3JhdC5zdHJhdGVneS52MSJ3CgxBcHBseVJlcXVlc3QSJwoGc291cmNlGAIgASgLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZhInCgZ0YXJnZXQYAyABKAsyFy5yYXQuY29tbW9uLnYxLlRhYmxlUmVmEg8KB29wdGlvbnMYBCABKAxKBAgBEAIiOwoNQXBwbHlSZXNwb25zZRIqCgZyZXN1bHQYASABKAsyGi5yYXQuY29tbW9uLnYxLldyaXRlUmVzdWx0MlkKD1N0cmF0ZWd5U2VydmljZRJGCgVBcHBseRIdLnJhdC5zdHJhdGVneS52MS5BcHBseVJlcXVlc3QaHi5yYXQuc3RyYXRlZ3kudjEuQXBwbHlSZXNwb25zZUI3WjVnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvc3RyYXRlZ3kvdjE7c3RyYXRlZ3l2MWIGcHJvdG8z", [file_rat_common_v1_data]);
 
 /**
  * @generated from message rat.strategy.v1.ApplyRequest
  */
 export type ApplyRequest = Message<"rat.strategy.v1.ApplyRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * Source dataset to read from.
    *
@@ -94,8 +87,9 @@ export const StrategyService: GenService<{
    * strategy orchestrates its required capabilities (e.g. Resolve source via a
    * a format capability, transform via a runtime, Write back via a
    * format capability) — but it does so by capability, never by plugin name.
-   * The core wires the concrete providers in via the RequestContext + the
-   * capability resolution the registry performs at plan time.
+   * The strategy reaches those providers through the core capability-invoke
+   * gateway (core/v1 Invoke, ADR-005), which resolves each capability URI to a
+   * concrete provider via the registry and mediates the call.
    *
    * @generated from rpc rat.strategy.v1.StrategyService.Apply
    */

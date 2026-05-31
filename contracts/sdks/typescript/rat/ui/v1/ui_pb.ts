@@ -21,24 +21,18 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/ui/v1/ui.proto.
  */
 export const file_rat_ui_v1_ui: GenFile = /*@__PURE__*/
-  fileDesc("ChJyYXQvdWkvdjEvdWkucHJvdG8SCXJhdC51aS52MSJBCg9EZXNjcmliZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQiLwoKSG9zdGVkU2xvdBIMCgRzbG90GAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJIk4KEERlc2NyaWJlUmVzcG9uc2USFAoMZGlzcGxheV9uYW1lGAEgASgJEiQKBXNsb3RzGAIgAygLMhUucmF0LnVpLnYxLkhvc3RlZFNsb3QiZAoRUmVuZGVyU2xvdFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSDAoEc2xvdBgCIAEoCRIRCgljb21wb25lbnQYAyABKAkiPQoSUmVuZGVyU2xvdFJlc3BvbnNlEhEKCWFzc2V0X3JlZhgBIAEoCRIUCgxwcm9wc19zY2hlbWEYAiABKAwymwEKCVVpU2VydmljZRJDCghEZXNjcmliZRIaLnJhdC51aS52MS5EZXNjcmliZVJlcXVlc3QaGy5yYXQudWkudjEuRGVzY3JpYmVSZXNwb25zZRJJCgpSZW5kZXJTbG90EhwucmF0LnVpLnYxLlJlbmRlclNsb3RSZXF1ZXN0Gh0ucmF0LnVpLnYxLlJlbmRlclNsb3RSZXNwb25zZUIrWilnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvdWkvdjE7dWl2MWIGcHJvdG8z", [file_rat_common_v1_context]);
+  fileDesc("ChJyYXQvdWkvdjEvdWkucHJvdG8SCXJhdC51aS52MSIXCg9EZXNjcmliZVJlcXVlc3RKBAgBEAIiLwoKSG9zdGVkU2xvdBIMCgRzbG90GAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJIk4KEERlc2NyaWJlUmVzcG9uc2USFAoMZGlzcGxheV9uYW1lGAEgASgJEiQKBXNsb3RzGAIgAygLMhUucmF0LnVpLnYxLkhvc3RlZFNsb3QiOgoRUmVuZGVyU2xvdFJlcXVlc3QSDAoEc2xvdBgCIAEoCRIRCgljb21wb25lbnQYAyABKAlKBAgBEAIiPQoSUmVuZGVyU2xvdFJlc3BvbnNlEhEKCWFzc2V0X3JlZhgBIAEoCRIUCgxwcm9wc19zY2hlbWEYAiABKAwymwEKCVVpU2VydmljZRJDCghEZXNjcmliZRIaLnJhdC51aS52MS5EZXNjcmliZVJlcXVlc3QaGy5yYXQudWkudjEuRGVzY3JpYmVSZXNwb25zZRJJCgpSZW5kZXJTbG90EhwucmF0LnVpLnYxLlJlbmRlclNsb3RSZXF1ZXN0Gh0ucmF0LnVpLnYxLlJlbmRlclNsb3RSZXNwb25zZUIrWilnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvdWkvdjE7dWl2MWIGcHJvdG8z");
 
 /**
  * @generated from message rat.ui.v1.DescribeRequest
  */
 export type DescribeRequest = Message<"rat.ui.v1.DescribeRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
 };
 
 /**
@@ -102,11 +96,6 @@ export const DescribeResponseSchema: GenMessage<DescribeResponse> = /*@__PURE__*
  * @generated from message rat.ui.v1.RenderSlotRequest
  */
 export type RenderSlotRequest = Message<"rat.ui.v1.RenderSlotRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * @generated from field: string slot = 2;
    */

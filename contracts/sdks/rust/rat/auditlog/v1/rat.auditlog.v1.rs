@@ -44,8 +44,6 @@ pub struct AuditRecord {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AppendRequest {
-    #[prost(message, optional, tag="1")]
-    pub context: ::core::option::Option<super::super::common::v1::RequestContext>,
     /// Core-authored, core-signed records to append, in chain order.
     #[prost(message, repeated, tag="2")]
     pub records: ::prost::alloc::vec::Vec<AuditRecord>,

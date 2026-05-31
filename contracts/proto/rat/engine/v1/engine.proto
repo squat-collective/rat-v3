@@ -22,7 +22,6 @@ syntax = "proto3";
 package rat.engine.v1;
 
 import "rat/common/v1/annotations.proto";
-import "rat/common/v1/context.proto";
 import "rat/common/v1/data.proto";
 
 option go_package = "github.com/rat-dev/rat/gen/rat/engine/v1;enginev1";
@@ -45,7 +44,7 @@ service EngineService {
 }
 
 message ExecuteRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   string sql = 2;
   // Tables referenced by the statement, so the core can resolve providers and
   // the engine can bind them without parsing SQL for refs.
@@ -57,7 +56,7 @@ message ExecuteResponse {
 }
 
 message QueryRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   string sql = 2;
   repeated rat.common.v1.TableRef tables = 3;
 }
@@ -68,7 +67,7 @@ message QueryResponse {
 }
 
 message PreviewRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   string sql = 2;
   repeated rat.common.v1.TableRef tables = 3;
   // Max rows to return in the sample.

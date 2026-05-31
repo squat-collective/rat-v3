@@ -35,8 +35,6 @@ syntax = "proto3";
 
 package rat.core.v1;
 
-import "rat/common/v1/context.proto";
-
 option go_package = "github.com/rat-dev/rat/gen/rat/core/v1;corev1";
 
 service CapabilityInvokeService {
@@ -47,10 +45,15 @@ service CapabilityInvokeService {
 }
 
 message InvokeRequest {
-  // The calling plugin's context. The core re-derives identity.caller_plugin for
-  // the downstream hop from THIS request's authenticated channel; wire-supplied
-  // identity values are not trusted (keystone, context.proto).
-  rat.common.v1.RequestContext context = 1;
+  // Call context (trace + identity + deadline) does NOT travel here. It rides in
+  // the `rat-callmeta-bin` transport-metadata header on the Invoke RPC, as on
+  // every control hop (ADR-007). The core reads it from metadata, validates
+  // traceparent, re-derives identity.caller_plugin for the downstream hop from
+  // THIS request's authenticated channel (wire-supplied identity is not trusted —
+  // keystone, context.proto), and stamps a fresh envelope onto the provider call.
+  // Keeping it out of the body is what lets the gateway forward `payload` without
+  // deserializing it (ADR-005 generic proxy).
+  reserved 1; // was `RequestContext context` — moved to rat-callmeta-bin (ADR-007)
 
   // The capability being invoked, e.g. "rat://format/v1/merge". MUST match the
   // rat://<axis>/v<major>/<capability> grammar. The core resolves this to a

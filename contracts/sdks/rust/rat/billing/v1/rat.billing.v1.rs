@@ -16,8 +16,6 @@ pub struct UsageEvent {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RecordRequest {
-    #[prost(message, optional, tag="1")]
-    pub context: ::core::option::Option<super::super::common::v1::RequestContext>,
     /// Tenant is taken from context.identity.tenant (C7); events meter per tenant.
     #[prost(message, repeated, tag="2")]
     pub events: ::prost::alloc::vec::Vec<UsageEvent>,

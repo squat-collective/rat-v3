@@ -10,7 +10,6 @@ syntax = "proto3";
 
 package rat.runtime.v1;
 
-import "rat/common/v1/context.proto";
 import "rat/common/v1/data.proto";
 
 option go_package = "github.com/rat-dev/rat/gen/rat/runtime/v1;runtimev1";
@@ -25,7 +24,7 @@ service RuntimeService {
 }
 
 message ExecuteRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Opaque work spec the runtime knows how to run (e.g. a serialized plan, a
   // script ref, a container entrypoint). The control plane does not interpret.
   bytes work_spec = 2;

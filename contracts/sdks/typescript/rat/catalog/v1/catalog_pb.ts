@@ -35,8 +35,6 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { TableRef } from "../../common/v1/data_pb";
 import { file_rat_common_v1_data } from "../../common/v1/data_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -45,17 +43,12 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/catalog/v1/catalog.proto.
  */
 export const file_rat_catalog_v1_catalog: GenFile = /*@__PURE__*/
-  fileDesc("ChxyYXQvY2F0YWxvZy92MS9jYXRhbG9nLnByb3RvEg5yYXQuY2F0YWxvZy52MSJlCg9HZXRUYWJsZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSEgoKaWRlbnRpZmllchgCIAEoCRIOCgZicmFuY2gYAyABKAkiOgoQR2V0VGFibGVSZXNwb25zZRImCgV0YWJsZRgBIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYiagoTQ3JlYXRlQnJhbmNoUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBIOCgZicmFuY2gYAiABKAkSEwoLZnJvbV9icmFuY2gYAyABKAkiJgoUQ3JlYXRlQnJhbmNoUmVzcG9uc2USDgoGYnJhbmNoGAEgASgJIqIBChJNZXJnZUJyYW5jaFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSDgoGYnJhbmNoGAIgASgJEhMKC2ludG9fYnJhbmNoGAMgASgJEh4KFmV4cGVjdGVkX2ludG9fc25hcHNob3QYBCABKAkSFwoPaWRlbXBvdGVuY3lfa2V5GAUgASgJIkMKE01lcmdlQnJhbmNoUmVzcG9uc2USEwoLc25hcHNob3RfaWQYASABKAkSFwoPYWxyZWFkeV9hcHBsaWVkGAIgASgIMpICCg5DYXRhbG9nU2VydmljZRJNCghHZXRUYWJsZRIfLnJhdC5jYXRhbG9nLnYxLkdldFRhYmxlUmVxdWVzdBogLnJhdC5jYXRhbG9nLnYxLkdldFRhYmxlUmVzcG9uc2USWQoMQ3JlYXRlQnJhbmNoEiMucmF0LmNhdGFsb2cudjEuQ3JlYXRlQnJhbmNoUmVxdWVzdBokLnJhdC5jYXRhbG9nLnYxLkNyZWF0ZUJyYW5jaFJlc3BvbnNlElYKC01lcmdlQnJhbmNoEiIucmF0LmNhdGFsb2cudjEuTWVyZ2VCcmFuY2hSZXF1ZXN0GiMucmF0LmNhdGFsb2cudjEuTWVyZ2VCcmFuY2hSZXNwb25zZUI1WjNnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvY2F0YWxvZy92MTtjYXRhbG9ndjFiBnByb3RvMw", [file_rat_common_v1_context, file_rat_common_v1_data]);
+  fileDesc("ChxyYXQvY2F0YWxvZy92MS9jYXRhbG9nLnByb3RvEg5yYXQuY2F0YWxvZy52MSI7Cg9HZXRUYWJsZVJlcXVlc3QSEgoKaWRlbnRpZmllchgCIAEoCRIOCgZicmFuY2gYAyABKAlKBAgBEAIiOgoQR2V0VGFibGVSZXNwb25zZRImCgV0YWJsZRgBIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYiQAoTQ3JlYXRlQnJhbmNoUmVxdWVzdBIOCgZicmFuY2gYAiABKAkSEwoLZnJvbV9icmFuY2gYAyABKAlKBAgBEAIiJgoUQ3JlYXRlQnJhbmNoUmVzcG9uc2USDgoGYnJhbmNoGAEgASgJIngKEk1lcmdlQnJhbmNoUmVxdWVzdBIOCgZicmFuY2gYAiABKAkSEwoLaW50b19icmFuY2gYAyABKAkSHgoWZXhwZWN0ZWRfaW50b19zbmFwc2hvdBgEIAEoCRIXCg9pZGVtcG90ZW5jeV9rZXkYBSABKAlKBAgBEAIiQwoTTWVyZ2VCcmFuY2hSZXNwb25zZRITCgtzbmFwc2hvdF9pZBgBIAEoCRIXCg9hbHJlYWR5X2FwcGxpZWQYAiABKAgykgIKDkNhdGFsb2dTZXJ2aWNlEk0KCEdldFRhYmxlEh8ucmF0LmNhdGFsb2cudjEuR2V0VGFibGVSZXF1ZXN0GiAucmF0LmNhdGFsb2cudjEuR2V0VGFibGVSZXNwb25zZRJZCgxDcmVhdGVCcmFuY2gSIy5yYXQuY2F0YWxvZy52MS5DcmVhdGVCcmFuY2hSZXF1ZXN0GiQucmF0LmNhdGFsb2cudjEuQ3JlYXRlQnJhbmNoUmVzcG9uc2USVgoLTWVyZ2VCcmFuY2gSIi5yYXQuY2F0YWxvZy52MS5NZXJnZUJyYW5jaFJlcXVlc3QaIy5yYXQuY2F0YWxvZy52MS5NZXJnZUJyYW5jaFJlc3BvbnNlQjVaM2dpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9jYXRhbG9nL3YxO2NhdGFsb2d2MWIGcHJvdG8z", [file_rat_common_v1_data]);
 
 /**
  * @generated from message rat.catalog.v1.GetTableRequest
  */
 export type GetTableRequest = Message<"rat.catalog.v1.GetTableRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * @generated from field: string identifier = 2;
    */
@@ -97,11 +90,6 @@ export const GetTableResponseSchema: GenMessage<GetTableResponse> = /*@__PURE__*
  * @generated from message rat.catalog.v1.CreateBranchRequest
  */
 export type CreateBranchRequest = Message<"rat.catalog.v1.CreateBranchRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * Branch name to create (e.g. a run id).
    *
@@ -145,11 +133,6 @@ export const CreateBranchResponseSchema: GenMessage<CreateBranchResponse> = /*@_
  * @generated from message rat.catalog.v1.MergeBranchRequest
  */
 export type MergeBranchRequest = Message<"rat.catalog.v1.MergeBranchRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * @generated from field: string branch = 2;
    */

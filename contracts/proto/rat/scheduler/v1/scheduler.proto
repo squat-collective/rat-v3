@@ -13,8 +13,6 @@ syntax = "proto3";
 
 package rat.scheduler.v1;
 
-import "rat/common/v1/context.proto";
-
 option go_package = "github.com/rat-dev/rat/gen/rat/scheduler/v1;schedulerv1";
 
 service SchedulerService {
@@ -40,7 +38,7 @@ service SchedulerService {
 }
 
 message ScheduleRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Caller-chosen id, used to cancel + to correlate fired triggers.
   string trigger_id = 2;
   // Cron expression; if empty, `at_unix_ms` is used for a one-shot.
@@ -53,7 +51,7 @@ message ScheduleResponse {
 }
 
 message CancelRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   string trigger_id = 2;
 }
 
@@ -62,7 +60,7 @@ message CancelResponse {
 }
 
 message WatchDueRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
 }
 
 // One fired trigger.

@@ -24,8 +24,6 @@ syntax = "proto3";
 
 package rat.tenancy.v1;
 
-import "rat/common/v1/context.proto";
-
 option go_package = "github.com/rat-dev/rat/gen/rat/tenancy/v1;tenancyv1";
 
 service TenancyService {
@@ -42,7 +40,7 @@ enum DecisionKind {
 }
 
 message DecideRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   DecisionKind kind = 2;
   // The action/resource under question (e.g. "share:dataset/orders").
   string subject_action = 3;

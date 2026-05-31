@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (0d: `format/v1` ADR-003 gate MET; identity-transport finding resolved → ADR-007, proto migration queued)
+> Updated: 2026-05-31 (0d: `format/v1` ADR-003 gate MET; ADR-007 decided AND its proto migration executed — context now rides in `rat-callmeta-bin` metadata, both refs green)
 
 ## Status one-liner
 
@@ -59,10 +59,11 @@ The 23 other prospective ADRs are in [backlog.md](backlog.md). They land as they
 
 ## Immediate next concrete step
 
-Sub-phase **0d is underway and `format/v1`'s ADR-003 two-reference gate is MET** (first axis done). The identity-transport finding is now **decided → [ADR-007](../docs/architecture/adrs/007-call-context-transport.md)** (cross-cutting context moves to the `rat-callmeta-bin` metadata header). The next concrete step is **executing the ADR-007 migration** — it's cross-cutting (touches every axis), so it should land before more axes get references:
+Sub-phase **0d is underway and `format/v1`'s ADR-003 two-reference gate is MET** (first axis done). The identity-transport finding is **decided ([ADR-007](../docs/architecture/adrs/007-call-context-transport.md)) AND its migration is executed** — `RequestContext` is stripped from all 37 control-message field sites and now rides in the `rat-callmeta-bin` metadata header; both references are green on the unchanged golden vectors. The next concrete step:
 
-1. **ADR-007 proto migration** (the immediate next step). Strip `RequestContext context = 1` from the 18 axis request messages + `core/v1 InvokeRequest` (`reserved 1;`); update `context.proto` prose to specify the `rat-callmeta-bin` carriage; regen the 4 SDKs; add the SDK metadata interceptor (Go first); update `inmemory-go`/`inmemory-py` + the stub gateway to read/stamp the envelope from metadata (and add the missing-traceparent rejection); re-run the **unchanged** shared golden vectors (must stay green). `buf breaking` will flag the field removal — expected + allowed in `v1-preview`.
-2. **Then pick the second data-plane axis for 0d** — `engine` (3 methods already 1:1 capability↔method, no Write-split needed) or `storage` (local-fs vs an S3-shaped impl is a clean independent pair). Reuse the proven harness pattern: shared `contracts/conformance/<axis>-v1.json` + two impls + the stub gateway.
+1. **Pick the second data-plane axis for 0d** — `engine` (3 methods already 1:1 capability↔method, no Write-split needed) or `storage` (local-fs vs an S3-shaped impl is a clean independent pair). Reuse the proven harness pattern: shared `contracts/conformance/<axis>-v1.json` + two impls + the stub gateway.
+2. **(Carry-over polish, optional)** roll a real **SDK metadata interceptor** into the generated SDKs so plugin code gets the reconstructed context object automatically (the references currently read/stamp `rat-callmeta-bin` by hand). Cheap, not blocking.
+3. **(Before `format/v1` → `v1`)** the typed-Arrow conformance pass (blocker #2 below) — still the one open item for that specific freeze.
 
 SDK distribution + layout + codegen are decided in **[ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md)**: vendored `contracts/sdks/<lang>/` (Go/Python/TS peers), reference plugins under `examples/<axis>/<impl>-<lang>/`, containerized `buf generate` via `scripts/gen-sdks.sh`.
 
@@ -71,7 +72,7 @@ SDK distribution + layout + codegen are decided in **[ADR-006](../docs/architect
 - **inmemory-py** (`examples/format/inmemory-py/`): from-scratch second reference, imports the vendored Python SDK, loads the same JSON. Green in `python:3.12` (grpcio 1.80.0 / protobuf 7.35.0).
 
 **Two things gate `format/v1` advancing `v1-preview` → `v1`:**
-1. **Identity-transport — DECIDED ([ADR-007](../docs/architecture/adrs/007-call-context-transport.md)), migration pending.** The finding the gateway surfaced (re-stamped per-hop identity can't live in a payload a generic proxy won't deserialize) is resolved: the whole `RequestContext` envelope moves from message field 1 to the `rat-callmeta-bin` metadata header. The *decision* unblocks the design; the *migration* (step 1 above) must land before `format/v1` → `v1`.
+1. **Identity-transport — DONE ✅ ([ADR-007](../docs/architecture/adrs/007-call-context-transport.md) decided + migrated).** `RequestContext` moved from message field 1 to the `rat-callmeta-bin` metadata header across all 37 control sites; the gateway now validates traceparent + re-stamps identity from metadata without touching the payload; both refs green on the unchanged vectors. No longer a blocker.
 2. **Typed-Arrow conformance pass** — both refs still carry the bulk leg as an in-process registry stand-in; the real Arrow Flight wire is unexercised.
 
 The deferred **additive tail** is still open and cheap to clear while in the contracts: #10b (manifest `artifact`/digest block), #9f doc-pins, per-kind manifest schemas, and rolling `(rat.capability)` across the other 14 axis services.

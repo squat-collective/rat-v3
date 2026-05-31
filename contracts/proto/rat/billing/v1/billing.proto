@@ -15,8 +15,6 @@ syntax = "proto3";
 
 package rat.billing.v1;
 
-import "rat/common/v1/context.proto";
-
 option go_package = "github.com/rat-dev/rat/gen/rat/billing/v1;billingv1";
 
 service BillingService {
@@ -35,7 +33,7 @@ message UsageEvent {
 }
 
 message RecordRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Tenant is taken from context.identity.tenant (C7); events meter per tenant.
   repeated UsageEvent events = 2;
 }

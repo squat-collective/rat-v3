@@ -18,15 +18,13 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/billing/v1/billing.proto.
  */
 export const file_rat_billing_v1_billing: GenFile = /*@__PURE__*/
-  fileDesc("ChxyYXQvYmlsbGluZy92MS9iaWxsaW5nLnByb3RvEg5yYXQuYmlsbGluZy52MSK7AQoKVXNhZ2VFdmVudBINCgVtZXRlchgBIAEoCRIQCghxdWFudGl0eRgCIAEoARIZChF0aW1lc3RhbXBfdW5peF9tcxgDIAEoAxI+CgpkaW1lbnNpb25zGAQgAygLMioucmF0LmJpbGxpbmcudjEuVXNhZ2VFdmVudC5EaW1lbnNpb25zRW50cnkaMQoPRGltZW5zaW9uc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiawoNUmVjb3JkUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBIqCgZldmVudHMYAiADKAsyGi5yYXQuYmlsbGluZy52MS5Vc2FnZUV2ZW50IiIKDlJlY29yZFJlc3BvbnNlEhAKCHJlY29yZGVkGAEgASgDMlkKDkJpbGxpbmdTZXJ2aWNlEkcKBlJlY29yZBIdLnJhdC5iaWxsaW5nLnYxLlJlY29yZFJlcXVlc3QaHi5yYXQuYmlsbGluZy52MS5SZWNvcmRSZXNwb25zZUI1WjNnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvYmlsbGluZy92MTtiaWxsaW5ndjFiBnByb3RvMw", [file_rat_common_v1_context]);
+  fileDesc("ChxyYXQvYmlsbGluZy92MS9iaWxsaW5nLnByb3RvEg5yYXQuYmlsbGluZy52MSK7AQoKVXNhZ2VFdmVudBINCgVtZXRlchgBIAEoCRIQCghxdWFudGl0eRgCIAEoARIZChF0aW1lc3RhbXBfdW5peF9tcxgDIAEoAxI+CgpkaW1lbnNpb25zGAQgAygLMioucmF0LmJpbGxpbmcudjEuVXNhZ2VFdmVudC5EaW1lbnNpb25zRW50cnkaMQoPRGltZW5zaW9uc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiQQoNUmVjb3JkUmVxdWVzdBIqCgZldmVudHMYAiADKAsyGi5yYXQuYmlsbGluZy52MS5Vc2FnZUV2ZW50SgQIARACIiIKDlJlY29yZFJlc3BvbnNlEhAKCHJlY29yZGVkGAEgASgDMlkKDkJpbGxpbmdTZXJ2aWNlEkcKBlJlY29yZBIdLnJhdC5iaWxsaW5nLnYxLlJlY29yZFJlcXVlc3QaHi5yYXQuYmlsbGluZy52MS5SZWNvcmRSZXNwb25zZUI1WjNnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvYmlsbGluZy92MTtiaWxsaW5ndjFiBnByb3RvMw");
 
 /**
  * @generated from message rat.billing.v1.UsageEvent
@@ -70,11 +68,6 @@ export const UsageEventSchema: GenMessage<UsageEvent> = /*@__PURE__*/
  * @generated from message rat.billing.v1.RecordRequest
  */
 export type RecordRequest = Message<"rat.billing.v1.RecordRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * Tenant is taken from context.identity.tenant (C7); events meter per tenant.
    *

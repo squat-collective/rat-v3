@@ -34,28 +34,18 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/identity/v1/identity.proto.
  */
 export const file_rat_identity_v1_identity: GenFile = /*@__PURE__*/
-  fileDesc("Ch5yYXQvaWRlbnRpdHkvdjEvaWRlbnRpdHkucHJvdG8SD3JhdC5pZGVudGl0eS52MSJeChNBdXRoZW50aWNhdGVSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS5yYXQuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0EhcKCmNyZWRlbnRpYWwYAiABKAxCA4ABASJOChRBdXRoZW50aWNhdGVSZXNwb25zZRIVCg1hdXRoZW50aWNhdGVkGAEgASgIEg8KB3N1YmplY3QYAiABKAkSDgoGdGVuYW50GAMgASgJImQKEEF1dGhvcml6ZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSDgoGYWN0aW9uGAIgASgJEhAKCHJlc291cmNlGAMgASgJImIKEUF1dGhvcml6ZVJlc3BvbnNlEg8KB2FsbG93ZWQYASABKAgSLAoJZGVueV9jb2RlGAIgASgOMhkucmF0LmlkZW50aXR5LnYxLkRlbnlDb2RlEg4KBnJlYXNvbhgDIAEoCSqpAQoIRGVueUNvZGUSGQoVREVOWV9DT0RFX1VOU1BFQ0lGSUVEEAASHwobREVOWV9DT0RFX05PVF9BVVRIRU5USUNBVEVEEAESHwobREVOWV9DT0RFX0lOU1VGRklDSUVOVF9ST0xFEAISHgoaREVOWV9DT0RFX0FDVElPTl9GT1JCSURERU4QAxIgChxERU5ZX0NPREVfUkVTT1VSQ0VfRk9SQklEREVOEAQywgEKD0lkZW50aXR5U2VydmljZRJbCgxBdXRoZW50aWNhdGUSJC5yYXQuaWRlbnRpdHkudjEuQXV0aGVudGljYXRlUmVxdWVzdBolLnJhdC5pZGVudGl0eS52MS5BdXRoZW50aWNhdGVSZXNwb25zZRJSCglBdXRob3JpemUSIS5yYXQuaWRlbnRpdHkudjEuQXV0aG9yaXplUmVxdWVzdBoiLnJhdC5pZGVudGl0eS52MS5BdXRob3JpemVSZXNwb25zZUI3WjVnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvaWRlbnRpdHkvdjE7aWRlbnRpdHl2MWIGcHJvdG8z", [file_rat_common_v1_context]);
+  fileDesc("Ch5yYXQvaWRlbnRpdHkvdjEvaWRlbnRpdHkucHJvdG8SD3JhdC5pZGVudGl0eS52MSI0ChNBdXRoZW50aWNhdGVSZXF1ZXN0EhcKCmNyZWRlbnRpYWwYAiABKAxCA4ABAUoECAEQAiJOChRBdXRoZW50aWNhdGVSZXNwb25zZRIVCg1hdXRoZW50aWNhdGVkGAEgASgIEg8KB3N1YmplY3QYAiABKAkSDgoGdGVuYW50GAMgASgJIjoKEEF1dGhvcml6ZVJlcXVlc3QSDgoGYWN0aW9uGAIgASgJEhAKCHJlc291cmNlGAMgASgJSgQIARACImIKEUF1dGhvcml6ZVJlc3BvbnNlEg8KB2FsbG93ZWQYASABKAgSLAoJZGVueV9jb2RlGAIgASgOMhkucmF0LmlkZW50aXR5LnYxLkRlbnlDb2RlEg4KBnJlYXNvbhgDIAEoCSqpAQoIRGVueUNvZGUSGQoVREVOWV9DT0RFX1VOU1BFQ0lGSUVEEAASHwobREVOWV9DT0RFX05PVF9BVVRIRU5USUNBVEVEEAESHwobREVOWV9DT0RFX0lOU1VGRklDSUVOVF9ST0xFEAISHgoaREVOWV9DT0RFX0FDVElPTl9GT1JCSURERU4QAxIgChxERU5ZX0NPREVfUkVTT1VSQ0VfRk9SQklEREVOEAQywgEKD0lkZW50aXR5U2VydmljZRJbCgxBdXRoZW50aWNhdGUSJC5yYXQuaWRlbnRpdHkudjEuQXV0aGVudGljYXRlUmVxdWVzdBolLnJhdC5pZGVudGl0eS52MS5BdXRoZW50aWNhdGVSZXNwb25zZRJSCglBdXRob3JpemUSIS5yYXQuaWRlbnRpdHkudjEuQXV0aG9yaXplUmVxdWVzdBoiLnJhdC5pZGVudGl0eS52MS5BdXRob3JpemVSZXNwb25zZUI3WjVnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvaWRlbnRpdHkvdjE7aWRlbnRpdHl2MWIGcHJvdG8z");
 
 /**
  * @generated from message rat.identity.v1.AuthenticateRequest
  */
 export type AuthenticateRequest = Message<"rat.identity.v1.AuthenticateRequest"> & {
-  /**
-   * No RequestContext.subject yet — this is what establishes it. Trace fields
-   * still apply, so the gateway passes context for correlation only.
-   *
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * Opaque credential (bearer token, client-cert chain, etc.). Never logged;
    * `debug_redact` makes that structural (reviews/06 SEC-8).
@@ -107,11 +97,6 @@ export const AuthenticateResponseSchema: GenMessage<AuthenticateResponse> = /*@_
  * @generated from message rat.identity.v1.AuthorizeRequest
  */
 export type AuthorizeRequest = Message<"rat.identity.v1.AuthorizeRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * Action being attempted, e.g. "pipeline.run", "plane.create".
    *

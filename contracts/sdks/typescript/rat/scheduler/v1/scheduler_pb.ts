@@ -16,25 +16,18 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/scheduler/v1/scheduler.proto.
  */
 export const file_rat_scheduler_v1_scheduler: GenFile = /*@__PURE__*/
-  fileDesc("CiByYXQvc2NoZWR1bGVyL3YxL3NjaGVkdWxlci5wcm90bxIQcmF0LnNjaGVkdWxlci52MSJ3Cg9TY2hlZHVsZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSEgoKdHJpZ2dlcl9pZBgCIAEoCRIMCgRjcm9uGAMgASgJEhIKCmF0X3VuaXhfbXMYBCABKAMiJgoQU2NoZWR1bGVSZXNwb25zZRISCgp0cmlnZ2VyX2lkGAEgASgJIlMKDUNhbmNlbFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSEgoKdHJpZ2dlcl9pZBgCIAEoCSIjCg5DYW5jZWxSZXNwb25zZRIRCgljYW5jZWxsZWQYASABKAgiQQoPV2F0Y2hEdWVSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS5yYXQuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0IkAKEFdhdGNoRHVlUmVzcG9uc2USEgoKdHJpZ2dlcl9pZBgBIAEoCRIYChBmaXJlZF9hdF91bml4X21zGAIgASgDMocCChBTY2hlZHVsZXJTZXJ2aWNlElEKCFNjaGVkdWxlEiEucmF0LnNjaGVkdWxlci52MS5TY2hlZHVsZVJlcXVlc3QaIi5yYXQuc2NoZWR1bGVyLnYxLlNjaGVkdWxlUmVzcG9uc2USSwoGQ2FuY2VsEh8ucmF0LnNjaGVkdWxlci52MS5DYW5jZWxSZXF1ZXN0GiAucmF0LnNjaGVkdWxlci52MS5DYW5jZWxSZXNwb25zZRJTCghXYXRjaER1ZRIhLnJhdC5zY2hlZHVsZXIudjEuV2F0Y2hEdWVSZXF1ZXN0GiIucmF0LnNjaGVkdWxlci52MS5XYXRjaER1ZVJlc3BvbnNlMAFCOVo3Z2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3NjaGVkdWxlci92MTtzY2hlZHVsZXJ2MWIGcHJvdG8z", [file_rat_common_v1_context]);
+  fileDesc("CiByYXQvc2NoZWR1bGVyL3YxL3NjaGVkdWxlci5wcm90bxIQcmF0LnNjaGVkdWxlci52MSJNCg9TY2hlZHVsZVJlcXVlc3QSEgoKdHJpZ2dlcl9pZBgCIAEoCRIMCgRjcm9uGAMgASgJEhIKCmF0X3VuaXhfbXMYBCABKANKBAgBEAIiJgoQU2NoZWR1bGVSZXNwb25zZRISCgp0cmlnZ2VyX2lkGAEgASgJIikKDUNhbmNlbFJlcXVlc3QSEgoKdHJpZ2dlcl9pZBgCIAEoCUoECAEQAiIjCg5DYW5jZWxSZXNwb25zZRIRCgljYW5jZWxsZWQYASABKAgiFwoPV2F0Y2hEdWVSZXF1ZXN0SgQIARACIkAKEFdhdGNoRHVlUmVzcG9uc2USEgoKdHJpZ2dlcl9pZBgBIAEoCRIYChBmaXJlZF9hdF91bml4X21zGAIgASgDMocCChBTY2hlZHVsZXJTZXJ2aWNlElEKCFNjaGVkdWxlEiEucmF0LnNjaGVkdWxlci52MS5TY2hlZHVsZVJlcXVlc3QaIi5yYXQuc2NoZWR1bGVyLnYxLlNjaGVkdWxlUmVzcG9uc2USSwoGQ2FuY2VsEh8ucmF0LnNjaGVkdWxlci52MS5DYW5jZWxSZXF1ZXN0GiAucmF0LnNjaGVkdWxlci52MS5DYW5jZWxSZXNwb25zZRJTCghXYXRjaER1ZRIhLnJhdC5zY2hlZHVsZXIudjEuV2F0Y2hEdWVSZXF1ZXN0GiIucmF0LnNjaGVkdWxlci52MS5XYXRjaER1ZVJlc3BvbnNlMAFCOVo3Z2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3NjaGVkdWxlci92MTtzY2hlZHVsZXJ2MWIGcHJvdG8z");
 
 /**
  * @generated from message rat.scheduler.v1.ScheduleRequest
  */
 export type ScheduleRequest = Message<"rat.scheduler.v1.ScheduleRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * Caller-chosen id, used to cancel + to correlate fired triggers.
    *
@@ -84,11 +77,6 @@ export const ScheduleResponseSchema: GenMessage<ScheduleResponse> = /*@__PURE__*
  */
 export type CancelRequest = Message<"rat.scheduler.v1.CancelRequest"> & {
   /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
-  /**
    * @generated from field: string trigger_id = 2;
    */
   triggerId: string;
@@ -122,10 +110,6 @@ export const CancelResponseSchema: GenMessage<CancelResponse> = /*@__PURE__*/
  * @generated from message rat.scheduler.v1.WatchDueRequest
  */
 export type WatchDueRequest = Message<"rat.scheduler.v1.WatchDueRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
 };
 
 /**

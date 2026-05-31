@@ -46,8 +46,6 @@ pub struct LaunchSpec {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LaunchRequest {
-    #[prost(message, optional, tag="1")]
-    pub context: ::core::option::Option<super::super::common::v1::RequestContext>,
     /// Logical plugin id this instance serves (for healthcheck/terminate).
     #[prost(string, tag="2")]
     pub plugin_id: ::prost::alloc::string::String,
@@ -65,8 +63,6 @@ pub struct LaunchResponse {
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TerminateRequest {
-    #[prost(message, optional, tag="1")]
-    pub context: ::core::option::Option<super::super::common::v1::RequestContext>,
     #[prost(string, tag="2")]
     pub instance_id: ::prost::alloc::string::String,
 }
@@ -77,8 +73,6 @@ pub struct TerminateResponse {
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HealthcheckRequest {
-    #[prost(message, optional, tag="1")]
-    pub context: ::core::option::Option<super::super::common::v1::RequestContext>,
     #[prost(string, tag="2")]
     pub instance_id: ::prost::alloc::string::String,
 }

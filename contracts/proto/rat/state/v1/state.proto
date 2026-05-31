@@ -50,8 +50,6 @@ syntax = "proto3";
 
 package rat.state.v1;
 
-import "rat/common/v1/context.proto";
-
 option go_package = "github.com/rat-dev/rat/gen/rat/state/v1;statev1";
 
 service StateService {
@@ -71,7 +69,7 @@ service StateService {
 }
 
 message GetRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
   string key = 2;
 }
@@ -84,7 +82,7 @@ message GetResponse {
 }
 
 message PutRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
   string key = 2;
   bytes value = 3;
@@ -121,7 +119,7 @@ message PutResponse {
 }
 
 message ListRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Plugin-relative prefix; subject to KEY GRAMMAR (file header). MAY be empty
   // (== list all of this plugin+tenant namespace).
   string prefix = 2;
@@ -132,7 +130,7 @@ message ListResponse {
 }
 
 message WatchRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Plugin-relative prefix; subject to KEY GRAMMAR (file header). MAY be empty.
   string prefix = 2;
   // Resume from this revision (0 == from now).

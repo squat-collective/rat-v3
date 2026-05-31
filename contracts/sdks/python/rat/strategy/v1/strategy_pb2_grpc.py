@@ -29,8 +29,9 @@ class StrategyServiceServicer(object):
         strategy orchestrates its required capabilities (e.g. Resolve source via a
         a format capability, transform via a runtime, Write back via a
         format capability) — but it does so by capability, never by plugin name.
-        The core wires the concrete providers in via the RequestContext + the
-        capability resolution the registry performs at plan time.
+        The strategy reaches those providers through the core capability-invoke
+        gateway (core/v1 Invoke, ADR-005), which resolves each capability URI to a
+        concrete provider via the registry and mediates the call.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

@@ -23,15 +23,13 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/marketplace/v1/marketplace.proto.
  */
 export const file_rat_marketplace_v1_marketplace: GenFile = /*@__PURE__*/
-  fileDesc("CiRyYXQvbWFya2V0cGxhY2UvdjEvbWFya2V0cGxhY2UucHJvdG8SEnJhdC5tYXJrZXRwbGFjZS52MSLmAQoHTGlzdGluZxIRCglwbHVnaW5faWQYASABKAkSDAoEa2luZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEh0KFXByb3ZpZGVkX2NhcGFiaWxpdGllcxgFIAMoCRIdChVyZXF1aXJlZF9jYXBhYmlsaXRpZXMYBiADKAkSHgoWY29uZm9ybWVkX2NhcGFiaWxpdGllcxgHIAMoCRIOCgZzaWduZWQYCCABKAgSEQoJc2lnbmVkX2J5GAkgASgJEhMKC3N1cHBvcnRfdXJsGAogASgJIn0KDVNlYXJjaFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSDQoFcXVlcnkYAiABKAkSDAoEa2luZBgDIAEoCRIfChdkZXBsb3ltZW50X2NhcGFiaWxpdGllcxgEIAMoCSI/Cg5TZWFyY2hSZXNwb25zZRItCghsaXN0aW5ncxgBIAMoCzIbLnJhdC5tYXJrZXRwbGFjZS52MS5MaXN0aW5nIk8KCkdldFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnJhdC5jb21tb24udjEuUmVxdWVzdENvbnRleHQSEQoJcGx1Z2luX2lkGAIgASgJIjsKC0dldFJlc3BvbnNlEiwKB2xpc3RpbmcYASABKAsyGy5yYXQubWFya2V0cGxhY2UudjEuTGlzdGluZzKtAQoSTWFya2V0cGxhY2VTZXJ2aWNlEk8KBlNlYXJjaBIhLnJhdC5tYXJrZXRwbGFjZS52MS5TZWFyY2hSZXF1ZXN0GiIucmF0Lm1hcmtldHBsYWNlLnYxLlNlYXJjaFJlc3BvbnNlEkYKA0dldBIeLnJhdC5tYXJrZXRwbGFjZS52MS5HZXRSZXF1ZXN0Gh8ucmF0Lm1hcmtldHBsYWNlLnYxLkdldFJlc3BvbnNlQj1aO2dpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9tYXJrZXRwbGFjZS92MTttYXJrZXRwbGFjZXYxYgZwcm90bzM", [file_rat_common_v1_context]);
+  fileDesc("CiRyYXQvbWFya2V0cGxhY2UvdjEvbWFya2V0cGxhY2UucHJvdG8SEnJhdC5tYXJrZXRwbGFjZS52MSLmAQoHTGlzdGluZxIRCglwbHVnaW5faWQYASABKAkSDAoEa2luZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEh0KFXByb3ZpZGVkX2NhcGFiaWxpdGllcxgFIAMoCRIdChVyZXF1aXJlZF9jYXBhYmlsaXRpZXMYBiADKAkSHgoWY29uZm9ybWVkX2NhcGFiaWxpdGllcxgHIAMoCRIOCgZzaWduZWQYCCABKAgSEQoJc2lnbmVkX2J5GAkgASgJEhMKC3N1cHBvcnRfdXJsGAogASgJIlMKDVNlYXJjaFJlcXVlc3QSDQoFcXVlcnkYAiABKAkSDAoEa2luZBgDIAEoCRIfChdkZXBsb3ltZW50X2NhcGFiaWxpdGllcxgEIAMoCUoECAEQAiI/Cg5TZWFyY2hSZXNwb25zZRItCghsaXN0aW5ncxgBIAMoCzIbLnJhdC5tYXJrZXRwbGFjZS52MS5MaXN0aW5nIiUKCkdldFJlcXVlc3QSEQoJcGx1Z2luX2lkGAIgASgJSgQIARACIjsKC0dldFJlc3BvbnNlEiwKB2xpc3RpbmcYASABKAsyGy5yYXQubWFya2V0cGxhY2UudjEuTGlzdGluZzKtAQoSTWFya2V0cGxhY2VTZXJ2aWNlEk8KBlNlYXJjaBIhLnJhdC5tYXJrZXRwbGFjZS52MS5TZWFyY2hSZXF1ZXN0GiIucmF0Lm1hcmtldHBsYWNlLnYxLlNlYXJjaFJlc3BvbnNlEkYKA0dldBIeLnJhdC5tYXJrZXRwbGFjZS52MS5HZXRSZXF1ZXN0Gh8ucmF0Lm1hcmtldHBsYWNlLnYxLkdldFJlc3BvbnNlQj1aO2dpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9tYXJrZXRwbGFjZS92MTttYXJrZXRwbGFjZXYxYgZwcm90bzM");
 
 /**
  * What a marketplace advertises about a plugin. Capability sets + conformance +
@@ -113,11 +111,6 @@ export const ListingSchema: GenMessage<Listing> = /*@__PURE__*/
  */
 export type SearchRequest = Message<"rat.marketplace.v1.SearchRequest"> & {
   /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
-  /**
    * Free-text query.
    *
    * @generated from field: string query = 2;
@@ -169,11 +162,6 @@ export const SearchResponseSchema: GenMessage<SearchResponse> = /*@__PURE__*/
  * @generated from message rat.marketplace.v1.GetRequest
  */
 export type GetRequest = Message<"rat.marketplace.v1.GetRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * @generated from field: string plugin_id = 2;
    */

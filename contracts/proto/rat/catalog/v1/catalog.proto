@@ -32,7 +32,6 @@ syntax = "proto3";
 
 package rat.catalog.v1;
 
-import "rat/common/v1/context.proto";
 import "rat/common/v1/data.proto";
 
 option go_package = "github.com/rat-dev/rat/gen/rat/catalog/v1;catalogv1";
@@ -51,7 +50,7 @@ service CatalogService {
 }
 
 message GetTableRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   string identifier = 2;
   // Optional branch to read from (empty == main).
   string branch = 3;
@@ -62,7 +61,7 @@ message GetTableResponse {
 }
 
 message CreateBranchRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Branch name to create (e.g. a run id).
   string branch = 2;
   // Branch point (empty == tip of main).
@@ -74,7 +73,7 @@ message CreateBranchResponse {
 }
 
 message MergeBranchRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   string branch = 2;
   string into_branch = 3;
   // Optimistic-concurrency guard: the snapshot `into_branch` is expected to be at

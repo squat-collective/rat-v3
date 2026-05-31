@@ -49,10 +49,14 @@ export const file_rat_common_v1_event: GenFile = /*@__PURE__*/
  */
 export type Event = Message<"rat.common.v1.Event"> & {
   /**
-   * Trace + identity + tenant for this event — the SAME envelope sync RPCs carry
-   * (context.proto). correlation_id chains the event to the operation that
-   * produced it; identity.tenant scopes routing/isolation; traceparent continues
-   * the distributed trace across the async hop. Core-stamped at emit time.
+   * Trace + identity + tenant for this event — the SAME envelope (context.proto).
+   * CARRIAGE: sync control RPCs carry it in the rat-callmeta-bin metadata header
+   * (ADR-007); the async Event carries it IN-BODY here, by design — a published,
+   * persisted, fan-out event has no per-hop metadata channel, and it is
+   * core-stamped once at emit (not re-stamped per hop), so a body field is correct.
+   * correlation_id chains the event to the operation that produced it;
+   * identity.tenant scopes routing/isolation; traceparent continues the
+   * distributed trace across the async hop.
    *
    * @generated from field: rat.common.v1.RequestContext context = 1;
    */

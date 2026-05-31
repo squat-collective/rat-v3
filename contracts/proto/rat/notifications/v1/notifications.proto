@@ -11,8 +11,6 @@ syntax = "proto3";
 
 package rat.notifications.v1;
 
-import "rat/common/v1/context.proto";
-
 option go_package = "github.com/rat-dev/rat/gen/rat/notifications/v1;notificationsv1";
 
 service NotificationsService {
@@ -29,7 +27,7 @@ enum Severity {
 }
 
 message SendRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   Severity severity = 2;
   // Short title + longer body. Plugins MUST NOT include secrets (I13); the core
   // redacts, but emitters share the obligation.

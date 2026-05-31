@@ -12,7 +12,6 @@ syntax = "proto3";
 
 package rat.strategy.v1;
 
-import "rat/common/v1/context.proto";
 import "rat/common/v1/data.proto";
 
 option go_package = "github.com/rat-dev/rat/gen/rat/strategy/v1;strategyv1";
@@ -22,13 +21,14 @@ service StrategyService {
   // strategy orchestrates its required capabilities (e.g. Resolve source via a
   // a format capability, transform via a runtime, Write back via a
   // format capability) — but it does so by capability, never by plugin name.
-  // The core wires the concrete providers in via the RequestContext + the
-  // capability resolution the registry performs at plan time.
+  // The strategy reaches those providers through the core capability-invoke
+  // gateway (core/v1 Invoke, ADR-005), which resolves each capability URI to a
+  // concrete provider via the registry and mediates the call.
   rpc Apply(ApplyRequest) returns (ApplyResponse);
 }
 
 message ApplyRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Source dataset to read from.
   rat.common.v1.TableRef source = 2;
   // Target dataset to write into.

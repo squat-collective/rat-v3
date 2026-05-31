@@ -21,8 +21,6 @@ syntax = "proto3";
 
 package rat.deploymentruntime.v1;
 
-import "rat/common/v1/context.proto";
-
 option go_package = "github.com/rat-dev/rat/gen/rat/deploymentruntime/v1;deploymentruntimev1";
 
 service DeploymentRuntimeService {
@@ -39,7 +37,7 @@ service DeploymentRuntimeService {
 
 // K8s-shaped resource asks, mirroring the manifest `resources` block (C4).
 message ResourceQuantities {
-  string cpu = 1;    // e.g. "500m"
+  string cpu = 1; // e.g. "500m"
   string memory = 2; // e.g. "512Mi"
 }
 
@@ -67,7 +65,7 @@ message LaunchSpec {
 }
 
 message LaunchRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Logical plugin id this instance serves (for healthcheck/terminate).
   string plugin_id = 2;
   LaunchSpec spec = 3;
@@ -81,7 +79,7 @@ message LaunchResponse {
 }
 
 message TerminateRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   string instance_id = 2;
 }
 
@@ -97,7 +95,7 @@ enum HealthStatus {
 }
 
 message HealthcheckRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   string instance_id = 2;
 }
 

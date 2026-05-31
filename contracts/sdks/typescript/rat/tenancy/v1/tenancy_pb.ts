@@ -27,25 +27,18 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/tenancy/v1/tenancy.proto.
  */
 export const file_rat_tenancy_v1_tenancy: GenFile = /*@__PURE__*/
-  fileDesc("ChxyYXQvdGVuYW5jeS92MS90ZW5hbmN5LnByb3RvEg5yYXQudGVuYW5jeS52MSKgAQoNRGVjaWRlUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBIqCgRraW5kGAIgASgOMhwucmF0LnRlbmFuY3kudjEuRGVjaXNpb25LaW5kEhYKDnN1YmplY3RfYWN0aW9uGAMgASgJEhsKE2NvdW50ZXJwYXJ0eV90ZW5hbnQYBCABKAkiXgoORGVjaWRlUmVzcG9uc2USDwoHYWxsb3dlZBgBIAEoCBIrCglkZW55X2NvZGUYAiABKA4yGC5yYXQudGVuYW5jeS52MS5EZW55Q29kZRIOCgZyZWFzb24YAyABKAkqfwoMRGVjaXNpb25LaW5kEh0KGURFQ0lTSU9OX0tJTkRfVU5TUEVDSUZJRUQQABIcChhERUNJU0lPTl9LSU5EX1BFUk1JU1NJT04QARIZChVERUNJU0lPTl9LSU5EX1NIQVJJTkcQAhIXChNERUNJU0lPTl9LSU5EX1FVT1RBEAMqhgEKCERlbnlDb2RlEhkKFURFTllfQ09ERV9VTlNQRUNJRklFRBAAEh4KGkRFTllfQ09ERV9QT0xJQ1lfRk9SQklEREVOEAESHAoYREVOWV9DT0RFX1FVT1RBX0VYQ0VFREVEEAISIQodREVOWV9DT0RFX0NST1NTX1RFTkFOVF9ERU5JRUQQAzJZCg5UZW5hbmN5U2VydmljZRJHCgZEZWNpZGUSHS5yYXQudGVuYW5jeS52MS5EZWNpZGVSZXF1ZXN0Gh4ucmF0LnRlbmFuY3kudjEuRGVjaWRlUmVzcG9uc2VCNVozZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3RlbmFuY3kvdjE7dGVuYW5jeXYxYgZwcm90bzM", [file_rat_common_v1_context]);
+  fileDesc("ChxyYXQvdGVuYW5jeS92MS90ZW5hbmN5LnByb3RvEg5yYXQudGVuYW5jeS52MSJ2Cg1EZWNpZGVSZXF1ZXN0EioKBGtpbmQYAiABKA4yHC5yYXQudGVuYW5jeS52MS5EZWNpc2lvbktpbmQSFgoOc3ViamVjdF9hY3Rpb24YAyABKAkSGwoTY291bnRlcnBhcnR5X3RlbmFudBgEIAEoCUoECAEQAiJeCg5EZWNpZGVSZXNwb25zZRIPCgdhbGxvd2VkGAEgASgIEisKCWRlbnlfY29kZRgCIAEoDjIYLnJhdC50ZW5hbmN5LnYxLkRlbnlDb2RlEg4KBnJlYXNvbhgDIAEoCSp/CgxEZWNpc2lvbktpbmQSHQoZREVDSVNJT05fS0lORF9VTlNQRUNJRklFRBAAEhwKGERFQ0lTSU9OX0tJTkRfUEVSTUlTU0lPThABEhkKFURFQ0lTSU9OX0tJTkRfU0hBUklORxACEhcKE0RFQ0lTSU9OX0tJTkRfUVVPVEEQAyqGAQoIRGVueUNvZGUSGQoVREVOWV9DT0RFX1VOU1BFQ0lGSUVEEAASHgoaREVOWV9DT0RFX1BPTElDWV9GT1JCSURERU4QARIcChhERU5ZX0NPREVfUVVPVEFfRVhDRUVERUQQAhIhCh1ERU5ZX0NPREVfQ1JPU1NfVEVOQU5UX0RFTklFRBADMlkKDlRlbmFuY3lTZXJ2aWNlEkcKBkRlY2lkZRIdLnJhdC50ZW5hbmN5LnYxLkRlY2lkZVJlcXVlc3QaHi5yYXQudGVuYW5jeS52MS5EZWNpZGVSZXNwb25zZUI1WjNnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvdGVuYW5jeS92MTt0ZW5hbmN5djFiBnByb3RvMw");
 
 /**
  * @generated from message rat.tenancy.v1.DecideRequest
  */
 export type DecideRequest = Message<"rat.tenancy.v1.DecideRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * @generated from field: rat.tenancy.v1.DecisionKind kind = 2;
    */

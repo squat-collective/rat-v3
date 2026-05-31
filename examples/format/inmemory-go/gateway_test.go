@@ -26,6 +26,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	commonv1 "github.com/rat-dev/rat/gen/rat/common/v1"
@@ -96,10 +97,55 @@ func newGateway(provider *grpc.ClientConn, callerPlugin string, allowed []string
 	}
 }
 
-// Invoke mediates one capability call: enforce → route → re-stamp identity →
-// audit → relay bytes. It never looks inside `payload`.
+// callMetaHeader is the binary metadata key carrying the serialized
+// RequestContext envelope on every control hop (ADR-007). The `-bin` suffix is
+// the gRPC convention for binary metadata.
+const callMetaHeader = "rat-callmeta-bin"
+
+// readCallMeta unmarshals the inbound rat-callmeta-bin envelope (nil if absent or
+// unparseable). This is the SDK-interceptor job, done here in the gateway.
+func readCallMeta(ctx context.Context) *commonv1.RequestContext {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil
+	}
+	vals := md.Get(callMetaHeader)
+	if len(vals) == 0 {
+		return nil
+	}
+	var rc commonv1.RequestContext
+	if proto.Unmarshal([]byte(vals[0]), &rc) != nil {
+		return nil
+	}
+	return &rc
+}
+
+// wellFormedTraceparent does a light W3C traceparent sanity check
+// ("00-<32hex>-<16hex>-<2hex>") — enough to exercise the ADR-007 / context.proto
+// gate ("the core rejects RPCs without a well-formed traceparent") without a full
+// parser. The point is that the gateway CAN do this now: trace is in metadata, not
+// the opaque payload.
+func wellFormedTraceparent(tp string) bool {
+	p := strings.Split(tp, "-")
+	return len(p) == 4 && len(p[0]) == 2 && len(p[1]) == 32 && len(p[2]) == 16 && len(p[3]) == 2
+}
+
+// Invoke mediates one capability call: read+validate envelope → enforce → route →
+// re-stamp identity → audit → relay bytes. It never looks inside `payload`.
 func (g *stubGateway) Invoke(ctx context.Context, req *corev1.InvokeRequest) (*corev1.InvokeResponse, error) {
 	cap := req.GetCapability()
+
+	// ADR-007: the call context rides in the rat-callmeta-bin metadata header, not
+	// the payload. Reading/validating/re-stamping it here — WITHOUT touching the
+	// opaque payload — is exactly what makes the generic-proxy relay below honest.
+	in := readCallMeta(ctx)
+
+	// C1 — reject RPCs lacking a well-formed traceparent (context.proto). Now
+	// enforceable at the gateway because trace is in metadata, not the un-parsed
+	// payload (the contradiction ADR-007 resolved).
+	if !wellFormedTraceparent(in.GetTrace().GetTraceparent()) {
+		return nil, status.Error(codes.InvalidArgument, "C1: missing or ill-formed traceparent")
+	}
 
 	// C5 — capability enforcement. The caller's manifest must permit this
 	// capability; the provider must serve it (here: it's in the route table).
@@ -111,23 +157,28 @@ func (g *stubGateway) Invoke(ctx context.Context, req *corev1.InvokeRequest) (*c
 		return nil, status.Errorf(codes.NotFound, "no provider method for capability %q", cap)
 	}
 
-	// C1/C2 — re-derive identity.caller_plugin for the DOWNSTREAM hop and
-	// propagate trace. The keystone (context.proto) says caller_plugin is
-	// re-derived per hop and never trusted from the wire; the core stamps it.
-	//
-	// FINDING (0d, surfaced by building this stub): the axis request messages
-	// carry RequestContext *inside* the payload, but a generic proxy that does
-	// not deserialize the payload cannot rewrite that embedded context. So the
-	// gateway stamps the downstream identity into gRPC METADATA instead. Whether
-	// frozen identity rides in payload.context or in channel metadata is a real
-	// open question this reference surfaced — see roadmap. For the stub the
-	// provider ignores both (it does not trust identity), so behavior is correct
-	// either way; the seam is what we're exercising.
-	tenant := req.GetContext().GetIdentity().GetTenant()
-	out := metadata.NewOutgoingContext(ctx, metadata.Pairs(
-		"x-rat-caller-plugin", g.callerPlugin,
-		"x-rat-tenant", tenant,
-	))
+	// C1/C2 — build the DOWNSTREAM envelope: trace copied VERBATIM (propagate
+	// rule), identity RE-STAMPED (caller_plugin re-derived for this hop, subject
+	// propagated, tenant stamped). The keystone's two handling rules map onto two
+	// metadata ops a payload-blind gateway can perform (ADR-007). A real core
+	// derives tenant from the authenticated principal; the stub trusts the inbound
+	// tenant for simplicity (it still overwrites caller_plugin, the load-bearing
+	// per-hop value for C3 namespacing).
+	tenant := in.GetIdentity().GetTenant()
+	downstream := &commonv1.RequestContext{
+		Trace: in.GetTrace(),
+		Identity: &commonv1.Identity{
+			CallerPlugin: g.callerPlugin,
+			Subject:      in.GetIdentity().GetSubject(),
+			Tenant:       tenant,
+		},
+		DeadlineUnixMs: in.GetDeadlineUnixMs(),
+	}
+	metaBytes, err := proto.Marshal(downstream)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "marshal call-meta: %v", err)
+	}
+	out := metadata.AppendToOutgoingContext(ctx, callMetaHeader, string(metaBytes))
 
 	// C8 — mandatory audit emission, even with no audit-log plugin installed.
 	g.mu.Lock()

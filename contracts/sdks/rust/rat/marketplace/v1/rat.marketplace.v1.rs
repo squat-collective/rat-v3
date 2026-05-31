@@ -33,8 +33,6 @@ pub struct Listing {
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SearchRequest {
-    #[prost(message, optional, tag="1")]
-    pub context: ::core::option::Option<super::super::common::v1::RequestContext>,
     /// Free-text query.
     #[prost(string, tag="2")]
     pub query: ::prost::alloc::string::String,
@@ -54,8 +52,6 @@ pub struct SearchResponse {
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetRequest {
-    #[prost(message, optional, tag="1")]
-    pub context: ::core::option::Option<super::super::common::v1::RequestContext>,
     #[prost(string, tag="2")]
     pub plugin_id: ::prost::alloc::string::String,
 }

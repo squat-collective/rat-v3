@@ -20,8 +20,6 @@ syntax = "proto3";
 
 package rat.marketplace.v1;
 
-import "rat/common/v1/context.proto";
-
 option go_package = "github.com/rat-dev/rat/gen/rat/marketplace/v1;marketplacev1";
 
 service MarketplaceService {
@@ -55,7 +53,7 @@ message Listing {
 }
 
 message SearchRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Free-text query.
   string query = 2;
   // Optional axis filter.
@@ -71,7 +69,7 @@ message SearchResponse {
 }
 
 message GetRequest {
-  rat.common.v1.RequestContext context = 1;
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   string plugin_id = 2;
 }
 

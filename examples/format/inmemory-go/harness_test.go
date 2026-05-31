@@ -36,6 +36,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/proto"
@@ -158,15 +159,28 @@ func (r *rig) invoke(ctx context.Context, capURI string, req, resp proto.Message
 	if err != nil {
 		return err
 	}
-	out, err := r.gw.Invoke(ctx, &corev1.InvokeRequest{
-		Context:    &commonv1.RequestContext{Identity: &commonv1.Identity{Tenant: "acme"}},
-		Capability: capURI,
-		Payload:    payload,
-	})
+	out, err := r.gw.Invoke(withCallMeta(ctx), &corev1.InvokeRequest{Capability: capURI, Payload: payload})
 	if err != nil {
 		return err
 	}
 	return proto.Unmarshal(out.GetResult(), resp)
+}
+
+// withCallMeta attaches the rat-callmeta-bin envelope a calling plugin's SDK sets
+// on every control call (ADR-007): a well-formed traceparent + correlation id +
+// the caller-supplied tenant (which the core re-stamps). Without it the gateway
+// rejects the call for a missing traceparent. Note: context rides in metadata, NOT
+// in the request body — the request messages no longer have a context field.
+func withCallMeta(ctx context.Context) context.Context {
+	rc := &commonv1.RequestContext{
+		Trace: &commonv1.TraceContext{
+			Traceparent:   "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+			CorrelationId: "corr-golden",
+		},
+		Identity: &commonv1.Identity{Tenant: "acme"},
+	}
+	b, _ := proto.Marshal(rc)
+	return metadata.AppendToOutgoingContext(ctx, callMetaHeader, string(b))
 }
 
 func toRows(src []map[string]string) []row {
@@ -184,7 +198,7 @@ func tableRef(id string) *commonv1.TableRef { return &commonv1.TableRef{Identifi
 func (r *rig) scan(ctx context.Context, table string) ([]row, error) {
 	var resp formatv1.ResolveResponse
 	if err := r.invoke(ctx, "rat://format/v1/scan",
-		&formatv1.ResolveRequest{Context: &commonv1.RequestContext{}, Table: tableRef(table)}, &resp); err != nil {
+		&formatv1.ResolveRequest{Table: tableRef(table)}, &resp); err != nil {
 		return nil, err
 	}
 	return r.impl.streams.pull(resp.GetStream()), nil
@@ -204,7 +218,7 @@ func TestFormatConformance_GoldenVectors(t *testing.T) {
 			case "append":
 				var resp formatv1.AppendResponse
 				if err := r.invoke(ctx, "rat://format/v1/append", &formatv1.AppendRequest{
-					Context: &commonv1.RequestContext{}, Table: tableRef(v.Table),
+					Table: tableRef(v.Table),
 					Source: r.impl.streams.put(toRows(s.Source)),
 				}, &resp); err != nil {
 					t.Fatalf("append: %v", err)
@@ -213,7 +227,7 @@ func TestFormatConformance_GoldenVectors(t *testing.T) {
 			case "merge":
 				var resp formatv1.MergeResponse
 				if err := r.invoke(ctx, "rat://format/v1/merge", &formatv1.MergeRequest{
-					Context: &commonv1.RequestContext{}, Table: tableRef(v.Table),
+					Table: tableRef(v.Table),
 					MergeKeys: s.MergeKeys, Source: r.impl.streams.put(toRows(s.Source)),
 				}, &resp); err != nil {
 					t.Fatalf("merge: %v", err)
@@ -222,7 +236,7 @@ func TestFormatConformance_GoldenVectors(t *testing.T) {
 			case "overwrite":
 				var resp formatv1.OverwriteResponse
 				if err := r.invoke(ctx, "rat://format/v1/overwrite", &formatv1.OverwriteRequest{
-					Context: &commonv1.RequestContext{}, Table: tableRef(v.Table),
+					Table: tableRef(v.Table),
 					Source: r.impl.streams.put(toRows(s.Source)),
 				}, &resp); err != nil {
 					t.Fatalf("overwrite: %v", err)
@@ -231,7 +245,7 @@ func TestFormatConformance_GoldenVectors(t *testing.T) {
 			case "maintain":
 				var resp formatv1.MaintainResponse
 				if err := r.invoke(ctx, "rat://format/v1/maintain",
-					&formatv1.MaintainRequest{Context: &commonv1.RequestContext{}, Table: tableRef(v.Table)}, &resp); err != nil {
+					&formatv1.MaintainRequest{Table: tableRef(v.Table)}, &resp); err != nil {
 					t.Fatalf("maintain: %v", err)
 				}
 				assertWrite(t, resp.GetResult(), s.Expect)
@@ -273,7 +287,7 @@ func TestFormatConformance_ErrorVectors(t *testing.T) {
 			case "merge":
 				var resp formatv1.MergeResponse
 				err = r.invoke(ctx, "rat://format/v1/merge", &formatv1.MergeRequest{
-					Context: &commonv1.RequestContext{}, Table: tableRef(table),
+					Table: tableRef(table),
 					MergeKeys: s.MergeKeys, Source: r.impl.streams.put(toRows(s.Source)),
 				}, &resp)
 			default:
@@ -286,6 +300,27 @@ func TestFormatConformance_ErrorVectors(t *testing.T) {
 				t.Fatalf("%s: status = %s, want %s", s.Step, got, s.Expect.Code)
 			}
 		})
+	}
+}
+
+// TestGateway_RejectsMissingTraceparent exercises the ADR-007 gate the metadata
+// carriage makes possible: the gateway validates traceparent (now in metadata,
+// readable without parsing the payload) and rejects a call that omits the
+// rat-callmeta-bin envelope.
+func TestGateway_RejectsMissingTraceparent(t *testing.T) {
+	r := newRig(t)
+	ctx := tctx(t)
+	payload, err := proto.Marshal(&formatv1.ResolveRequest{Table: tableRef("warehouse.sales.orders")})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	// Note: ctx WITHOUT withCallMeta → no traceparent reaches the gateway.
+	_, err = r.gw.Invoke(ctx, &corev1.InvokeRequest{Capability: "rat://format/v1/scan", Payload: payload})
+	if err == nil {
+		t.Fatal("Invoke without traceparent: want error, got nil")
+	}
+	if got := status.Code(err); got != codes.InvalidArgument {
+		t.Fatalf("status = %s, want INVALID_ARGUMENT", got)
 	}
 }
 

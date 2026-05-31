@@ -21,25 +21,18 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { RequestContext } from "../../common/v1/context_pb";
-import { file_rat_common_v1_context } from "../../common/v1/context_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/secret/v1/secret.proto.
  */
 export const file_rat_secret_v1_secret: GenFile = /*@__PURE__*/
-  fileDesc("ChpyYXQvc2VjcmV0L3YxL3NlY3JldC5wcm90bxINcmF0LnNlY3JldC52MSJUCg5SZXNvbHZlUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBISCgpzZWNyZXRfcmVmGAIgASgJIk0KD1Jlc29sdmVSZXNwb25zZRINCgVmb3VuZBgBIAEoCBISCgV2YWx1ZRgCIAEoDEIDgAEBEhcKD2V4cGlyZXNfdW5peF9tcxgDIAEoAzJZCg1TZWNyZXRTZXJ2aWNlEkgKB1Jlc29sdmUSHS5yYXQuc2VjcmV0LnYxLlJlc29sdmVSZXF1ZXN0Gh4ucmF0LnNlY3JldC52MS5SZXNvbHZlUmVzcG9uc2VCM1oxZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3NlY3JldC92MTtzZWNyZXR2MWIGcHJvdG8z", [file_rat_common_v1_context]);
+  fileDesc("ChpyYXQvc2VjcmV0L3YxL3NlY3JldC5wcm90bxINcmF0LnNlY3JldC52MSIqCg5SZXNvbHZlUmVxdWVzdBISCgpzZWNyZXRfcmVmGAIgASgJSgQIARACIk0KD1Jlc29sdmVSZXNwb25zZRINCgVmb3VuZBgBIAEoCBISCgV2YWx1ZRgCIAEoDEIDgAEBEhcKD2V4cGlyZXNfdW5peF9tcxgDIAEoAzJZCg1TZWNyZXRTZXJ2aWNlEkgKB1Jlc29sdmUSHS5yYXQuc2VjcmV0LnYxLlJlc29sdmVSZXF1ZXN0Gh4ucmF0LnNlY3JldC52MS5SZXNvbHZlUmVzcG9uc2VCM1oxZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3NlY3JldC92MTtzZWNyZXR2MWIGcHJvdG8z");
 
 /**
  * @generated from message rat.secret.v1.ResolveRequest
  */
 export type ResolveRequest = Message<"rat.secret.v1.ResolveRequest"> & {
-  /**
-   * @generated from field: rat.common.v1.RequestContext context = 1;
-   */
-  context?: RequestContext | undefined;
-
   /**
    * Opaque secret reference, e.g. "ref://vault/prod/db-password". The plugin
    * MUST scope resolution by context.identity.tenant (no cross-tenant secret reads).

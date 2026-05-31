@@ -4,6 +4,24 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — ADR-007 migration executed: `RequestContext` field → `rat-callmeta-bin` metadata across the contract
+
+Implemented [ADR-007](../docs/architecture/adrs/007-call-context-transport.md) (the decision landed in commit `9ff3cac`; this is the implementation, kept separate per one-ADR-per-commit).
+
+- **Protos:** stripped `RequestContext context = 1` from **37 messages** (36 request messages across the 18 axis services + `core/v1 InvokeRequest`), each replaced with `reserved 1;`; removed the now-unused `context.proto` import from those 19 files. `context.proto` prose rewritten to specify `rat-callmeta-bin` carriage + the "why metadata not field 1" rationale (messages unchanged). `event.proto` keeps its in-body `RequestContext` (async exception — core-stamped once at emit, no per-hop metadata channel) with the carriage distinction documented. `strategy.proto` Apply comment corrected (providers reached via the core invoke gateway, not "via RequestContext"). `buf lint`/`build` clean; `buf format` applied.
+- **`buf breaking` confirms exactly 37 findings, all "field 1 `context` deleted"** — nothing collateral, exactly as the ADR predicted; allowed in `v1-preview`.
+- **SDKs:** regenerated all 4 (Go/Python/TS/Rust) via `make gen-sdks`; the generated request types no longer carry `context`.
+- **References + gateway updated to the metadata model:**
+  - Stub gateway (`inmemory-go/gateway_test.go`) now reads the inbound `rat-callmeta-bin` envelope, **validates traceparent** (new C1 gate — possible now that trace is in metadata, not the opaque payload; rejects missing/ill-formed with `INVALID_ARGUMENT`), and constructs the downstream envelope (trace verbatim, identity re-stamped) as outbound metadata — still never deserializing the payload. New test `TestGateway_RejectsMissingTraceparent`.
+  - Both harnesses (`inmemory-go`, `inmemory-py`) carry context via `rat-callmeta-bin` metadata instead of a request field.
+- **Behavior-preserving — verified:** the **unchanged** shared golden vectors still pass on both impls (Go in `golang:1.25`, Python in `python:3.12`), the strongest evidence the migration changed carriage, not semantics. The ADR-003 `format/v1` two-reference cross-run remains green.
+
+**Caveat (recorded, non-blocking):** `make gen-check` hit the known BSR rate-limit (429) on its *temp* regen (the done.md 2026-05-31 multi-SDK caveat) → false "python stale." The committed SDKs are correct — proven by both harnesses passing against them. Network-bound check, not a content defect.
+
+**Files:** `contracts/proto/**` (20 files), `contracts/sdks/**` (regenerated), `examples/format/inmemory-go/{gateway_test.go,harness_test.go}`, `examples/format/inmemory-py/harness_test.py`, `roadmap/**`.
+
+---
+
 ## 2026-05-31 — ADR-007: call-context transport (cross-cutting context → metadata, not payload)
 
 Resolved the freeze-blocking finding the 0d stub gateway surfaced. **[ADR-007](../docs/architecture/adrs/007-call-context-transport.md) (Accepted):** the cross-cutting envelope (`RequestContext` = trace + identity + deadline) moves out of message field 1 into a single binary transport-metadata header `rat-callmeta-bin`. The keystone's message *shape* is kept verbatim; only the *carrier* changes.
