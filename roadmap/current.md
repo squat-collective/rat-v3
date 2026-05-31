@@ -68,7 +68,7 @@ Recommended entry — a vertical slice through the data plane, smallest end-to-e
 4. **Run it under a minimal harness** that exercises the contract — this is where contract gaps surface for real (the whole point of ADR-003).
 5. Per ADR-003, a **second independent `format` impl** + golden-data cross-run is required before the `format` contract can freeze.
 
-Open decisions to settle as 0d starts (capture as ADRs/notes): the codegen toolchain (remote buf plugins need network; the sandbox blocked GHCR earlier — may need local codegen images), and the reference-plugin directory layout.
+SDK distribution + layout + codegen are now decided in **[ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md)**: vendored `contracts/sdks/<lang>/` (Go/Python/TS peers), reference plugins under `examples/<axis>/<impl>-<lang>/`, containerized `buf generate` via `scripts/gen-sdks.sh`. **First 0d task = make codegen+compile actually green** (the Go SDK currently fails to compile: generated gRPC stubs need Go ≥ 1.25 vs the 1.23 base image — pin the image or pin grpc/protobuf; settle remote-vs-local buf plugins in the script).
 
 Also worth landing alongside first Go code: the deferred **additive tail** — #10b (manifest `artifact`/digest block), #9f doc-pins, and per-kind manifest schemas — none freeze-blocking, but cheap to clear while in the contracts.
 

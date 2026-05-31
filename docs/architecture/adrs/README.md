@@ -11,6 +11,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [003](003-two-references-before-contract-freeze.md) | Two independent reference implementations before any contract freezes | Accepted | 2026-05-30 |
 | [004](004-core-language-go.md) | Core language locked — Go | Accepted | 2026-05-30 |
 | [005](005-capability-invocation-model.md) | Capability invocation model — core-mediated control plane | Accepted | 2026-05-30 |
+| [006](006-sdk-distribution-and-plugin-layout.md) | SDK distribution, reference-plugin layout, and codegen toolchain | Accepted | 2026-05-31 |
 
 ## Template
 

@@ -4,6 +4,22 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — ADR-006: SDK distribution + reference-plugin layout + codegen toolchain
+
+**What:** Before scaffolding 0d (first reference implementations — the first code), pinned three project-shaping decisions in [ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md), prompted by Tom's point that plugins must be authorable in *any* language (ADR-001 / vision #3), not just Go.
+
+- **D1 SDK distribution:** vendored `contracts/sdks/<lang>/` (Go/Python/TS as peer committed dirs, none privileged), regenerated-not-hand-edited; **BSR publication deferred** as the later external-distribution channel. Mirrors Kubernetes (vendor for the monorepo, publish for outsiders). Chosen over BSR-now (needs network + org; sandbox blocks) and protos-only/local-codegen (multi-step build in a fiddly-toolchain env).
+- **D2 layout:** reference plugins under `examples/<axis>/<impl>-<lang>/`; ADR-003's two-reference rule satisfied per critical axis by two impls in *different* languages running shared golden-data vectors — cross-language interop is the strongest form of the rule.
+- **D3 codegen:** containerized `buf generate` driven by a committed `scripts/gen-sdks.sh`. Captured two gotchas already hit: the generated Go gRPC stubs need Go ≥ 1.25 (base `golang:1.23` image failed to build the SDK this session — pin the image or pin grpc/protobuf), and `buf generate` uses remote buf.build plugins (network) so the script must handle local-plugin fallback.
+
+**Process note / correction:** earlier this session I claimed the Go SDK "compiles clean" — it does NOT yet; codegen *produces* 42 Go files but compiling them failed on the Go-version floor above. ADR-006 D3 records the real situation; resolving it is the first 0d task.
+
+**Next:** scaffold per D1/D2/D3 — `buf.gen.<lang>.yaml` + `scripts/gen-sdks.sh` (settle the Go-version/grpc-pin), generate+commit `sdks/`, drop the transient `gen/` path, then `examples/format/inmemory-go/`.
+
+**Files:** `docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md` (new), `docs/architecture/adrs/README.md`.
+
+---
+
 ## 2026-05-30 — Freeze-blocker #10a: debug_redact on sensitive bytes fields
 
 reviews/06 SEC-8 (part of #10): "never logged" was a comment; `[debug_redact = true]` makes redaction structural (reflection/text-marshal omit the field). Applied to the four sensitive bytes fields: `secret.ResolveResponse.value`, `identity.AuthenticateRequest.credential`, `storage.VendCredentialsResponse.credentials`, `common.ArrowStream.ticket`. Confirmed buf 1.47.2 accepts the option via an isolated test first.
