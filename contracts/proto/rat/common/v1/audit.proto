@@ -1,0 +1,61 @@
+// Cross-cutting audit envelope — the C8 (mandatory audit) wire type.
+//
+// AuditRecord is CORE-AUTHORED, CORE-SIGNED, and emitted on every security-relevant
+// event (plugin installs, binding changes, credential vends, auth decisions) EVEN
+// WHEN NO audit-log plugin is installed — the core falls back to a core-local
+// append-only store. "audit-log: none" must NOT mean "no audit". It is therefore a
+// CROSS-CUTTING type, not an axis type: the core's enforcement layer constructs +
+// signs it; the `kind: audit-log` axis (auditlog.proto) is only the export SINK and
+// IMPORTS this record. Keeping it here (common/v1), not in the axis proto, stops the
+// core's C8 emission from depending on an axis contract — the layering the synthesis
+// cross-cutting rule requires (reviews/00 C1–C10; plugin-architecture.md).
+//
+// Moved here from rat.auditlog.v1 in sub-phase 0c (finalize cross-cutting protos).
+// WIRE-COMPATIBLE: field numbers are unchanged, so the canonical serialization +
+// signatures + hash chain are byte-identical; only the proto package (and the
+// generated type name) moves rat.auditlog.v1 → rat.common.v1.
+syntax = "proto3";
+
+package rat.common.v1;
+
+option go_package = "github.com/rat-dev/rat/gen/rat/common/v1;commonv1";
+
+enum AuditOutcome {
+  AUDIT_OUTCOME_UNSPECIFIED = 0;
+  AUDIT_OUTCOME_SUCCESS = 1;
+  AUDIT_OUTCOME_DENIED = 2;
+  AUDIT_OUTCOME_ERROR = 3;
+}
+
+// One audit record. Append-only; tamper-evidence is enforced by the core signature +
+// hash chain, not by trusting the sink. Authored by the CORE (the audit-log axis is
+// only the export sink).
+//
+// CANONICAL SERIALIZATION (pinned — the bytes `signature` covers and `prev_hash` of
+// the NEXT record chains over): the proto3 wire encoding of all fields EXCEPT
+// `signature` (field 10), emitted in ascending field-number order, each field
+// present exactly once, no unknown fields, varints in minimal form, default-valued
+// fields omitted. This deterministic form is the canonical record bytes; the core
+// hashes/signs exactly these bytes and verifiers recompute them identically.
+message AuditRecord {
+  // Core-assigned chain position id (monotonic). Set by the CORE, never the caller.
+  // With prev_hash this forms the linear hash chain.
+  string id = 1;
+  // Core-computed hash of the previous record's canonical bytes (chain link). Empty
+  // for the first record in the chain.
+  string prev_hash = 2;
+  int64 timestamp_unix_ms = 3;
+  // Who (subject) did what (action) to which (resource), and the result.
+  string subject = 4;
+  string tenant = 5;
+  string action = 6;
+  string resource = 7;
+  AuditOutcome outcome = 8;
+  // Correlation back to the operation (C1).
+  string correlation_id = 9;
+  // Core's Ed25519 signature over this record's canonical serialization (all fields
+  // above; this field itself is excluded from the signed bytes). The authority of
+  // the record — a sink verifies against the core's published key and rejects any
+  // record whose signature does not verify.
+  bytes signature = 10;
+}

@@ -6,7 +6,12 @@ from rat.auditlog.v1 import auditlog_pb2 as rat_dot_auditlog_dot_v1_dot_auditlog
 
 
 class AuditLogServiceStub(object):
-    """Missing associated documentation comment in .proto file."""
+    """NOTE (0c): the cross-cutting audit RECORD — common.v1.AuditRecord +
+    common.v1.AuditOutcome — lives in common/v1/audit.proto, because the CORE authors
+    + signs + emits it even when NO audit-log plugin is installed. This axis is only
+    the export SINK; the messages below are its Append SERVICE wire shapes.
+
+    """
 
     def __init__(self, channel):
         """Constructor.
@@ -22,7 +27,12 @@ class AuditLogServiceStub(object):
 
 
 class AuditLogServiceServicer(object):
-    """Missing associated documentation comment in .proto file."""
+    """NOTE (0c): the cross-cutting audit RECORD — common.v1.AuditRecord +
+    common.v1.AuditOutcome — lives in common/v1/audit.proto, because the CORE authors
+    + signs + emits it even when NO audit-log plugin is installed. This axis is only
+    the export SINK; the messages below are its Append SERVICE wire shapes.
+
+    """
 
     def Append(self, request, context):
         """rat://auditlog/v1/append — append core-authored, core-signed audit records
@@ -51,7 +61,12 @@ def add_AuditLogServiceServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class AuditLogService(object):
-    """Missing associated documentation comment in .proto file."""
+    """NOTE (0c): the cross-cutting audit RECORD — common.v1.AuditRecord +
+    common.v1.AuditOutcome — lives in common/v1/audit.proto, because the CORE authors
+    + signs + emits it even when NO audit-log plugin is installed. This axis is only
+    the export SINK; the messages below are its Append SERVICE wire shapes.
+
+    """
 
     @staticmethod
     def Append(request,

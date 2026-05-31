@@ -56,6 +56,7 @@
 package auditlogv1
 
 import (
+	v1 "github.com/rat-dev/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -69,58 +70,6 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
-
-type AuditOutcome int32
-
-const (
-	AuditOutcome_AUDIT_OUTCOME_UNSPECIFIED AuditOutcome = 0
-	AuditOutcome_AUDIT_OUTCOME_SUCCESS     AuditOutcome = 1
-	AuditOutcome_AUDIT_OUTCOME_DENIED      AuditOutcome = 2
-	AuditOutcome_AUDIT_OUTCOME_ERROR       AuditOutcome = 3
-)
-
-// Enum value maps for AuditOutcome.
-var (
-	AuditOutcome_name = map[int32]string{
-		0: "AUDIT_OUTCOME_UNSPECIFIED",
-		1: "AUDIT_OUTCOME_SUCCESS",
-		2: "AUDIT_OUTCOME_DENIED",
-		3: "AUDIT_OUTCOME_ERROR",
-	}
-	AuditOutcome_value = map[string]int32{
-		"AUDIT_OUTCOME_UNSPECIFIED": 0,
-		"AUDIT_OUTCOME_SUCCESS":     1,
-		"AUDIT_OUTCOME_DENIED":      2,
-		"AUDIT_OUTCOME_ERROR":       3,
-	}
-)
-
-func (x AuditOutcome) Enum() *AuditOutcome {
-	p := new(AuditOutcome)
-	*p = x
-	return p
-}
-
-func (x AuditOutcome) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (AuditOutcome) Descriptor() protoreflect.EnumDescriptor {
-	return file_rat_auditlog_v1_auditlog_proto_enumTypes[0].Descriptor()
-}
-
-func (AuditOutcome) Type() protoreflect.EnumType {
-	return &file_rat_auditlog_v1_auditlog_proto_enumTypes[0]
-}
-
-func (x AuditOutcome) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use AuditOutcome.Descriptor instead.
-func (AuditOutcome) EnumDescriptor() ([]byte, []int) {
-	return file_rat_auditlog_v1_auditlog_proto_rawDescGZIP(), []int{0}
-}
 
 // Per-record disposition of an Append.
 type AppendStatus int32
@@ -163,11 +112,11 @@ func (x AppendStatus) String() string {
 }
 
 func (AppendStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_rat_auditlog_v1_auditlog_proto_enumTypes[1].Descriptor()
+	return file_rat_auditlog_v1_auditlog_proto_enumTypes[0].Descriptor()
 }
 
 func (AppendStatus) Type() protoreflect.EnumType {
-	return &file_rat_auditlog_v1_auditlog_proto_enumTypes[1]
+	return &file_rat_auditlog_v1_auditlog_proto_enumTypes[0]
 }
 
 func (x AppendStatus) Number() protoreflect.EnumNumber {
@@ -176,7 +125,7 @@ func (x AppendStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AppendStatus.Descriptor instead.
 func (AppendStatus) EnumDescriptor() ([]byte, []int) {
-	return file_rat_auditlog_v1_auditlog_proto_rawDescGZIP(), []int{1}
+	return file_rat_auditlog_v1_auditlog_proto_rawDescGZIP(), []int{0}
 }
 
 type RejectCode int32
@@ -218,11 +167,11 @@ func (x RejectCode) String() string {
 }
 
 func (RejectCode) Descriptor() protoreflect.EnumDescriptor {
-	return file_rat_auditlog_v1_auditlog_proto_enumTypes[2].Descriptor()
+	return file_rat_auditlog_v1_auditlog_proto_enumTypes[1].Descriptor()
 }
 
 func (RejectCode) Type() protoreflect.EnumType {
-	return &file_rat_auditlog_v1_auditlog_proto_enumTypes[2]
+	return &file_rat_auditlog_v1_auditlog_proto_enumTypes[1]
 }
 
 func (x RejectCode) Number() protoreflect.EnumNumber {
@@ -231,155 +180,20 @@ func (x RejectCode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use RejectCode.Descriptor instead.
 func (RejectCode) EnumDescriptor() ([]byte, []int) {
-	return file_rat_auditlog_v1_auditlog_proto_rawDescGZIP(), []int{2}
-}
-
-// One audit record. Append-only; tamper-evidence is enforced by the core
-// signature + hash chain, not by trusting the sink.
-//
-// CANONICAL SERIALIZATION (pinned — the bytes `signature` covers and `prev_hash`
-// of the NEXT record chains over): the proto3 wire encoding of all fields EXCEPT
-// `signature` (field 10), emitted in ascending field-number order, each field
-// present exactly once, no unknown fields, varints in minimal form, default-valued
-// fields omitted. This deterministic form is the canonical record bytes; the
-// core hashes/signs exactly these bytes and verifiers recompute them identically.
-type AuditRecord struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Core-assigned chain position id (monotonic). Set by the CORE, never the
-	// caller. With prev_hash this forms the linear hash chain.
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Core-computed hash of the previous record's canonical bytes (chain link).
-	// Empty for the first record in the chain.
-	PrevHash        string `protobuf:"bytes,2,opt,name=prev_hash,json=prevHash,proto3" json:"prev_hash,omitempty"`
-	TimestampUnixMs int64  `protobuf:"varint,3,opt,name=timestamp_unix_ms,json=timestampUnixMs,proto3" json:"timestamp_unix_ms,omitempty"`
-	// Who (subject) did what (action) to which (resource), and the result.
-	Subject  string       `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
-	Tenant   string       `protobuf:"bytes,5,opt,name=tenant,proto3" json:"tenant,omitempty"`
-	Action   string       `protobuf:"bytes,6,opt,name=action,proto3" json:"action,omitempty"`
-	Resource string       `protobuf:"bytes,7,opt,name=resource,proto3" json:"resource,omitempty"`
-	Outcome  AuditOutcome `protobuf:"varint,8,opt,name=outcome,proto3,enum=rat.auditlog.v1.AuditOutcome" json:"outcome,omitempty"`
-	// Correlation back to the operation (C1).
-	CorrelationId string `protobuf:"bytes,9,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
-	// Core's Ed25519 signature over this record's canonical serialization (all
-	// fields above; this field itself is excluded from the signed bytes). The
-	// authority of the record — a sink verifies against the core's published key
-	// and rejects any record whose signature does not verify.
-	Signature     []byte `protobuf:"bytes,10,opt,name=signature,proto3" json:"signature,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AuditRecord) Reset() {
-	*x = AuditRecord{}
-	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AuditRecord) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AuditRecord) ProtoMessage() {}
-
-func (x *AuditRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AuditRecord.ProtoReflect.Descriptor instead.
-func (*AuditRecord) Descriptor() ([]byte, []int) {
-	return file_rat_auditlog_v1_auditlog_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *AuditRecord) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *AuditRecord) GetPrevHash() string {
-	if x != nil {
-		return x.PrevHash
-	}
-	return ""
-}
-
-func (x *AuditRecord) GetTimestampUnixMs() int64 {
-	if x != nil {
-		return x.TimestampUnixMs
-	}
-	return 0
-}
-
-func (x *AuditRecord) GetSubject() string {
-	if x != nil {
-		return x.Subject
-	}
-	return ""
-}
-
-func (x *AuditRecord) GetTenant() string {
-	if x != nil {
-		return x.Tenant
-	}
-	return ""
-}
-
-func (x *AuditRecord) GetAction() string {
-	if x != nil {
-		return x.Action
-	}
-	return ""
-}
-
-func (x *AuditRecord) GetResource() string {
-	if x != nil {
-		return x.Resource
-	}
-	return ""
-}
-
-func (x *AuditRecord) GetOutcome() AuditOutcome {
-	if x != nil {
-		return x.Outcome
-	}
-	return AuditOutcome_AUDIT_OUTCOME_UNSPECIFIED
-}
-
-func (x *AuditRecord) GetCorrelationId() string {
-	if x != nil {
-		return x.CorrelationId
-	}
-	return ""
-}
-
-func (x *AuditRecord) GetSignature() []byte {
-	if x != nil {
-		return x.Signature
-	}
-	return nil
+	return file_rat_auditlog_v1_auditlog_proto_rawDescGZIP(), []int{1}
 }
 
 type AppendRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Core-authored, core-signed records to append, in chain order.
-	Records       []*AuditRecord `protobuf:"bytes,2,rep,name=records,proto3" json:"records,omitempty"`
+	Records       []*v1.AuditRecord `protobuf:"bytes,2,rep,name=records,proto3" json:"records,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AppendRequest) Reset() {
 	*x = AppendRequest{}
-	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[1]
+	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -391,7 +205,7 @@ func (x *AppendRequest) String() string {
 func (*AppendRequest) ProtoMessage() {}
 
 func (x *AppendRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[1]
+	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -404,10 +218,10 @@ func (x *AppendRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendRequest.ProtoReflect.Descriptor instead.
 func (*AppendRequest) Descriptor() ([]byte, []int) {
-	return file_rat_auditlog_v1_auditlog_proto_rawDescGZIP(), []int{1}
+	return file_rat_auditlog_v1_auditlog_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *AppendRequest) GetRecords() []*AuditRecord {
+func (x *AppendRequest) GetRecords() []*v1.AuditRecord {
 	if x != nil {
 		return x.Records
 	}
@@ -428,7 +242,7 @@ type RecordAck struct {
 
 func (x *RecordAck) Reset() {
 	*x = RecordAck{}
-	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[2]
+	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -440,7 +254,7 @@ func (x *RecordAck) String() string {
 func (*RecordAck) ProtoMessage() {}
 
 func (x *RecordAck) ProtoReflect() protoreflect.Message {
-	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[2]
+	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -453,7 +267,7 @@ func (x *RecordAck) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordAck.ProtoReflect.Descriptor instead.
 func (*RecordAck) Descriptor() ([]byte, []int) {
-	return file_rat_auditlog_v1_auditlog_proto_rawDescGZIP(), []int{2}
+	return file_rat_auditlog_v1_auditlog_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *RecordAck) GetId() string {
@@ -496,7 +310,7 @@ type AppendResponse struct {
 
 func (x *AppendResponse) Reset() {
 	*x = AppendResponse{}
-	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[3]
+	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -508,7 +322,7 @@ func (x *AppendResponse) String() string {
 func (*AppendResponse) ProtoMessage() {}
 
 func (x *AppendResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[3]
+	mi := &file_rat_auditlog_v1_auditlog_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -521,7 +335,7 @@ func (x *AppendResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendResponse.ProtoReflect.Descriptor instead.
 func (*AppendResponse) Descriptor() ([]byte, []int) {
-	return file_rat_auditlog_v1_auditlog_proto_rawDescGZIP(), []int{3}
+	return file_rat_auditlog_v1_auditlog_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *AppendResponse) GetAcks() []*RecordAck {
@@ -549,21 +363,9 @@ var File_rat_auditlog_v1_auditlog_proto protoreflect.FileDescriptor
 
 const file_rat_auditlog_v1_auditlog_proto_rawDesc = "" +
 	"\n" +
-	"\x1erat/auditlog/v1/auditlog.proto\x12\x0frat.auditlog.v1\"\xca\x02\n" +
-	"\vAuditRecord\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
-	"\tprev_hash\x18\x02 \x01(\tR\bprevHash\x12*\n" +
-	"\x11timestamp_unix_ms\x18\x03 \x01(\x03R\x0ftimestampUnixMs\x12\x18\n" +
-	"\asubject\x18\x04 \x01(\tR\asubject\x12\x16\n" +
-	"\x06tenant\x18\x05 \x01(\tR\x06tenant\x12\x16\n" +
-	"\x06action\x18\x06 \x01(\tR\x06action\x12\x1a\n" +
-	"\bresource\x18\a \x01(\tR\bresource\x127\n" +
-	"\aoutcome\x18\b \x01(\x0e2\x1d.rat.auditlog.v1.AuditOutcomeR\aoutcome\x12%\n" +
-	"\x0ecorrelation_id\x18\t \x01(\tR\rcorrelationId\x12\x1c\n" +
-	"\tsignature\x18\n" +
-	" \x01(\fR\tsignature\"M\n" +
-	"\rAppendRequest\x126\n" +
-	"\arecords\x18\x02 \x03(\v2\x1c.rat.auditlog.v1.AuditRecordR\arecordsJ\x04\b\x01\x10\x02\"\x90\x01\n" +
+	"\x1erat/auditlog/v1/auditlog.proto\x12\x0frat.auditlog.v1\x1a\x19rat/common/v1/audit.proto\"K\n" +
+	"\rAppendRequest\x124\n" +
+	"\arecords\x18\x02 \x03(\v2\x1a.rat.common.v1.AuditRecordR\arecordsJ\x04\b\x01\x10\x02\"\x90\x01\n" +
 	"\tRecordAck\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x125\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x1d.rat.auditlog.v1.AppendStatusR\x06status\x12<\n" +
@@ -572,12 +374,7 @@ const file_rat_auditlog_v1_auditlog_proto_rawDesc = "" +
 	"\x0eAppendResponse\x12.\n" +
 	"\x04acks\x18\x01 \x03(\v2\x1a.rat.auditlog.v1.RecordAckR\x04acks\x12*\n" +
 	"\x11last_committed_id\x18\x02 \x01(\tR\x0flastCommittedId\x12.\n" +
-	"\x13last_committed_hash\x18\x03 \x01(\tR\x11lastCommittedHash*{\n" +
-	"\fAuditOutcome\x12\x1d\n" +
-	"\x19AUDIT_OUTCOME_UNSPECIFIED\x10\x00\x12\x19\n" +
-	"\x15AUDIT_OUTCOME_SUCCESS\x10\x01\x12\x18\n" +
-	"\x14AUDIT_OUTCOME_DENIED\x10\x02\x12\x17\n" +
-	"\x13AUDIT_OUTCOME_ERROR\x10\x03*\x83\x01\n" +
+	"\x13last_committed_hash\x18\x03 \x01(\tR\x11lastCommittedHash*\x83\x01\n" +
 	"\fAppendStatus\x12\x1d\n" +
 	"\x19APPEND_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17APPEND_STATUS_COMMITTED\x10\x01\x12\x1b\n" +
@@ -604,30 +401,28 @@ func file_rat_auditlog_v1_auditlog_proto_rawDescGZIP() []byte {
 	return file_rat_auditlog_v1_auditlog_proto_rawDescData
 }
 
-var file_rat_auditlog_v1_auditlog_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_rat_auditlog_v1_auditlog_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_rat_auditlog_v1_auditlog_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_rat_auditlog_v1_auditlog_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_rat_auditlog_v1_auditlog_proto_goTypes = []any{
-	(AuditOutcome)(0),      // 0: rat.auditlog.v1.AuditOutcome
-	(AppendStatus)(0),      // 1: rat.auditlog.v1.AppendStatus
-	(RejectCode)(0),        // 2: rat.auditlog.v1.RejectCode
-	(*AuditRecord)(nil),    // 3: rat.auditlog.v1.AuditRecord
-	(*AppendRequest)(nil),  // 4: rat.auditlog.v1.AppendRequest
-	(*RecordAck)(nil),      // 5: rat.auditlog.v1.RecordAck
-	(*AppendResponse)(nil), // 6: rat.auditlog.v1.AppendResponse
+	(AppendStatus)(0),      // 0: rat.auditlog.v1.AppendStatus
+	(RejectCode)(0),        // 1: rat.auditlog.v1.RejectCode
+	(*AppendRequest)(nil),  // 2: rat.auditlog.v1.AppendRequest
+	(*RecordAck)(nil),      // 3: rat.auditlog.v1.RecordAck
+	(*AppendResponse)(nil), // 4: rat.auditlog.v1.AppendResponse
+	(*v1.AuditRecord)(nil), // 5: rat.common.v1.AuditRecord
 }
 var file_rat_auditlog_v1_auditlog_proto_depIdxs = []int32{
-	0, // 0: rat.auditlog.v1.AuditRecord.outcome:type_name -> rat.auditlog.v1.AuditOutcome
-	3, // 1: rat.auditlog.v1.AppendRequest.records:type_name -> rat.auditlog.v1.AuditRecord
-	1, // 2: rat.auditlog.v1.RecordAck.status:type_name -> rat.auditlog.v1.AppendStatus
-	2, // 3: rat.auditlog.v1.RecordAck.reject_code:type_name -> rat.auditlog.v1.RejectCode
-	5, // 4: rat.auditlog.v1.AppendResponse.acks:type_name -> rat.auditlog.v1.RecordAck
-	4, // 5: rat.auditlog.v1.AuditLogService.Append:input_type -> rat.auditlog.v1.AppendRequest
-	6, // 6: rat.auditlog.v1.AuditLogService.Append:output_type -> rat.auditlog.v1.AppendResponse
-	6, // [6:7] is the sub-list for method output_type
-	5, // [5:6] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	5, // 0: rat.auditlog.v1.AppendRequest.records:type_name -> rat.common.v1.AuditRecord
+	0, // 1: rat.auditlog.v1.RecordAck.status:type_name -> rat.auditlog.v1.AppendStatus
+	1, // 2: rat.auditlog.v1.RecordAck.reject_code:type_name -> rat.auditlog.v1.RejectCode
+	3, // 3: rat.auditlog.v1.AppendResponse.acks:type_name -> rat.auditlog.v1.RecordAck
+	2, // 4: rat.auditlog.v1.AuditLogService.Append:input_type -> rat.auditlog.v1.AppendRequest
+	4, // 5: rat.auditlog.v1.AuditLogService.Append:output_type -> rat.auditlog.v1.AppendResponse
+	5, // [5:6] is the sub-list for method output_type
+	4, // [4:5] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_rat_auditlog_v1_auditlog_proto_init() }
@@ -640,8 +435,8 @@ func file_rat_auditlog_v1_auditlog_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rat_auditlog_v1_auditlog_proto_rawDesc), len(file_rat_auditlog_v1_auditlog_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   4,
+			NumEnums:      2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

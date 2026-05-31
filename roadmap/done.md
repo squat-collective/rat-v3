@@ -4,6 +4,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — Sub-phase 0c COMPLETE: cross-cutting protos finalized (audit envelope relocated + coverage audit)
+
+Finalized the cross-cutting concern protos. An audit of every C1–C10 + ARCH concern against its wire home surfaced **one real layering inversion**, which 0c fixes; everything else was already covered (the freeze-blocker remediation had filled context/data/annotations/event/invoke).
+
+- **The finding:** `AuditRecord` + `AuditOutcome` lived in the **`rat.auditlog.v1` axis** proto — but the audit record is **core-authored, core-signed, and emitted even when no audit-log plugin is installed** (C8; the proto's own header says "this axis is only the export sink"). A core-enforced cross-cutting type living in an axis proto would force the core's C8 emission to import an axis contract.
+- **The fix:** created **`contracts/proto/rat/common/v1/audit.proto`** with `AuditRecord` + `AuditOutcome` (the cross-cutting C8 envelope, next to context/data/annotations/event); `auditlog.proto` now imports it and `AppendRequest.records` references `common.v1.AuditRecord`. **Wire-compatible** — field numbers unchanged, so the canonical serialization + Ed25519 signatures + hash chain are byte-identical; only the proto package (and generated type name) moves `auditlog.v1` → `common.v1`. `buf lint`/`build` clean; `buf breaking` flags the move (3 expected findings, allowed in `v1-preview`); all 4 SDKs regenerated.
+- **Coverage doc:** [`docs/architecture/cross-cutting-coverage.md`](../docs/architecture/cross-cutting-coverage.md) — the finalize artifact: a matrix mapping every C1–C10 + ARCH concern to its wire home (`common/v1/{context,data,annotations,event,audit}` + `core/v1/invoke`) or its deliberately non-wire mechanism (transport credential / manifest schema / process gate / conformance suite). Confirms NO concern is homeless and NO core-enforced concern lives in an axis proto. Also resolves the plan's "descriptors ⬜" note (descriptors = the manifest `plugin.v1.json` + the proto service descriptors the gateway already reads — both done).
+
+**Sub-phase 0c is COMPLETE.** The cross-cutting proto set is final: `common/v1/{context, data, annotations, event, audit}` + `core/v1/invoke`, with `auditlog.proto` demoted to a pure sink axis. Remaining toward `rat/1` freeze: **0h** (peer review + freeze).
+
+**Files:** `contracts/proto/rat/common/v1/audit.proto` (new), `contracts/proto/rat/auditlog/v1/auditlog.proto` (imports it), `contracts/sdks/**` (regenerated), `docs/architecture/cross-cutting-coverage.md`.
+
+---
+
 ## 2026-05-31 — Sub-phase 0g: per-axis `CONTRACT.md` author guides (6 data-plane axes)
 
 Wrote the author-facing contract guide for every data-plane axis — the canonical "how do I implement a `kind: <axis>` plugin" doc, grounded in the now-existing protos, golden vectors, and both reference rounds.

@@ -50,7 +50,14 @@ syntax = "proto3";
 
 package rat.auditlog.v1;
 
+import "rat/common/v1/audit.proto";
+
 option go_package = "github.com/rat-dev/rat/gen/rat/auditlog/v1;auditlogv1";
+
+// NOTE (0c): the cross-cutting audit RECORD — common.v1.AuditRecord +
+// common.v1.AuditOutcome — lives in common/v1/audit.proto, because the CORE authors
+// + signs + emits it even when NO audit-log plugin is installed. This axis is only
+// the export SINK; the messages below are its Append SERVICE wire shapes.
 
 service AuditLogService {
   // rat://auditlog/v1/append — append core-authored, core-signed audit records
@@ -60,49 +67,10 @@ service AuditLogService {
   rpc Append(AppendRequest) returns (AppendResponse);
 }
 
-enum AuditOutcome {
-  AUDIT_OUTCOME_UNSPECIFIED = 0;
-  AUDIT_OUTCOME_SUCCESS = 1;
-  AUDIT_OUTCOME_DENIED = 2;
-  AUDIT_OUTCOME_ERROR = 3;
-}
-
-// One audit record. Append-only; tamper-evidence is enforced by the core
-// signature + hash chain, not by trusting the sink.
-//
-// CANONICAL SERIALIZATION (pinned — the bytes `signature` covers and `prev_hash`
-// of the NEXT record chains over): the proto3 wire encoding of all fields EXCEPT
-// `signature` (field 10), emitted in ascending field-number order, each field
-// present exactly once, no unknown fields, varints in minimal form, default-valued
-// fields omitted. This deterministic form is the canonical record bytes; the
-// core hashes/signs exactly these bytes and verifiers recompute them identically.
-message AuditRecord {
-  // Core-assigned chain position id (monotonic). Set by the CORE, never the
-  // caller. With prev_hash this forms the linear hash chain.
-  string id = 1;
-  // Core-computed hash of the previous record's canonical bytes (chain link).
-  // Empty for the first record in the chain.
-  string prev_hash = 2;
-  int64 timestamp_unix_ms = 3;
-  // Who (subject) did what (action) to which (resource), and the result.
-  string subject = 4;
-  string tenant = 5;
-  string action = 6;
-  string resource = 7;
-  AuditOutcome outcome = 8;
-  // Correlation back to the operation (C1).
-  string correlation_id = 9;
-  // Core's Ed25519 signature over this record's canonical serialization (all
-  // fields above; this field itself is excluded from the signed bytes). The
-  // authority of the record — a sink verifies against the core's published key
-  // and rejects any record whose signature does not verify.
-  bytes signature = 10;
-}
-
 message AppendRequest {
   reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   // Core-authored, core-signed records to append, in chain order.
-  repeated AuditRecord records = 2;
+  repeated rat.common.v1.AuditRecord records = 2;
 }
 
 // Per-record disposition of an Append.

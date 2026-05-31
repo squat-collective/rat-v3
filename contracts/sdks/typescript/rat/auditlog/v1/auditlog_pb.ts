@@ -53,100 +53,15 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { AuditRecord } from "../../common/v1/audit_pb";
+import { file_rat_common_v1_audit } from "../../common/v1/audit_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/auditlog/v1/auditlog.proto.
  */
 export const file_rat_auditlog_v1_auditlog: GenFile = /*@__PURE__*/
-  fileDesc("Ch5yYXQvYXVkaXRsb2cvdjEvYXVkaXRsb2cucHJvdG8SD3JhdC5hdWRpdGxvZy52MSLlAQoLQXVkaXRSZWNvcmQSCgoCaWQYASABKAkSEQoJcHJldl9oYXNoGAIgASgJEhkKEXRpbWVzdGFtcF91bml4X21zGAMgASgDEg8KB3N1YmplY3QYBCABKAkSDgoGdGVuYW50GAUgASgJEg4KBmFjdGlvbhgGIAEoCRIQCghyZXNvdXJjZRgHIAEoCRIuCgdvdXRjb21lGAggASgOMh0ucmF0LmF1ZGl0bG9nLnYxLkF1ZGl0T3V0Y29tZRIWCg5jb3JyZWxhdGlvbl9pZBgJIAEoCRIRCglzaWduYXR1cmUYCiABKAwiRAoNQXBwZW5kUmVxdWVzdBItCgdyZWNvcmRzGAIgAygLMhwucmF0LmF1ZGl0bG9nLnYxLkF1ZGl0UmVjb3JkSgQIARACIngKCVJlY29yZEFjaxIKCgJpZBgBIAEoCRItCgZzdGF0dXMYAiABKA4yHS5yYXQuYXVkaXRsb2cudjEuQXBwZW5kU3RhdHVzEjAKC3JlamVjdF9jb2RlGAMgASgOMhsucmF0LmF1ZGl0bG9nLnYxLlJlamVjdENvZGUicgoOQXBwZW5kUmVzcG9uc2USKAoEYWNrcxgBIAMoCzIaLnJhdC5hdWRpdGxvZy52MS5SZWNvcmRBY2sSGQoRbGFzdF9jb21taXR0ZWRfaWQYAiABKAkSGwoTbGFzdF9jb21taXR0ZWRfaGFzaBgDIAEoCSp7CgxBdWRpdE91dGNvbWUSHQoZQVVESVRfT1VUQ09NRV9VTlNQRUNJRklFRBAAEhkKFUFVRElUX09VVENPTUVfU1VDQ0VTUxABEhgKFEFVRElUX09VVENPTUVfREVOSUVEEAISFwoTQVVESVRfT1VUQ09NRV9FUlJPUhADKoMBCgxBcHBlbmRTdGF0dXMSHQoZQVBQRU5EX1NUQVRVU19VTlNQRUNJRklFRBAAEhsKF0FQUEVORF9TVEFUVVNfQ09NTUlUVEVEEAESGwoXQVBQRU5EX1NUQVRVU19EVVBMSUNBVEUQAhIaChZBUFBFTkRfU1RBVFVTX1JFSkVDVEVEEAMqhAEKClJlamVjdENvZGUSGwoXUkVKRUNUX0NPREVfVU5TUEVDSUZJRUQQABIdChlSRUpFQ1RfQ09ERV9CQURfU0lHTkFUVVJFEAESGwoXUkVKRUNUX0NPREVfQ0hBSU5fQlJFQUsQAhIdChlSRUpFQ1RfQ09ERV9TVE9SQUdFX0VSUk9SEAMyXAoPQXVkaXRMb2dTZXJ2aWNlEkkKBkFwcGVuZBIeLnJhdC5hdWRpdGxvZy52MS5BcHBlbmRSZXF1ZXN0Gh8ucmF0LmF1ZGl0bG9nLnYxLkFwcGVuZFJlc3BvbnNlQjdaNWdpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9hdWRpdGxvZy92MTthdWRpdGxvZ3YxYgZwcm90bzM");
-
-/**
- * One audit record. Append-only; tamper-evidence is enforced by the core
- * signature + hash chain, not by trusting the sink.
- *
- * CANONICAL SERIALIZATION (pinned — the bytes `signature` covers and `prev_hash`
- * of the NEXT record chains over): the proto3 wire encoding of all fields EXCEPT
- * `signature` (field 10), emitted in ascending field-number order, each field
- * present exactly once, no unknown fields, varints in minimal form, default-valued
- * fields omitted. This deterministic form is the canonical record bytes; the
- * core hashes/signs exactly these bytes and verifiers recompute them identically.
- *
- * @generated from message rat.auditlog.v1.AuditRecord
- */
-export type AuditRecord = Message<"rat.auditlog.v1.AuditRecord"> & {
-  /**
-   * Core-assigned chain position id (monotonic). Set by the CORE, never the
-   * caller. With prev_hash this forms the linear hash chain.
-   *
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * Core-computed hash of the previous record's canonical bytes (chain link).
-   * Empty for the first record in the chain.
-   *
-   * @generated from field: string prev_hash = 2;
-   */
-  prevHash: string;
-
-  /**
-   * @generated from field: int64 timestamp_unix_ms = 3;
-   */
-  timestampUnixMs: bigint;
-
-  /**
-   * Who (subject) did what (action) to which (resource), and the result.
-   *
-   * @generated from field: string subject = 4;
-   */
-  subject: string;
-
-  /**
-   * @generated from field: string tenant = 5;
-   */
-  tenant: string;
-
-  /**
-   * @generated from field: string action = 6;
-   */
-  action: string;
-
-  /**
-   * @generated from field: string resource = 7;
-   */
-  resource: string;
-
-  /**
-   * @generated from field: rat.auditlog.v1.AuditOutcome outcome = 8;
-   */
-  outcome: AuditOutcome;
-
-  /**
-   * Correlation back to the operation (C1).
-   *
-   * @generated from field: string correlation_id = 9;
-   */
-  correlationId: string;
-
-  /**
-   * Core's Ed25519 signature over this record's canonical serialization (all
-   * fields above; this field itself is excluded from the signed bytes). The
-   * authority of the record — a sink verifies against the core's published key
-   * and rejects any record whose signature does not verify.
-   *
-   * @generated from field: bytes signature = 10;
-   */
-  signature: Uint8Array;
-};
-
-/**
- * Describes the message rat.auditlog.v1.AuditRecord.
- * Use `create(AuditRecordSchema)` to create a new message.
- */
-export const AuditRecordSchema: GenMessage<AuditRecord> = /*@__PURE__*/
-  messageDesc(file_rat_auditlog_v1_auditlog, 0);
+  fileDesc("Ch5yYXQvYXVkaXRsb2cvdjEvYXVkaXRsb2cucHJvdG8SD3JhdC5hdWRpdGxvZy52MSJCCg1BcHBlbmRSZXF1ZXN0EisKB3JlY29yZHMYAiADKAsyGi5yYXQuY29tbW9uLnYxLkF1ZGl0UmVjb3JkSgQIARACIngKCVJlY29yZEFjaxIKCgJpZBgBIAEoCRItCgZzdGF0dXMYAiABKA4yHS5yYXQuYXVkaXRsb2cudjEuQXBwZW5kU3RhdHVzEjAKC3JlamVjdF9jb2RlGAMgASgOMhsucmF0LmF1ZGl0bG9nLnYxLlJlamVjdENvZGUicgoOQXBwZW5kUmVzcG9uc2USKAoEYWNrcxgBIAMoCzIaLnJhdC5hdWRpdGxvZy52MS5SZWNvcmRBY2sSGQoRbGFzdF9jb21taXR0ZWRfaWQYAiABKAkSGwoTbGFzdF9jb21taXR0ZWRfaGFzaBgDIAEoCSqDAQoMQXBwZW5kU3RhdHVzEh0KGUFQUEVORF9TVEFUVVNfVU5TUEVDSUZJRUQQABIbChdBUFBFTkRfU1RBVFVTX0NPTU1JVFRFRBABEhsKF0FQUEVORF9TVEFUVVNfRFVQTElDQVRFEAISGgoWQVBQRU5EX1NUQVRVU19SRUpFQ1RFRBADKoQBCgpSZWplY3RDb2RlEhsKF1JFSkVDVF9DT0RFX1VOU1BFQ0lGSUVEEAASHQoZUkVKRUNUX0NPREVfQkFEX1NJR05BVFVSRRABEhsKF1JFSkVDVF9DT0RFX0NIQUlOX0JSRUFLEAISHQoZUkVKRUNUX0NPREVfU1RPUkFHRV9FUlJPUhADMlwKD0F1ZGl0TG9nU2VydmljZRJJCgZBcHBlbmQSHi5yYXQuYXVkaXRsb2cudjEuQXBwZW5kUmVxdWVzdBofLnJhdC5hdWRpdGxvZy52MS5BcHBlbmRSZXNwb25zZUI3WjVnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvYXVkaXRsb2cvdjE7YXVkaXRsb2d2MWIGcHJvdG8z", [file_rat_common_v1_audit]);
 
 /**
  * @generated from message rat.auditlog.v1.AppendRequest
@@ -155,7 +70,7 @@ export type AppendRequest = Message<"rat.auditlog.v1.AppendRequest"> & {
   /**
    * Core-authored, core-signed records to append, in chain order.
    *
-   * @generated from field: repeated rat.auditlog.v1.AuditRecord records = 2;
+   * @generated from field: repeated rat.common.v1.AuditRecord records = 2;
    */
   records: AuditRecord[];
 };
@@ -165,7 +80,7 @@ export type AppendRequest = Message<"rat.auditlog.v1.AppendRequest"> & {
  * Use `create(AppendRequestSchema)` to create a new message.
  */
 export const AppendRequestSchema: GenMessage<AppendRequest> = /*@__PURE__*/
-  messageDesc(file_rat_auditlog_v1_auditlog, 1);
+  messageDesc(file_rat_auditlog_v1_auditlog, 0);
 
 /**
  * Ack for one record in the request; acks[i] corresponds to records[i].
@@ -198,7 +113,7 @@ export type RecordAck = Message<"rat.auditlog.v1.RecordAck"> & {
  * Use `create(RecordAckSchema)` to create a new message.
  */
 export const RecordAckSchema: GenMessage<RecordAck> = /*@__PURE__*/
-  messageDesc(file_rat_auditlog_v1_auditlog, 2);
+  messageDesc(file_rat_auditlog_v1_auditlog, 1);
 
 /**
  * @generated from message rat.auditlog.v1.AppendResponse
@@ -235,38 +150,7 @@ export type AppendResponse = Message<"rat.auditlog.v1.AppendResponse"> & {
  * Use `create(AppendResponseSchema)` to create a new message.
  */
 export const AppendResponseSchema: GenMessage<AppendResponse> = /*@__PURE__*/
-  messageDesc(file_rat_auditlog_v1_auditlog, 3);
-
-/**
- * @generated from enum rat.auditlog.v1.AuditOutcome
- */
-export enum AuditOutcome {
-  /**
-   * @generated from enum value: AUDIT_OUTCOME_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: AUDIT_OUTCOME_SUCCESS = 1;
-   */
-  SUCCESS = 1,
-
-  /**
-   * @generated from enum value: AUDIT_OUTCOME_DENIED = 2;
-   */
-  DENIED = 2,
-
-  /**
-   * @generated from enum value: AUDIT_OUTCOME_ERROR = 3;
-   */
-  ERROR = 3,
-}
-
-/**
- * Describes the enum rat.auditlog.v1.AuditOutcome.
- */
-export const AuditOutcomeSchema: GenEnum<AuditOutcome> = /*@__PURE__*/
-  enumDesc(file_rat_auditlog_v1_auditlog, 0);
+  messageDesc(file_rat_auditlog_v1_auditlog, 2);
 
 /**
  * Per-record disposition of an Append.
@@ -306,7 +190,7 @@ export enum AppendStatus {
  * Describes the enum rat.auditlog.v1.AppendStatus.
  */
 export const AppendStatusSchema: GenEnum<AppendStatus> = /*@__PURE__*/
-  enumDesc(file_rat_auditlog_v1_auditlog, 1);
+  enumDesc(file_rat_auditlog_v1_auditlog, 0);
 
 /**
  * @generated from enum rat.auditlog.v1.RejectCode
@@ -343,7 +227,7 @@ export enum RejectCode {
  * Describes the enum rat.auditlog.v1.RejectCode.
  */
 export const RejectCodeSchema: GenEnum<RejectCode> = /*@__PURE__*/
-  enumDesc(file_rat_auditlog_v1_auditlog, 2);
+  enumDesc(file_rat_auditlog_v1_auditlog, 1);
 
 /**
  * @generated from service rat.auditlog.v1.AuditLogService
