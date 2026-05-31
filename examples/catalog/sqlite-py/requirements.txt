@@ -1,0 +1,5 @@
+# Runtime deps for rat-catalog-sqlite-py. sqlite3 is in the Python stdlib (no dep).
+# Pinned to the versions 0d was verified against (python:3.12). protobuf must be
+# >= the gencode's runtime pin (see rat/*/v1/*_pb2.py ValidateProtobufRuntimeVersion).
+grpcio==1.80.0
+protobuf==7.35.0

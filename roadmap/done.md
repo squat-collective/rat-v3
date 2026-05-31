@@ -4,6 +4,22 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — Round 2: `catalog` = sqlite (real backend) — durable branches/ledger + concurrent-merge safety
+
+Third round-2 real backend. `examples/catalog/sqlite-py/` — branches, their snapshots, and the idempotency ledger live in sqlite (real transactional SQL DB, file, WAL) rather than an in-memory dict.
+
+- **Passes the SAME shared vectors** (`contracts/conformance/catalog-v1.json`) — same model + deterministic snapshot scheme. All three catalog refs (inmemory-go, inmemory-py, sqlite-py) green on one shared file.
+- **Two properties the in-memory catalog CANNOT show:**
+  - **Durability** (`test_durability_branches_and_ledger_survive_reopen`): create branch + merge → close → reopen the same db file → the branch, the moved snapshot, AND the idempotency ledger persist (a re-merge with the same key is still a no-op returning already_applied). A dict dies with the process.
+  - **Concurrent-merge safety** (`test_concurrent_merge_one_winner`): 16 threads race a MergeBranch into `main` from the same expected snapshot → exactly one COMMITs, the rest FAILED_PRECONDITION. Durable, cross-connection lost-update prevention via `BEGIN IMMEDIATE` (+ idempotency-key PK), not an in-process mutex.
+- Concurrent-merge safety is the publish gate of the v2 pipeline model (reviews/06 #8 — `MergeBranch` is reconciler-retried, must be safe under retry AND concurrency), enforced for real. Python stdlib sqlite3; direct harness. Green in `python:3.12`.
+
+**Round 2 progress: 3 of 6 axes** (`state`=sqlite, `storage`=local-fs, `catalog`=sqlite). Remaining: `format`, `engine`, `runtime` (the Arrow-heavy / execution ones).
+
+**Files:** `examples/catalog/sqlite-py/**`. No proto/SDK/vector change.
+
+---
+
 ## 2026-05-31 — Round 2: `storage` = local-fs (real backend) — path containment + tenant isolation
 
 Second round-2 real backend. `examples/storage/localfs-go/` — a `storage` plugin that vends credentials scoped to a REAL local filesystem path under a per-tenant root, where the in-memory refs just echo the requested prefix into a JSON scope receipt.
