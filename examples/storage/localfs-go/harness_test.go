@@ -1,0 +1,277 @@
+// harness_test.go — conformance + round-2 harness for rat-storage-localfs-go.
+//
+//  1. ADR-003 cross-run: drives StorageService.VendCredentials through the stub
+//     core gateway on the SAME shared golden vectors the in-memory references load
+//     (contracts/conformance/storage-v1.json), asserting the provider-neutral scope
+//     binding (tenant + logical prefix + mode + short TTL). A real backend passing
+//     the identical vectors is the round-2 ADR-003 evidence.
+//
+//  2. Round-2 filesystem properties the in-memory echo cannot show:
+//     - TestLocalFS_PathContainment: a normal prefix resolves under the tenant root
+//       and the directory is created on disk; an ESCAPING prefix is PERMISSION_DENIED.
+//     - TestLocalFS_TenantIsolation: two tenants vending the same logical prefix get
+//       distinct paths, each under its own tenant root.
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"net"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	commonv1 "github.com/rat-dev/rat/gen/rat/common/v1"
+	corev1 "github.com/rat-dev/rat/gen/rat/core/v1"
+	storagev1 "github.com/rat-dev/rat/gen/rat/storage/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/test/bufconn"
+	"google.golang.org/protobuf/proto"
+)
+
+// ---- golden-vector model (mirrors contracts/conformance/storage-v1.json) ----
+
+type scope struct {
+	Tenant string `json:"tenant"`
+	Prefix string `json:"prefix"`
+	Mode   string `json:"mode"`
+}
+
+type expectation struct {
+	CredentialsPresent bool   `json:"credentials_present"`
+	Scope              *scope `json:"scope"`
+	Code               string `json:"code"`
+}
+
+type vstep struct {
+	Step   string      `json:"step"`
+	Op     string      `json:"op"`
+	Prefix string      `json:"prefix"`
+	Mode   string      `json:"mode"`
+	Expect expectation `json:"expect"`
+}
+
+type vectors struct {
+	Axis            string  `json:"axis"`
+	Tenant          string  `json:"tenant"`
+	CredentialsTTLs int64   `json:"credentials_ttl_seconds"`
+	Lifecycle       []vstep `json:"lifecycle"`
+	Errors          []vstep `json:"errors"`
+}
+
+const vectorPath = "../../../contracts/conformance/storage-v1.json"
+
+func loadVectors(t *testing.T) vectors {
+	t.Helper()
+	raw, err := os.ReadFile(vectorPath)
+	if err != nil {
+		t.Fatalf("read golden vectors %s: %v", vectorPath, err)
+	}
+	var v vectors
+	if err := json.Unmarshal(raw, &v); err != nil {
+		t.Fatalf("parse golden vectors: %v", err)
+	}
+	if v.Axis != "storage/v1" {
+		t.Fatalf("vectors axis = %q, want storage/v1", v.Axis)
+	}
+	return v
+}
+
+func modeEnum(s string) storagev1.AccessMode {
+	switch s {
+	case "READ":
+		return storagev1.AccessMode_ACCESS_MODE_READ
+	case "WRITE":
+		return storagev1.AccessMode_ACCESS_MODE_WRITE
+	case "READ_WRITE":
+		return storagev1.AccessMode_ACCESS_MODE_READ_WRITE
+	default:
+		return storagev1.AccessMode_ACCESS_MODE_UNSPECIFIED
+	}
+}
+
+// ---- harness wiring: plugin behind the stub core gateway ----
+
+type rig struct {
+	gw     corev1.CapabilityInvokeServiceClient
+	core   *stubGateway
+	tenant string
+}
+
+func bufDial(t *testing.T, lis *bufconn.Listener) *grpc.ClientConn {
+	t.Helper()
+	conn, err := grpc.NewClient(
+		"passthrough:///bufnet",
+		grpc.WithContextDialer(func(_ context.Context, _ string) (net.Conn, error) { return lis.Dial() }),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	return conn
+}
+
+func newRig(t *testing.T, tenant string) *rig {
+	t.Helper()
+	plis := bufconn.Listen(1 << 20)
+	psrv := grpc.NewServer()
+	storagev1.RegisterStorageServiceServer(psrv, newServer(newStore(t.TempDir())))
+	go func() { _ = psrv.Serve(plis) }()
+	t.Cleanup(psrv.Stop)
+	providerConn := bufDial(t, plis)
+
+	core := newGateway(providerConn, "rat-strategy-test", []string{"rat://storage/v1/vend-credentials"})
+
+	glis := bufconn.Listen(1 << 20)
+	gsrv := grpc.NewServer()
+	corev1.RegisterCapabilityInvokeServiceServer(gsrv, core)
+	go func() { _ = gsrv.Serve(glis) }()
+	t.Cleanup(gsrv.Stop)
+
+	return &rig{gw: corev1.NewCapabilityInvokeServiceClient(bufDial(t, glis)), core: core, tenant: tenant}
+}
+
+func tctx(t *testing.T) context.Context {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+	return ctx
+}
+
+func (r *rig) withCallMeta(ctx context.Context) context.Context {
+	rc := &commonv1.RequestContext{
+		Trace:    &commonv1.TraceContext{Traceparent: "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01", CorrelationId: "corr-golden"},
+		Identity: &commonv1.Identity{Tenant: r.tenant},
+	}
+	b, _ := proto.Marshal(rc)
+	return metadata.AppendToOutgoingContext(ctx, callMetaHeader, string(b))
+}
+
+func (r *rig) vend(ctx context.Context, prefix, mode string) (*storagev1.VendCredentialsResponse, error) {
+	payload, err := proto.Marshal(&storagev1.VendCredentialsRequest{Prefix: prefix, Mode: modeEnum(mode)})
+	if err != nil {
+		return nil, err
+	}
+	out, err := r.gw.Invoke(r.withCallMeta(ctx), &corev1.InvokeRequest{
+		Capability: "rat://storage/v1/vend-credentials", Payload: payload,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var resp storagev1.VendCredentialsResponse
+	if err := proto.Unmarshal(out.GetResult(), &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ---- 1. shared-vector conformance ----
+
+func TestStorageConformance_GoldenVectors(t *testing.T) {
+	v := loadVectors(t)
+	r := newRig(t, v.Tenant)
+	ctx := tctx(t)
+	ttlMs := v.CredentialsTTLs * 1000
+	const slackMs = 2000
+
+	for _, s := range v.Lifecycle {
+		s := s
+		t.Run(s.Step, func(t *testing.T) {
+			before := nowMs()
+			resp, err := r.vend(ctx, s.Prefix, s.Mode)
+			after := nowMs()
+			if err != nil {
+				t.Fatalf("vend: %v", err)
+			}
+			if s.Expect.CredentialsPresent && len(resp.GetCredentials()) == 0 {
+				t.Fatalf("credentials empty, want present")
+			}
+			var got scopeReceipt // ignores resolved_path here; the round-2 tests check it
+			if err := json.Unmarshal(resp.GetCredentials(), &got); err != nil {
+				t.Fatalf("decode scope receipt: %v", err)
+			}
+			if e := s.Expect.Scope; e != nil {
+				if got.Tenant != e.Tenant || got.Prefix != e.Prefix || got.Mode != e.Mode {
+					t.Fatalf("scope = {%q %q %q}, want {%q %q %q}", got.Tenant, got.Prefix, got.Mode, e.Tenant, e.Prefix, e.Mode)
+				}
+			}
+			exp := resp.GetExpiresUnixMs()
+			if exp < before+ttlMs-slackMs || exp > after+ttlMs+slackMs {
+				t.Fatalf("expires_unix_ms = %d, want within [%d, %d]", exp, before+ttlMs-slackMs, after+ttlMs+slackMs)
+			}
+		})
+	}
+
+	if got, want := len(r.core.auditLog()), len(v.Lifecycle); got != want {
+		t.Fatalf("audit log = %d entries, want one per mediated call (%d)", got, want)
+	}
+}
+
+func TestStorageConformance_ErrorVectors(t *testing.T) {
+	v := loadVectors(t)
+	r := newRig(t, v.Tenant)
+	ctx := tctx(t)
+
+	for _, s := range v.Errors {
+		s := s
+		t.Run(s.Step, func(t *testing.T) {
+			_, err := r.vend(ctx, s.Prefix, s.Mode)
+			if err == nil {
+				t.Fatalf("%s: want error %s, got nil", s.Step, s.Expect.Code)
+			}
+			if got := status.Code(err); got != codes.InvalidArgument {
+				t.Fatalf("%s: status = %s, want INVALID_ARGUMENT", s.Step, got)
+			}
+		})
+	}
+}
+
+// ---- 2. round-2 filesystem properties (direct on the real backend) ----
+
+func TestLocalFS_PathContainment(t *testing.T) {
+	st := newStore(t.TempDir())
+
+	// A normal prefix resolves under the tenant root + creates the directory.
+	r, err := st.vend("acme", "warehouse/orders", "READ", 0)
+	if err != nil {
+		t.Fatalf("vend: %v", err)
+	}
+	tenantRoot := filepath.Join(st.root, "acme")
+	if !strings.HasPrefix(r.ResolvedPath, tenantRoot+string(filepath.Separator)) {
+		t.Fatalf("resolved %q not under tenant root %q", r.ResolvedPath, tenantRoot)
+	}
+	if fi, err := os.Stat(r.ResolvedPath); err != nil || !fi.IsDir() {
+		t.Fatalf("resolved dir not created on disk: %v", err)
+	}
+
+	// An ESCAPING prefix is denied — the property the in-memory echo can't enforce.
+	if _, err := st.vend("acme", "../../escape", "READ", 0); status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("escaping prefix: got %v, want PERMISSION_DENIED", err)
+	}
+}
+
+func TestLocalFS_TenantIsolation(t *testing.T) {
+	st := newStore(t.TempDir())
+	a, err := st.vend("acme", "data", "READ", 0)
+	if err != nil {
+		t.Fatalf("vend acme: %v", err)
+	}
+	b, err := st.vend("globex", "data", "READ", 0)
+	if err != nil {
+		t.Fatalf("vend globex: %v", err)
+	}
+	if a.ResolvedPath == b.ResolvedPath {
+		t.Fatalf("two tenants resolved the same logical prefix to one path %q — no isolation", a.ResolvedPath)
+	}
+	if !strings.HasPrefix(a.ResolvedPath, filepath.Join(st.root, "acme")+string(filepath.Separator)) ||
+		!strings.HasPrefix(b.ResolvedPath, filepath.Join(st.root, "globex")+string(filepath.Separator)) {
+		t.Fatalf("paths not tenant-isolated: %q / %q", a.ResolvedPath, b.ResolvedPath)
+	}
+}

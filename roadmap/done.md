@@ -4,6 +4,23 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — Round 2: `storage` = local-fs (real backend) — path containment + tenant isolation
+
+Second round-2 real backend. `examples/storage/localfs-go/` — a `storage` plugin that vends credentials scoped to a REAL local filesystem path under a per-tenant root, where the in-memory refs just echo the requested prefix into a JSON scope receipt.
+
+- **Provider-neutral vectors:** `storage`'s `prefix` is provider-specific (the in-memory refs used `s3://…` URIs). Changed `contracts/conformance/storage-v1.json` to scheme-less LOGICAL prefixes (`warehouse/orders`, …) so every backend can resolve them per its own scheme; the in-memory refs (which echo) re-pass unchanged (verified). The receipt MAY carry extra provider-specific fields (local-fs adds `resolved_path`) the vectors ignore.
+- **Passes the SAME shared vectors** through the stub gateway (scope = tenant + logical prefix + mode + short TTL). All three `storage` refs (inmemory-go, inmemory-py, localfs-go) green on one shared file.
+- **Two filesystem properties the in-memory echo CANNOT show, now tested:**
+  - **Path containment** (`TestLocalFS_PathContainment`): a normal prefix resolves under `<root>/<tenant>/` and the dir is created on disk; an escaping prefix (`../../escape`) → `PERMISSION_DENIED` (via `filepath.Rel` containment). The in-memory echo would accept it.
+  - **Tenant isolation** (`TestLocalFS_TenantIsolation`): two tenants vending the same logical prefix get distinct paths under their own roots.
+- Path containment is the storage analog of sqlite's durability/CAS — the cross-tenant security boundary `storage.proto` emphasizes (reviews/01 F3, reviews/04), enforced for real rather than by convention. Go (routes through the gateway, unlike the Python sqlite ref). Green in `golang:1.25`.
+
+**Round 2 progress: 2 of 6 axes** have a divergent real backend (`state`=sqlite, `storage`=local-fs). Pattern holds: real backend + same shared vectors + a backend-specific semantic test.
+
+**Files:** `contracts/conformance/storage-v1.json` (logical prefixes), `examples/storage/localfs-go/**`. No proto/SDK change.
+
+---
+
 ## 2026-05-31 — ROUND 2 begins: `state` = sqlite (real backend) — durability + linearizable CAS
 
 The first **technologically-divergent** reference (ADR-003's *spirit*, not just letter): a third `state` implementation backed by **sqlite** (real embedded transactional SQL DB, file-on-disk, WAL) rather than an in-memory hashmap. `examples/state/sqlite-py/`.

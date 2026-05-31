@@ -18,8 +18,8 @@ The current 0d references are **inmemory twins** (`inmemory-go` + `inmemory-py`)
 
 **Round 2 (before any data-plane axis → `v1`):** make one reference per axis a *real divergent backend* with a different consistency/semantic profile. Cheapest + highest-value first:
 - **`state` = sqlite — ✅ DONE 2026-05-31** (`examples/state/sqlite-py/`): passes the shared vectors + adds round-2 tests for DURABILITY (survives reopen) and LINEARIZABLE CAS (16 threads → exactly one winner, enforced by `BEGIN IMMEDIATE`, not a mutex). Establishes the round-2 pattern: real backend + same vectors + a backend-specific semantic test.
-- **`storage` = local-fs** — real filesystem creds/paths vs the in-memory scope receipt. ⬅ next (cheap).
-- **`format` = parquet/iceberg files**, **`engine` = duckdb/datafusion**, **`catalog` = sqlite-catalog**, **`runtime` = container/subprocess** — heavier; schedule after local-fs. The format/engine ones subsume the typed-Arrow pass.
+- **`storage` = local-fs — ✅ DONE 2026-05-31** (`examples/storage/localfs-go/`): passes the shared vectors (now provider-neutral logical prefixes) + adds round-2 tests for PATH CONTAINMENT (escaping prefix → `PERMISSION_DENIED`, dir created on disk) and TENANT ISOLATION (two tenants → distinct paths). The cross-tenant boundary, enforced by `filepath` resolution rather than convention.
+- **`format` = parquet/iceberg files**, **`engine` = duckdb/datafusion**, **`catalog` = sqlite-catalog**, **`runtime` = container/subprocess** — heavier; remaining. The format/engine ones subsume the typed-Arrow pass.
 
 This also naturally subsumes the **typed-Arrow conformance pass** (a real format/engine backend forces the real Arrow Flight data leg, retiring the in-process stream-registry stand-in). Decision recorded 2026-05-31 (Tom: "finish wire contracts first, then round 2"). Until round 2 lands, the roadmap's per-axis "ADR-003 gate MET" means the wire-contract cross-run only.
 

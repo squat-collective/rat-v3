@@ -1,5 +1,5 @@
 {
-  "_comment": "RAT storage/v1 conformance vectors — ADR-003 shared golden data. The SINGLE source of truth for the storage axis. Both independent references (Go: examples/storage/inmemory-go, Python: examples/storage/inmemory-py) load THIS file and drive StorageService.VendCredentials over real gRPC. Storage owns byte storage + credential vending; the control plane never sees bytes, it only asks storage to vend short-TTL, prefix-scoped, TENANT-scoped credentials (the C7 enforcement point — reviews/01 Finding 3, reviews/04). The credential blob is opaque/provider-specific in production (an STS token set); for conformance the references encode the GRANTED SCOPE as a JSON 'scope receipt' {tenant, prefix, mode, expires_unix_ms} so the harness can assert the security obligation: the vended creds are bound to the caller's tenant (read from the rat-callmeta-bin metadata header, ADR-007 — NOT a request field, so it can't be forged) + the requested prefix + mode. This axis is the first reference that CONSUMES identity from the metadata envelope.",
+  "_comment": "RAT storage/v1 conformance vectors — ADR-003 shared golden data. The SINGLE source of truth for the storage axis. Both independent references (Go: examples/storage/inmemory-go, Python: examples/storage/inmemory-py) load THIS file and drive StorageService.VendCredentials over real gRPC. Storage owns byte storage + credential vending; the control plane never sees bytes, it only asks storage to vend short-TTL, prefix-scoped, TENANT-scoped credentials (the C7 enforcement point — reviews/01 Finding 3, reviews/04). The credential blob is opaque/provider-specific in production (an STS token set); for conformance the references encode the GRANTED SCOPE as a JSON 'scope receipt' {tenant, prefix, mode, expires_unix_ms} so the harness can assert the security obligation: the vended creds are bound to the caller's tenant (read from the rat-callmeta-bin metadata header, ADR-007 — NOT a request field, so it can't be forged) + the requested prefix + mode. This axis is the first reference that CONSUMES identity from the metadata envelope. NOTE: `prefix` is a LOGICAL, provider-neutral path (scheme-less) so every storage backend can resolve it per its own scheme — the in-memory refs echo it into the scope receipt; the round-2 local-fs ref resolves it to a real filesystem path under the tenant root (and enforces containment). The scope receipt MAY carry extra provider-specific fields (e.g. resolved_path) that these vectors ignore.",
   "axis": "storage/v1",
   "tenant": "acme",
   "credentials_ttl_seconds": 900,
@@ -7,31 +7,31 @@
     {
       "step": "vend_read",
       "op": "vend",
-      "prefix": "s3://bucket/warehouse/orders",
+      "prefix": "warehouse/orders",
       "mode": "READ",
       "expect": {
         "credentials_present": true,
-        "scope": {"tenant": "acme", "prefix": "s3://bucket/warehouse/orders", "mode": "READ"}
+        "scope": {"tenant": "acme", "prefix": "warehouse/orders", "mode": "READ"}
       }
     },
     {
       "step": "vend_write",
       "op": "vend",
-      "prefix": "s3://bucket/warehouse/staging",
+      "prefix": "warehouse/staging",
       "mode": "WRITE",
       "expect": {
         "credentials_present": true,
-        "scope": {"tenant": "acme", "prefix": "s3://bucket/warehouse/staging", "mode": "WRITE"}
+        "scope": {"tenant": "acme", "prefix": "warehouse/staging", "mode": "WRITE"}
       }
     },
     {
       "step": "vend_read_write",
       "op": "vend",
-      "prefix": "s3://bucket/warehouse/all",
+      "prefix": "warehouse/all",
       "mode": "READ_WRITE",
       "expect": {
         "credentials_present": true,
-        "scope": {"tenant": "acme", "prefix": "s3://bucket/warehouse/all", "mode": "READ_WRITE"}
+        "scope": {"tenant": "acme", "prefix": "warehouse/all", "mode": "READ_WRITE"}
       }
     }
   ],
@@ -46,7 +46,7 @@
     {
       "step": "unspecified_mode",
       "op": "vend",
-      "prefix": "s3://bucket/x",
+      "prefix": "x",
       "mode": "UNSPECIFIED",
       "expect": {"code": "INVALID_ARGUMENT"}
     }
