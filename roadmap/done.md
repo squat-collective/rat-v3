@@ -6,15 +6,15 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ## 2026-05-31 — Codegen pipeline: make targets + gen script + CI + per-commit hook
 
-**What:** Built the SDK-codegen + verification toolchain that ADR-006 D3 calls for. Three pieces (commits `2ec6c8e` pipeline, `cf2c170` Claude hook):
+**What:** Built the SDK-codegen + verification toolchain that ADR-006 D3 calls for. Three pieces (commits `654c3f1` pipeline, `4abffe7` Claude hook):
 
 1. **`scripts/gen-sdks.sh` + `Makefile`** — containerized (podman/docker, no host installs). `make check` = FAST per-commit gate (buf lint, ~5s); `make verify` = FULL (lint + build + SDK freshness + Go SDK compile, slow/network); `make gen-sdks` / `gen-check` / `compile-sdks`. Vendored Go SDK landed at `contracts/sdks/go/` (42 files + go.mod), compiles clean under `golang:1.25` (resolves the ADR-006 D3 Go≥1.25 floor). `buf.gen.yaml` → `buf.gen.go.yaml` (per-language, outputs to `sdks/go`); `.gitignore` drops the retired `/gen/`.
 2. **`.github/workflows/contracts.yml`** — `validate` job (buf lint+build, +`buf breaking` on PRs) and `sdks` job (regen + Go compile; PRs **fail on stale committed SDK**; push to main **auto-commits regenerated SDKs back** — the "autogenerate on GitHub" ask).
-3. **Per-commit Claude hook** (`.claude/`, via claude-engineer) — PreToolUse/Bash → `precommit-contracts-check.sh`, self-filters in cost order so only a `git commit` that stages `contracts/proto/` runs `make check`; exit 2 blocks on lint failure. **Never per-edit, never `make verify`.** Verified: non-commit 22ms/exit0, no-proto-commit 26ms/exit0, clean-proto 4.7s/exit0, broken-proto exit2/blocked. Caveat: only gates Claude-run commits (CI is the real boundary; human-commit gating would need a repo git pre-commit hook).
+3. **Per-commit Claude hook** (`.claude/`, via claude-engineer) — PreToolUse/Bash with `if:"Bash(git commit *)"` → `.claude/hooks/contracts-check.sh`. The hook process only spawns on `git commit`; the script then self-guards on staged `contracts/proto/` files (pure shell, no container if none staged) before running `make check`; exit 2 blocks on lint failure. **Never per-edit, never `make verify`.** Verified all 4 paths against the real script: nothing-staged 11ms/exit0, non-proto-staged 6ms/exit0, clean-proto exit0 (ran make check), broken-proto exit2/blocked with the lint error fed back. Caveat: only gates Claude-run commits (CI is the real boundary; human-commit gating would need a repo git pre-commit hook).
 
 **Verified:** `make check` / `gen-check` / `compile-sdks` all exit 0 locally; hook tested across all 4 paths; settings.json valid + `$schema`/`env`/`permissions` preserved.
 
-**Files:** `Makefile`, `scripts/gen-sdks.sh`, `.github/workflows/contracts.yml`, `contracts/buf.gen.go.yaml`, `contracts/.gitignore`, `contracts/sdks/go/**`, `.claude/settings.json`, `.claude/hooks/precommit-contracts-check.sh`.
+**Files:** `Makefile`, `scripts/gen-sdks.sh`, `.github/workflows/contracts.yml`, `contracts/buf.gen.go.yaml`, `contracts/.gitignore`, `contracts/sdks/go/**`, `.claude/settings.json`, `.claude/hooks/contracts-check.sh`.
 
 ---
 
