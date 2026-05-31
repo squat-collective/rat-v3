@@ -4,7 +4,7 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
-## 2026-05-31 — 0d started: first reference plugin (rat-format-inmemory-go) — commit `3bb6c0c`
+## 2026-05-31 — 0d started: first reference plugin (rat-format-inmemory-go) — commit `c472620`
 
 First real RAT v3 *code*: a reference `kind: format` plugin under `examples/format/inmemory-go/` (ADR-006 D2 layout), implementing the full `format/v1` wire contract to validate it by building against it (ADR-003 forcing function), not as production storage.
 
@@ -18,7 +18,7 @@ First real RAT v3 *code*: a reference `kind: format` plugin under `examples/form
 
 **Verified (golang:1.25 container):** `go build` / `go vet` / `go test` all green — 3 tests PASS over real gRPC.
 
-**Process note:** a long cancelled tool-batch mid-session left a stale compiled 15MB binary + a broken `server.go` (dead `errUnused` + stray brace) uncommitted, and the first plugin commit + roadmap edits never landed. Terminal stdout was also corrupting. Recovered by checking real git/file state (not terminal output), rewriting `server.go` clean, removing the binary, re-verifying green in-container, then committing fresh as `3bb6c0c`.
+**Process note:** a long cancelled tool-batch mid-session left a stale compiled 15MB binary + a broken `server.go` (dead `errUnused` + stray brace) uncommitted, and the first plugin commit + roadmap edits never landed. Terminal stdout was also corrupting. Recovered by checking real git/file state (not terminal output), rewriting `server.go` clean, removing the binary, re-verifying green in-container, then committing fresh as `c472620`.
 
 **Next (ADR-003 gate):** a SECOND independent `format` impl — e.g. `examples/format/inmemory-py` — running the SAME golden vectors, before `format/v1` can freeze. (The sequencing panel — see chat — recommends also routing the harness's control RPCs through a ~200-LOC throwaway stub invoke-gateway so the freeze also validates the ADR-005 mediation seams, not just the plugin-to-plugin data contract.)
 
