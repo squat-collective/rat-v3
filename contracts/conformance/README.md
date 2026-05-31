@@ -14,6 +14,31 @@ This is how the "run against each other on golden data" clause is satisfied
 that happen to agree. If the file changes, every impl re-tests against the new
 truth on its next run.
 
+## Running the suite (sub-phase 0f)
+
+```bash
+make conformance        # or: scripts/conformance.sh
+```
+
+This **auto-discovers every reference** under `examples/<axis>/<impl>/`, runs each
+one's harness against its golden vectors (Go refs via `go test`, Python refs via
+`python harness_test.py`, all containerized — no host installs), and prints a single
+pass/fail matrix:
+
+```
+  axis      impl             lang vectors              result
+  --------- ---------------- ---- -------------------- ------
+  engine    duckdb-py        py  engine-real-v1.json  PASS
+  format    parquet-py       py  format-v1.json       PASS
+  state     sqlite-py        py  state-v1.json        PASS
+  …
+  20/20 references conform
+```
+
+Exit 0 iff every reference conforms — so CI / the freeze gate can hang on it. A new
+reference joins the suite automatically the moment it lands. This is the operational
+form of ADR-003's "both pass the axis's conformance suite": one command, one matrix.
+
 ## Files
 
 | File | Axis | Consumed by |

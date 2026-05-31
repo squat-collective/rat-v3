@@ -4,6 +4,21 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — Sub-phase 0f: the conformance suite runner — one command, one pass/fail matrix
+
+Formalized the conformance suite (the operational form of ADR-003's "both pass the axis's conformance suite"). The per-axis golden vectors were already authoritative; what was missing was a single runner across all references.
+
+- **`scripts/conformance.sh`** + **`make conformance`** — **auto-discovers every reference** under `examples/<axis>/<impl>/` (Go = has `go.mod`; Python = has `harness_test.py`), runs each one's harness against its golden vectors (Go via `go test`, Python via `python harness_test.py`), and prints a single **axis × impl × lang × vectors × result** matrix. Containerized (podman/docker, no host installs); one golang container for all Go refs, one python container (union of deps installed once) for all Python refs. **Exit 0 iff every reference conforms** — so CI / the freeze gate can hang on it. A new reference joins the suite the moment it lands (no registration).
+- Portable rendering (host `sort` + plain `awk`, works under mawk/gawk); real-engine refs correctly mapped to `engine-real-v1.json`, the rest to `<axis>-v1.json`.
+- **Verified: 20/20 references conform** — all 6 axes' round-1 language twins + the round-2 real backends (sqlite/local-fs/subprocess/duckdb/datafusion/parquet/delta), green in one run.
+- `contracts/conformance/README.md` documents `make conformance` + a sample matrix.
+
+This is the 0f deliverable's core (the suite runner). A per-RPC latency benchmark is the remaining 0f sub-item (deferred — lighter, optional).
+
+**Files:** `scripts/conformance.sh`, `Makefile` (conformance target), `contracts/conformance/README.md`.
+
+---
+
 ## 2026-05-31 — Real Arrow Flight transport — the last in-process data-leg stand-in retired
 
 Replaced the in-process Arrow-IPC registry with a REAL `pyarrow.flight` transport in `examples/format/parquet-py` — the only reference where the bulk-data leg is now *fully* real (real Parquet files + real Flight wire).

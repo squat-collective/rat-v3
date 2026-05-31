@@ -26,7 +26,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-check compile-sdks help
+.PHONY: check verify lint build gen-sdks gen-check compile-sdks conformance help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -57,3 +57,7 @@ compile-sdks: ## Compile the generated Go SDK (proves it builds)
 	@$(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e GOTOOLCHAIN=local \
 	  -v "$(CURDIR)/$(CONTRACTS)/sdks/go:/sdk:Z" -w /sdk $(GO_IMAGE) \
 	  sh -c 'go build ./... && echo "OK: Go SDK compiles"'
+
+## --- conformance suite (0f) --------------------------------------------------
+conformance: ## Run EVERY reference plugin against its golden vectors → pass/fail matrix
+	@scripts/conformance.sh
