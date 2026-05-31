@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (0d: 4 of 6 data-plane axes' WIRE-CONTRACT gate MET — format/engine/storage/runtime; ADR-007 + ADR-008 decided AND migrated; all 8 refs green. NOTE: refs are inmemory twins — ADR-003's real-backend round-2 still pending before v1; see scope caveat below.)
+> Updated: 2026-05-31 (0d: 5 of 6 data-plane axes' WIRE-CONTRACT gate MET — format/engine/storage/runtime/catalog; ADR-007 + ADR-008 decided AND migrated; all 10 refs green. Only `state` left. NOTE: refs are inmemory twins — ADR-003's real-backend round-2 still pending before v1; see scope caveat below.)
 
 ## Status one-liner
 
@@ -61,7 +61,7 @@ The 23 other prospective ADRs are in [backlog.md](backlog.md). They land as they
 
 Sub-phase **0d is underway. FOUR data-plane axes are through the ADR-003 two-reference gate: `format/v1`, `engine/v1`, `storage/v1`, `runtime/v1`** — each has two independent references (Go + Python) passing one shared golden-vector file. `format`/`engine`/`storage` route through the stub ADR-005/007 gateway; `runtime` is driven **directly** (the gateway can't mediate its streaming Execute — see the finding below). ADR-007 is decided + migrated; `storage` reads tenant from the envelope (C7); `runtime` is the first streaming axis. The harness pattern is proven + repeatable. The next concrete step:
 
-1. **Pick the fifth data-plane axis for 0d** — `catalog` or `state` (the two remaining of the six: engine ✅ format ✅ storage ✅ runtime ✅, catalog, state). Same pattern (shared `contracts/conformance/<axis>-v1.json` + two impls + the stub gateway); each unannotated axis needs its `(rat.common.v1.capability)` option added (storage + runtime did; 12 remain). `state` mixes unary RPCs (Get/Put/List) **and** a server-streaming one (`Watch`) — the ADR-008 `InvokeServerStream` relay now exists, so a full `state` reference can route Watch through it (the relay code is in `examples/runtime/inmemory-go/gateway_test.go`, ready to lift). `catalog` is fully unary (simplest next).
+1. **The SIXTH (last) data-plane axis: `state`** — the only remaining of the six (engine ✅ format ✅ storage ✅ runtime ✅ catalog ✅, state). Same pattern. `state` is the richest yet: unary Get/Put/List **plus** a server-streaming `Watch`, and its proto carries a real conformance obligation — **linearizable CAS + ordered Watch** (freeze-blocker #3). An in-memory impl can satisfy the wire contract (round 1), but the *semantic* test (does CAS actually serialize?) is exactly what round-2 `state`=sqlite is for. `state` needs its `(rat.common.v1.capability)` annotations added (11 axes remain unannotated), and the `Watch` capability routes through the ADR-008 `InvokeServerStream` relay (lift the code from `examples/runtime/inmemory-go/gateway_test.go`). Completing `state` MEETS the wire-contract gate for all 6 data-plane axes → 0d round-1 done.
 2. **(Carry-over polish, optional)** a real **SDK metadata interceptor** so plugin code gets the reconstructed context object automatically; and wiring `InvokeBidiStream` (the `observability.Ingest` bidi relay) when that axis is referenced.
 3. **(Before any data-plane axis → `v1`)** the typed-Arrow conformance pass — format + engine refs still carry the bulk leg as an in-process stand-in.
 3. **(Carry-over polish, optional)** a real **SDK metadata interceptor** so plugin code gets the reconstructed context object automatically.

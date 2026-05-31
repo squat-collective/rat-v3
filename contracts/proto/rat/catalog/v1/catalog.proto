@@ -32,6 +32,7 @@ syntax = "proto3";
 
 package rat.catalog.v1;
 
+import "rat/common/v1/annotations.proto";
 import "rat/common/v1/data.proto";
 
 option go_package = "github.com/rat-dev/rat/gen/rat/catalog/v1;catalogv1";
@@ -39,14 +40,20 @@ option go_package = "github.com/rat-dev/rat/gen/rat/catalog/v1;catalogv1";
 service CatalogService {
   // rat://catalog/v1/get-table — resolve a table identifier to a TableRef
   // (physical location + current snapshot/branch).
-  rpc GetTable(GetTableRequest) returns (GetTableResponse);
+  rpc GetTable(GetTableRequest) returns (GetTableResponse) {
+    option (rat.common.v1.capability) = "rat://catalog/v1/get-table";
+  }
 
   // rat://catalog/v1/create-branch — open an isolated branch for a pipeline run.
-  rpc CreateBranch(CreateBranchRequest) returns (CreateBranchResponse);
+  rpc CreateBranch(CreateBranchRequest) returns (CreateBranchResponse) {
+    option (rat.common.v1.capability) = "rat://catalog/v1/create-branch";
+  }
 
   // rat://catalog/v1/merge-branch — merge a completed run's branch back to main,
   // after quality tests pass (the pre-merge gate of the v2 pipeline model).
-  rpc MergeBranch(MergeBranchRequest) returns (MergeBranchResponse);
+  rpc MergeBranch(MergeBranchRequest) returns (MergeBranchResponse) {
+    option (rat.common.v1.capability) = "rat://catalog/v1/merge-branch";
+  }
 }
 
 message GetTableRequest {

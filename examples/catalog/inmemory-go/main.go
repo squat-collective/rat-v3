@@ -1,0 +1,30 @@
+// main.go — entrypoint: serve CatalogService over gRPC. Address from
+// $RAT_PLUGIN_ADDR (default :0 → an OS-assigned port, printed on startup).
+package main
+
+import (
+	"fmt"
+	"log"
+	"net"
+	"os"
+
+	catalogv1 "github.com/rat-dev/rat/gen/rat/catalog/v1"
+	"google.golang.org/grpc"
+)
+
+func main() {
+	addr := os.Getenv("RAT_PLUGIN_ADDR")
+	if addr == "" {
+		addr = ":0"
+	}
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatalf("listen: %v", err)
+	}
+	srv := grpc.NewServer()
+	catalogv1.RegisterCatalogServiceServer(srv, newServer())
+	fmt.Printf("rat-catalog-inmemory-go listening on %s\n", lis.Addr().String())
+	if err := srv.Serve(lis); err != nil {
+		log.Fatalf("serve: %v", err)
+	}
+}

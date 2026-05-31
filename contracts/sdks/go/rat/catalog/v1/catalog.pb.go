@@ -382,7 +382,7 @@ var File_rat_catalog_v1_catalog_proto protoreflect.FileDescriptor
 
 const file_rat_catalog_v1_catalog_proto_rawDesc = "" +
 	"\n" +
-	"\x1crat/catalog/v1/catalog.proto\x12\x0erat.catalog.v1\x1a\x18rat/common/v1/data.proto\"O\n" +
+	"\x1crat/catalog/v1/catalog.proto\x12\x0erat.catalog.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"O\n" +
 	"\x0fGetTableRequest\x12\x1e\n" +
 	"\n" +
 	"identifier\x18\x02 \x01(\tR\n" +
@@ -405,11 +405,11 @@ const file_rat_catalog_v1_catalog_proto_rawDesc = "" +
 	"\x13MergeBranchResponse\x12\x1f\n" +
 	"\vsnapshot_id\x18\x01 \x01(\tR\n" +
 	"snapshotId\x12'\n" +
-	"\x0falready_applied\x18\x02 \x01(\bR\x0ealreadyApplied2\x92\x02\n" +
-	"\x0eCatalogService\x12M\n" +
-	"\bGetTable\x12\x1f.rat.catalog.v1.GetTableRequest\x1a .rat.catalog.v1.GetTableResponse\x12Y\n" +
-	"\fCreateBranch\x12#.rat.catalog.v1.CreateBranchRequest\x1a$.rat.catalog.v1.CreateBranchResponse\x12V\n" +
-	"\vMergeBranch\x12\".rat.catalog.v1.MergeBranchRequest\x1a#.rat.catalog.v1.MergeBranchResponseB5Z3github.com/rat-dev/rat/gen/rat/catalog/v1;catalogv1b\x06proto3"
+	"\x0falready_applied\x18\x02 \x01(\bR\x0ealreadyApplied2\xf9\x02\n" +
+	"\x0eCatalogService\x12m\n" +
+	"\bGetTable\x12\x1f.rat.catalog.v1.GetTableRequest\x1a .rat.catalog.v1.GetTableResponse\"\x1e\x8a\x97\"\x1arat://catalog/v1/get-table\x12}\n" +
+	"\fCreateBranch\x12#.rat.catalog.v1.CreateBranchRequest\x1a$.rat.catalog.v1.CreateBranchResponse\"\"\x8a\x97\"\x1erat://catalog/v1/create-branch\x12y\n" +
+	"\vMergeBranch\x12\".rat.catalog.v1.MergeBranchRequest\x1a#.rat.catalog.v1.MergeBranchResponse\"!\x8a\x97\"\x1drat://catalog/v1/merge-branchB5Z3github.com/rat-dev/rat/gen/rat/catalog/v1;catalogv1b\x06proto3"
 
 var (
 	file_rat_catalog_v1_catalog_proto_rawDescOnce sync.Once

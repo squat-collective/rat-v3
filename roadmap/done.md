@@ -4,6 +4,23 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 0d: `catalog` axis — two references (Go + Python) + shared golden vectors → `catalog/v1` wire-contract gate MET
+
+Fifth data-plane axis through the 0d two-reference (wire-contract) gate. The richest axis so far — git-like branch/version semantics with a real safety contract.
+
+- **contracts/conformance/catalog-v1.json** — a STATEFUL lifecycle: GetTable(main) → CreateBranch(run-42 from main) → GetTable(on branch) → MergeBranch with optimistic-concurrency ACCEPT (`expected_into_snapshot` matches) + idempotency_key → idempotent retry (`already_applied=true`) → MergeBranch REJECT (`FAILED_PRECONDITION`, target moved) ; + stateless errors (unknown table `NOT_FOUND`, empty id `INVALID_ARGUMENT`). Exercises the MERGE-SAFETY contract (reviews/06 #8) for real. Deterministic snapshot scheme (seed main@snap-0; merge → snap-<counter>) keeps the two impls in lockstep; the harness gained per-step `expect.code` so an error can be asserted mid-sequence.
+- **catalog.proto:** added `(rat.common.v1.capability)` to all 3 RPCs (get-table/create-branch/merge-branch) + annotations import (was comment-only) so the gateway routes them. SDKs regenerated.
+- **inmemory-go** (`examples/catalog/inmemory-go/`): store(branches/merges ledger)/server/main + the unary stub gateway re-pointed at CatalogService + harness. Green in `golang:1.25`.
+- **inmemory-py** (`examples/catalog/inmemory-py/`): from-scratch second reference mirroring the snapshot model. Green in `python:3.12`.
+
+**Verified (containers):** all TEN references (format+engine+storage+runtime+catalog, Go+Python) green together.
+
+**Scope (per the round-1/round-2 split):** in-memory twins — wire-contract gate. A real divergent backend (e.g. sqlite-catalog) is round-2.
+
+**Files:** `contracts/conformance/catalog-v1.json`, `contracts/proto/rat/catalog/v1/catalog.proto`, `contracts/sdks/**` (regenerated), `examples/catalog/inmemory-go/**`, `examples/catalog/inmemory-py/**`.
+
+---
+
 ## 2026-05-31 — ADR-008 migration executed: `InvokeServerStream` + `InvokeBidiStream`; runtime now gateway-mediated
 
 Implemented [ADR-008](../docs/architecture/adrs/008-streaming-capability-invocation.md) (decided in the prior commit; this is the implementation, kept separate per one-ADR-per-commit).

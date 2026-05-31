@@ -1,0 +1,68 @@
+{
+  "_comment": "RAT catalog/v1 conformance vectors — ADR-003 shared golden data. The SINGLE source of truth for the catalog axis. Both independent references (Go: examples/catalog/inmemory-go, Python: examples/catalog/inmemory-py) load THIS file and drive CatalogService (GetTable / CreateBranch / MergeBranch) over real gRPC. Catalog owns table metadata + git-like branch/version semantics — the basis for branch-isolated pipeline runs. The references model a deterministic snapshot scheme so two impls stay in lockstep: branches are global; the reference SEEDS one table ('warehouse.sales.orders') on branch 'main' at snapshot 'snap-0'; CreateBranch copies the source branch's snapshot; MergeBranch bumps a global counter and sets the target branch to 'snap-<counter>' (first merge -> 'snap-1'). The lifecycle is STATEFUL (steps share one catalog, run in order); a step with expect.code asserts a gRPC error mid-sequence (used for the optimistic-concurrency reject after the target has moved). The MERGE-SAFETY contract (reviews/06 #8) is what's under test: optimistic concurrency (expected_into_snapshot) + idempotency (idempotency_key -> already_applied).",
+  "axis": "catalog/v1",
+  "seed_table": "warehouse.sales.orders",
+  "lifecycle": [
+    {
+      "step": "get_table_main",
+      "op": "get_table",
+      "identifier": "warehouse.sales.orders",
+      "branch": "",
+      "expect": {"table": {"identifier": "warehouse.sales.orders", "branch": "main"}}
+    },
+    {
+      "step": "create_branch",
+      "op": "create_branch",
+      "branch": "run-42",
+      "from_branch": "main",
+      "expect": {"branch": "run-42"}
+    },
+    {
+      "step": "get_table_on_branch",
+      "op": "get_table",
+      "identifier": "warehouse.sales.orders",
+      "branch": "run-42",
+      "expect": {"table": {"identifier": "warehouse.sales.orders", "branch": "run-42"}}
+    },
+    {
+      "step": "merge_branch_ok",
+      "op": "merge_branch",
+      "branch": "run-42",
+      "into_branch": "main",
+      "expected_into_snapshot": "snap-0",
+      "idempotency_key": "run-42-merge",
+      "expect": {"already_applied": false, "snapshot_id_set": true}
+    },
+    {
+      "step": "merge_branch_idempotent_retry",
+      "op": "merge_branch",
+      "branch": "run-42",
+      "into_branch": "main",
+      "idempotency_key": "run-42-merge",
+      "expect": {"already_applied": true, "snapshot_id_set": true}
+    },
+    {
+      "step": "merge_branch_stale_snapshot",
+      "op": "merge_branch",
+      "branch": "run-42",
+      "into_branch": "main",
+      "expected_into_snapshot": "snap-0",
+      "idempotency_key": "different-key",
+      "expect": {"code": "FAILED_PRECONDITION"}
+    }
+  ],
+  "errors": [
+    {
+      "step": "get_unknown_table",
+      "op": "get_table",
+      "identifier": "warehouse.sales.ghosts",
+      "expect": {"code": "NOT_FOUND"}
+    },
+    {
+      "step": "get_empty_identifier",
+      "op": "get_table",
+      "identifier": "",
+      "expect": {"code": "INVALID_ARGUMENT"}
+    }
+  ]
+}
