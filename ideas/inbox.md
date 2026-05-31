@@ -127,7 +127,9 @@ Worth a dedicated ADR when the marketplace plugin is being built. Look at: VSCod
 
 ---
 
-## 2026-05-31 — [contract, ADR-005] Where does re-stamped identity ride: payload.context or channel metadata?
+## 2026-05-31 — [contract, ADR-005] Where does re-stamped identity ride: payload.context or channel metadata? `[promoted → docs/architecture/adrs/007-call-context-transport.md]`
+
+> **Resolved by [ADR-007](../docs/architecture/adrs/007-call-context-transport.md):** the whole cross-cutting envelope (trace + identity) moves out of the payload into a `rat-callmeta-bin` transport-metadata header — option (a), refined. This upholds ADR-005's generic-proxy guarantee (the gateway parses zero payload bytes) and keeps the keystone `RequestContext` shape verbatim, only changing its carrier. The reasoning below is kept as the historical record.
 
 **Surfaced by building the 0d stub invoke-gateway** (`examples/format/inmemory-go/gateway_test.go`) — exactly the kind of gap ADR-003 predicts a real implementation exposes.
 

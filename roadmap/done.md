@@ -4,6 +4,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — ADR-007: call-context transport (cross-cutting context → metadata, not payload)
+
+Resolved the freeze-blocking finding the 0d stub gateway surfaced. **[ADR-007](../docs/architecture/adrs/007-call-context-transport.md) (Accepted):** the cross-cutting envelope (`RequestContext` = trace + identity + deadline) moves out of message field 1 into a single binary transport-metadata header `rat-callmeta-bin`. The keystone's message *shape* is kept verbatim; only the *carrier* changes.
+
+**Why:** ADR-005 committed the gateway to being a generic proxy that forwards the payload *without interpreting it* — but the gateway must validate `traceparent` and re-stamp `identity` per hop, both impossible on an opaque payload while the envelope lives inside it. Moving the envelope to metadata makes ADR-005's generic-proxy guarantee literally true, lets the gateway do its stated job, and eliminates the forgeable in-body identity footgun by construction. Refines ADR-005 (upholds it); relocates — does not discard — the keystone identity model. Rejected the splice-field-1, keep-as-mirror, and identity-only-in-metadata alternatives (reasons in the ADR).
+
+**Process:** ADR-only commit (per the one-ADR-per-commit rule). The proto migration (strip `RequestContext context = 1` from 18 axis services + `InvokeRequest`; regen 4 SDKs; SDK metadata interceptor; update both `format` refs + the stub gateway; re-run the unchanged golden vectors) is queued as the next implementation step — **not** in this commit.
+
+**Files:** `docs/architecture/adrs/007-call-context-transport.md`, `docs/architecture/adrs/README.md` (index), `ideas/inbox.md` (finding marked promoted), `roadmap/**`.
+
+---
+
 ## 2026-05-31 — 0d: second `format` reference (inmemory-py) + shared golden vectors + stub ADR-005 gateway → `format/v1` ADR-003 gate MET
 
 The [ADR-003](../docs/architecture/adrs/003-two-references-before-contract-freeze.md) two-reference gate for `format/v1` is satisfied: a **second, independently-written** reference passes the **same golden vectors** as the first, both loading one shared artifact.

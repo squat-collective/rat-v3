@@ -28,7 +28,7 @@ Numbered as proposed in [reviews/00-synthesis.md](../reviews/00-synthesis.md). M
 | ADR-009 | Conformance suite obligations per axis | C6 |
 | ADR-010 | Tenancy as structural isolation | C7 |
 | ADR-013 | API gateway hardening + listener split | C10 |
-| (new) | **Identity transport across the core-mediated hop** — where re-stamped per-hop identity rides when the gateway is a generic proxy that won't deserialize the payload: channel metadata vs splice-field-1 vs two-channel. Amends/extends [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md) + `context.proto`. **Freeze-blocking for ALL axes** (touches the universal `RequestContext` field-1 invariant). Surfaced 2026-05-31 by the 0d stub gateway; detail in [ideas/inbox.md](../ideas/inbox.md). | C1/C2 keystone |
+| ADR-007 ✅ | **Identity transport across the core-mediated hop** — DECIDED 2026-05-31: cross-cutting `RequestContext` moves from message field 1 → `rat-callmeta-bin` metadata header ([ADR-007](../docs/architecture/adrs/007-call-context-transport.md)). **Migration is now the in-flight next step** (see [current.md](current.md)): strip the field across 18 axis protos + `InvokeRequest`, regen SDKs + metadata interceptor, update both `format` refs + the stub gateway, re-run golden vectors. | C1/C2 keystone |
 
 ### Pre-GA (land during Phase 1-4)
 
