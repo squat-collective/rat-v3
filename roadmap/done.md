@@ -4,6 +4,21 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — Sub-phase 0h: freeze review COMPLETE — verdict **NO-GO** for unconditional `rat/1`
+
+Ran the final adversarial pass before tagging the data-plane contracts `v1`. Three independent reviewers (contract-coherence, security/enforcement, freeze-readiness/integration) swept the now-complete surface; every blocker was ground-truthed against the actual proto/vector/reference files before being accepted or downgraded. Evidence base: `make conformance` **20/20 PASS**, `make lint`+`make build` clean.
+
+- **Result:** [`reviews/07-freeze-review.md`](../reviews/07-freeze-review.md). The 15 prior freeze-blockers (reviews/06) are confirmed resolved and the keystone holds. But the pass found a **new punch-list** the earlier review couldn't reach (the references + cross-cutting protos + CONTRACT.md docs that surface these didn't exist then):
+  - **4 MUST-FIX** (wire-shape / un-retrofittable): **M1** error-model convention referenced (invoke.proto:99) but pinned in no frozen artifact; **M2** "resource absent" modeled 3 ways (secret/state `found` bool vs catalog `NOT_FOUND`) with no governing rule; **M3** signatures (`AuditRecord`, `SubjectAssertion`) carry no `key_id`/alg → rotation pain; **M4** `SubjectAssertion` verification contract omits the bare-mirror cross-check (`Identity.tenant` == signed tenant) + doesn't state the transport-trust dependency.
+  - **4 SHOULD-FIX** (cheap text): **S1** engine `snapshot_id` vector vs `WriteResult` comment mismatch; **S2** bidi non-first-frame `capability` "ignored" not "rejected"; **S3** audit-on-deny intended but unpinned (stub omits it); **S4** stale `runtime-v1.json` comment.
+  - **3 ACCEPTED RESIDUALS** (defensible, documented): R1 assertion bound to operation not hop (bounded by C5 `requires`); R2 storage cred-scoping honour-system (ADR-005 bearer exception); R3 additive niceties → backlog.
+- **The real gate (ADR-003):** per-axis is MET (two refs + divergent real backend + golden vectors, all 6 axes), but the **cross-axis composition** clause is **NOT met** — conformance is per-axis only, and the **strategy axis (which composes engine+format+catalog+storage) has zero references**. Risk a composition test finds a flaw: low (coupling types `TableRef`/`ArrowStream` partly exercised via real Arrow Flight). But low ≠ satisfied.
+- **Decision:** do NOT tag `rat/1` yet. Path: (1) 0h-remediation clears M1–M4 + S1–S4; (2) cross-axis fork — **(a)** strict ADR-003 (build strategy ref + composition test first) or **(b)** conditional freeze (tag after step 1, cross-axis as the one documented residual gate). The fork is rigor-vs-velocity → user's call. (3) advance the 6 axes `v1-preview`→`v1`.
+
+**Files:** `reviews/07-freeze-review.md` (new). New backlog work surfaced (M1–M4, S1–S4, R1–R3, cross-axis gate).
+
+---
+
 ## 2026-05-31 — Sub-phase 0c COMPLETE: cross-cutting protos finalized (audit envelope relocated + coverage audit)
 
 Finalized the cross-cutting concern protos. An audit of every C1–C10 + ARCH concern against its wire home surfaced **one real layering inversion**, which 0c fixes; everything else was already covered (the freeze-blocker remediation had filled context/data/annotations/event/invoke).

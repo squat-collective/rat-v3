@@ -6,6 +6,35 @@ When an item moves to active work, promote it: cut it from here, add it to [curr
 
 ---
 
+## 0h-remediation — the freeze punch-list (BLOCKS `rat/1`)
+
+Surfaced by the 0h freeze review ([reviews/07-freeze-review.md](../reviews/07-freeze-review.md), 2026-05-31). Clear these before tagging the data-plane contracts `v1`. Each should land `buf`-clean; mostly additive or comment-only.
+
+**MUST-FIX (wire-shape / un-retrofittable):**
+- **M1 — pin the error-model convention.** `invoke.proto:99` + every `CONTRACT.md` reference a canonical gRPC-code-per-failure-class mapping that exists in no frozen artifact. Create a `common/v1` error-model doc (or pinned comment block) enumerating it; reference it from each axis. *Highest-leverage — spans all 6 axes.*
+- **M2 — settle "resource absent" modeling.** secret/state use a `found` bool; catalog uses `NOT_FOUND` status — no governing rule. Fold the rule into M1 ("`found:bool` when absence is normal control-flow or an anti-enumeration concern; `NOT_FOUND` otherwise") and make catalog's choice deliberate. Wire-locks at freeze.
+- **M3 — add `key_id` (+ `alg`) to signed envelopes.** `AuditRecord.signature` (audit.proto:60) + `SubjectAssertion.signature` (context.proto:147) are bare `bytes` with no key identifier → key rotation/agility painful. Add `key_id` pre-freeze; update the canonical-serialization spec to include it (additive for future records).
+- **M4 — close the `SubjectAssertion` verification gap.** Add a step 4 to the VERIFICATION CONTRACT: the bare `Identity.tenant`/`subject.principal` mirrors MUST equal the signature-covered values or reject. State explicitly that `caller_plugin`/`tenant` trust rests on authenticated transport (C2). Spec-text on a frozen type → do before freeze.
+
+**SHOULD-FIX (cheap text, do while free):**
+- **S1 — engine `snapshot_id` coherence.** `engine-v1.json:9` mandates `snapshot_id_set:true` on CREATE TABLE; `data.proto:79` says "if the format is versioned (else empty)." Reword the `WriteResult.snapshot_id` comment to "resulting version id of the written table state, empty if none."
+- **S2 — bidi non-first-frame `capability`.** `invoke.proto:131` says "ignored after open"; change to "non-empty `capability` on a non-first frame → stream aborted with `INVALID_ARGUMENT`."
+- **S3 — pin audit-on-deny.** Make "every enforcement decision incl. DENIED emits exactly one audit record" an explicit C8 conformance obligation (+ a future gateway-conformance vector). The stub gateway currently omits it (gateway_test.go).
+- **S4 — fix stale `runtime-v1.json` comment** (claims `Invoke` is unary-only; `InvokeServerStream` shipped in ADR-008).
+
+**ACCEPTED RESIDUALS (documented, NOT blocking — track for GA):**
+- **R1** — `SubjectAssertion` bound to operation (`correlation_id`), not hop/capability: bounded confused-deputy, blast radius = the operation's C5-declared capability set. Revisit if finer user-presence proof is needed.
+- **R2** — storage `VendCredentials` tenant-scoping is per-impl honour-system (ADR-005 bearer exception; core can't inspect an STS blob).
+- **R3** — additive niceties: watch `caught-up` bookmark, `Event.schema_version`, `ArrowStream` termination signal, `MergeBranchResponse` no-op-vs-replay disambiguation, `TableRef.branch` vs per-RPC `branch` precedence. All additive post-freeze.
+
+---
+
+## Cross-axis composition gate (ADR-003) — BLOCKS strict `rat/1`
+
+0h confirmed the ADR-003 **per-axis** gate is met (two refs + divergent real backend + golden vectors, all 6 axes) but the **cross-axis composition** clause is **not** — conformance is per-axis only, and the **strategy axis (which composes engine+format+catalog+storage) has zero references**. To satisfy strict ADR-003: build the first **strategy reference** + a **cross-axis composition test** that runs a composed pipeline (strategy → engine → format → catalog → storage) on golden data, substituting one impl per axis. Risk it finds a contract flaw: low (coupling types `TableRef`/`ArrowStream` partly exercised via real Arrow Flight) — hence the conditional-freeze alternative (tag after 0h-remediation, track this as the one documented residual gate). **The fork (strict vs conditional) is the user's call — see reviews/07 Decision.**
+
+---
+
 ## Additive (NOT freeze-blocking) — roll `(rat.capability)` across remaining axes
 
 Freeze-blocker #5 created `contracts/proto/rat/common/v1/annotations.proto` (the `(rat.common.v1.capability)` method option) and applied it to **format** + **engine**; **storage**, **runtime**, **catalog**, and **state** were added during their 0d work (2026-05-31) — so all 6 DATA-PLANE axes are annotated. Applying it to the remaining control/experience axis services (strategy, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log, ui, notifications, marketplace, billing) is **additive** — adding a method option is wire-compatible (`buf breaking` FILE does not flag it), so it does NOT block the `rat/1` freeze. But the C5 gateway + C6 conformance harness need it on every method to function, so it should land before those are built (and each axis needs it before that axis can be 0d-tested through the stub gateway). Per method: add `import "rat/common/v1/annotations.proto";` + `option (rat.common.v1.capability) = "rat://<axis>/v1/<cap>";` inside each rpc (capability URIs already documented in each proto's header comment). Source: reviews/06 I-4 (AUTH-9).
