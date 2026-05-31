@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (0d: 4 of 6 data-plane axes MET — format/engine/storage/runtime; ADR-007 + ADR-008 both decided AND migrated; runtime now gateway-mediated via InvokeServerStream; all 8 refs green)
+> Updated: 2026-05-31 (0d: 4 of 6 data-plane axes' WIRE-CONTRACT gate MET — format/engine/storage/runtime; ADR-007 + ADR-008 decided AND migrated; all 8 refs green. NOTE: refs are inmemory twins — ADR-003's real-backend round-2 still pending before v1; see scope caveat below.)
 
 ## Status one-liner
 
@@ -73,9 +73,12 @@ SDK distribution + layout + codegen are decided in **[ADR-006](../docs/architect
 - **inmemory-go** (commit `c472620`, then refactored): now loads the shared JSON and runs **through the stub core-mediated gateway** (`gateway_test.go`, a faithful ADR-005 generic byte-relay — routes by the `(rat.common.v1.capability)` annotation, enforces C5, emits C8 audit). Green in `golang:1.25`.
 - **inmemory-py** (`examples/format/inmemory-py/`): from-scratch second reference, imports the vendored Python SDK, loads the same JSON. Green in `python:3.12` (grpcio 1.80.0 / protobuf 7.35.0).
 
+> **Scope caveat on "ADR-003 gate MET" (be honest about this):** the per-axis "gate MET" claims below mean the **wire-contract two-reference cross-run** — two independent *code paths* (Go + Python) pass one shared golden-vector file. They do **not** yet satisfy ADR-003's stronger intent: "different *underlying technologies* … different consistency/semantic profiles" (its iceberg-vs-delta / sqlite-vs-postgres examples). Both impls per axis are in-memory twins, so the semantic-divergence + real-data-leg findings ADR-003 cares most about are still deferred to **round 2** (see gate #2 + #3). Round 1 (now) locks the wire contract for all 6 axes; round 2 makes one reference per axis a real divergent backend before that axis → `v1`.
+
 **What gates the data-plane axes (`format/v1`, `engine/v1`, …) advancing `v1-preview` → `v1`:**
-1. **Identity-transport — DONE ✅ ([ADR-007](../docs/architecture/adrs/007-call-context-transport.md) decided + migrated).** `RequestContext` moved from message field 1 to the `rat-callmeta-bin` metadata header across all 37 control sites; the gateway now validates traceparent + re-stamps identity from metadata without touching the payload; all four refs green on the unchanged vectors. No longer a blocker.
-2. **Typed-Arrow conformance pass** — every data-plane ref (format + engine) still carries the bulk leg as an in-process registry stand-in; the real Arrow Flight wire is unexercised. This is the shared remaining item before any of these axes freeze.
+1. **Identity-transport — DONE ✅ ([ADR-007](../docs/architecture/adrs/007-call-context-transport.md) decided + migrated).** `RequestContext` moved from message field 1 to the `rat-callmeta-bin` metadata header across all 37 control sites; the gateway now validates traceparent + re-stamps identity from metadata without touching the payload; all refs green on the unchanged vectors. No longer a blocker.
+2. **Round-2: a technologically-divergent reference per axis.** The current cross-runs use inmemory-go + inmemory-py — same underlying tech (a hashmap), two languages. ADR-003's intent needs one *real backend* per axis with a different consistency/semantic profile (e.g. `storage`=local-fs, `state`=sqlite — both cheap + high-value; `format`=parquet/iceberg; `engine`=duckdb). This is where the "orthogonality assumption" failures surface. Required before any axis → `v1`. (See [backlog.md](backlog.md).)
+3. **Typed-Arrow conformance pass** — every data-plane ref with a bulk leg (format + engine) still carries it as an in-process registry stand-in; the real Arrow Flight wire is unexercised. (storage + runtime have no bulk leg under test.) Shared remaining item before those axes freeze; naturally folds into round 2.
 
 The deferred **additive tail** is still open and cheap to clear while in the contracts: #10b (manifest `artifact`/digest block), #9f doc-pins, per-kind manifest schemas, and rolling `(rat.capability)` across the other 14 axis services.
 

@@ -12,6 +12,19 @@ Freeze-blocker #5 created `contracts/proto/rat/common/v1/annotations.proto` (the
 
 ---
 
+## 0d/0e round-2 — a technologically-divergent reference per data-plane axis (real backends)
+
+The current 0d references are **inmemory twins** (`inmemory-go` + `inmemory-py`): two independent *code paths* in two languages that pass one shared golden-vector file. That validates the **wire contract** (proto shapes, RPC cardinalities, error model, the `rat-callmeta-bin` envelope, gateway mediation) and the cross-cutting machinery — and it's where ADR-007 + ADR-008 came from. But it is the **weak form** of ADR-003 "independence": both impls use the same underlying tech (a hashmap), so they cannot surface the **orthogonality-assumption / semantic-divergence** failures ADR-003 targets ("this only worked because both used the same Arrow dialect"; snapshot-isolation vs CAS; serializable vs eventual).
+
+**Round 2 (before any data-plane axis → `v1`):** make one reference per axis a *real divergent backend* with a different consistency/semantic profile. Cheapest + highest-value first:
+- **`state` = sqlite** — gives a REAL serializable backend to test the linearizable-CAS + ordered-Watch conformance obligation (freeze-blocker #3) that an in-memory impl can only fake.
+- **`storage` = local-fs** — real filesystem creds/paths vs the in-memory scope receipt.
+- **`format` = parquet/iceberg files**, **`engine` = duckdb/datafusion**, **`catalog` = sqlite-catalog** — heavier; schedule after the cheap two.
+
+This also naturally subsumes the **typed-Arrow conformance pass** (a real format/engine backend forces the real Arrow Flight data leg, retiring the in-process stream-registry stand-in). Decision recorded 2026-05-31 (Tom: "finish wire contracts first, then round 2"). Until round 2 lands, the roadmap's per-axis "ADR-003 gate MET" means the wire-contract cross-run only.
+
+---
+
 ## ADRs to write (from synthesis — 23 of 26 not yet written)
 
 Numbered as proposed in [reviews/00-synthesis.md](../reviews/00-synthesis.md). Most are Phase 0 wire-breaking concerns that land *during* Phase 0 as the contracts get drafted, NOT before. They're listed here so they're not lost.
