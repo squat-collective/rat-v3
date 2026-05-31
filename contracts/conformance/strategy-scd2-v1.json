@@ -1,0 +1,29 @@
+{
+  "_comment": "Golden scenario for the SCD2 strategy reference (examples/strategy/scd2-py) — the SECOND strategy implementation (ADR-003). Unlike a per-axis golden vector (one axis, one pass), this is a two-RUN temporal scenario: run1 is the initial load of a customer dimension; run2 is the next day's snapshot with one CHANGED row (id=1 region west→north), one UNCHANGED (id=2), and one NEW (id=3). After both runs the SCD2 history must equal expected_history — id=1 has a closed old version + a new current version; id=2 stays one current version; id=3 is one new current version. The strategy is exercised over the REAL composition stack (gateway + format + catalog + Arrow Flight) by examples/composition/harness.py's SCD2 phase. Run together with fullrefresh, these are the two independent strategy references that let strategy/v1 freeze.",
+  "axis": "strategy/scd2",
+  "natural_key": ["id"],
+  "tracked": ["name", "region"],
+  "source_table": "customers",
+  "target_table": "customers_history",
+  "run1": {
+    "effective_from": "2026-01-01",
+    "source": [
+      {"id": 1, "name": "Ann", "region": "west"},
+      {"id": 2, "name": "Bob", "region": "east"}
+    ]
+  },
+  "run2": {
+    "effective_from": "2026-02-01",
+    "source": [
+      {"id": 1, "name": "Ann", "region": "north"},
+      {"id": 2, "name": "Bob", "region": "east"},
+      {"id": 3, "name": "Cy", "region": "south"}
+    ]
+  },
+  "expected_history": [
+    {"id": 1, "name": "Ann", "region": "west",  "effective_from": "2026-01-01", "effective_to": "2026-02-01", "is_current": false},
+    {"id": 1, "name": "Ann", "region": "north", "effective_from": "2026-02-01", "effective_to": "", "is_current": true},
+    {"id": 2, "name": "Bob", "region": "east",  "effective_from": "2026-01-01", "effective_to": "", "is_current": true},
+    {"id": 3, "name": "Cy",  "region": "south", "effective_from": "2026-02-01", "effective_to": "", "is_current": true}
+  ]
+}

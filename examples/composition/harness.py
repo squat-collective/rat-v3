@@ -107,6 +107,12 @@ class CompFormatServicer(format_pb2_grpc.FormatServiceServicer):
         n = self.store.overwrite(request.table.identifier, t.to_pylist() if t else [])
         return format_pb2.OverwriteResponse(result=data_pb2.WriteResult(rows_affected=n))
 
+    def Merge(self, request, context):
+        t = flight_pull(request.source)
+        n = self.store.merge(request.table.identifier, list(request.merge_keys),
+                             t.to_pylist() if t else [])
+        return format_pb2.MergeResponse(result=data_pb2.WriteResult(rows_affected=n))
+
 
 class CompCatalogServicer(catalog_pb2_grpc.CatalogServiceServicer):
     def __init__(self, catalog):
@@ -204,6 +210,52 @@ def run_combo(combo, v, tmp):
             s.stop(None)
 
 
+SCD2_VECTORS = os.path.join(ROOT, "contracts", "conformance", "strategy-scd2-v1.json")
+
+
+def run_scd2(sv, tmp):
+    """The SECOND strategy reference (scd2-py) over the real stack — proves strategy/v1
+    serves a second, semantically-different strategy (ADR-003). Uses baseline backends
+    (parquet format + sqlite catalog); runs two temporal loads and asserts the SCD2
+    history."""
+    SCD2 = getattr(_load("examples/strategy/scd2-py/store.py", "strategy_scd2_store"), "SCD2Strategy")
+    src_id, tgt_id = sv["source_table"], sv["target_table"]
+
+    fmt = CompFormatServicer(build_format("parquet-py", tmp))
+    cat = CompCatalogServicer(build_catalog("sqlite-py", tmp, [src_id, tgt_id]))
+    fmt_srv, fmt_ch = _serve(format_pb2_grpc.add_FormatServiceServicer_to_server, fmt)
+    cat_srv, cat_ch = _serve(catalog_pb2_grpc.add_CatalogServiceServicer_to_server, cat)
+    fmt_stub = format_pb2_grpc.FormatServiceStub(fmt_ch)
+
+    gw = Gateway()
+    gw.register(fmt_stub, _service_desc(format_pb2, "FormatService"))
+    gw.register(catalog_pb2_grpc.CatalogServiceStub(cat_ch), _service_desc(catalog_pb2, "CatalogService"))
+
+    delta_host = FlightHost()  # the strategy hosts its synthesized version-delta here
+    host_rows = lambda rows: delta_host.put(pa.Table.from_pylist(rows) if rows else pa.table({}))
+    pull_rows = lambda s: (lambda t: t.to_pylist() if t is not None else [])(flight_pull(s))
+    seed_host = FlightHost()
+    try:
+        requires = ["rat://catalog/v1/get-table", "rat://format/v1/scan", "rat://format/v1/merge"]
+        scd2 = SCD2(gw.invoker_for(requires), host_rows, pull_rows)
+        opts = {"natural_key": sv["natural_key"], "tracked": sv["tracked"]}
+        for run in ("run1", "run2"):
+            r = sv[run]
+            fmt_stub.Overwrite(format_pb2.OverwriteRequest(
+                table=data_pb2.TableRef(identifier=src_id), source=seed_host.put(pa.Table.from_pylist(r["source"]))))
+            scd2.apply(src_id, tgt_id, json.dumps({**opts, "effective_from": r["effective_from"]}).encode())
+
+        out = flight_pull(fmt_stub.Resolve(format_pb2.ResolveRequest(
+            table=data_pb2.TableRef(identifier=tgt_id))).stream)
+        got = out.to_pylist() if out is not None else []
+        keyf = lambda r: (r.get("id"), r.get("effective_from"))
+        return sorted(got, key=keyf), sorted(sv["expected_history"], key=keyf)
+    finally:
+        delta_host.stop(); seed_host.stop()
+        for s in (fmt_srv, cat_srv):
+            s.stop(None)
+
+
 def main():
     with open(VECTORS, encoding="utf-8") as f:
         v = json.load(f)
@@ -236,7 +288,31 @@ def main():
         print("  " + "  ".join(str(r[i]).ljust(w[i]) for i in range(5)))
     print()
     if ok:
-        print(f">> COMPOSITION CONFORMANT ✅ — all {len(rows)} ADR-003 cross-combinations produced the identical target")
+        print(f">> cross-axis matrix ✅ — all {len(rows)} ADR-003 cross-combinations produced the identical target")
+    else:
+        print(">> cross-axis matrix ❌")
+
+    # --- strategy axis: the SECOND reference (scd2-py) over the real stack ---
+    with open(SCD2_VECTORS, encoding="utf-8") as f:
+        sv = json.load(f)
+    assert sv["axis"] == "strategy/scd2"
+    print()
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            got, exp = run_scd2(sv, tmp)
+        scd2_ok = got == exp
+        print("  strategy reference 2 — scd2-py (parquet+sqlite, 2 temporal loads):",
+              "OK ✅" if scd2_ok else "MISMATCH ❌")
+        if not scd2_ok:
+            print(f"    got={got}\n    exp={exp}")
+    except Exception as e:  # noqa
+        scd2_ok = False
+        print(f"  strategy reference 2 — scd2-py: ERROR {type(e).__name__}: {e}")
+    ok = ok and scd2_ok
+
+    print()
+    if ok:
+        print(">> COMPOSITION CONFORMANT ✅ — cross-axis matrix + both strategy references pass")
         sys.exit(0)
     print(">> COMPOSITION FAILED ❌")
     sys.exit(1)

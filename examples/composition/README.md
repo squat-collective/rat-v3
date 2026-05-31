@@ -38,6 +38,16 @@ Every combination must produce the **identical** target
 `expected_target`). The strategy code never changes across the substitutions — that
 invariance, proven on golden data, is the gate.
 
+### Plus: the strategy axis's two references
+
+After the cross-axis matrix, `make composition` runs a **second phase** that exercises
+the SECOND strategy reference — [`scd2-py`](../strategy/scd2-py) — over the same real
+stack (gateway + parquet + sqlite + Flight): two temporal loads from
+[`strategy-scd2-v1.json`](../../contracts/conformance/strategy-scd2-v1.json), asserting
+the SCD2 history. Two independent strategies (full-refresh + SCD2) over one
+`strategy/v1` contract is the ADR-003 two-reference gate for the strategy axis — what
+lets it freeze (`rat/1.1`).
+
 ## Why this is a faithful gate (and what's a stand-in)
 
 - **Real cross-axis Arrow handoff over Flight.** The engine↔format legs are real

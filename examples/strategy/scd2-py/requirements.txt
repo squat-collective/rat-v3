@@ -1,0 +1,6 @@
+# SCD2 reads + writes bulk data (it computes the version delta), so unlike the
+# full-refresh strategy it needs pyarrow + Flight to host/pull Arrow — plus the
+# gRPC runtime + the generated SDK (on PYTHONPATH).
+grpcio==1.80.0
+protobuf==7.35.0
+pyarrow==24.0.0
