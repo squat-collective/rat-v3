@@ -4,6 +4,28 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 0d started: first reference plugin (rat-format-inmemory-go) — commit `3bb6c0c`
+
+First real RAT v3 *code*: a reference `kind: format` plugin under `examples/format/inmemory-go/` (ADR-006 D2 layout), implementing the full `format/v1` wire contract to validate it by building against it (ADR-003 forcing function), not as production storage.
+
+- `store.go` — in-memory ordered-row tables: append / merge(upsert on keys) / overwrite / scan / maintain; per-mutation snapshot.
+- `stream.go` — in-process stand-in for the out-of-band Arrow leg: single-use ticket registry; `Resolve` returns producer-hosted `ArrowStream{transport=FLIGHT}`; mutating RPCs pull a caller-hosted source. (Real Arrow Flight deferred to a production reference.)
+- `server.go` — the 5 `FormatService` RPCs over gRPC; empty `TableRef`/missing `merge_keys` → `INVALID_ARGUMENT`; `Maintain` leaves `rows_affected` absent (proto3 optional = unknown).
+- `main.go` — gRPC server entrypoint.
+- `harness_test.go` — golden-data conformance harness: append→scan→merge→overwrite→maintain + 2 error cases over REAL in-process gRPC (bufconn). The vectors a second independent impl must also pass.
+
+**Supporting:** committed the Go SDK `go.mod`+`go.sum` (reproducible builds; `go mod tidy` resolved grpc v1.81.1 + protobuf v1.36.11); dropped the go.sum gitignore; `.gitignore` for the compiled binary. Plugin depends on the SDK via a local `replace`.
+
+**Verified (golang:1.25 container):** `go build` / `go vet` / `go test` all green — 3 tests PASS over real gRPC.
+
+**Process note:** a long cancelled tool-batch mid-session left a stale compiled 15MB binary + a broken `server.go` (dead `errUnused` + stray brace) uncommitted, and the first plugin commit + roadmap edits never landed. Terminal stdout was also corrupting. Recovered by checking real git/file state (not terminal output), rewriting `server.go` clean, removing the binary, re-verifying green in-container, then committing fresh as `3bb6c0c`.
+
+**Next (ADR-003 gate):** a SECOND independent `format` impl — e.g. `examples/format/inmemory-py` — running the SAME golden vectors, before `format/v1` can freeze. (The sequencing panel — see chat — recommends also routing the harness's control RPCs through a ~200-LOC throwaway stub invoke-gateway so the freeze also validates the ADR-005 mediation seams, not just the plugin-to-plugin data contract.)
+
+**Files:** `examples/format/inmemory-go/**`, `contracts/sdks/go/{go.mod,go.sum}`, `contracts/.gitignore`.
+
+---
+
 ## 2026-05-31 — Multi-language SDKs: Python, TypeScript, Rust (+Go) — commit `78be8b4`
 
 **What:** Extended codegen from Go-only to all four target languages (Tom: "python, ts and ruff[=Rust]"), realizing the any-language promise (ADR-001 / vision #3). Each is a committed, peer `contracts/sdks/<lang>/` with its own `buf.gen.<lang>.yaml`:
