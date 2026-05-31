@@ -4,6 +4,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 🧊 **`strategy/v1` FROZEN** (`rat/1.1`) — scd2 second reference landed
+
+The ADR-009-anticipated follow-on: with a second, semantically-different strategy reference, `strategy/v1` advances `v1-preview` → `v1` (commit `cd8fcac`, tagged **`rat/1.1`**).
+
+- **`examples/strategy/scd2-py/`** — Slowly Changing Dimension Type 2: stateful + temporal, the deliberate ADR-003 divergence from full-refresh. Reads source snapshot + existing target history; closes changed versions (`is_current=false`, `effective_to=run-ts`) + inserts new current versions; written via one `format.merge` keyed on `(natural_key…, effective_from)`. **Different capability mix** (`get-table` + `scan`×2 + `merge`, no engine) over the same `Apply` contract.
+- **`contracts/conformance/strategy-scd2-v1.json`** — two-run temporal golden scenario (initial load → snapshot with changed + unchanged + new key → expected history).
+- **`make composition`** extended — added `FormatService.Merge` + an SCD2 phase; now proves the cross-axis matrix **AND both strategy references** over the real stack (gateway + parquet + sqlite + Flight). Green.
+- **`strategy.proto` → v1** (frozen, `rat/1.1`).
+- **Contract observations** (ADR-003 payoff, none requiring a change): a strategy can read target state (`scan`), can be a data **producer** (hosts the synthesized delta) and **consumer** (pulls scans) — full-refresh was a pure router, so this stayed hidden until the second reference. Per-run params ride in `options`.
+
+**`strategy/v1` is now `v1`.** Remaining `v1-preview`: control/experience axes + the manifest schema.
+
+---
+
 ## 2026-05-31 — 🧊 **`rat/1` FROZEN** — data-plane contracts advanced to `v1` (ADR-009 + tag)
 
 The Phase 0 contract-freeze milestone. With both gates met (0h-remediation + 0i cross-axis composition), the data-plane axis contracts advance `v1-preview` → `v1`.

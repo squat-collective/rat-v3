@@ -39,7 +39,8 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | 0g | Author-facing prose (`CONTRACT.md` per axis) | ongoing; finalize 2 weeks — **✅ DONE for the 6 data-plane axes** (`contracts/proto/rat/{state,engine,format,storage,runtime,catalog}/v1/CONTRACT.md`): capabilities + RPCs + conformance obligations + writing-a-plugin + reference-impl table; indexed in the conformance README; all links verified, buf-clean. Control/experience axes when referenced. |
 | 0h | Peer review + revisions + `rat/1` freeze | **✅ COMPLETE.** Freeze review ([reviews/07](../reviews/07-freeze-review.md)) → NO-GO punch-list (M1–M4 + S1–S4), all remediated. |
 | 0i | Cross-axis composition (ADR-003 cross-combination gate) | **✅ COMPLETE.** First `strategy` ref + `make composition` — all 4 ADR-003 combos (DuckDB/DataFusion × Parquet/Delta × sqlite/in-memory) produce the identical target, strategy unchanged. |
-| — | **`rat/1` FREEZE** | **🧊 DONE (ADR-009, tag `rat/1`).** 6 data-plane axes + cross-cutting types → `v1`. `strategy/v1` + control/experience + manifest stay `v1-preview`. |
+| — | **`rat/1` FREEZE** | **🧊 DONE (ADR-009, tag `rat/1`).** 6 data-plane axes + cross-cutting types → `v1`. Control/experience + manifest stay `v1-preview`. |
+| — | **`strategy/v1` FREEZE** | **🧊 DONE (tag `rat/1.1`).** Second strategy ref `scd2-py` (divergent: SCD2, `merge`-based) landed → `strategy/v1` → `v1`. `make composition` proves both strategy refs. |
 
 **Deliverables:**
 - `plugin/v1.json` published at stable URL

@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (🧊 **`rat/1` FROZEN.** The data-plane axis contracts are at **`v1`** — [ADR-009](../docs/architecture/adrs/009-data-plane-contract-freeze-v1.md), commit `b9dbe2d` tagged `rat/1`. Both gates met: 0h-remediation (M1–M4 + S1–S4) cleared + the **0i cross-axis composition gate** met (`make composition`, all 4 ADR-003 combos identical, via the new `strategy` reference). Conformance 20/20 throughout. Frozen: engine/format/catalog/storage/runtime/state + `common/v1/*` + `core/v1/invoke` + `ERROR_MODEL.md`. Still `v1-preview`: `strategy/v1` (one ref), control/experience axes, manifest schema. **Phase 0's headline deliverable is DONE.** Next: the loosely-coupled tail — `strategy/v1` 2nd ref, control-plane single refs, manifest freeze — OR start Phase 1 (the core). USER'S CALL.)
+> Updated: 2026-05-31 (🧊 **`rat/1` + `rat/1.1` FROZEN.** Data-plane axis contracts at **`v1`** ([ADR-009](../docs/architecture/adrs/009-data-plane-contract-freeze-v1.md), `b9dbe2d`=`rat/1`); **`strategy/v1` now also frozen** (`cd8fcac`=`rat/1.1`) after its **second reference** landed — `examples/strategy/scd2-py` (SCD2: stateful/temporal, divergent capability mix). `make composition` now proves the cross-axis matrix **AND both strategy references** over the real stack; green. Conformance 20/20. **Frozen `v1`:** engine/format/catalog/storage/runtime/state/**strategy** + `common/v1/*` + `core/v1/invoke` + `ERROR_MODEL.md`. Still `v1-preview`: control/experience axes + manifest schema. **Next:** control-plane single refs + manifest freeze (closes Phase 0) — OR start Phase 1 (the core; Gate A `rat/1` is satisfied). USER'S CALL.)
 
 ## Status one-liner
 
