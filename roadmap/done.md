@@ -4,6 +4,21 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — Real Arrow Flight transport — the last in-process data-leg stand-in retired
+
+Replaced the in-process Arrow-IPC registry with a REAL `pyarrow.flight` transport in `examples/format/parquet-py` — the only reference where the bulk-data leg is now *fully* real (real Parquet files + real Flight wire).
+
+- **`examples/format/parquet-py/flight.py`** — a real `FlightServerBase` on an ephemeral localhost port. `put(table)` hosts the table + returns `ArrowStream{endpoint=grpc://host:port, ticket}`; `flight_pull(stream)` dials the descriptor's endpoint and `DoGet`s the ticket — a real Flight round-trip over a TCP socket. Single-use tickets (DoGet consumes — SEC-14).
+- **Both directions are real:** the PLUGIN hosts a Flight server for Resolve results (the harness DoGets); the CALLER (harness) hosts a Flight server for Append/Merge/Overwrite sources (the plugin DoGets). Matches the contract's "Resolve → producer-hosted; the format pulls from a caller-hosted source" — both `PRODUCER_HOSTED` (data-holder hosts, data-needer DoGets).
+- **Zero contract change:** the `common.v1.ArrowStream {endpoint, ticket, transport=FLIGHT, role}` descriptor was always real-Flight-shaped; only the implementation swapped (in-process dict → real Flight server). `streams.py` deleted from parquet-py; `server.py` + `harness_test.py` use `flight.py`. Still passes the SAME shared `format-v1.json` + the real-Parquet-files test. Green in `python:3.12`.
+- This proves the in-process registry was always a transport CHOICE, not a contract limitation. The other refs keep it for simplicity; parquet-py is the canonical real-Flight demonstration.
+
+**Significance:** the last "stand-in" in the data plane is retired (in this reference). Across rounds 1+2 the DATA was already real typed Arrow (engine/format); now the TRANSPORT is real Arrow Flight too. The data-plane contract is validated end-to-end with real backends AND a real wire.
+
+**Files:** `examples/format/parquet-py/{flight.py,server.py,harness_test.py,README.md}` (−`streams.py`). No proto/SDK/vector change.
+
+---
+
 ## 2026-05-31 — 🎉 ROUND 2 COMPLETE: `format` = REAL pair (Parquet + Delta) — real Arrow files + time travel
 
 Sixth + final round-2 axis, via option (b) two REAL backends. **Round 2 is now complete — all six data-plane axes have a technologically-divergent real backend.**

@@ -1,14 +1,13 @@
-"""Conformance + round-2 harness for a REAL file-format backend (shared by
-parquet-py + delta-py — identical; only the imported Store differs).
+"""Conformance + round-2 harness for the Parquet format backend — with the data leg
+carried by REAL Arrow Flight (not the in-process Arrow-IPC registry).
 
  1. ADR-003 cross-run — loads the SAME shared vectors the in-memory format refs load
-    (contracts/conformance/format-v1.json). format's data is just rows, so the
-    vectors are provider-neutral: a real Parquet/Delta backend passes them as-is.
-    Source rows are staged as REAL Arrow (Arrow IPC) and scan results pulled back as
-    REAL Arrow (the typed-Arrow data leg, both directions).
+    (contracts/conformance/format-v1.json). Source rows for Append/Merge/Overwrite
+    are hosted on the HARNESS's real Flight server (the format plugin DoGets them);
+    Resolve results are hosted on the PLUGIN's real Flight server (the harness DoGets
+    them). The data crosses real TCP sockets via Flight DoGet, both directions.
 
- 2. A backend-specific test that real files actually land on disk + are readable
-    (parquet-py: Parquet files; delta-py: a Delta table with time-travel).
+ 2. A backend test that real Parquet files land on disk + are readable.
 
 Runs standalone (`python harness_test.py`) or under pytest.
 """
@@ -26,6 +25,7 @@ import pyarrow.parquet as pq
 from rat.common.v1 import data_pb2
 from rat.format.v1 import format_pb2, format_pb2_grpc
 
+from flight import FlightHost, flight_pull
 from server import FormatServicer
 from store import FORMAT, Store
 
@@ -49,6 +49,7 @@ class Rig:
     def __init__(self) -> None:
         self._dir = tempfile.mkdtemp(prefix="rat-format-")
         self.servicer = FormatServicer(Store(self._dir))
+        self.source_flight = FlightHost()  # the caller hosts Append/Merge/Overwrite sources
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
         format_pb2_grpc.add_FormatServiceServicer_to_server(self.servicer, self.server)
         port = self.server.add_insecure_port("127.0.0.1:0")
@@ -59,13 +60,16 @@ class Rig:
     def close(self) -> None:
         self.channel.close()
         self.server.stop(None)
+        self.source_flight.stop()
+        self.servicer.close()  # stops the plugin's Flight server
 
     def _source(self, rows):
-        return self.servicer.streams.put(pa.Table.from_pylist(rows))
+        # Host the source on the harness's Flight server; the plugin DoGets it.
+        return self.source_flight.put(pa.Table.from_pylist(rows))
 
     def scan(self, identifier):
         resp = self.stub.Resolve(format_pb2.ResolveRequest(table=_ref(identifier)))
-        table = self.servicer.streams.pull(resp.stream)
+        table = flight_pull(resp.stream)  # real Flight DoGet from the plugin's endpoint
         return table.to_pylist() if table is not None and table.num_columns else []
 
 
@@ -167,4 +171,4 @@ if __name__ == "__main__":
         finally:
             rig.close()
     test_real_parquet_files_on_disk()
-    print(f"PASS — {FORMAT}: real format backend conformed to format/v1 golden vectors + real files on disk")
+    print(f"PASS — {FORMAT}: conformed to format/v1 over REAL Arrow Flight + real files on disk")

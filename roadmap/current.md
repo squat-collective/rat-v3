@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (🎉 ROUND 1 + ROUND 2 BOTH COMPLETE. All 6 data-plane axes have two language refs (wire contract) AND a technologically-divergent real backend (semantic): state=sqlite, storage=local-fs, catalog=sqlite, runtime=subprocess, engine=duckdb+datafusion, format=parquet+delta. ADR-007 + ADR-008 decided AND migrated. Typed-Arrow gap retired for engine+format. Next: real Arrow Flight transport + 0f conformance suite + 0h freeze.)
+> Updated: 2026-05-31 (🎉 ROUND 1 + ROUND 2 BOTH COMPLETE. All 6 data-plane axes have two language refs (wire contract) AND a technologically-divergent real backend (semantic): state=sqlite, storage=local-fs, catalog=sqlite, runtime=subprocess, engine=duckdb+datafusion, format=parquet+delta. ADR-007 + ADR-008 decided AND migrated. Typed-Arrow gap retired (engine+format) AND real Arrow Flight transport landed (parquet-py) — the last in-process data-leg stand-in retired. Next: 0f conformance suite + 0c/0g/0h freeze.)
 
 ## Status one-liner
 
@@ -66,8 +66,8 @@ The 23 other prospective ADRs are in [backlog.md](backlog.md). They land as they
 ADR-007 + ADR-008 decided AND migrated; typed-Arrow gap retired for engine+format (real Arrow IPC). The full ADR-003 rigor is satisfied for every data-plane contract.
 
 **Genuinely remaining toward `rat/1` freeze (no longer reference-impl work):**
-1. **Real Arrow Flight transport** — every data leg still uses an in-process Arrow-IPC registry stand-in (the DATA is real typed Arrow; only the TRANSPORT is in-process). A real Flight (or file-handoff) server would retire the last stand-in. The cleanest single remaining "make it real" item.
-2. **Sub-phase 0f** — formalize the conformance suite (the per-axis golden vectors + a runner) + per-RPC latency benchmark.
+1. **Real Arrow Flight transport — ✅ DONE** (`examples/format/parquet-py/flight.py`): the data leg now crosses real TCP sockets via Flight `DoGet`, both directions, with zero contract change — proving the in-process registry was always a transport choice. (Other refs keep the in-process stand-in for simplicity; making them all Flight is optional polish.)
+2. **Sub-phase 0f** — formalize the conformance suite (the per-axis golden vectors + a single runner across all refs) + per-RPC latency benchmark. The natural next step now that the vectors + refs all exist.
 3. **Sub-phase 0c / 0g / 0h** — finalize cross-cutting protos; per-axis `CONTRACT.md`; peer review + `rat/1` freeze.
 4. **Polish (not blocking):** real **SDK metadata interceptor** (so plugin code gets the reconstructed context automatically); wire `InvokeBidiStream` (`observability.Ingest` bidi relay) when referenced; roll `(rat.capability)` across the remaining control/experience axis services (strategy, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log, ui, notifications, marketplace, billing).
 
