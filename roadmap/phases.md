@@ -42,7 +42,8 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | — | **`rat/1` FREEZE** | **🧊 DONE (ADR-009, tag `rat/1`).** 6 data-plane axes + cross-cutting types → `v1`. Control/experience + manifest stay `v1-preview`. |
 | — | **`strategy/v1` FREEZE** | **🧊 DONE (tag `rat/1.1`).** Second strategy ref `scd2-py` (divergent: SCD2, `merge`-based) landed → `strategy/v1` → `v1`. `make composition` proves both strategy refs. |
 | — | **Control-plane FREEZE** | **🧊 DONE (tag `rat/1.2`).** 7 axes (identity/secret/scheduler/tenancy/billing/observability/audit-log) — one ref + conformance each (ADR-003). `make conformance` 27/27. |
-| — | **`deployment-runtime` FREEZE** | **🧊 DONE (tag `rat/1.3`).** Two divergent refs (local-process + k8s-dryrun) sharing the I9 isolation gate. `make conformance` 29/29. Remaining `v1-preview`: experience axes (ui/notifications/marketplace) + manifest. |
+| — | **`deployment-runtime` FREEZE** | **🧊 DONE (tag `rat/1.3`).** Two divergent refs (local-process + k8s-dryrun) sharing the I9 isolation gate. `make conformance` 29/29. |
+| — | **Experience FREEZE** | **🧊🎉 DONE (tag `rat/1.4`).** ui/notifications/marketplace — one ref each. **ALL 18 axis contracts now `v1`.** `make conformance` 32/32. Only `v1-preview` left: the manifest schema (`plugin/v1.json`). |
 
 **Deliverables:**
 - `plugin/v1.json` published at stable URL

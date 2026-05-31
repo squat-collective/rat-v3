@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (🧊 **`rat/1` → `rat/1.3` FROZEN.** Data-plane (`rat/1`, [ADR-009](../docs/architecture/adrs/009-data-plane-contract-freeze-v1.md)) + `strategy/v1` (`rat/1.1`) + **7 control-plane axes** (`rat/1.2`) + **`deployment-runtime/v1`** (`rat/1.3`: two divergent refs — local-process + k8s-dryrun, sharing the I9 gate). **`make conformance` 29/29**; `make composition` green. **Frozen `v1` = 15 axes** + `common/v1/*` + `core/v1/invoke` + `ERROR_MODEL.md`. **Still `v1-preview` (the whole remaining tail):** the 3 experience axes (ui/notifications/marketplace) + the manifest schema. **Next:** experience-axis refs + manifest freeze fully close Phase 0 — OR start **Phase 1 (the core)**; Gate A (`rat/1`) is satisfied. USER'S CALL.)
+> Updated: 2026-05-31 (🎉 **ALL 18 AXIS CONTRACTS FROZEN at `v1`** (`rat/1` → `rat/1.4`). 7 data-plane + deployment-runtime + 7 control-plane + 3 experience (ui/notifications/marketplace = `rat/1.4`), plus `common/v1/*` + `core/v1/invoke` + `ERROR_MODEL.md`. **`make conformance` 32/32**; `make composition` green. **The ONLY remaining `v1-preview` artifact is the manifest schema (`plugin/v1.json`).** **Next:** freeze the manifest schema to fully close Phase 0's contract surface — OR start **Phase 1 (the core)**; Gate A (`rat/1`) is long satisfied. USER'S CALL.)
 
 ## Status one-liner
 

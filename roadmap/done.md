@@ -4,6 +4,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 🧊🎉 **Experience axes FROZEN** (`rat/1.4`) — ALL 18 AXIS CONTRACTS NOW `v1`
+
+Built one reference per experience axis and froze them — **completing the entire axis-contract surface**. `make conformance` **32/32** (commits `5ce7b30` refs, `030d406` freeze, tag **`rat/1.4`**).
+
+- **`examples/notifications/inmemory-py`** — Send delivery sink (captures messages); rejects empty title (`INVALID_ARGUMENT`).
+- **`examples/marketplace/community-py`** — Search/Get over seeded listings; the load-bearing **capability-aware "works on my deployment?" filter** (only listings whose `required_capabilities` are satisfied by the caller's `deployment_capabilities` are returned — e.g. scd2 is filtered until `format/merge` is present). Mandatory listing fields (provided/required/conformed + signed) exercised; Get unknown → `NOT_FOUND`.
+- **`examples/ui/web-portal-py`** — Describe (display name + hosted slots) + RenderSlot (resolve a contributed component → asset_ref + props_schema); unknown → `NOT_FOUND`.
+- **Build method:** all 3 via **parallel subagents** on the storage template (omitting the tenant/context handling these stateless axes don't need).
+- **Freeze:** flipped ui/notifications/marketplace DRAFT → `v1` (`rat/1.4`); buf clean.
+
+**🎉 Milestone: every one of the 18 axis contracts is now frozen at `v1`** — 7 data-plane (engine/format/catalog/storage/runtime/state/strategy) + 1 tier-0 (deployment-runtime) + 7 control-plane (identity/secret/scheduler/tenancy/billing/observability/audit-log) + 3 experience (ui/notifications/marketplace), plus the cross-cutting types. **The only remaining `v1-preview` artifact is the manifest schema (`plugin/v1.json`).**
+
+---
+
 ## 2026-05-31 — 🧊 **`deployment-runtime/v1` FROZEN** (`rat/1.3`) — two divergent references
 
 Built two technologically-divergent references for the tier-0 `deployment-runtime` axis (the I9 trust boundary) and froze it. `make conformance` **29/29** (commits `119a1a0` refs, `50f21ee` freeze, tag **`rat/1.3`**).
