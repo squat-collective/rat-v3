@@ -4,6 +4,29 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 🧊 **`rat/1` FROZEN** — data-plane contracts advanced to `v1` (ADR-009 + tag)
+
+The Phase 0 contract-freeze milestone. With both gates met (0h-remediation + 0i cross-axis composition), the data-plane axis contracts advance `v1-preview` → `v1`.
+
+- **[ADR-009](../docs/architecture/adrs/009-data-plane-contract-freeze-v1.md)** (`6ca3ed2`) — the freeze decision: the six ADR-003 data-plane axes (engine/format/catalog/storage/runtime/state) + the cross-cutting types they depend on (`common/v1/{context,data,annotations,event,audit}`, `core/v1/invoke`, `ERROR_MODEL.md`) freeze at `v1`; breaking changes now require `v2`. `strategy/v1` (one ref) + control/experience axes + the manifest schema stay `v1-preview`. Residuals R1–R3 accepted as documented.
+- **Freeze applied** (`b9dbe2d`, **tagged `rat/1`**) — flipped the Status markers on all 17 frozen files (11 protos + 6 `CONTRACT.md`) DRAFT/v1-preview → "v1 (frozen — rat/1, ADR-009)"; comment-only, buf lint+build clean, SDKs unaffected. `reviews/07` carries the RESOLUTION banner (the 0h NO-GO is closed).
+- The `rat/1` annotated tag marks the frozen surface (local; reversible until external consumers pin to it).
+
+**Phase 0's headline deliverable — a frozen, independently-validated data-plane contract — is DONE.** What remains in Phase 0 is the loosely-coupled tail: `strategy/v1` second reference, the control-plane axes' single references, and the manifest-schema freeze.
+
+---
+
+## 2026-05-31 — Sub-phase 0i COMPLETE: cross-axis composition (ADR-003 cross-combination gate MET)
+
+Built the ADR-003 "run against each other on golden data" gate the freeze review flagged as the one unmet clause (reviews/07 Part C).
+
+- **`examples/strategy/fullrefresh-py/`** (`abd1228`) — the FIRST `kind: strategy` reference (the axis had zero). Pure capability orchestration over a single `invoke` seam: `catalog.get-table → engine.query → format.overwrite`, coupled to nothing by name. Its conformance IS the composition test.
+- **`examples/composition/`** + **`make composition`** — boots catalog+engine+format as real gRPC servers wired by capability through a mediating gateway, Arrow over **real pyarrow.flight** between axes, and runs the strategy across the 4 ADR-003 combos on shared golden data ([`composition-v1.json`](../contracts/conformance/composition-v1.json)). `comp_engine.py` closes the gap the per-axis engine refs left (resolve `QueryRequest.tables` via `format.scan`, bind, stream results over Flight).
+- **Result:** all 4 combos — DuckDB/DataFusion × Parquet/Delta × sqlite/in-memory, storage held at local-fs — produce the **identical** target with the strategy code unchanged. **Gate MET.**
+- **Findings surfaced** (the payoff): engine `SUM` type diverges DuckDB(hugeint)/DataFusion(int64) → golden SQL pins it with `CAST AS BIGINT`; the engine `tables`-binding + real Arrow transport weren't exercised per-axis; catalog has no create-table RPC (GA commit-linkage, R3). None wire-breaking. Conformance still 20/20.
+
+---
+
 ## 2026-05-31 — 0h-remediation COMPLETE: the freeze punch-list (M1–M4 + S1–S4) cleared
 
 Cleared the entire 0h freeze-review punch-list ([reviews/07](../reviews/07-freeze-review.md)). User chose **strict ADR-003** for the cross-axis gate, so remediation lands first, then the strategy reference + composition test, then the freeze. Conformance held **20/20** after every change.

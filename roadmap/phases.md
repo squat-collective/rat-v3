@@ -9,7 +9,7 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | Phase | What | Status | Effort | Notes |
 |---|---|---|---|---|
 | **−1** | Architectural design + adversarial review | **done** (2026-05-30) | ~1 day | ADRs 001-003, vision, overview, 5-perspective review, synthesis |
-| **0** | Lock the contracts (with Critical concerns baked in) | **in-flight** (entered 2026-05-30) | 4-6 months | 0a manifest schema drafted; see ADR-003 |
+| **0** | Lock the contracts (with Critical concerns baked in) | **in-flight** — 🧊 **data-plane FROZEN `rat/1`** (2026-05-31, ADR-009) | 4-6 months | Headline deliverable DONE; remaining = control-plane refs + `strategy` 2nd ref + manifest freeze |
 | **1** | Build the core (~12-15k LOC) | not-started | 3 months | Six things + cross-cutting enforcement |
 | **2** | Solo deployment reference plugins (production-grade) | not-started | 2 months | `chmod +x ./rat` works end-to-end |
 | **3** | Self-hosted team reference plugins | not-started | 2 months | Match v2's operational shape |
@@ -37,7 +37,9 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | 0e | Reference implementations round 2 — 1 per critical axis (6 more) | 3-5 weeks — **✅ COMPLETE both senses. (a) Language twins (`inmemory-py`) → wire-contract gate; ADR-007 + ADR-008 decided AND migrated; gateway mediates unary + server-streaming. (b) 🎉 The technologically-divergent REAL-backend round is DONE for all six: state=sqlite, storage=local-fs, catalog=sqlite, runtime=subprocess, engine=duckdb+datafusion, format=parquet+delta — each passing the shared vectors + a backend-specific semantic test; typed-Arrow retired for engine+format. Remaining before `v1`: real Arrow Flight transport + 0f conformance suite + 0h freeze.** |
 | 0f | Conformance suites + per-RPC latency benchmark | 3 weeks — **✅ COMPLETE. Conformance suite runner (`make conformance` → 20/20 references conform; auto-discovers refs, one pass/fail matrix, CI/freeze-gateable) + per-RPC latency benchmark (`make bench` → core-mediation hop ≈ +0.2ms/+270%, validates ADR-005). Real Arrow Flight transport ✅ (parquet-py).** |
 | 0g | Author-facing prose (`CONTRACT.md` per axis) | ongoing; finalize 2 weeks — **✅ DONE for the 6 data-plane axes** (`contracts/proto/rat/{state,engine,format,storage,runtime,catalog}/v1/CONTRACT.md`): capabilities + RPCs + conformance obligations + writing-a-plugin + reference-impl table; indexed in the conformance README; all links verified, buf-clean. Control/experience axes when referenced. |
-| 0h | Peer review + revisions + `rat/1` freeze | 2-3 weeks |
+| 0h | Peer review + revisions + `rat/1` freeze | **✅ COMPLETE.** Freeze review ([reviews/07](../reviews/07-freeze-review.md)) → NO-GO punch-list (M1–M4 + S1–S4), all remediated. |
+| 0i | Cross-axis composition (ADR-003 cross-combination gate) | **✅ COMPLETE.** First `strategy` ref + `make composition` — all 4 ADR-003 combos (DuckDB/DataFusion × Parquet/Delta × sqlite/in-memory) produce the identical target, strategy unchanged. |
+| — | **`rat/1` FREEZE** | **🧊 DONE (ADR-009, tag `rat/1`).** 6 data-plane axes + cross-cutting types → `v1`. `strategy/v1` + control/experience + manifest stay `v1-preview`. |
 
 **Deliverables:**
 - `plugin/v1.json` published at stable URL

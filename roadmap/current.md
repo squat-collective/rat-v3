@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (✅ 0h-REMEDIATION COMPLETE — the freeze punch-list (M1–M4 + S1–S4) is cleared (commits `16d9c37`,`7e169e1`,`df07ff9`); conformance held **20/20** throughout; freeze review at [reviews/07](../reviews/07-freeze-review.md). User chose **strict ADR-003** for the cross-axis gate. **Next (IN FLIGHT): build the first `strategy` reference + the cross-axis composition test** — the ADR-003 cross-combination gate (Engine A/B × Format A/B × Catalog A/B, Storage A held; the engine↔format Arrow handoff is the key thing under test). THEN tag `rat/1`. Prior: ROUND 1+2 complete; 0c/0f/0g done; ADR-007/008 migrated.)
+> Updated: 2026-05-31 (🧊 **`rat/1` FROZEN.** The data-plane axis contracts are at **`v1`** — [ADR-009](../docs/architecture/adrs/009-data-plane-contract-freeze-v1.md), commit `b9dbe2d` tagged `rat/1`. Both gates met: 0h-remediation (M1–M4 + S1–S4) cleared + the **0i cross-axis composition gate** met (`make composition`, all 4 ADR-003 combos identical, via the new `strategy` reference). Conformance 20/20 throughout. Frozen: engine/format/catalog/storage/runtime/state + `common/v1/*` + `core/v1/invoke` + `ERROR_MODEL.md`. Still `v1-preview`: `strategy/v1` (one ref), control/experience axes, manifest schema. **Phase 0's headline deliverable is DONE.** Next: the loosely-coupled tail — `strategy/v1` 2nd ref, control-plane single refs, manifest freeze — OR start Phase 1 (the core). USER'S CALL.)
 
 ## Status one-liner
 
