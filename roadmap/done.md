@@ -4,6 +4,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 0h-remediation COMPLETE: the freeze punch-list (M1–M4 + S1–S4) cleared
+
+Cleared the entire 0h freeze-review punch-list ([reviews/07](../reviews/07-freeze-review.md)). User chose **strict ADR-003** for the cross-axis gate, so remediation lands first, then the strategy reference + composition test, then the freeze. Conformance held **20/20** after every change.
+
+- **M1+M2** (`16d9c37`) — pinned the canonical error model: new [`contracts/proto/rat/common/v1/ERROR_MODEL.md`](../contracts/proto/rat/common/v1/ERROR_MODEL.md) (two-layer rule: domain-outcome-field vs gRPC-status; the full status-code table; the not-found rule + secret anti-enumeration exception). Fixed the dangling cite in `invoke.proto`; documented catalog's deliberate no-`found` choice in `catalog.proto`; pointed all 6 axis `CONTRACT.md` at the model.
+- **M3+M4** (`7e169e1`) — hardened the signed envelope: `key_id` on `AuditRecord` (field 11) + `SubjectAssertion` (field 5), each resolving in the core's published keyring to {key, algorithm} (rotation + agility = new key_id, no on-wire `alg`); covered by the signature. Added VERIFICATION CONTRACT step 4 (bare `Identity.tenant`/`principal` MUST equal the signature-covered values) + the transport-trust basis note (caller_plugin/tenant rest on authenticated transport C2). Additive fields, buf-clean; 4 SDKs regenerated.
+- **S1–S4** (`df07ff9`) — comment cluster: `WriteResult.snapshot_id` reworded (not format-only); bidi non-first-frame `capability` → ABORT not "ignore"; audit-on-deny pinned as a C8 conformance obligation; stale `runtime-v1.json` comment corrected (ADR-008 closed the streaming-mediation gap).
+
+**All 4 MUST-FIX + 4 SHOULD-FIX done; 3 residuals (R1–R3) tracked in backlog.** Next (strict-ADR-003 path): build the first **strategy** reference + the **cross-axis composition test** (the ADR-003 cross-combination gate), then tag `rat/1`.
+
+---
+
 ## 2026-05-31 — Sub-phase 0h: freeze review COMPLETE — verdict **NO-GO** for unconditional `rat/1`
 
 Ran the final adversarial pass before tagging the data-plane contracts `v1`. Three independent reviewers (contract-coherence, security/enforcement, freeze-readiness/integration) swept the now-complete surface; every blocker was ground-truthed against the actual proto/vector/reference files before being accepted or downgraded. Evidence base: `make conformance` **20/20 PASS**, `make lint`+`make build` clean.

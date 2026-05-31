@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (🔍 0h FREEZE REVIEW DONE — verdict **NO-GO** for unconditional `rat/1` ([reviews/07](../reviews/07-freeze-review.md)). All 6 data-plane axes have two language refs + a divergent real backend; `make conformance` 20/20; buf clean; the 15 reviews/06 blockers all resolved. BUT the final adversarial pass surfaced a punch-list: **4 MUST-FIX** (M1 error-model convention unpinned, M2 not-found modeled 3 ways, M3 signatures lack `key_id`, M4 assertion bare-mirror cross-check missing) + **4 SHOULD-FIX** (S1–S4 cheap text) + 3 accepted residuals. AND the **ADR-003 cross-axis composition gate is NOT met** (per-axis only; strategy axis has zero refs). **Next: 0h-remediation (clear M1–M4 + S1–S4), then the cross-axis fork — (a) strict ADR-003 build strategy ref+composition test, or (b) conditional freeze. USER'S CALL.** Prior: ROUND 1+2 complete; 0c/0f/0g done; ADR-007/008 migrated.)
+> Updated: 2026-05-31 (✅ 0h-REMEDIATION COMPLETE — the freeze punch-list (M1–M4 + S1–S4) is cleared (commits `16d9c37`,`7e169e1`,`df07ff9`); conformance held **20/20** throughout; freeze review at [reviews/07](../reviews/07-freeze-review.md). User chose **strict ADR-003** for the cross-axis gate. **Next (IN FLIGHT): build the first `strategy` reference + the cross-axis composition test** — the ADR-003 cross-combination gate (Engine A/B × Format A/B × Catalog A/B, Storage A held; the engine↔format Arrow handoff is the key thing under test). THEN tag `rat/1`. Prior: ROUND 1+2 complete; 0c/0f/0g done; ADR-007/008 migrated.)
 
 ## Status one-liner
 
