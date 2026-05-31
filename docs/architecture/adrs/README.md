@@ -13,6 +13,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [005](005-capability-invocation-model.md) | Capability invocation model — core-mediated control plane | Accepted | 2026-05-30 |
 | [006](006-sdk-distribution-and-plugin-layout.md) | SDK distribution, reference-plugin layout, and codegen toolchain | Accepted | 2026-05-31 |
 | [007](007-call-context-transport.md) | Call-context transport — cross-cutting context rides in transport metadata, not the payload | Accepted | 2026-05-31 |
+| [008](008-streaming-capability-invocation.md) | Streaming capability invocation — per-cardinality Invoke variants, enforce-at-open | Accepted | 2026-05-31 |
 
 ## Template
 

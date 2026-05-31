@@ -151,7 +151,9 @@ Related: [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md)
 
 ---
 
-## 2026-05-31 — [contract, ADR-005] The core-mediated Invoke is unary-only — server-streaming capabilities have no mediation path
+## 2026-05-31 — [contract, ADR-005] The core-mediated Invoke is unary-only — server-streaming capabilities have no mediation path `[promoted → docs/architecture/adrs/008-streaming-capability-invocation.md]`
+
+> **Resolved by [ADR-008](../docs/architecture/adrs/008-streaming-capability-invocation.md):** option (a) — add `InvokeServerStream` + `InvokeBidiStream` to the core invoke service (generic byte-relays, enforce-once-at-open, identity stamped into downstream metadata per ADR-007). Streaming is "unary with N frames"; the gateway stays axis-generic; central enforcement (ADR-005) holds for every cardinality. The reasoning below is kept as the historical record.
 
 **Surfaced by building the 0d `runtime` reference** — the 0d forcing function (ADR-003) exposing a contract gap, like the ADR-007 identity-transport finding before it.
 

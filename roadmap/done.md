@@ -4,6 +4,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — ADR-008: streaming capability invocation (per-cardinality Invoke variants)
+
+Resolved the streaming-mediation finding the `runtime` 0d reference surfaced. **[ADR-008](../docs/architecture/adrs/008-streaming-capability-invocation.md) (Accepted):** add `InvokeServerStream(InvokeRequest) returns (stream InvokeResponse)` + `InvokeBidiStream(stream InvokeRequest) returns (stream InvokeResponse)` to `core/v1 CapabilityInvokeService`. Streaming capabilities stay core-mediated — the gateway enforces C2/C5/C7/C8 + traceparent **once at stream-open**, stamps the downstream `rat-callmeta-bin` envelope for the stream's lifetime (ADR-007), and relays each frame's opaque bytes via the passthrough codec (never deserializing). One C8 audit per stream.
+
+**Why:** ADR-005's `Invoke` is unary; the contract has 4 streaming methods (`runtime.Execute`, `state.Watch`, `scheduler.WatchDue` server-streaming; `observability.Ingest` bidi) with no mediation path. Extends ADR-005 (upholds its central-enforcement thesis — streaming is "unary with N frames", gateway stays axis-generic) + reuses ADR-007's enforce-at-open + identity-in-metadata. `InvokeBidiStream` subsumes client-streaming, so only 2 new RPCs. Rejected direct-dial-with-token (reintroduces the honor-system ADR-005 refused), progress-to-event-bus (mutilates axis contracts, doesn't generalize to bidi), and leave-unmediated (permanent enforcement hole).
+
+**Process:** ADR-only commit. The implementation (add the 2 RPCs to `invoke.proto`, regen SDKs, server-stream relay in the gateway, route `runtime.Execute` through `InvokeServerStream` + add runtime's deferred capability annotation, re-run the unchanged runtime vectors) is queued as the next step.
+
+**Files:** `docs/architecture/adrs/008-streaming-capability-invocation.md`, `docs/architecture/adrs/README.md` (index), `ideas/inbox.md` (finding promoted), `roadmap/**`.
+
+---
+
 ## 2026-05-31 — 0d: `runtime` axis — two references (Go + Python) + shared golden vectors → `runtime/v1` ADR-003 gate MET (+ streaming-mediation finding)
 
 Fourth data-plane axis through the 0d two-reference gate, and the **first streaming axis**: `Execute(ExecuteRequest) returns (stream ExecuteResponse)` — interim `ExecuteProgress` + terminal `ExecuteCompleted` (a oneof).
