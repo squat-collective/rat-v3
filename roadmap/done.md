@@ -4,6 +4,23 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — ROUND 2 begins: `state` = sqlite (real backend) — durability + linearizable CAS
+
+The first **technologically-divergent** reference (ADR-003's *spirit*, not just letter): a third `state` implementation backed by **sqlite** (real embedded transactional SQL DB, file-on-disk, WAL) rather than an in-memory hashmap. `examples/state/sqlite-py/`.
+
+- **Passes the SAME shared golden vectors** (`contracts/conformance/state-v1.json`) the in-memory twins pass — a real backend conforming to the identical wire contract is the actual round-2 ADR-003 evidence. All three `state` refs (inmemory-go, inmemory-py, sqlite-py) green on one shared file.
+- **Two properties the in-memory twins CANNOT show, now actually tested:**
+  - **Durability** (`test_durability_survives_reopen`): write → close store → reopen the same db file → state persists. A hashmap dies with the process.
+  - **Linearizable CAS** (`test_linearizable_cas_one_winner`): 16 threads race a compare-and-set from the same revision → **exactly one** COMMITs. Serialization enforced by sqlite's `BEGIN IMMEDIATE` (durable, cross-connection), not an in-process mutex — the real lease primitive (reviews/06 C-4) the in-memory twin could only fake.
+- CAS is read→check→write inside a `BEGIN IMMEDIATE` transaction; global monotonic revision via a `meta` table; change log table for Watch. Same MODEL as the in-memory refs (matching revisions) so the shared vectors pass. Python stdlib `sqlite3` (zero new deps; GIL released during sqlite calls so the concurrency test is real).
+- Verified in `python:3.12` (sqlite 3.46.1): `PASS … + durability + linearizable CAS`.
+
+**Significance:** this is the first axis where the round-2 SEMANTIC gate (not just the wire-contract gate) is exercised on a divergent backend. The in-memory `state` CAS is serialized by a mutex (also linearizable, but in-process + non-durable); sqlite proves the contract holds on a backend with a genuinely different consistency/durability profile — exactly the "orthogonality assumption" rigor ADR-003 exists for.
+
+**Files:** `examples/state/sqlite-py/**`. No proto/SDK change.
+
+---
+
 ## 2026-05-31 — 0d: `state` axis (Go + Python) → `state/v1` wire-contract gate MET → 🎉 ROUND 1 COMPLETE (all 6 data-plane axes)
 
 Sixth + final data-plane axis through the 0d wire-contract two-reference gate — and the **capstone**: a tier-0 plugin with 4 RPCs (Get/Put/List unary + Watch server-streaming) and the axis's two pointed obligations.

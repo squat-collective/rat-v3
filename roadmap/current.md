@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (🎉 0d ROUND 1 COMPLETE — all 6 data-plane axes' WIRE-CONTRACT gate MET: format/engine/storage/runtime/catalog/state; all 12 refs green. ADR-007 + ADR-008 decided AND migrated. NOTE: refs are inmemory twins — ADR-003's real-backend round-2 still pending before v1; see scope caveat below.)
+> Updated: 2026-05-31 (Round 1 COMPLETE — all 6 axes, 12 inmemory refs. ROUND 2 STARTED: `state`=sqlite real backend passes the shared vectors + adds durability + linearizable-CAS tests (the first divergent-backend semantic evidence). ADR-007 + ADR-008 decided AND migrated.)
 
 ## Status one-liner
 
@@ -61,7 +61,7 @@ The 23 other prospective ADRs are in [backlog.md](backlog.md). They land as they
 
 **🎉 0d ROUND 1 is COMPLETE.** All six data-plane axes — `format` `engine` `storage` `runtime` `catalog` `state` — have two independently-written references (Go + Python) passing one shared golden-vector file; all 12 green together. The gateway mediates unary + server-streaming; ADR-007 + ADR-008 are decided AND migrated. The harness/reference pattern is fully proven. Candidate next steps (pick per appetite):
 
-1. **Round 2 — the first technologically-divergent real backend** (the highest-value next step; see [backlog.md](backlog.md)). Make ONE reference per axis a real backend with a different consistency/semantic profile, starting cheap + high-value: **`state`=sqlite** (actually tests linearizable-CAS, which the in-memory twin can only fake) and **`storage`=local-fs**. This is where ADR-003's orthogonality-assumption failures surface. Reuse the SAME shared golden vectors — a real backend that passes them is the real ADR-003 evidence.
+1. **Round 2 — continue the technologically-divergent real backends** (see [backlog.md](backlog.md)). **`state`=sqlite ✅ DONE** (`examples/state/sqlite-py/` — passes the shared vectors + adds durability + linearizable-CAS tests). Next cheap+high-value: **`storage`=local-fs** (real filesystem creds/paths vs the in-memory scope receipt). Then the heavier ones: `format`=parquet/iceberg, `engine`=duckdb, `catalog`=sqlite-catalog, `runtime`=container/subprocess. Each reuses the SAME shared golden vectors; a real backend that passes them is the real ADR-003 evidence. Where a round-2 backend exposes a semantic property the wire vectors don't cover (durability, linearizable CAS, real Arrow dialect), add a backend-specific test (as sqlite-py did).
 2. **Typed-Arrow conformance pass** — `format` + `engine` still carry the bulk leg as an in-process stand-in. A real format/engine backend (round 2) forces the real Arrow Flight data leg, so this folds into round 2 naturally.
 3. **Polish (optional, not blocking):** a real **SDK metadata interceptor** so plugin code gets the reconstructed context automatically; wire `InvokeBidiStream` (the `observability.Ingest` bidi relay) when that axis is referenced; roll `(rat.capability)` across the remaining unannotated axis services (strategy, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log, ui, notifications, marketplace, billing).
 4. **Beyond 0d:** sub-phases 0c (cross-cutting protos finalize), 0f (conformance suite + benchmarks), 0g (per-axis CONTRACT.md), 0h (peer review + `rat/1` freeze).
