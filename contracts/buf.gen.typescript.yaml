@@ -1,0 +1,11 @@
+# TypeScript SDK codegen (ADR-006 D1/D3). Generated into sdks/typescript/,
+# committed, regenerated via scripts/gen-sdks.sh — never hand-edited.
+# protobuf-es (messages) + connect-es (services) — buf's first-class TS stack.
+version: v2
+plugins:
+  - remote: buf.build/bufbuild/es
+    out: sdks/typescript
+    opt: target=ts
+  - remote: buf.build/connectrpc/es
+    out: sdks/typescript
+    opt: target=ts

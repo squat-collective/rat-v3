@@ -31,7 +31,7 @@ else
 fi
 
 # Languages wired today -> their buf.gen template + output subdir.
-LANGS=(go)
+LANGS=(go python typescript rust)
 
 run_buf_generate() {
   # $1 = workspace dir to mount as /workspace (buf templates write relative to it)
@@ -56,7 +56,11 @@ if [[ "${1:-}" == "--check" ]]; then
   rm -rf "$TMP"/sdks
   run_buf_generate "$TMP"
   for lang in "${LANGS[@]}"; do
-    if ! diff -r "$CONTRACTS/sdks/$lang" "$TMP/sdks/$lang" >/dev/null 2>&1; then
+    # Ignore hand-added, non-generated module files (e.g. sdks/go/go.mod) — they
+    # are not produced by buf and would otherwise read as a spurious diff.
+    if ! diff -r \
+        --exclude=go.mod --exclude=go.sum \
+        "$CONTRACTS/sdks/$lang" "$TMP/sdks/$lang" >/dev/null 2>&1; then
       echo "error: contracts/sdks/$lang is stale — run 'make gen-sdks' and commit." >&2
       exit 1
     fi

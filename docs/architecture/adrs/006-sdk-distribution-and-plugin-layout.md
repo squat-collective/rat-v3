@@ -40,11 +40,24 @@ contracts/
   buf.gen.go.yaml             # one codegen template per language
   buf.gen.python.yaml
   buf.gen.typescript.yaml
+  buf.gen.rust.yaml
   sdks/
-    go/                       # generated *.pb.go (+ grpc)         — committed
-    python/                   # generated *_pb2.py (+ grpc)        — committed
-    typescript/               # generated *.ts (Connect-ES)        — committed
+    go/                       # generated *.pb.go (+ grpc-go)        — committed
+    python/                   # generated *_pb2.py (+ grpc)          — committed
+    typescript/               # generated *.ts (protobuf-es + connect-es) — committed
+    rust/                     # generated *.rs (prost + tonic)       — committed
 ```
+
+**Amendment (2026-05-31):** all four target languages — **Go, Python, TypeScript,
+Rust** — are now wired and generated (not Go-first-only as the original text below
+contemplated). Counts at first generation: go 43 (+go.mod), python 46, typescript
+42, rust 39. Plugin stacks: Go = protocolbuffers/go + grpc/go; Python =
+protocolbuffers/python + grpc/python; TypeScript = bufbuild/es + connectrpc/es;
+Rust = community neoeinstein-prost + neoeinstein-tonic. `scripts/gen-sdks.sh`
+LANGS + CI regenerate all four. NOTE: codegen uses **remote buf.build plugins**
+(network); regenerating all four in quick succession can hit BSR rate limits —
+acceptable because regen is infrequent and the SDKs are committed, but a reason
+the freshness gate must tolerate transient BSR 429s (retry rather than fail hard).
 
 The proto remains the single source; `sdks/<lang>/` are **regenerated, never hand-edited**
 (enforced by a header + a regen script — see D3). When a real external ecosystem exists, the

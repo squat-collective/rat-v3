@@ -1,0 +1,8 @@
+# Python SDK codegen (ADR-006 D1/D3). Generated into sdks/python/, committed,
+# regenerated via scripts/gen-sdks.sh — never hand-edited. Remote buf.build plugins.
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/python
+    out: sdks/python
+  - remote: buf.build/grpc/python
+    out: sdks/python
