@@ -25,6 +25,7 @@ __pycache__/
 .env.local
 
 # Generated artefacts
-*.pb.go
-*_pb2.py
+# NOTE: the vendored SDKs under contracts/sdks/<lang>/ ARE committed (ADR-006 D1).
+# Do NOT ignore *.pb.go / *_pb2.py here — they are the deliverable, not scratch.
+# (contracts/.gitignore handles the only proto-related exclusion: sdks/go/go.sum.)
 gen/

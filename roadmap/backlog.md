@@ -12,12 +12,6 @@ Freeze-blocker #5 created `contracts/proto/rat/common/v1/annotations.proto` (the
 
 ---
 
-## Repo defect — vendored Go/Python SDKs are silently gitignored (contradicts ADR-006 D1)
-
-The root `.gitignore` ignores `*.pb.go` (line 28) and `*_pb2.py` (line 29). Consequence: the **entire Go SDK** and **all Python message classes** (`*_pb2.py`) under `contracts/sdks/` are NOT committed — only the TS/Rust SDKs and the Python `*_pb2_grpc.py` stubs are tracked. This directly contradicts [ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md) D1 ("vendored `contracts/sdks/<lang>/` … ARE committed"), which `contracts/.gitignore` even reaffirms ("Generated SDKs … ARE committed … Nothing proto-related is ignored here") — the root ignore overrides it. Reference plugins build locally (they regenerate or already have the files) and CI regenerates SDKs, so nothing is *broken* today — but a fresh `git clone` cannot `go build` a reference or `import rat.*` in Python without first running `make gen-sdks`. **Decision needed:** either (a) remove the two patterns from the root `.gitignore` and commit the ~Go+Python SDK trees (makes ADR-006 D1 true — likely correct), or (b) amend ADR-006 to say Go/Python are regenerate-on-clone (not vendored) and document the `make gen-sdks` bootstrap step. Surfaced 2026-05-31 during storage 0d. Almost certainly an accidental over-broad ignore (the patterns read like build-artifact ignores, but these files ARE the deliverable).
-
----
-
 ## ADRs to write (from synthesis — 23 of 26 not yet written)
 
 Numbered as proposed in [reviews/00-synthesis.md](../reviews/00-synthesis.md). Most are Phase 0 wire-breaking concerns that land *during* Phase 0 as the contracts get drafted, NOT before. They're listed here so they're not lost.

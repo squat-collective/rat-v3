@@ -4,6 +4,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — Fix: vendor the Go + Python SDKs (un-ignore them) — makes ADR-006 D1 true
+
+Resolved the repo defect surfaced during storage 0d. The root `.gitignore` had `*.pb.go` + `*_pb2.py` under "Generated artefacts" (alongside the retired `gen/`), which silently excluded the **entire Go SDK** and **all Python message classes** from version control — contradicting [ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md) D1 ("vendored `contracts/sdks/<lang>/` … ARE committed").
+
+- Removed the two patterns from the root `.gitignore` (kept `gen/`); added a note pointing to ADR-006 D1 so it isn't re-added. The only `*.pb.go`/`*_pb2.py` in the repo are the SDKs (examples import the SDK, don't generate), so the un-ignore is safe + targeted. `contracts/.gitignore` still handles the one intended exclusion (`sdks/go/go.sum`).
+- Committed the now-trackable **42 Go `*.pb.go`** + **23 Python `*_pb2.py`** files (freshly regenerated; reflect ADR-007's no-context-field + the storage capability annotation). Tom chose "fix now: commit the SDKs."
+- Result: a fresh `git clone` can `go build` a reference + `import rat.*` in Python without first running `make gen-sdks`. All four languages' SDKs are now genuinely vendored.
+
+**Files:** `.gitignore`, `contracts/sdks/go/**` (42 `.pb.go`), `contracts/sdks/python/**` (23 `_pb2.py`).
+
+---
+
 ## 2026-05-31 — 0d: `storage` axis — two references (Go + Python) + shared golden vectors → `storage/v1` ADR-003 gate MET
 
 Third data-plane axis through the 0d two-reference gate. Storage owns credential vending (no Arrow leg) — one RPC, `VendCredentials` — and is the **C7 tenancy enforcement point**.
