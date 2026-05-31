@@ -35,9 +35,9 @@ Entered Phase 0 on 2026-05-30 (exploratory mode — see commitment-gate note abo
 9. 🔶 **IN PROGRESS** — the small-wire-fix cluster, split into sub-commits:
    - ✅ **9a** (`22b76e2`) — `secret.Resolve.found` semantics pinned (anti-enumeration).
    - ✅ **9b** (`fcbe8bb`) — decision-RPC error model: `deny_code` enum on `identity.Authorize` + `tenancy.Decide`; `reason` demoted to log-only.
-   - ✅ **9c** (`4f4e3a2`) — `data.proto` ArrowStream protocol (`transport`=FLIGHT) + role/direction field; `observability.Ingest` → bidi-streaming.
-   - ✅ **9d** (`1f7e8b2`) — `slots.target` wrapped in `capabilityRef` (schema + scd2 example, re-validated).
-   - ✅ **9e** (`9c39f47`) — sentinel→`optional` (rows_affected, fraction); `options` UTF-8-JSON encoding pin; scheduler at-least-once delivery doc.
+   - ✅ **9c** (`9c25c26`) — `data.proto` ArrowStream protocol (`transport`=FLIGHT) + role/direction field; `observability.Ingest` → bidi-streaming.
+   - ✅ **9d** (`f290601`) — `slots.target` wrapped in `capabilityRef` (schema + scd2 example, re-validated).
+   - ✅ **9e** (`277a09f`) — sentinel→`optional` (rows_affected, fraction); `options` UTF-8-JSON encoding pin; scheduler at-least-once delivery doc.
    - ⬜ **9f** (optional doc-pins, low value) — `state.List`/`marketplace.Search` pagination-default note; timestamp int64-ms ratification note. Comments only, arguably post-freeze-safe. ← deferred; **#10 next**
 10. Land cheap additive placeholders (manifest `image` digest, `debug_redact`; audit signature already done in #4).
 
@@ -59,15 +59,18 @@ The 23 other prospective ADRs are in [backlog.md](backlog.md). They land as they
 
 ## Immediate next concrete step
 
-Sub-phase **0b — axis protos**. In `contracts/proto/`:
-1. Write `strategy/v1/strategy.proto` (the `Apply` RPC ⇒ `rat://strategy/v1/apply`).
-2. Write `format/v1/format.proto` (scan/merge/append ⇒ `rat://format-capability/v1/*`).
-3. Write `runtime/v1/runtime.proto` (`Execute` ⇒ `rat://runtime/v1/execute`).
-4. These three are the ones the example manifests already reference, so they close the loop between manifest and wire contract first.
-5. Before generating any SDK: add `buf.yaml` + decide the validator/codegen container image (also unblocks 0f tooling). This is where the Go/buf toolchain in `.claude/settings.json` first gets exercised.
-6. As each axis proto lands, derive its per-kind manifest schema (the 0a → 0b handoff recorded in `contracts/schema/README.md`).
+Sub-phase **0d — first reference implementations** (the ADR-003 gate: no data-plane contract freezes until two independent implementations exist and run against each other on golden data). This is the **first real code** in the project, and the forcing function that validates the now-remediated contracts by building against them rather than reviewing them.
 
-Also pending (deferred Claude-config item, now triggerable since the first `.proto`/code is imminent): the `PostToolUse` auto-format hook (`gofmt`/`buf format`) — see [backlog.md](backlog.md). Land it when the first proto/Go file is committed.
+Recommended entry — a vertical slice through the data plane, smallest end-to-end loop first:
+1. **Pick the first axis + impl.** Start with `format` (Iceberg or a trivial in-memory format) — it's the most-referenced axis (every strategy requires it), and the `rat-format-deltalake` example manifest already targets it.
+2. **Set up the Go module** under (proposed) `examples/` or `plugins/` — wire it to the generated SDK (`buf generate` output; codegen needs network for buf.build remote plugins, so settle the codegen story first — local `protoc-gen-go`/`protoc-gen-go-grpc` in a container vs remote).
+3. **Implement the `FormatService`** (Resolve/Append/Merge/Overwrite/Maintain) against the frozen-draft proto, honoring `RequestContext` + the capability annotations.
+4. **Run it under a minimal harness** that exercises the contract — this is where contract gaps surface for real (the whole point of ADR-003).
+5. Per ADR-003, a **second independent `format` impl** + golden-data cross-run is required before the `format` contract can freeze.
+
+Open decisions to settle as 0d starts (capture as ADRs/notes): the codegen toolchain (remote buf plugins need network; the sandbox blocked GHCR earlier — may need local codegen images), and the reference-plugin directory layout.
+
+Also worth landing alongside first Go code: the deferred **additive tail** — #10b (manifest `artifact`/digest block), #9f doc-pins, and per-kind manifest schemas — none freeze-blocking, but cheap to clear while in the contracts.
 
 ## What's NOT in flight (paused / cancelled)
 
