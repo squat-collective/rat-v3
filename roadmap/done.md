@@ -4,6 +4,22 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — Multi-language SDKs: Python, TypeScript, Rust (+Go) — commit `2f9c1c2`
+
+**What:** Extended codegen from Go-only to all four target languages (Tom: "python, ts and ruff[=Rust]"), realizing the any-language promise (ADR-001 / vision #3). Each is a committed, peer `contracts/sdks/<lang>/` with its own `buf.gen.<lang>.yaml`:
+- **Go** — protocolbuffers/go + grpc/go (43 files + go.mod; compiles under golang:1.25)
+- **Python** — protocolbuffers/python + grpc/python (46)
+- **TypeScript** — bufbuild/es + connectrpc/es (42)
+- **Rust** — community neoeinstein-prost + neoeinstein-tonic (39)
+
+`scripts/gen-sdks.sh` LANGS=(go python typescript rust); `--check` loops all four (excludes hand-added go.mod/go.sum). CI (`contracts.yml`) regenerates all four (was Go-only). ADR-006 amended (diagram + stacks + BSR-rate-limit note).
+
+**Each language's codegen empirically verified in-container** (buf generate exit 0, file counts above). `make check` (buf lint) green.
+
+**⚠️ Operational caveat (real, recorded):** codegen uses **remote buf.build plugins** → regenerating all four in quick succession hits **BSR rate limits** (429); `make compile-sdks` also flaked on `go get` (network) during this session. Neither is a content defect — the committed SDKs are correct, Go compiled clean earlier — but it means `make gen-check`/`compile-sdks` are network-bound and can transiently fail locally. Future hardening: retry/backoff on 429, or local (non-remote) codegen plugin images. Not blocking.
+
+---
+
 ## 2026-05-31 — Codegen pipeline: make targets + gen script + CI + per-commit hook
 
 **What:** Built the SDK-codegen + verification toolchain that ADR-006 D3 calls for. Three pieces (commits `654c3f1` pipeline, `4abffe7` Claude hook):
