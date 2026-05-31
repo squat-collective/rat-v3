@@ -4,6 +4,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — Round 2: `runtime` = subprocess (real backend) — OS process isolation
+
+Fourth round-2 real backend. `examples/runtime/subprocess-py/` — each `Execute` runs the work unit in a real CHILD OS PROCESS (`worker.py`) instead of in-thread. Runtime is the "where does the code run" axis; this one actually runs it elsewhere.
+
+- **Passes the SAME shared vectors** (`contracts/conformance/runtime-v1.json`) — the toy work_spec (`{steps, rows, indeterminate, fail}`) is abstract enough a child-process runtime interprets it identically (emit `steps` progress events ± fraction, then a completion). All three runtime refs (inmemory-go, inmemory-py, subprocess-py) green on one shared file.
+- **Two isolation properties the in-thread runtime CANNOT show:** `test_work_runs_in_a_separate_process` (work unit PID ≠ server's) and `test_each_work_unit_gets_its_own_process` (two Execute calls → two DISTINCT child PIDs).
+- Process isolation is the seed of the real runtime/deployment-runtime sandboxing story (a crashing unit can't take the runtime down; a container/WASM runtime is the step up). Python stdlib `subprocess`; direct streaming harness. Green in `python:3.12`.
+
+**Round 2 progress: 4 of 6 axes** (`state`, `storage`, `catalog`, `runtime`). Remaining: **`format` + `engine`** — the genuinely heavy ones (real Arrow Flight + Parquet / DuckDB) that need conformance-vector REWORK first (engine vectors are toy-mini-SQL-specific; format carries the bulk leg as an in-process stand-in). Not drop-in like the other four — surfaced for a decision (see [current.md](current.md)).
+
+**Files:** `examples/runtime/subprocess-py/**`. No proto/SDK/vector change.
+
+---
+
 ## 2026-05-31 — Round 2: `catalog` = sqlite (real backend) — durable branches/ledger + concurrent-merge safety
 
 Third round-2 real backend. `examples/catalog/sqlite-py/` — branches, their snapshots, and the idempotency ledger live in sqlite (real transactional SQL DB, file, WAL) rather than an in-memory dict.
