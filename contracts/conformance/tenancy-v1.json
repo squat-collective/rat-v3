@@ -1,0 +1,45 @@
+{
+  "_comment": "RAT tenancy/v1 conformance vectors — control-plane golden data. A `kind: tenancy` plugin answers tenant-boundary POLICY questions the core poses at decision points (a permission check, a sharing grant, a quota test) via TenancyService.Decide. CRITICAL (tenancy.proto header, C7 — reviews/00 Theme 4, reviews/01 Finding 3): tenancy is STRUCTURAL, not advisory — the tenant dimension lives in core primitives (identity.tenant threads every RPC, the state gateway namespaces by it, storage vends tenant-scoped creds). This plugin does NOT re-implement isolation; the core enforces the boundary. The plugin only answers POLICY the core can't hardcode (e.g. 'may tenant A share dataset X with tenant B?', 'is tenant A over quota?'). The caller's tenant is read from the rat-callmeta-bin metadata header (ADR-007 — NOT a request field, so a caller can't pose a decision as another tenant). ERROR MODEL: a deny on a successful Decide uses the in-band `allowed` bool + enumerated `deny_code` (never the free-text reason — anti-enumeration-oracle). Cases are evaluated IN ORDER because QUOTA is STATEFUL: a per-(tenant) counter (QUOTA_LIMIT=2) is incremented on each QUOTA decide, so the 1st and 2nd pass and the 3rd is denied QUOTA_EXCEEDED. The reference allowlist lets `acme` share with `partner` only.",
+  "axis": "tenancy/v1",
+  "tenant": "acme",
+  "decide": [
+    {
+      "step": "permission_ok",
+      "kind": "PERMISSION",
+      "subject_action": "pipeline.run",
+      "expect": {"allowed": true}
+    },
+    {
+      "step": "share_allowlisted",
+      "kind": "SHARING",
+      "subject_action": "share:dataset/orders",
+      "counterparty_tenant": "partner",
+      "expect": {"allowed": true}
+    },
+    {
+      "step": "share_denied",
+      "kind": "SHARING",
+      "subject_action": "share:dataset/orders",
+      "counterparty_tenant": "rival",
+      "expect": {"allowed": false, "deny_code": "CROSS_TENANT_DENIED"}
+    },
+    {
+      "step": "quota_1",
+      "kind": "QUOTA",
+      "subject_action": "q",
+      "expect": {"allowed": true}
+    },
+    {
+      "step": "quota_2",
+      "kind": "QUOTA",
+      "subject_action": "q",
+      "expect": {"allowed": true}
+    },
+    {
+      "step": "quota_over",
+      "kind": "QUOTA",
+      "subject_action": "q",
+      "expect": {"allowed": false, "deny_code": "QUOTA_EXCEEDED"}
+    }
+  ]
+}

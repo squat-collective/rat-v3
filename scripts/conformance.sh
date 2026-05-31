@@ -18,7 +18,7 @@ RUNTIME="$(command -v podman || command -v docker)"
 GO_IMAGE="${GO_IMAGE:-docker.io/library/golang:1.25}"
 PY_IMAGE="${PY_IMAGE:-docker.io/library/python:3.12}"
 # Union of every Python reference's runtime deps (real backends included).
-PY_DEPS="grpcio==1.80.0 protobuf==7.35.0 pyarrow==24.0.0 duckdb==1.5.3 datafusion==53.0.0 deltalake==1.6.0"
+PY_DEPS="grpcio==1.80.0 protobuf==7.35.0 pyarrow==24.0.0 duckdb==1.5.3 datafusion==53.0.0 deltalake==1.6.0 cryptography==44.0.0"
 
 if [ -z "$RUNTIME" ]; then echo "no podman/docker found" >&2; exit 2; fi
 

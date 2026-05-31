@@ -1,0 +1,26 @@
+{
+  "_comment": "RAT billing/v1 conformance vectors — the SINGLE source of truth for the billing axis. The reference (Python: examples/billing/inmemory-py) loads THIS file and drives BillingService.Record over real gRPC. A `kind: billing` plugin is a metering SINK: the core emits usage events at well-defined points (pipeline run, credential vend, storage bytes) and the plugin records + aggregates them. Billing is per-tenant BY CONSTRUCTION (C7): every event is metered under the tenant read from the rat-callmeta-bin metadata header (ADR-007) — NOT a request field — so a caller can't bill another tenant's account. The harness records each `record` case, asserts RecordResponse.recorded per case, then asserts the running per-(tenant, meter) sum matches `expect_aggregate` (e.g. pipeline.run recorded twice → 2). A separate isolation check (not in these vectors) confirms recording under another tenant leaves the target tenant's totals unchanged.",
+  "axis": "billing/v1",
+  "tenant": "acme",
+  "record": [
+    {
+      "step": "two_events",
+      "events": [
+        {"meter": "pipeline.run", "quantity": 1},
+        {"meter": "storage.bytes", "quantity": 1024}
+      ],
+      "expect": {"recorded": 2}
+    },
+    {
+      "step": "one_more_run",
+      "events": [
+        {"meter": "pipeline.run", "quantity": 1}
+      ],
+      "expect": {"recorded": 1}
+    }
+  ],
+  "expect_aggregate": [
+    {"meter": "pipeline.run", "quantity": 2},
+    {"meter": "storage.bytes", "quantity": 1024}
+  ]
+}

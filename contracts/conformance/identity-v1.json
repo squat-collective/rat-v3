@@ -1,0 +1,36 @@
+{
+  "_comment": "Golden conformance vectors for the identity/v1 axis. Loaded by every kind: identity reference (ADR-003 cross-run). authenticate cases drive IdentityService.Authenticate with an opaque credential and assert (authenticated, subject, tenant). authorize cases set the end-user subject in the rat-callmeta-bin metadata envelope (ADR-007), drive Authorize, and assert (allowed, deny_code). deny_code is the DenyCode enum NAME without the DENY_CODE_ prefix.",
+  "axis": "identity/v1",
+  "authenticate": [
+    {
+      "step": "good_admin",
+      "credential": "tok-acme-admin",
+      "expect": {"authenticated": true, "subject": "alice", "tenant": "acme"}
+    },
+    {
+      "step": "bad_token",
+      "credential": "tok-nope",
+      "expect": {"authenticated": false}
+    }
+  ],
+  "authorize": [
+    {
+      "step": "admin_can_run",
+      "subject": "alice",
+      "action": "pipeline.run",
+      "expect": {"allowed": true}
+    },
+    {
+      "step": "viewer_cannot_run",
+      "subject": "bob",
+      "action": "pipeline.run",
+      "expect": {"allowed": false, "deny_code": "INSUFFICIENT_ROLE"}
+    },
+    {
+      "step": "anon_denied",
+      "subject": "",
+      "action": "pipeline.run",
+      "expect": {"allowed": false, "deny_code": "NOT_AUTHENTICATED"}
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "_comment": "RAT scheduler/v1 conformance vectors. Drives Schedule/Cancel/WatchDue. at_unix_ms_offset is relative to the harness's 'now' (ms): negative = the one-shot is already due and should fire on WatchDue; positive = future, should NOT fire. Cancelled triggers never fire. expect_due is the exact set WatchDue must yield. The reference fires every due/not-cancelled/not-yet-fired one-shot then completes the stream (at-least-once per scheduler.proto).",
+  "axis": "scheduler/v1",
+  "schedule": [
+    {"trigger_id": "run-A", "at_unix_ms_offset": -1000},
+    {"trigger_id": "run-B", "at_unix_ms_offset": -1000},
+    {"trigger_id": "run-C", "at_unix_ms_offset": 600000}
+  ],
+  "cancel": ["run-B"],
+  "expect_due": ["run-A"]
+}

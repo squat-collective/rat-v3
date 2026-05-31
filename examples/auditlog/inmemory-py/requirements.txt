@@ -1,0 +1,5 @@
+# The audit-log sink verifies the core's Ed25519 signatures over the pinned canonical
+# serialization, so it needs `cryptography` in addition to the gRPC runtime + SDK.
+grpcio==1.80.0
+protobuf==7.35.0
+cryptography==44.0.0

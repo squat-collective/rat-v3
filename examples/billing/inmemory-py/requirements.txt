@@ -1,0 +1,5 @@
+# Runtime deps for rat-billing-inmemory-py. Pinned to the versions the example
+# refs were verified against (python:3.12 container). protobuf must be >= the
+# gencode's runtime pin (see rat/*/v1/*_pb2.py ValidateProtobufRuntimeVersion).
+grpcio==1.80.0
+protobuf==7.35.0

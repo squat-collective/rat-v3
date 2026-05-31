@@ -1,0 +1,11 @@
+{
+  "_comment": "RAT auditlog/v1 conformance vectors. The records are core-SIGNED and chain-linked, so the scenario is built + signed at run time by the harness (it plays the core, holding the Ed25519 private key; the sink holds only the public key). This file pins the axis and documents the expected per-step acks the harness asserts. Properties under test (freeze-blocker #4): signature-verify, prev_hash chain-check, prefix-only commit, idempotent-duplicate.",
+  "axis": "auditlog/v1",
+  "scenario": [
+    {"step": "two_valid_chained", "append": ["a1", "a2"], "expect_acks": ["COMMITTED", "COMMITTED"]},
+    {"step": "idempotent_retry", "append": ["a1 (dup)"], "expect_acks": ["DUPLICATE"]},
+    {"step": "forged_signature", "append": ["a3 (corrupt sig)"], "expect_acks": ["REJECTED:BAD_SIGNATURE"]},
+    {"step": "chain_gap", "append": ["a4 (wrong prev_hash)"], "expect_acks": ["REJECTED:CHAIN_BREAK"]},
+    {"step": "prefix_only_commit", "append": ["a5", "a6 (corrupt sig)", "a7"], "expect_acks": ["COMMITTED", "REJECTED:BAD_SIGNATURE", "REJECTED:CHAIN_BREAK"]}
+  ]
+}
