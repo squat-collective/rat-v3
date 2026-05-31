@@ -46,6 +46,10 @@ creds, not separate RPCs.)
 
 ## Cross-cutting (every axis)
 
+- **Error reporting** follows the canonical [error model](../../common/v1/ERROR_MODEL.md)
+  (pinned at `rat/1`): gRPC status codes for malformed/unauthorized/missing/precondition
+  failures; in-response enum/`bool` fields for normal domain outcomes (CAS conflict, read-miss).
+
 - **You READ the envelope.** `RequestContext` rides in the `rat-callmeta-bin` metadata
   header ([ADR-007](../../../../../docs/architecture/adrs/007-call-context-transport.md));
   storage is the axis that most depends on it — extract `identity.tenant` from

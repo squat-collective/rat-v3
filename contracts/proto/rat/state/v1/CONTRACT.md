@@ -52,6 +52,10 @@ state on behalf of every other plugin, namespaced per-plugin and per-tenant.
 
 ## Cross-cutting (every axis)
 
+- **Error reporting** follows the canonical [error model](../../common/v1/ERROR_MODEL.md)
+  (pinned at `rat/1`): gRPC status codes for malformed/unauthorized/missing/precondition
+  failures; in-response enum/`bool` fields for normal domain outcomes (CAS conflict, read-miss).
+
 - **Context is in metadata, not the body** — `RequestContext` (trace + identity +
   tenant) rides in the `rat-callmeta-bin` metadata header ([ADR-007](../../../../../docs/architecture/adrs/007-call-context-transport.md)),
   never a request field. The state gateway namespaces by `identity.caller_plugin` +
