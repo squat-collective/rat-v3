@@ -26,8 +26,10 @@ if [ -z "$RUNTIME" ]; then echo "no podman/docker found" >&2; exit 2; fi
 GO_REFS=(); PY_REFS=()
 for d in examples/*/*/; do
   d="${d%/}"
-  if   [ -f "$d/go.mod" ];          then GO_REFS+=("$d")
-  elif [ -f "$d/harness_test.py" ]; then PY_REFS+=("$d")
+  # A conformance reference is a dir with a harness (harness_test.{go,py}). Dirs
+  # with a go.mod but no harness (e.g. the latency benchmark) are NOT references.
+  if   [ -f "$d/go.mod" ] && [ -f "$d/harness_test.go" ]; then GO_REFS+=("$d")
+  elif [ -f "$d/harness_test.py" ];                       then PY_REFS+=("$d")
   fi
 done
 

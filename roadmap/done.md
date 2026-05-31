@@ -4,6 +4,21 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — Sub-phase 0f COMPLETE: per-RPC latency benchmark — the ADR-005 mediation hop, measured
+
+The second + final 0f sub-item: a benchmark that quantifies the one perf number the architecture trades on — the **core-mediated gateway's overhead vs a direct call** (ADR-005 accepted "a latency hop per control call", with a direct-dial fast-path *only if a profiling pass shows it's needed*; ADR-008 added a streaming relay). This IS that profiling pass.
+
+- **`examples/bench/latency-go/`** + **`make bench`** — measures the SAME plugin RPC two ways (direct `caller→plugin` vs mediated `caller→gateway→plugin`) for a unary RPC (`state.Get`) and a server-streaming one (`runtime.Execute`); reports p50/p99/mean + the delta. The plugin RPCs are trivial (fixed response / a few fixed frames) so the measurement isolates transport + mediation cost. The mediated path includes the client-side marshal/unmarshal + the `rat-callmeta-bin` envelope stamp (the SDK's real cost) + the gateway's traceparent-validate + identity-restamp + passthrough relay (a faithful non-test gateway in `gateway.go`).
+- **Result (localhost TCP, single goroutine):** unary direct p50 ~62µs vs mediated ~228µs → **+166µs (+266%)**; streaming direct ~66µs vs mediated ~249µs → **+183µs (+277%)**. Mediation roughly TRIPLES a control RPC's latency (a full extra gRPC hop + serialization) but the **absolute cost is ~0.2ms**.
+- **Validates the ADR-005 bet honestly:** cheap enough for control traffic (a pipeline run makes a handful of control calls → ~ms total, negligible vs the data work), and the hot path doesn't pay it at all — bulk DATA bypasses the gateway entirely via `ArrowStream`. If a future hot control path ever needs sub-mediation latency, the direct-dial fast-path ADR-005 left open can be added — but the number shows it isn't needed for v1.
+- The benchmark dir has a `go.mod` but no `harness_test.go`, so `scripts/conformance.sh` discovery was tightened to require a harness — the bench is correctly excluded from `make conformance` (still 20/20).
+
+**🎉 Sub-phase 0f is COMPLETE** — conformance suite runner (`make conformance`, 20/20) + latency benchmark (`make bench`). Plus the real Arrow Flight transport landed. The data-plane reference + conformance + perf arc of Phase 0 is done; remaining is freeze prep (0c/0g/0h).
+
+**Files:** `examples/bench/latency-go/**`, `Makefile` (bench target), `scripts/conformance.sh` (harness-required discovery).
+
+---
+
 ## 2026-05-31 — Sub-phase 0f: the conformance suite runner — one command, one pass/fail matrix
 
 Formalized the conformance suite (the operational form of ADR-003's "both pass the axis's conformance suite"). The per-axis golden vectors were already authoritative; what was missing was a single runner across all references.

@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (🎉 ROUND 1 + ROUND 2 BOTH COMPLETE. All 6 data-plane axes have two language refs (wire contract) AND a technologically-divergent real backend (semantic): state=sqlite, storage=local-fs, catalog=sqlite, runtime=subprocess, engine=duckdb+datafusion, format=parquet+delta. ADR-007 + ADR-008 decided AND migrated. Typed-Arrow gap retired + real Arrow Flight transport landed (parquet-py). 0f conformance suite runner DONE (`make conformance` → 20/20 references conform). Next: 0f latency benchmark (optional) + 0c/0g/0h freeze.)
+> Updated: 2026-05-31 (🎉 ROUND 1 + ROUND 2 BOTH COMPLETE. All 6 data-plane axes have two language refs (wire contract) AND a technologically-divergent real backend (semantic): state=sqlite, storage=local-fs, catalog=sqlite, runtime=subprocess, engine=duckdb+datafusion, format=parquet+delta. ADR-007 + ADR-008 decided AND migrated. Typed-Arrow gap retired + real Arrow Flight transport landed (parquet-py). 🎉 Sub-phase 0f COMPLETE: conformance suite (`make conformance` → 20/20) + latency benchmark (`make bench` → core-mediation hop ≈ +0.2ms/+270%, validates ADR-005). Next: freeze prep — 0c/0g/0h.)
 
 ## Status one-liner
 
@@ -67,7 +67,7 @@ ADR-007 + ADR-008 decided AND migrated; typed-Arrow gap retired for engine+forma
 
 **Genuinely remaining toward `rat/1` freeze (no longer reference-impl work):**
 1. **Real Arrow Flight transport — ✅ DONE** (`examples/format/parquet-py/flight.py`): the data leg now crosses real TCP sockets via Flight `DoGet`, both directions, with zero contract change — proving the in-process registry was always a transport choice. (Other refs keep the in-process stand-in for simplicity; making them all Flight is optional polish.)
-2. **Sub-phase 0f — conformance suite runner ✅ DONE** (`make conformance` / `scripts/conformance.sh`): auto-discovers + runs every reference against its golden vectors → one pass/fail matrix; **20/20 conform**; exit 0 iff all pass (CI/freeze-gateable). Remaining 0f sub-item: a per-RPC latency benchmark (lighter, optional).
+2. **Sub-phase 0f — ✅ COMPLETE.** Conformance suite runner (`make conformance` → auto-discovers + runs every reference → one pass/fail matrix; **20/20 conform**; CI/freeze-gateable) + per-RPC latency benchmark (`make bench` → core-mediation hop ≈ **+0.2ms / +270%** at p50, unary + streaming; absolute is sub-ms, bulk bypasses via ArrowStream — validates ADR-005's "the hop is acceptable" bet with real numbers).
 3. **Sub-phase 0c / 0g / 0h** — finalize cross-cutting protos; per-axis `CONTRACT.md`; peer review + `rat/1` freeze.
 4. **Polish (not blocking):** real **SDK metadata interceptor** (so plugin code gets the reconstructed context automatically); wire `InvokeBidiStream` (`observability.Ingest` bidi relay) when referenced; roll `(rat.capability)` across the remaining control/experience axis services (strategy, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log, ui, notifications, marketplace, billing).
 
