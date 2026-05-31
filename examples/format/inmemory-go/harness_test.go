@@ -1,43 +1,103 @@
 // harness_test.go — the conformance/golden-data harness for the format/v1 axis.
 //
-// This is the ADR-003 forcing function: it drives the FormatService through its
-// full lifecycle (append → scan → merge → overwrite → maintain) over a REAL
-// in-process gRPC connection, asserting behavior against golden expectations.
-// The same vectors must pass for a second, independent format impl (e.g.
-// inmemory-py) before the format contract can freeze.
+// This is the ADR-003 forcing function. It loads the language-neutral golden
+// vectors from contracts/conformance/format-v1.json (the SAME file the Python
+// reference loads) and drives the FormatService through its full lifecycle
+// (append → scan → merge → overwrite → maintain) plus error cases.
 //
-// Running over real gRPC (not direct method calls) is deliberate: it exercises
-// the actual wire — serialization of TableRef/ArrowStream/WriteResult, the
-// RequestContext envelope, the per-RPC request/response messages — which is what
-// the contract review (reviews/06) said only a real implementation can validate.
+// Two things are deliberate:
+//
+//  1. It runs over REAL gRPC, not direct method calls — exercising serialization
+//     of TableRef/ArrowStream/WriteResult and the RequestContext envelope, which
+//     the contract review (reviews/06) said only a real implementation validates.
+//
+//  2. Every control call is routed through the CORE-MEDIATED path — the stub
+//     core/v1 CapabilityInvokeService (gateway_test.go), not a direct
+//     FormatService client. So the harness validates the ADR-005 mediation seams
+//     (capability routing, C5 enforcement, C8 audit, generic byte relay) on top
+//     of the plugin-to-plugin data contract. The plugin never sees a direct dial.
+//
+// The data ("bulk") leg stays in-process: source rows are staged on the plugin's
+// own stream registry (shared object, same process) and scan results are pulled
+// back from it — the real Arrow Flight wire is deferred to a production reference.
 package main
 
 import (
 	"context"
+	"encoding/json"
 	"net"
+	"os"
 	"testing"
 	"time"
 
 	commonv1 "github.com/rat-dev/rat/gen/rat/common/v1"
+	corev1 "github.com/rat-dev/rat/gen/rat/core/v1"
 	formatv1 "github.com/rat-dev/rat/gen/rat/format/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
+	"google.golang.org/protobuf/proto"
 )
 
-const tbl = "warehouse.sales.orders"
+// ---- golden-vector model (mirrors contracts/conformance/format-v1.json) ----
 
-// dialInProc spins the server on an in-memory bufconn listener and returns a
-// connected client + the server (so the test can stage source streams on it).
-func dialInProc(t *testing.T) (formatv1.FormatServiceClient, *formatServer) {
+type expectation struct {
+	RowsAffected       *int64              `json:"rows_affected"`
+	RowsAffectedAbsent bool                `json:"rows_affected_absent"`
+	SnapshotIDSet      bool                `json:"snapshot_id_set"`
+	RowCount           *int                `json:"row_count"`
+	RowsContain        []map[string]string `json:"rows_contain"`
+	Code               string              `json:"code"`
+}
+
+type vstep struct {
+	Step          string              `json:"step"`
+	Op            string              `json:"op"`
+	Source        []map[string]string `json:"source"`
+	MergeKeys     []string            `json:"merge_keys"`
+	TableOverride *string             `json:"table_override"` // pointer: "" overrides, absent = default table
+	Expect        expectation         `json:"expect"`
+}
+
+type vectors struct {
+	Axis      string  `json:"axis"`
+	Table     string  `json:"table"`
+	Lifecycle []vstep `json:"lifecycle"`
+	Errors    []vstep `json:"errors"`
+}
+
+const vectorPath = "../../../contracts/conformance/format-v1.json"
+
+func loadVectors(t *testing.T) vectors {
 	t.Helper()
-	lis := bufconn.Listen(1 << 20)
-	srv := grpc.NewServer()
-	impl := newServer()
-	formatv1.RegisterFormatServiceServer(srv, impl)
-	go func() { _ = srv.Serve(lis) }()
-	t.Cleanup(srv.Stop)
+	raw, err := os.ReadFile(vectorPath)
+	if err != nil {
+		t.Fatalf("read golden vectors %s: %v", vectorPath, err)
+	}
+	var v vectors
+	if err := json.Unmarshal(raw, &v); err != nil {
+		t.Fatalf("parse golden vectors: %v", err)
+	}
+	if v.Axis != "format/v1" {
+		t.Fatalf("vectors axis = %q, want format/v1", v.Axis)
+	}
+	return v
+}
 
+// ---- harness wiring: plugin behind the stub core gateway ----
+
+// rig holds the mediated client plus a handle to the plugin impl (to stage/pull
+// the in-process bulk leg) and the gateway (to assert C8 audit).
+type rig struct {
+	gw   corev1.CapabilityInvokeServiceClient
+	impl *formatServer
+	core *stubGateway
+}
+
+func bufDial(t *testing.T, lis *bufconn.Listener) *grpc.ClientConn {
+	t.Helper()
 	conn, err := grpc.NewClient(
 		"passthrough:///bufnet",
 		grpc.WithContextDialer(func(_ context.Context, _ string) (net.Conn, error) { return lis.Dial() }),
@@ -47,134 +107,247 @@ func dialInProc(t *testing.T) (formatv1.FormatServiceClient, *formatServer) {
 		t.Fatalf("dial: %v", err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	return formatv1.NewFormatServiceClient(conn), impl
+	return conn
 }
 
-func ctx(t *testing.T) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), 5*time.Second)
-}
-
-func ref() *commonv1.TableRef { return &commonv1.TableRef{Identifier: tbl} }
-
-// stageSource stashes rows in the server's stream registry and returns a
-// caller-hosted ArrowStream descriptor pointing at them (what a real caller would
-// hand to a mutating RPC).
-func stageSource(impl *formatServer, rows []row) *commonv1.ArrowStream {
-	return impl.streams.put(rows)
-}
-
-// scanAll resolves the table and returns the rows the producer-hosted stream
-// yields.
-func scanAll(t *testing.T, c formatv1.FormatServiceClient, impl *formatServer) []row {
+// newRig stands up two real gRPC hops: harness → core gateway → format plugin.
+func newRig(t *testing.T) *rig {
 	t.Helper()
-	cx, cancel := ctx(t)
-	defer cancel()
-	resp, err := c.Resolve(cx, &formatv1.ResolveRequest{Context: &commonv1.RequestContext{}, Table: ref()})
-	if err != nil {
-		t.Fatalf("Resolve: %v", err)
-	}
-	return impl.streams.pull(resp.GetStream())
+
+	// Hop 2: the format plugin.
+	plis := bufconn.Listen(1 << 20)
+	psrv := grpc.NewServer()
+	impl := newServer()
+	formatv1.RegisterFormatServiceServer(psrv, impl)
+	go func() { _ = psrv.Serve(plis) }()
+	t.Cleanup(psrv.Stop)
+	providerConn := bufDial(t, plis)
+
+	// The core gateway, pointed at the plugin, with the caller permitted every
+	// format capability (its manifest `requires` them all).
+	core := newGateway(providerConn, "rat-strategy-test", []string{
+		"rat://format/v1/scan",
+		"rat://format/v1/append",
+		"rat://format/v1/merge",
+		"rat://format/v1/overwrite",
+		"rat://format/v1/maintain",
+	})
+
+	// Hop 1: the core's capability-invoke gateway.
+	glis := bufconn.Listen(1 << 20)
+	gsrv := grpc.NewServer()
+	corev1.RegisterCapabilityInvokeServiceServer(gsrv, core)
+	go func() { _ = gsrv.Serve(glis) }()
+	t.Cleanup(gsrv.Stop)
+
+	return &rig{gw: corev1.NewCapabilityInvokeServiceClient(bufDial(t, glis)), impl: impl, core: core}
 }
 
-func TestFormatLifecycle_GoldenVectors(t *testing.T) {
-	c, impl := dialInProc(t)
-	cx, cancel := ctx(t)
-	defer cancel()
+func tctx(t *testing.T) context.Context {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+	return ctx
+}
 
-	// 1. Append two rows.
-	ap, err := c.Append(cx, &formatv1.AppendRequest{
-		Context: &commonv1.RequestContext{},
-		Table:   ref(),
-		Source: stageSource(impl, []row{
-			{"id": "1", "name": "alice"},
-			{"id": "2", "name": "bob"},
-		}),
+// invoke mediates one typed call: marshal req → CapabilityInvokeService.Invoke →
+// unmarshal the relayed result into resp. This is exactly what a real calling
+// plugin's generated SDK stub does on top of Invoke.
+func (r *rig) invoke(ctx context.Context, capURI string, req, resp proto.Message) error {
+	payload, err := proto.Marshal(req)
+	if err != nil {
+		return err
+	}
+	out, err := r.gw.Invoke(ctx, &corev1.InvokeRequest{
+		Context:    &commonv1.RequestContext{Identity: &commonv1.Identity{Tenant: "acme"}},
+		Capability: capURI,
+		Payload:    payload,
 	})
 	if err != nil {
-		t.Fatalf("Append: %v", err)
+		return err
 	}
-	if got := ap.GetResult().GetRowsAffected(); got != 2 {
-		t.Fatalf("Append rows_affected = %d, want 2", got)
+	return proto.Unmarshal(out.GetResult(), resp)
+}
+
+func toRows(src []map[string]string) []row {
+	out := make([]row, len(src))
+	for i, m := range src {
+		out[i] = row(m)
+	}
+	return out
+}
+
+func tableRef(id string) *commonv1.TableRef { return &commonv1.TableRef{Identifier: id} }
+
+// scan resolves the table through the gateway and pulls the rows the returned
+// producer-hosted stream yields (from the plugin's in-process registry).
+func (r *rig) scan(ctx context.Context, table string) ([]row, error) {
+	var resp formatv1.ResolveResponse
+	if err := r.invoke(ctx, "rat://format/v1/scan",
+		&formatv1.ResolveRequest{Context: &commonv1.RequestContext{}, Table: tableRef(table)}, &resp); err != nil {
+		return nil, err
+	}
+	return r.impl.streams.pull(resp.GetStream()), nil
+}
+
+// ---- the tests ----
+
+func TestFormatConformance_GoldenVectors(t *testing.T) {
+	v := loadVectors(t)
+	r := newRig(t)
+	ctx := tctx(t)
+
+	for _, s := range v.Lifecycle {
+		s := s
+		t.Run(s.Step, func(t *testing.T) {
+			switch s.Op {
+			case "append":
+				var resp formatv1.AppendResponse
+				if err := r.invoke(ctx, "rat://format/v1/append", &formatv1.AppendRequest{
+					Context: &commonv1.RequestContext{}, Table: tableRef(v.Table),
+					Source: r.impl.streams.put(toRows(s.Source)),
+				}, &resp); err != nil {
+					t.Fatalf("append: %v", err)
+				}
+				assertWrite(t, resp.GetResult(), s.Expect)
+			case "merge":
+				var resp formatv1.MergeResponse
+				if err := r.invoke(ctx, "rat://format/v1/merge", &formatv1.MergeRequest{
+					Context: &commonv1.RequestContext{}, Table: tableRef(v.Table),
+					MergeKeys: s.MergeKeys, Source: r.impl.streams.put(toRows(s.Source)),
+				}, &resp); err != nil {
+					t.Fatalf("merge: %v", err)
+				}
+				assertWrite(t, resp.GetResult(), s.Expect)
+			case "overwrite":
+				var resp formatv1.OverwriteResponse
+				if err := r.invoke(ctx, "rat://format/v1/overwrite", &formatv1.OverwriteRequest{
+					Context: &commonv1.RequestContext{}, Table: tableRef(v.Table),
+					Source: r.impl.streams.put(toRows(s.Source)),
+				}, &resp); err != nil {
+					t.Fatalf("overwrite: %v", err)
+				}
+				assertWrite(t, resp.GetResult(), s.Expect)
+			case "maintain":
+				var resp formatv1.MaintainResponse
+				if err := r.invoke(ctx, "rat://format/v1/maintain",
+					&formatv1.MaintainRequest{Context: &commonv1.RequestContext{}, Table: tableRef(v.Table)}, &resp); err != nil {
+					t.Fatalf("maintain: %v", err)
+				}
+				assertWrite(t, resp.GetResult(), s.Expect)
+			case "scan":
+				rows, err := r.scan(ctx, v.Table)
+				if err != nil {
+					t.Fatalf("scan: %v", err)
+				}
+				assertScan(t, rows, s.Expect)
+			default:
+				t.Fatalf("unknown op %q", s.Op)
+			}
+		})
 	}
 
-	// 2. Scan → 2 rows.
-	if got := len(scanAll(t, c, impl)); got != 2 {
-		t.Fatalf("after Append, scan = %d rows, want 2", got)
+	// C8: every mediated call must have produced an audit record. Lifecycle has
+	// one Invoke per step (scans included).
+	if got, want := len(r.core.auditLog()), len(v.Lifecycle); got != want {
+		t.Fatalf("audit log = %d entries, want one per mediated call (%d)", got, want)
 	}
+}
 
-	// 3. Merge: upsert id=2 (update bob→robert) + insert id=3.
-	mg, err := c.Merge(cx, &formatv1.MergeRequest{
-		Context:   &commonv1.RequestContext{},
-		Table:     ref(),
-		MergeKeys: []string{"id"},
-		Source: stageSource(impl, []row{
-			{"id": "2", "name": "robert"},
-			{"id": "3", "name": "carol"},
-		}),
-	})
-	if err != nil {
-		t.Fatalf("Merge: %v", err)
+func TestFormatConformance_ErrorVectors(t *testing.T) {
+	v := loadVectors(t)
+	r := newRig(t)
+	ctx := tctx(t)
+
+	for _, s := range v.Errors {
+		s := s
+		t.Run(s.Step, func(t *testing.T) {
+			table := v.Table
+			if s.TableOverride != nil {
+				table = *s.TableOverride
+			}
+			var err error
+			switch s.Op {
+			case "scan":
+				_, err = r.scan(ctx, table)
+			case "merge":
+				var resp formatv1.MergeResponse
+				err = r.invoke(ctx, "rat://format/v1/merge", &formatv1.MergeRequest{
+					Context: &commonv1.RequestContext{}, Table: tableRef(table),
+					MergeKeys: s.MergeKeys, Source: r.impl.streams.put(toRows(s.Source)),
+				}, &resp)
+			default:
+				t.Fatalf("unknown error-op %q", s.Op)
+			}
+			if err == nil {
+				t.Fatalf("%s: want error %s, got nil", s.Step, s.Expect.Code)
+			}
+			if got := status.Code(err); got != wantCode(t, s.Expect.Code) {
+				t.Fatalf("%s: status = %s, want %s", s.Step, got, s.Expect.Code)
+			}
+		})
 	}
-	if got := mg.GetResult().GetRowsAffected(); got != 2 {
-		t.Fatalf("Merge rows_affected = %d, want 2", got)
-	}
-	rows := scanAll(t, c, impl)
-	if len(rows) != 3 {
-		t.Fatalf("after Merge, scan = %d rows, want 3", len(rows))
-	}
-	// id=2 must now read "robert" (updated, not duplicated).
-	for _, r := range rows {
-		if r["id"] == "2" && r["name"] != "robert" {
-			t.Fatalf("merged id=2 name = %q, want robert", r["name"])
+}
+
+// ---- assertions ----
+
+func assertWrite(t *testing.T, res *commonv1.WriteResult, e expectation) {
+	t.Helper()
+	if e.RowsAffected != nil {
+		if res.RowsAffected == nil {
+			t.Fatalf("rows_affected absent, want %d", *e.RowsAffected)
+		}
+		if *res.RowsAffected != *e.RowsAffected {
+			t.Fatalf("rows_affected = %d, want %d", *res.RowsAffected, *e.RowsAffected)
 		}
 	}
-
-	// 4. Overwrite: replace everything with one row.
-	ov, err := c.Overwrite(cx, &formatv1.OverwriteRequest{
-		Context: &commonv1.RequestContext{},
-		Table:   ref(),
-		Source:  stageSource(impl, []row{{"id": "9", "name": "zoe"}}),
-	})
-	if err != nil {
-		t.Fatalf("Overwrite: %v", err)
+	if e.RowsAffectedAbsent && res.RowsAffected != nil {
+		t.Fatalf("rows_affected = %d, want absent", *res.RowsAffected)
 	}
-	if got := ov.GetResult().GetRowsAffected(); got != 1 {
-		t.Fatalf("Overwrite rows_affected = %d, want 1", got)
-	}
-	if got := len(scanAll(t, c, impl)); got != 1 {
-		t.Fatalf("after Overwrite, scan = %d rows, want 1", got)
-	}
-
-	// 5. Maintain: succeeds; rows_affected is unknown (absent), snapshot present.
-	mn, err := c.Maintain(cx, &formatv1.MaintainRequest{Context: &commonv1.RequestContext{}, Table: ref()})
-	if err != nil {
-		t.Fatalf("Maintain: %v", err)
-	}
-	if mn.GetResult().GetSnapshotId() == "" {
-		t.Fatalf("Maintain snapshot_id empty, want set")
+	if e.SnapshotIDSet && res.GetSnapshotId() == "" {
+		t.Fatalf("snapshot_id empty, want set")
 	}
 }
 
-func TestResolve_EmptyTableRef_InvalidArgument(t *testing.T) {
-	c, _ := dialInProc(t)
-	cx, cancel := ctx(t)
-	defer cancel()
-	_, err := c.Resolve(cx, &formatv1.ResolveRequest{Context: &commonv1.RequestContext{}, Table: &commonv1.TableRef{}})
-	if err == nil {
-		t.Fatal("Resolve with empty table.identifier: want error, got nil")
+func assertScan(t *testing.T, rows []row, e expectation) {
+	t.Helper()
+	if e.RowCount != nil && len(rows) != *e.RowCount {
+		t.Fatalf("scan = %d rows, want %d", len(rows), *e.RowCount)
+	}
+	for _, want := range e.RowsContain {
+		if !containsRow(rows, want) {
+			t.Fatalf("scan rows %v missing expected %v", rows, want)
+		}
 	}
 }
 
-func TestMerge_NoMergeKeys_InvalidArgument(t *testing.T) {
-	c, impl := dialInProc(t)
-	cx, cancel := ctx(t)
-	defer cancel()
-	_, err := c.Merge(cx, &formatv1.MergeRequest{
-		Context: &commonv1.RequestContext{},
-		Table:   ref(),
-		Source:  stageSource(impl, []row{{"id": "1"}}),
-	})
-	if err == nil {
-		t.Fatal("Merge without merge_keys: want error, got nil")
+func containsRow(rows []row, want map[string]string) bool {
+	for _, r := range rows {
+		match := true
+		for k, v := range want {
+			if r[k] != v {
+				match = false
+				break
+			}
+		}
+		if match {
+			return true
+		}
+	}
+	return false
+}
+
+func wantCode(t *testing.T, name string) codes.Code {
+	t.Helper()
+	switch name {
+	case "INVALID_ARGUMENT":
+		return codes.InvalidArgument
+	case "PERMISSION_DENIED":
+		return codes.PermissionDenied
+	case "NOT_FOUND":
+		return codes.NotFound
+	default:
+		t.Fatalf("unmapped expected code %q", name)
+		return codes.Unknown
 	}
 }

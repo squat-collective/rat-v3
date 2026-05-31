@@ -1,11 +1,11 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-30 (after `.claude/` configuration + ADR-003 + roadmap structure + synthesis landed; core language locked to Go via ADR-004 + coding-phase allowlist)
+> Updated: 2026-05-31 (0d: `format/v1` ADR-003 two-reference gate MET — second reference `inmemory-py` + shared golden vectors + stub ADR-005 gateway, both impls green)
 
 ## Status one-liner
 
-**Phase 0 in-flight (entered 2026-05-30).** 0a schema + all 20 0b axis protos drafted; adversarial agent-team review ([reviews/06](../reviews/06-proto-contract-review.md)) found 15 freeze-blockers + the AUTH-2 open decision (resolved → [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md), core-mediated). **Freeze-blocker remediation: #1–#9 done (the keystone + all structural wire fixes) + #10a (debug_redact); every change buf lint/build/generate-clean.** Remaining is the *additive/GA-safe* tail only — #10b (manifest `artifact`/digest block) + #9f doc-pins — which can land after the `rat/1` freeze without breaking plugins. So: **all freeze-BLOCKING structural changes are complete; the contract is materially freeze-ready** pending the additive tail + the ADR-003 two-reference rule (0d). Multi-language SDKs (Go/Python/TS/Rust) generated + committed under `contracts/sdks/`. **0d STARTED:** first reference plugin `examples/format/inmemory-go/` implements `format/v1` end-to-end (5 RPCs over gRPC) + golden-data harness, all green in golang:1.25 (commit `c472620`). **Next:** a SECOND independent `format` impl (e.g. `inmemory-py`) on the SAME golden vectors → then `format/v1` can freeze; the sequencing panel recommends adding a ~200-LOC throwaway stub invoke-gateway to the harness so the freeze also exercises the ADR-005 control-path mediation seams.
+**Phase 0 in-flight (entered 2026-05-30).** 0a schema + all 20 0b axis protos drafted; adversarial agent-team review ([reviews/06](../reviews/06-proto-contract-review.md)) found 15 freeze-blockers + the AUTH-2 open decision (resolved → [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md), core-mediated). **Freeze-blocker remediation: #1–#9 done (the keystone + all structural wire fixes) + #10a (debug_redact); every change buf lint/build/generate-clean.** Remaining is the *additive/GA-safe* tail only — #10b (manifest `artifact`/digest block) + #9f doc-pins — which can land after the `rat/1` freeze without breaking plugins. So: **all freeze-BLOCKING structural changes are complete; the contract is materially freeze-ready** pending the additive tail + the ADR-003 two-reference rule (0d). Multi-language SDKs (Go/Python/TS/Rust) generated + committed under `contracts/sdks/`. **0d — `format/v1` ADR-003 two-reference gate MET (2026-05-31):** two independent references — `examples/format/inmemory-go/` (now mediated through a stub ADR-005 invoke-gateway) and `examples/format/inmemory-py/` (from-scratch second impl) — both pass the SAME shared golden vectors (`contracts/conformance/format-v1.json`), green in golang:1.25 and python:3.12 respectively. The stub invoke-gateway (panel recommendation) landed too, so the cross-run exercises the ADR-005 control-path mediation seams, not just plugin-to-plugin. **`format/v1` cannot advance `v1-preview`→`v1` yet:** two blockers remain — (1) the identity-transport decision the gateway surfaced (payload.context vs channel metadata; see ideas/inbox.md), (2) a typed-Arrow conformance pass (bulk leg is still an in-process stand-in). **Next:** resolve the identity-transport question (likely an ADR amending 005), then pick the second data-plane axis for 0d (`engine` or `storage`).
 
 > Commitment-gate note: `phases.md` flags a 12–18mo runway + GTM commitment as a pre-Phase-0 gate. Tom chose to proceed in exploratory/sandbox mode. Gate acknowledged, not formally cleared — revisit before investing the full 4–6mo of Phase 0.
 
@@ -59,18 +59,24 @@ The 23 other prospective ADRs are in [backlog.md](backlog.md). They land as they
 
 ## Immediate next concrete step
 
-Sub-phase **0d — first reference implementations** (the ADR-003 gate: no data-plane contract freezes until two independent implementations exist and run against each other on golden data). This is the **first real code** in the project, and the forcing function that validates the now-remediated contracts by building against them rather than reviewing them.
+Sub-phase **0d is underway and `format/v1`'s ADR-003 two-reference gate is MET** (first axis done). The two candidates for the *next* concrete step:
 
-Recommended entry — a vertical slice through the data plane, smallest end-to-end loop first:
-1. **Pick the first axis + impl.** Start with `format` (Iceberg or a trivial in-memory format) — it's the most-referenced axis (every strategy requires it), and the `rat-format-deltalake` example manifest already targets it.
-2. **Set up the Go module** under (proposed) `examples/` or `plugins/` — wire it to the generated SDK (`buf generate` output; codegen needs network for buf.build remote plugins, so settle the codegen story first — local `protoc-gen-go`/`protoc-gen-go-grpc` in a container vs remote).
-3. **Implement the `FormatService`** (Resolve/Append/Merge/Overwrite/Maintain) against the frozen-draft proto, honoring `RequestContext` + the capability annotations.
-4. **Run it under a minimal harness** that exercises the contract — this is where contract gaps surface for real (the whole point of ADR-003).
-5. Per ADR-003, a **second independent `format` impl** + golden-data cross-run is required before the `format` contract can freeze.
+1. **Resolve the identity-transport question** (blocker #1 below) — it's now the highest-leverage open item because it affects *every* axis's wire, not just format. Write the follow-up ADR (amend/extend ADR-005 + `context.proto`) deciding metadata-only vs splice-field-1 vs two-channel. Doing this before more axes get references avoids re-stamping the same flaw across them.
+2. **Pick the second data-plane axis for 0d** — `engine` (its 3 methods are already 1:1 capability↔method, no Write-split needed) or `storage` (local-fs vs an S3-shaped impl is a clean independent pair). Reuse the now-proven harness pattern: shared `contracts/conformance/<axis>-v1.json` + two impls + (optionally) route through the same stub gateway.
 
-SDK distribution + layout + codegen are now decided in **[ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md)**: vendored `contracts/sdks/<lang>/` (Go/Python/TS peers), reference plugins under `examples/<axis>/<impl>-<lang>/`, containerized `buf generate` via `scripts/gen-sdks.sh`. **First 0d task = make codegen+compile actually green** (the Go SDK currently fails to compile: generated gRPC stubs need Go ≥ 1.25 vs the 1.23 base image — pin the image or pin grpc/protobuf; settle remote-vs-local buf plugins in the script).
+Doing (1) first is recommended — the finding is fresh and the fix is cross-cutting.
 
-Also worth landing alongside first Go code: the deferred **additive tail** — #10b (manifest `artifact`/digest block), #9f doc-pins, and per-kind manifest schemas — none freeze-blocking, but cheap to clear while in the contracts.
+SDK distribution + layout + codegen are decided in **[ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md)**: vendored `contracts/sdks/<lang>/` (Go/Python/TS peers), reference plugins under `examples/<axis>/<impl>-<lang>/`, containerized `buf generate` via `scripts/gen-sdks.sh`.
+
+**0d — `format/v1` ADR-003 gate is now MET (2026-05-31).** Two independent references both pass the SAME shared golden vectors (`contracts/conformance/format-v1.json`):
+- **inmemory-go** (commit `c472620`, then refactored): now loads the shared JSON and runs **through the stub core-mediated gateway** (`gateway_test.go`, a faithful ADR-005 generic byte-relay — routes by the `(rat.common.v1.capability)` annotation, enforces C5, emits C8 audit). Green in `golang:1.25`.
+- **inmemory-py** (`examples/format/inmemory-py/`): from-scratch second reference, imports the vendored Python SDK, loads the same JSON. Green in `python:3.12` (grpcio 1.80.0 / protobuf 7.35.0).
+
+**Two things gate `format/v1` advancing `v1-preview` → `v1`:**
+1. **Identity-transport decision** (the finding the gateway surfaced — see [ideas/inbox.md](../ideas/inbox.md)): re-stamped per-hop identity can't live in a payload a generic proxy won't deserialize, yet `context.proto` says `RequestContext` is field 1 of every request. Pick metadata-only / splice-field-1 / two-channel — touches `context.proto` + `invoke.proto`, affects *every* axis. Likely a follow-up ADR amending 005.
+2. **Typed-Arrow conformance pass** — both refs still carry the bulk leg as an in-process registry stand-in; the real Arrow Flight wire is unexercised.
+
+The deferred **additive tail** is still open and cheap to clear while in the contracts: #10b (manifest `artifact`/digest block), #9f doc-pins, per-kind manifest schemas, and rolling `(rat.capability)` across the other 14 axis services.
 
 ## What's NOT in flight (paused / cancelled)
 

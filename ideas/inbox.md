@@ -124,3 +124,25 @@ Probably the last — auth model varies by deployment-runtime. Future ADR when c
 **Q14 in [ADR-002](../docs/architecture/adrs/002-founding-tech-stack.md).** The marketplace plugin needs a UX: search by capability, by name, by author? Trust badges? Reviews? Compatibility checking (does this plugin work on my deployment)?
 
 Worth a dedicated ADR when the marketplace plugin is being built. Look at: VSCode marketplace UX, Cargo's crates.io, Helm Hub, OperatorHub.io for patterns.
+
+---
+
+## 2026-05-31 — [contract, ADR-005] Where does re-stamped identity ride: payload.context or channel metadata?
+
+**Surfaced by building the 0d stub invoke-gateway** (`examples/format/inmemory-go/gateway_test.go`) — exactly the kind of gap ADR-003 predicts a real implementation exposes.
+
+ADR-005 / `core/v1/invoke.proto` says the gateway is a **generic proxy**: it routes by capability and forwards `payload` **without interpreting it**. But two clauses collide:
+1. The gateway must **re-derive `identity.caller_plugin`** for the downstream hop and **never trust wire-supplied identity** (keystone, `context.proto`).
+2. Every axis request carries `RequestContext` (incl. `identity`) **inside the payload** (field 1).
+
+A proxy that doesn't deserialize the payload **cannot rewrite the embedded `identity`**. So the re-stamped identity has to travel somewhere the proxy *can* set without parsing bytes — i.e. **gRPC metadata** on the downstream call — and the providing plugin would read identity from metadata, not from `payload.context.identity`. That contradicts "RequestContext travels as field 1 of every request" (`context.proto`).
+
+Three resolutions to weigh (→ likely a follow-up ADR amending 005/context):
+- **(a) Identity rides in channel metadata; payload.context.identity is advisory/ignored.** Keeps the proxy truly generic. Cost: the "every RPC carries identity in field 1" invariant weakens to "field-1 context carries trace + deadline; identity is in metadata."
+- **(b) The gateway DOES splice field 1.** It interprets only the well-known `RequestContext context = 1` prefix (uniform across all axes by construction) and rewrites `identity`, forwarding the rest opaquely. Costs "forwards payload without interpreting it" purity, but only for one structurally-guaranteed field.
+- **(c) Two-channel: trace in payload, identity wholly out-of-band (metadata + the signed `SubjectAssertion`).** Most faithful to "never trust wire identity," most plumbing.
+
+The stub does **(a)** (stamps `x-rat-caller-plugin`/`x-rat-tenant` into outbound metadata) and the reference plugin ignores identity entirely, so behavior is correct under any choice — but the **frozen** contract must pick one before `format/v1` (and every axis) is GA. Freeze-blocking-adjacent: touches `context.proto` + `invoke.proto`, both in the `rat/1` surface.
+
+Open question: which of (a)/(b)/(c) — pick before any axis freezes.
+Related: [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md), `contracts/proto/rat/common/v1/context.proto`, `contracts/proto/rat/core/v1/invoke.proto`, [ADR-003](../docs/architecture/adrs/003-two-references-before-contract-freeze.md) (the rule that made this surface).

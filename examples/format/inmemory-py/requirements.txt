@@ -1,0 +1,6 @@
+# Runtime deps for rat-format-inmemory-py. Pinned to the versions the 0d
+# cross-run was verified against (python:3.12 container).
+# protobuf must be >= the gencode's runtime pin (7.35.0; see the generated
+# rat/*/v1/*_pb2.py ValidateProtobufRuntimeVersion call).
+grpcio==1.80.0
+protobuf==7.35.0

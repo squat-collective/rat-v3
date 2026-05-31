@@ -1,0 +1,60 @@
+{
+  "_comment": "RAT format/v1 conformance vectors — the ADR-003 shared golden data. This is the SINGLE source of truth for the format axis's expected behavior. Every independent format implementation's harness (Go: examples/format/inmemory-go, Python: examples/format/inmemory-py, ...) loads THIS file and drives its FormatService through these steps over real gRPC, asserting the expectations. 'Run against each other on golden data' (ADR-003) is satisfied by both impls passing the identical vectors from one shared artifact — not by re-typed-but-equal numbers. See docs/architecture/adrs/003-two-references-before-contract-freeze.md.",
+  "axis": "format/v1",
+  "table": "warehouse.sales.orders",
+  "lifecycle": [
+    {
+      "step": "append_two",
+      "op": "append",
+      "source": [{"id": "1", "name": "alice"}, {"id": "2", "name": "bob"}],
+      "expect": {"rows_affected": 2}
+    },
+    {
+      "step": "scan_after_append",
+      "op": "scan",
+      "expect": {"row_count": 2}
+    },
+    {
+      "step": "merge_upsert",
+      "op": "merge",
+      "merge_keys": ["id"],
+      "source": [{"id": "2", "name": "robert"}, {"id": "3", "name": "carol"}],
+      "expect": {"rows_affected": 2}
+    },
+    {
+      "step": "scan_after_merge",
+      "op": "scan",
+      "expect": {"row_count": 3, "rows_contain": [{"id": "2", "name": "robert"}]}
+    },
+    {
+      "step": "overwrite_all",
+      "op": "overwrite",
+      "source": [{"id": "9", "name": "zoe"}],
+      "expect": {"rows_affected": 1}
+    },
+    {
+      "step": "scan_after_overwrite",
+      "op": "scan",
+      "expect": {"row_count": 1, "rows_contain": [{"id": "9", "name": "zoe"}]}
+    },
+    {
+      "step": "maintain",
+      "op": "maintain",
+      "expect": {"snapshot_id_set": true, "rows_affected_absent": true}
+    }
+  ],
+  "errors": [
+    {
+      "step": "resolve_empty_tableref",
+      "op": "scan",
+      "table_override": "",
+      "expect": {"code": "INVALID_ARGUMENT"}
+    },
+    {
+      "step": "merge_without_keys",
+      "op": "merge",
+      "source": [{"id": "1"}],
+      "expect": {"code": "INVALID_ARGUMENT"}
+    }
+  ]
+}

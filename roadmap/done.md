@@ -4,6 +4,27 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 0d: second `format` reference (inmemory-py) + shared golden vectors + stub ADR-005 gateway → `format/v1` ADR-003 gate MET
+
+The [ADR-003](../docs/architecture/adrs/003-two-references-before-contract-freeze.md) two-reference gate for `format/v1` is satisfied: a **second, independently-written** reference passes the **same golden vectors** as the first, both loading one shared artifact.
+
+- **Shared golden vectors** — `contracts/conformance/format-v1.json` (+ README). Language-neutral, executable: the *single source of truth* for format/v1 behavior (lifecycle append→scan→merge→overwrite→maintain + 2 error vectors). This is how "run against each other on golden data" is met *literally* (one file, two impls) rather than by hand-copied-but-equal vectors.
+- **Go harness refactored** — `inmemory-go/harness_test.go` now loads the shared JSON (was inline vectors) and drives everything through a generic vector executor.
+- **Stub ADR-005 invoke-gateway** — `inmemory-go/gateway_test.go` (~150 LOC, test-only, throwaway). The Go harness no longer dials FormatService directly; it goes harness → `core/v1 CapabilityInvokeService.Invoke` → format plugin. The gateway is a **faithful generic byte-relay**: a passthrough codec (`Name()=="proto"`) forwards the serialized payload without deserializing it, capability→method routing is read from the `(rat.common.v1.capability)` method annotation (freeze-blocker #5 machinery, not a hand map), and it enforces C5 (capability allowlist) + emits C8 audit (asserted: one record per mediated call). Validates the mediation seams, not just the plugin-to-plugin data contract.
+- **Second reference, `inmemory-py`** — `examples/format/inmemory-py/` (store.py / streams.py / server.py / main.py / harness_test.py + README + pinned requirements). From-scratch Python code path (not a Go port), imports the vendored Python SDK via `PYTHONPATH`. Its harness loads the SAME shared JSON.
+
+**Verified (containers, no host installs):**
+- Go (`golang:1.25`): `go test ./...` green — full lifecycle + error vectors, all mediated through the stub gateway. `go.mod` cleanly promotes `google.golang.org/protobuf` to a direct dep (`go mod tidy`).
+- Python (`python:3.12`, grpcio 1.80.0 / protobuf 7.35.0 — matches the gencode runtime pin exactly): `python harness_test.py` → `PASS`.
+
+**Finding surfaced (captured in [ideas/inbox.md](../ideas/inbox.md)):** building the generic proxy exposed a real contract tension — the gateway must re-stamp `identity.caller_plugin` per hop and never trust wire identity, but `RequestContext` (with identity) lives *inside* the payload a generic proxy won't deserialize. So re-stamped identity has to ride in gRPC metadata, which contradicts "RequestContext travels as field 1 of every request." Needs a resolution (metadata-only / splice-field-1 / two-channel) before any axis freezes. Exactly the ADR-003-predicted "second implementation reveals the contract flaw" outcome.
+
+**Still open before `format/v1` advances `v1-preview`→`v1`:** the identity-transport decision above; a typed-Arrow conformance pass (the bulk leg is still an in-process registry stand-in in both refs).
+
+**Files:** `contracts/conformance/**`, `examples/format/inmemory-go/{harness_test.go,gateway_test.go,go.mod,go.sum}`, `examples/format/inmemory-py/**`, `ideas/inbox.md`.
+
+---
+
 ## 2026-05-31 — 0d started: first reference plugin (rat-format-inmemory-go) — commit `c472620`
 
 First real RAT v3 *code*: a reference `kind: format` plugin under `examples/format/inmemory-go/` (ADR-006 D2 layout), implementing the full `format/v1` wire contract to validate it by building against it (ADR-003 forcing function), not as production storage.
