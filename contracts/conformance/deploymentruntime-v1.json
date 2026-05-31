@@ -1,0 +1,35 @@
+{
+  "_comment": "RAT deployment-runtime/v1 conformance vectors — ADR-003 shared golden data for the two divergent references (local-process-py: real subprocess; k8s-dryrun-py: maps the profile to a Pod securityContext). Tests the Launch→Healthcheck→Terminate lifecycle AND the load-bearing I9 obligation: a conformant deployment-runtime MUST honor the IsolationProfile (deployment_runtime.proto SECURITY) — it refuses to launch a plugin whose isolation is below the I9 minimum (run_as_non_root + drop_all_capabilities + no_new_privileges). A runtime that ignores the profile fails conformance. The running Healthcheck's detail carries an isolation-honored receipt (a conformance stand-in, like storage's scope receipt) so the property is observable.",
+  "axis": "deployment-runtime/v1",
+  "full_profile": {
+    "run_as_non_root": true,
+    "drop_all_capabilities": true,
+    "no_new_privileges": true,
+    "read_only_root_fs": true,
+    "block_metadata_egress": true,
+    "seccomp_profile": "RuntimeDefault"
+  },
+  "expect_isolation_honored": {
+    "run_as_non_root": true,
+    "drop_all_capabilities": true,
+    "no_new_privileges": true
+  },
+  "lifecycle": {
+    "plugin_id": "rat-format-parquet-py",
+    "image": "ghcr.io/rat-dev/format-parquet:1.0.0"
+  },
+  "errors": [
+    {
+      "step": "below_i9_minimum",
+      "image": "ghcr.io/rat-dev/x:1",
+      "isolation": {"run_as_non_root": false, "drop_all_capabilities": true, "no_new_privileges": true},
+      "expect": {"code": "FAILED_PRECONDITION"}
+    },
+    {
+      "step": "empty_image",
+      "image": "",
+      "isolation": {"run_as_non_root": true, "drop_all_capabilities": true, "no_new_privileges": true},
+      "expect": {"code": "INVALID_ARGUMENT"}
+    }
+  ]
+}
