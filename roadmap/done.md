@@ -4,6 +4,24 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 0d: `storage` axis — two references (Go + Python) + shared golden vectors → `storage/v1` ADR-003 gate MET
+
+Third data-plane axis through the 0d two-reference gate. Storage owns credential vending (no Arrow leg) — one RPC, `VendCredentials` — and is the **C7 tenancy enforcement point**.
+
+- **First reference that CONSUMES identity from the metadata envelope.** Tenant-scoping is storage's whole job, so both impls read `context.identity.tenant` from the `rat-callmeta-bin` metadata header (ADR-007) — never a request field, so a caller can't request another tenant's creds. This exercises the ADR-007 **provider-side read** that format/engine didn't.
+- **Capability annotation rolled out to storage.** `storage.proto`'s `VendCredentials` had the capability only in a comment (freeze-blocker #5 only annotated format+engine); added `option (rat.common.v1.capability) = "rat://storage/v1/vend-credentials"` (+ the annotations import) so the gateway can route it. Additive/wire-compatible. Partial progress on the backlog "roll `(rat.capability)` across remaining axes" item. SDK delta: one TS file (`storage_pb.ts`); Rust codegen doesn't emit method options (no diff); Go/Python generated files are gitignored (see finding below).
+- **Conformance via a scope receipt.** The credential blob is opaque/provider-specific in production; the references encode the granted scope as JSON `{tenant, prefix, mode, expires_unix_ms}` so the harness can assert the C7 obligation (scope.tenant == caller tenant + requested prefix + mode + short TTL). Added a `TestStorage_TenantComesFromMetadataNotRequest` / `test_tenant_from_metadata_not_request` structural check (vend under a different caller tenant → creds scoped to THAT tenant).
+- **inmemory-go** (`examples/storage/inmemory-go/`): creds/server/main + the axis-generic stub gateway re-pointed at `StorageService` + harness. Green in `golang:1.25`.
+- **inmemory-py** (`examples/storage/inmemory-py/`): from-scratch second reference. Green in `python:3.12`.
+
+**Verified (containers):** all SIX references (format + engine + storage, Go + Python) green together.
+
+**⚠️ Pre-existing repo finding surfaced (not introduced here):** the root `.gitignore` ignores `*.pb.go` (line 28) and `*_pb2.py` (line 29) — so the **Go SDK and the Python message classes are NOT committed** (only TS/Rust + Python grpc-stubs are tracked). This contradicts ADR-006 D1's "vendored SDKs are committed." References build fine against locally-regenerated SDKs (and CI regenerates), but a fresh clone can't import the Go/Python SDK without `make gen-sdks`. Logged in [backlog.md](backlog.md) for a decision.
+
+**Files:** `contracts/conformance/storage-v1.json` + README, `contracts/proto/rat/storage/v1/storage.proto` (annotation), `contracts/sdks/typescript/rat/storage/v1/storage_pb.ts`, `examples/storage/inmemory-go/**`, `examples/storage/inmemory-py/**`.
+
+---
+
 ## 2026-05-31 — 0d: `engine` axis — two references (Go + Python) + shared golden vectors → `engine/v1` ADR-003 gate MET
 
 Second data-plane axis through the 0d two-reference gate, reusing the format pattern (shared conformance JSON + two independent impls + the stub ADR-005/007 gateway).

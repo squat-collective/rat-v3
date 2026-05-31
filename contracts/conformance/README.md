@@ -20,6 +20,7 @@ truth on its next run.
 |---|---|---|
 | `format-v1.json` | `format/v1` | `examples/format/inmemory-go` (Go harness), `examples/format/inmemory-py` (Python harness) |
 | `engine-v1.json` | `engine/v1` | `examples/engine/inmemory-go` (Go harness), `examples/engine/inmemory-py` (Python harness) |
+| `storage-v1.json` | `storage/v1` | `examples/storage/inmemory-go` (Go harness), `examples/storage/inmemory-py` (Python harness) |
 
 ### `engine-v1.json` mini-SQL grammar
 

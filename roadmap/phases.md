@@ -33,8 +33,8 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | 0a | Manifest schema (`contracts/schema/plugin.v1.json`) — including resources, trust, capabilities blocks | 2-3 weeks — **envelope drafted ✅; per-kind schemas deferred to 0b** |
 | 0b | ~20 axis protos (data + control + experience) | 4-6 weeks, parallelizable — **DONE ✅ 20 protos (18 axes + 2 common); buf lint+build+generate clean. Remaining 0b work: per-kind manifest schemas derived from protos** |
 | 0c | Cross-cutting concern protos (`common/v1/context.proto` ✅ for trace/identity/tenant + `common/v1/data.proto` ✅ done early; audit envelope, descriptors ⬜) | 2-3 weeks |
-| 0d | Reference implementations round 1 — 1 per critical axis (6 plugins) | 6-8 weeks, parallelizable — **`format` ✅ + `engine` ✅ round-1 (`inmemory-go` each); 2 of 6 data-plane axes done** |
-| 0e | Reference implementations round 2 — 1 per critical axis (6 more) | 3-5 weeks — **`format` ✅ + `engine` ✅ round-2 (`inmemory-py` each); shared golden vectors + stub ADR-005/007 gateway → both axes' ADR-003 two-reference gate MET. Identity-transport resolved (ADR-007, migrated). Remaining before `v1`: typed-Arrow pass. Axes left: runtime, catalog, storage, state.** |
+| 0d | Reference implementations round 1 — 1 per critical axis (6 plugins) | 6-8 weeks, parallelizable — **`format` ✅ + `engine` ✅ + `storage` ✅ round-1 (`inmemory-go` each); 3 of 6 data-plane axes done** |
+| 0e | Reference implementations round 2 — 1 per critical axis (6 more) | 3-5 weeks — **`format` ✅ + `engine` ✅ + `storage` ✅ round-2 (`inmemory-py` each); shared golden vectors + stub ADR-005/007 gateway → all three axes' ADR-003 two-reference gate MET. Identity-transport resolved (ADR-007, migrated); storage reads tenant from the envelope. Remaining before `v1`: typed-Arrow pass. Axes left: runtime, catalog, state.** |
 | 0f | Conformance suites + per-RPC latency benchmark | 3 weeks |
 | 0g | Author-facing prose (`CONTRACT.md` per axis) | ongoing; finalize 2 weeks |
 | 0h | Peer review + revisions + `rat/1` freeze | 2-3 weeks |

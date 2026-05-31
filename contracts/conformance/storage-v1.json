@@ -1,0 +1,54 @@
+{
+  "_comment": "RAT storage/v1 conformance vectors — ADR-003 shared golden data. The SINGLE source of truth for the storage axis. Both independent references (Go: examples/storage/inmemory-go, Python: examples/storage/inmemory-py) load THIS file and drive StorageService.VendCredentials over real gRPC. Storage owns byte storage + credential vending; the control plane never sees bytes, it only asks storage to vend short-TTL, prefix-scoped, TENANT-scoped credentials (the C7 enforcement point — reviews/01 Finding 3, reviews/04). The credential blob is opaque/provider-specific in production (an STS token set); for conformance the references encode the GRANTED SCOPE as a JSON 'scope receipt' {tenant, prefix, mode, expires_unix_ms} so the harness can assert the security obligation: the vended creds are bound to the caller's tenant (read from the rat-callmeta-bin metadata header, ADR-007 — NOT a request field, so it can't be forged) + the requested prefix + mode. This axis is the first reference that CONSUMES identity from the metadata envelope.",
+  "axis": "storage/v1",
+  "tenant": "acme",
+  "credentials_ttl_seconds": 900,
+  "lifecycle": [
+    {
+      "step": "vend_read",
+      "op": "vend",
+      "prefix": "s3://bucket/warehouse/orders",
+      "mode": "READ",
+      "expect": {
+        "credentials_present": true,
+        "scope": {"tenant": "acme", "prefix": "s3://bucket/warehouse/orders", "mode": "READ"}
+      }
+    },
+    {
+      "step": "vend_write",
+      "op": "vend",
+      "prefix": "s3://bucket/warehouse/staging",
+      "mode": "WRITE",
+      "expect": {
+        "credentials_present": true,
+        "scope": {"tenant": "acme", "prefix": "s3://bucket/warehouse/staging", "mode": "WRITE"}
+      }
+    },
+    {
+      "step": "vend_read_write",
+      "op": "vend",
+      "prefix": "s3://bucket/warehouse/all",
+      "mode": "READ_WRITE",
+      "expect": {
+        "credentials_present": true,
+        "scope": {"tenant": "acme", "prefix": "s3://bucket/warehouse/all", "mode": "READ_WRITE"}
+      }
+    }
+  ],
+  "errors": [
+    {
+      "step": "empty_prefix",
+      "op": "vend",
+      "prefix": "",
+      "mode": "READ",
+      "expect": {"code": "INVALID_ARGUMENT"}
+    },
+    {
+      "step": "unspecified_mode",
+      "op": "vend",
+      "prefix": "s3://bucket/x",
+      "mode": "UNSPECIFIED",
+      "expect": {"code": "INVALID_ARGUMENT"}
+    }
+  ]
+}

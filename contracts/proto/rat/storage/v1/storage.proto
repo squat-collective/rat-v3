@@ -19,12 +19,16 @@ syntax = "proto3";
 
 package rat.storage.v1;
 
+import "rat/common/v1/annotations.proto";
+
 option go_package = "github.com/rat-dev/rat/gen/rat/storage/v1;storagev1";
 
 service StorageService {
   // rat://storage/v1/vend-credentials — issue short-TTL, prefix-scoped,
   // tenant-scoped credentials the data plane uses to read/write bytes directly.
-  rpc VendCredentials(VendCredentialsRequest) returns (VendCredentialsResponse);
+  rpc VendCredentials(VendCredentialsRequest) returns (VendCredentialsResponse) {
+    option (rat.common.v1.capability) = "rat://storage/v1/vend-credentials";
+  }
 }
 
 enum AccessMode {
