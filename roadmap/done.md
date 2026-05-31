@@ -4,7 +4,7 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
-## 2026-05-31 — Multi-language SDKs: Python, TypeScript, Rust (+Go) — commit `2f9c1c2`
+## 2026-05-31 — Multi-language SDKs: Python, TypeScript, Rust (+Go) — commit `78be8b4`
 
 **What:** Extended codegen from Go-only to all four target languages (Tom: "python, ts and ruff[=Rust]"), realizing the any-language promise (ADR-001 / vision #3). Each is a committed, peer `contracts/sdks/<lang>/` with its own `buf.gen.<lang>.yaml`:
 - **Go** — protocolbuffers/go + grpc/go (43 files + go.mod; compiles under golang:1.25)
