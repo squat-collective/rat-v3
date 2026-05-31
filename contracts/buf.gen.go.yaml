@@ -1,0 +1,10 @@
+# Go SDK codegen (ADR-006 D1/D3). Generated into sdks/go/, committed, regenerated
+# via scripts/gen-sdks.sh — never hand-edited. Uses remote buf.build plugins.
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: sdks/go
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: sdks/go
+    opt: paths=source_relative

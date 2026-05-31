@@ -1,3 +1,5 @@
-# Generated SDKs (buf generate) — build artifacts, not committed.
-# Regenerate with: buf generate (needs network for remote plugins).
-/gen/
+# Generated SDKs live in sdks/<lang>/ and ARE committed (ADR-006 D1) — regenerate
+# via `make gen-sdks`, never hand-edit. Nothing proto-related is ignored here.
+
+# Go SDK build/test scratch (deps are resolved on build, not vendored here).
+sdks/go/go.sum
