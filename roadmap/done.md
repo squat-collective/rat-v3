@@ -4,6 +4,24 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 🧊 **Control-plane axes FROZEN** (`rat/1.2`) — 7 references + freeze
+
+Built one reference per control-plane axis (ADR-003 requires only one for control-plane, vs two for data-plane) and froze them. `make conformance` now **27/27** (commits `5bcedf9` refs, `ba9269b` freeze, tag **`rat/1.2`**).
+
+- **`examples/identity/static-token-py`** — Authenticate (constant-time token compare; the C2 default, not anon-root) + Authorize (coarse role-based `deny_code`).
+- **`examples/secret/inmemory-py`** — Resolve with **anti-enumeration**: unknown ref AND cross-tenant ref both return `found=false` (never `PERMISSION_DENIED`).
+- **`examples/scheduler/inmemory-py`** — Schedule/Cancel + server-streaming WatchDue (one-shots; at-least-once delivery).
+- **`examples/tenancy/inmemory-py`** — Decide (permission/sharing/quota → `allowed` + `deny_code`); policy *on top of* the core's structural C7 isolation.
+- **`examples/billing/inmemory-py`** — Record usage events, per-tenant by construction (C7) + aggregation/isolation tests.
+- **`examples/observability/inmemory-py`** — bidi Ingest with cumulative per-batch acks.
+- **`examples/auditlog/inmemory-py`** — Append sink enforcing all 4 freeze-blocker-#4 properties: **Ed25519 signature verify** over the pinned canonical serialization, `prev_hash` chain check, prefix-only commit, idempotent DUPLICATE (adds `cryptography`; harness plays the signing core).
+- **Build method:** the 4 simple unary axes (identity/secret/tenancy/billing) via **parallel subagents** on the storage template; the 3 streaming/crypto axes (scheduler/observability/auditlog) built directly.
+- **Freeze:** flipped the 7 axis Status markers DRAFT → `v1` (frozen, `rat/1.2`); buf clean. Executes ADR-009's stated plan.
+
+**Still `v1-preview`:** `deployment-runtime` (data-plane, no ref yet) + experience axes (`ui`, `notifications`, `marketplace`) + the manifest schema.
+
+---
+
 ## 2026-05-31 — 🧊 **`strategy/v1` FROZEN** (`rat/1.1`) — scd2 second reference landed
 
 The ADR-009-anticipated follow-on: with a second, semantically-different strategy reference, `strategy/v1` advances `v1-preview` → `v1` (commit `cd8fcac`, tagged **`rat/1.1`**).

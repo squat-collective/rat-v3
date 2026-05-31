@@ -41,6 +41,7 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | 0i | Cross-axis composition (ADR-003 cross-combination gate) | **✅ COMPLETE.** First `strategy` ref + `make composition` — all 4 ADR-003 combos (DuckDB/DataFusion × Parquet/Delta × sqlite/in-memory) produce the identical target, strategy unchanged. |
 | — | **`rat/1` FREEZE** | **🧊 DONE (ADR-009, tag `rat/1`).** 6 data-plane axes + cross-cutting types → `v1`. Control/experience + manifest stay `v1-preview`. |
 | — | **`strategy/v1` FREEZE** | **🧊 DONE (tag `rat/1.1`).** Second strategy ref `scd2-py` (divergent: SCD2, `merge`-based) landed → `strategy/v1` → `v1`. `make composition` proves both strategy refs. |
+| — | **Control-plane FREEZE** | **🧊 DONE (tag `rat/1.2`).** 7 axes (identity/secret/scheduler/tenancy/billing/observability/audit-log) — one ref + conformance each (ADR-003). `make conformance` 27/27. Remaining `v1-preview`: deployment-runtime + experience axes + manifest. |
 
 **Deliverables:**
 - `plugin/v1.json` published at stable URL
