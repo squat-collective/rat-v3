@@ -148,3 +148,23 @@ The stub does **(a)** (stamps `x-rat-caller-plugin`/`x-rat-tenant` into outbound
 
 Open question: which of (a)/(b)/(c) — pick before any axis freezes.
 Related: [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md), `contracts/proto/rat/common/v1/context.proto`, `contracts/proto/rat/core/v1/invoke.proto`, [ADR-003](../docs/architecture/adrs/003-two-references-before-contract-freeze.md) (the rule that made this surface).
+
+---
+
+## 2026-05-31 — [contract, ADR-005] The core-mediated Invoke is unary-only — server-streaming capabilities have no mediation path
+
+**Surfaced by building the 0d `runtime` reference** — the 0d forcing function (ADR-003) exposing a contract gap, like the ADR-007 identity-transport finding before it.
+
+`runtime/v1`'s `Execute(ExecuteRequest) returns (stream ExecuteResponse)` is **server-streaming** (interim `ExecuteProgress` + terminal `ExecuteCompleted`). But ADR-005's `core/v1 CapabilityInvokeService.Invoke(InvokeRequest) returns (InvokeResponse)` is **unary** — it cannot carry a streamed response. So a strategy that `requires: rat://runtime/v1/execute` has **no core-mediated way to invoke it**: the gateway can route+enforce a unary call, not a stream. (Every other 0d axis so far — format/engine/storage — is unary and routes cleanly through the stub gateway; runtime had to be driven DIRECTLY, bypassing the gateway, which means its C2/C5/C7/C8 + traceparent seams are currently unenforced.)
+
+This is freeze-relevant: `invoke.proto` is in the `rat/1` surface, and *any* axis with a streaming method (runtime today; future engine/observability streams) hits this.
+
+Three resolutions to weigh (→ a candidate follow-up ADR, "streaming capability invocation"):
+- **(a) Add `InvokeStream(InvokeRequest) returns (stream InvokeResponse)` to `invoke.proto`.** The gateway becomes a streaming generic byte-relay (same passthrough-codec trick, but it relays a stream of `result` frames). Enforcement (C2/C5/C7/C8 + traceparent) happens once at stream open, identity stamped into the downstream metadata as today. Cleanest + most consistent with the unary model; the gateway stays axis-generic. Cost: a second RPC in the frozen core surface + streaming relay plumbing.
+- **(b) Streaming capabilities are direct-dial with a gateway-issued, capability-scoped token** (like the ArrowStream bulk-data leg, which already bypasses the core). The gateway mints a short-TTL token at a unary "open" call; the caller dials the provider's stream directly with it; the provider validates. Mirrors `storage.VendCredentials` / the bytes path. Cost: distributes enforcement to the callee (the exact honor-system ADR-005 rejected for control calls) — but maybe acceptable for the *streaming* subset since progress is liveness, not authz-bearing.
+- **(c) Progress moves to the async event bus (`common/v1 Event`); `Execute` becomes unary** returning only the terminal result, with `ExecuteProgress` re-published as events keyed by `correlation_id`. Keeps the invoke contract unary. Cost: liveness loses request-scoped backpressure + becomes best-effort; couples runtime to the bus.
+
+Leaning **(a)** — it preserves the central-enforcement property ADR-005 is built on and keeps the gateway generic; streaming is just the unary relay with N response frames. But it needs the ADR to weigh (b)'s perf argument for genuinely high-volume streams.
+
+Open question: pick (a)/(b)/(c) before `runtime/v1` (or any streaming axis) routes through the gateway — and before `invoke.proto` freezes.
+Related: [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md), [ADR-007](../docs/architecture/adrs/007-call-context-transport.md) (same "0d reveals the gap" pattern), `contracts/proto/rat/core/v1/invoke.proto`, `contracts/proto/rat/runtime/v1/runtime.proto`, `examples/runtime/inmemory-go/harness_test.go` (the direct-dial workaround + its header note).

@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (0d: `format/v1` + `engine/v1` + `storage/v1` ADR-003 gates MET — two refs each on shared golden vectors; ADR-007 decided + migrated; storage is first axis to read tenant from the metadata envelope)
+> Updated: 2026-05-31 (0d: `format` + `engine` + `storage` + `runtime` ADR-003 gates MET — 4 of 6 data-plane axes; ADR-007 decided + migrated; runtime surfaced the streaming-mediation gap in the unary Invoke)
 
 ## Status one-liner
 
@@ -59,12 +59,12 @@ The 23 other prospective ADRs are in [backlog.md](backlog.md). They land as they
 
 ## Immediate next concrete step
 
-Sub-phase **0d is underway. THREE data-plane axes are through the ADR-003 two-reference gate: `format/v1`, `engine/v1`, `storage/v1`** — each has two independent references (Go + Python) passing one shared golden-vector file, routed through the stub ADR-005/007 gateway. ADR-007 is decided + migrated (context rides in `rat-callmeta-bin` metadata); `storage` is the first axis whose server **reads** tenant from that envelope (the C7 enforcement point). The harness pattern is proven + repeatable. The next concrete step:
+Sub-phase **0d is underway. FOUR data-plane axes are through the ADR-003 two-reference gate: `format/v1`, `engine/v1`, `storage/v1`, `runtime/v1`** — each has two independent references (Go + Python) passing one shared golden-vector file. `format`/`engine`/`storage` route through the stub ADR-005/007 gateway; `runtime` is driven **directly** (the gateway can't mediate its streaming Execute — see the finding below). ADR-007 is decided + migrated; `storage` reads tenant from the envelope (C7); `runtime` is the first streaming axis. The harness pattern is proven + repeatable. The next concrete step:
 
-1. **Pick the fourth data-plane axis for 0d** — `catalog`, `runtime`, or `state`. Same pattern (shared `contracts/conformance/<axis>-v1.json` + two impls + the stub gateway). Each still-unannotated axis needs its `(rat.common.v1.capability)` method option added (additive) so the gateway can route it — storage just did this; 13 axes remain. (The six ADR-003 data-plane axes: engine ✅, format ✅, storage ✅, runtime, catalog, state.)
-2. **(Pre-existing defect, needs a decision — see [backlog.md](backlog.md))** the root `.gitignore` ignores `*.pb.go` + `*_pb2.py`, so the Go SDK + Python message classes are NOT committed (contradicts ADR-006 D1). References build locally + CI regenerates, but a fresh clone can't import them without `make gen-sdks`.
+1. **Resolve the streaming-mediation finding** (the highest-leverage open item — see [ideas/inbox.md](../ideas/inbox.md) + [backlog.md](backlog.md)): ADR-005's `Invoke` is unary, so no server-streaming capability (runtime today; future axes) can be gateway-mediated. Write the follow-up ADR (leaning: add `InvokeStream` to `invoke.proto` + a streaming relay in the gateway), then route runtime through it + add runtime's deferred capability annotation. Like ADR-007, this is cross-cutting and freeze-relevant.
+2. **Or pick the fifth data-plane axis for 0d** — `catalog` or `state` (the two remaining of the six: engine ✅ format ✅ storage ✅ runtime ✅, catalog, state). Same pattern; each unannotated axis needs its `(rat.common.v1.capability)` option added (storage did, 13 remain).
 3. **(Carry-over polish, optional)** a real **SDK metadata interceptor** so plugin code gets the reconstructed context object automatically.
-4. **(Before any data-plane axis → `v1`)** the typed-Arrow conformance pass — the format + engine refs still carry the bulk leg as an in-process stand-in (storage has no bulk leg). Shared remaining item for those freezes.
+4. **(Before any data-plane axis → `v1`)** the typed-Arrow conformance pass — format + engine refs still carry the bulk leg as an in-process stand-in (storage + runtime have no bulk leg under test).
 
 SDK distribution + layout + codegen are decided in **[ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md)**: vendored `contracts/sdks/<lang>/` (Go/Python/TS peers), reference plugins under `examples/<axis>/<impl>-<lang>/`, containerized `buf generate` via `scripts/gen-sdks.sh`.
 

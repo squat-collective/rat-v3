@@ -4,6 +4,22 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 0d: `runtime` axis — two references (Go + Python) + shared golden vectors → `runtime/v1` ADR-003 gate MET (+ streaming-mediation finding)
+
+Fourth data-plane axis through the 0d two-reference gate, and the **first streaming axis**: `Execute(ExecuteRequest) returns (stream ExecuteResponse)` — interim `ExecuteProgress` + terminal `ExecuteCompleted` (a oneof).
+
+- **contracts/conformance/runtime-v1.json** — drives a tiny work_spec (`{steps, rows, indeterminate, fail}`): emit `steps` progress messages (fraction `(i+1)/steps`, or **absent** when indeterminate — exercising the proto3 optional double presence) then a terminal completion (success + `WriteResult.rows_affected`, or `success=false`+error). Vectors: determinate / indeterminate / zero-progress / failure + an empty-work_spec error.
+- **inmemory-go** (`examples/runtime/inmemory-go/`): `spec`/`server`/`main` + streaming harness. Green in `golang:1.25`.
+- **inmemory-py** (`examples/runtime/inmemory-py/`): from-scratch second reference (server-streaming generator). Green in `python:3.12`.
+
+**⚠️ Contract finding surfaced (the 0d forcing function working as designed, like ADR-007):** ADR-005's `core/v1 CapabilityInvokeService.Invoke` is **unary**, but `runtime.Execute` is **server-streaming** — so the stub gateway **cannot mediate a streaming capability**. Runtime is therefore driven **directly** (bypassing the gateway), meaning its C2/C5/C7/C8 + traceparent seams are currently unenforced. Freeze-relevant (`invoke.proto` is in `rat/1`, and any future streaming axis hits this). Captured in [ideas/inbox.md](../ideas/inbox.md) with three resolutions (add `InvokeStream` / direct-dial-with-token / progress-to-event-bus); leaning toward `InvokeStream`. Candidate follow-up ADR queued in [backlog.md](backlog.md). The runtime capability annotation was **deferred** (only needed for gateway routing, which is blocked) — so NO proto change, NO SDK regen this commit.
+
+**Verified (containers):** all EIGHT references (format + engine + storage + runtime, Go + Python) green together.
+
+**Files:** `contracts/conformance/runtime-v1.json` + README, `examples/runtime/inmemory-go/**`, `examples/runtime/inmemory-py/**`, `ideas/inbox.md`.
+
+---
+
 ## 2026-05-31 — Fix: vendor the Go + Python SDKs (un-ignore them) — makes ADR-006 D1 true
 
 Resolved the repo defect surfaced during storage 0d. The root `.gitignore` had `*.pb.go` + `*_pb2.py` under "Generated artefacts" (alongside the retired `gen/`), which silently excluded the **entire Go SDK** and **all Python message classes** from version control — contradicting [ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md) D1 ("vendored `contracts/sdks/<lang>/` … ARE committed").

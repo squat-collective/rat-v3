@@ -29,6 +29,7 @@ Numbered as proposed in [reviews/00-synthesis.md](../reviews/00-synthesis.md). M
 | ADR-010 | Tenancy as structural isolation | C7 |
 | ADR-013 | API gateway hardening + listener split | C10 |
 | ADR-007 ✅ DONE | **Identity transport across the core-mediated hop** — DECIDED + MIGRATED 2026-05-31 ([ADR-007](../docs/architecture/adrs/007-call-context-transport.md)). `RequestContext` moved from message field 1 → `rat-callmeta-bin` metadata header across all 37 control sites; SDKs regenerated; both `format` refs + stub gateway updated; golden vectors green. Carry-over (optional, not blocking): a real SDK metadata interceptor so plugin code gets the reconstructed context automatically. | C1/C2 keystone |
+| (new) | **Streaming capability invocation** — ADR-005's `core/v1 CapabilityInvokeService.Invoke` is UNARY; server-streaming capabilities (`runtime.Execute` today; future streaming axes) have no core-mediated path, so `runtime` had to bypass the gateway (C2/C5/C7/C8 + traceparent unenforced for it). Freeze-relevant (`invoke.proto` ∈ `rat/1`). Decide: (a) add `InvokeStream(InvokeRequest) returns (stream InvokeResponse)` + streaming relay (leaning), (b) direct-dial with a gateway-issued capability-scoped token (like the ArrowStream bulk leg), or (c) progress→event-bus + unary Execute. Surfaced 2026-05-31 by `runtime` 0d; detail in [ideas/inbox.md](../ideas/inbox.md). After it lands: route runtime through the gateway + add runtime's deferred `(rat.capability)` annotation. | ARCH (streaming) |
 
 ### Pre-GA (land during Phase 1-4)
 

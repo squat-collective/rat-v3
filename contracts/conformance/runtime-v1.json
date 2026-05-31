@@ -1,0 +1,53 @@
+{
+  "_comment": "RAT runtime/v1 conformance vectors — ADR-003 shared golden data. The SINGLE source of truth for the runtime axis. Both independent references (Go: examples/runtime/inmemory-go, Python: examples/runtime/inmemory-py) load THIS file and drive RuntimeService.Execute over real gRPC. runtime/v1 is the FIRST streaming axis: Execute returns a stream of ExecuteResponse (a progress|completed oneof) — interim ExecuteProgress liveness updates then a terminal ExecuteCompleted. The references run a tiny work_spec (JSON {steps, rows, indeterminate, fail}): they emit `steps` progress messages (fraction (i+1)/steps, or ABSENT when indeterminate — exercising the proto3 optional double presence) then a terminal completion carrying success + WriteResult.rows_affected, or success=false+error when `fail` is set. The point under test is the STREAMING wire contract (progress framing, optional-fraction presence, terminal oneof), not real compute. NOTE: runtime is driven DIRECTLY (not through the stub core gateway) because the gateway's CapabilityInvokeService.Invoke is unary-only and cannot mediate a server-streaming capability — a contract finding surfaced by this axis (see ideas/inbox.md / a candidate streaming-invoke ADR).",
+  "axis": "runtime/v1",
+  "lifecycle": [
+    {
+      "step": "execute_determinate",
+      "op": "execute",
+      "work": {"steps": 3, "rows": 42},
+      "expect": {
+        "progress_count": 3,
+        "progress_has_fraction": true,
+        "final_fraction": 1.0,
+        "completed": {"success": true, "rows_affected": 42}
+      }
+    },
+    {
+      "step": "execute_indeterminate",
+      "op": "execute",
+      "work": {"steps": 2, "rows": 7, "indeterminate": true},
+      "expect": {
+        "progress_count": 2,
+        "progress_fraction_absent": true,
+        "completed": {"success": true, "rows_affected": 7}
+      }
+    },
+    {
+      "step": "execute_no_progress",
+      "op": "execute",
+      "work": {"steps": 0, "rows": 1},
+      "expect": {
+        "progress_count": 0,
+        "completed": {"success": true, "rows_affected": 1}
+      }
+    },
+    {
+      "step": "execute_failure",
+      "op": "execute",
+      "work": {"fail": "boom"},
+      "expect": {
+        "progress_count": 0,
+        "completed": {"success": false, "error": "boom"}
+      }
+    }
+  ],
+  "errors": [
+    {
+      "step": "empty_work_spec",
+      "op": "execute",
+      "work": null,
+      "expect": {"code": "INVALID_ARGUMENT"}
+    }
+  ]
+}
