@@ -19,7 +19,8 @@ truth on its next run.
 | File | Axis | Consumed by |
 |---|---|---|
 | `format-v1.json` | `format/v1` | `examples/format/inmemory-go` (Go harness), `examples/format/inmemory-py` (Python harness) |
-| `engine-v1.json` | `engine/v1` | `examples/engine/inmemory-go` (Go harness), `examples/engine/inmemory-py` (Python harness) |
+| `engine-v1.json` | `engine/v1` | `examples/engine/inmemory-go` (Go harness), `examples/engine/inmemory-py` (Python harness) — round-1 toy mini-SQL (wire contract) |
+| `engine-real-v1.json` | `engine/v1` | `examples/engine/duckdb-py`, `examples/engine/datafusion-py` — round-2 REAL SQL + typed Arrow (the duckdb+datafusion cross-run) |
 | `storage-v1.json` | `storage/v1` | `examples/storage/inmemory-go` (Go harness), `examples/storage/inmemory-py` (Python harness) |
 
 ### `engine-v1.json` mini-SQL grammar

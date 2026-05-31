@@ -1,0 +1,44 @@
+{
+  "_comment": "RAT engine/v1 REAL-SQL conformance vectors — the ROUND-2 ADR-003 cross-run for the engine axis. Where engine-v1.json drives a toy mini-SQL engine (untyped, in-process string rows) to validate the WIRE contract, THIS file drives TWO REAL SQL engines — DuckDB (examples/engine/duckdb-py) and DataFusion (examples/engine/datafusion-py) — over real typed SQL, with results flowing as REAL typed Arrow (serialized Arrow IPC over the ArrowStream leg, read back with pyarrow). Two independent real engines agreeing on this golden data is ADR-003's actual intent (its literal 'duckdb + datafusion' example) AND it retires the typed-Arrow conformance gap for engine (the data is real Arrow, not the toy string-row stand-in). `setup` runs Execute statements (DDL/INSERT, asserting rows_affected); `queries` run Query/Preview and assert the typed-Arrow result (row_count + rows_contain with TYPED values + projected column set); `errors` assert gRPC codes.",
+  "axis": "engine/v1",
+  "variant": "real-sql",
+  "setup": [
+    {"sql": "CREATE TABLE orders (id INTEGER, region VARCHAR, amount INTEGER)", "rows_affected": 0},
+    {"sql": "INSERT INTO orders VALUES (1, 'west', 100)", "rows_affected": 1},
+    {"sql": "INSERT INTO orders VALUES (2, 'east', 200)", "rows_affected": 1},
+    {"sql": "INSERT INTO orders VALUES (3, 'west', 300)", "rows_affected": 1}
+  ],
+  "queries": [
+    {
+      "step": "query_all",
+      "op": "query",
+      "sql": "SELECT id, region, amount FROM orders",
+      "expect": {
+        "row_count": 3,
+        "columns": ["id", "region", "amount"],
+        "rows_contain": [{"id": 2, "region": "east", "amount": 200}]
+      }
+    },
+    {
+      "step": "query_where_projection",
+      "op": "query",
+      "sql": "SELECT id, amount FROM orders WHERE region = 'west'",
+      "expect": {
+        "row_count": 2,
+        "columns": ["id", "amount"],
+        "rows_contain": [{"id": 1, "amount": 100}, {"id": 3, "amount": 300}]
+      }
+    },
+    {
+      "step": "preview_bounded",
+      "op": "preview",
+      "sql": "SELECT id FROM orders",
+      "limit": 2,
+      "expect": {"row_count": 2, "columns": ["id"]}
+    }
+  ],
+  "errors": [
+    {"step": "query_unknown_table", "op": "query", "sql": "SELECT * FROM ghosts", "expect": {"code": "INVALID_ARGUMENT"}},
+    {"step": "execute_empty_sql", "op": "execute", "sql": "", "expect": {"code": "INVALID_ARGUMENT"}}
+  ]
+}

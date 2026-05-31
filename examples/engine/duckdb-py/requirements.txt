@@ -1,0 +1,5 @@
+# Runtime deps for rat-engine-duckdb-py (round-2 real backend).
+grpcio==1.80.0
+protobuf==7.35.0
+duckdb==1.5.3
+pyarrow==24.0.0

@@ -1,0 +1,5 @@
+# Runtime deps for rat-engine-datafusion-py (round-2 real backend; the 2nd engine).
+grpcio==1.80.0
+protobuf==7.35.0
+datafusion==53.0.0
+pyarrow==24.0.0

@@ -4,6 +4,21 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — Round 2 (option b): `engine` = REAL pair — DuckDB + DataFusion on real SQL + typed Arrow
+
+The first round-2 axis done via **option (b): two REAL backends** (ADR-003's literal "duckdb + datafusion" example), not toy + real. Two genuinely different SQL engine technologies agree on one shared golden-vector file.
+
+- **`contracts/conformance/engine-real-v1.json`** — REAL typed SQL (`CREATE TABLE orders (id INTEGER, region VARCHAR, amount INTEGER)`, `INSERT`, `SELECT … WHERE … / LIMIT`) with typed-Arrow result assertions (row_count + projected columns + rows_contain with TYPED values). Distinct from the round-1 toy `engine-v1.json` (which validates the wire contract via the in-memory mini-SQL refs).
+- **`examples/engine/duckdb-py`** (DuckDB 1.5.3) + **`examples/engine/datafusion-py`** (Apache DataFusion 53.0.0) — both execute the same SQL, both return results as **real typed Arrow**. Only `store.py` differs between them; `server.py`/`streams.py`/`harness_test.py` are identical (the contract is the same, only the engine changes). Both green in `python:3.12`.
+- **Retires the typed-Arrow gap for engine:** the result leg is now **real Arrow IPC** (typed schema + columnar batches, serialized + read back with pyarrow via `streams.py`), not the toy string-row stand-in. The transport is still an in-process registry (Flight deferred), but the DATA is genuine typed Arrow.
+- Deps install cleanly + fast in-container (duckdb/datafusion/pyarrow, ~8s). The toy `inmemory-go`/`inmemory-py` engine refs remain as the round-1 wire-contract validation.
+
+**Round 2 progress: 5 of 6 axes.** `state`=sqlite, `storage`=local-fs, `catalog`=sqlite, `runtime`=subprocess, **`engine`=duckdb+datafusion**. Remaining: **`format`** (parquet + delta/iceberg — real Arrow files; the last + heaviest).
+
+**Files:** `contracts/conformance/engine-real-v1.json` + README, `examples/engine/duckdb-py/**`, `examples/engine/datafusion-py/**`. No proto/SDK change.
+
+---
+
 ## 2026-05-31 — Round 2: `runtime` = subprocess (real backend) — OS process isolation
 
 Fourth round-2 real backend. `examples/runtime/subprocess-py/` — each `Execute` runs the work unit in a real CHILD OS PROCESS (`worker.py`) instead of in-thread. Runtime is the "where does the code run" axis; this one actually runs it elsewhere.
