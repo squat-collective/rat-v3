@@ -1,4 +1,4 @@
-// Secret-backend axis service contract. DRAFT — sub-phase 0b.
+// Secret-backend axis service contract. Status: v1 (frozen — rat/1.2; ADR-003: control-plane = one ref + conformance).
 //
 // A `kind: secret-backend` plugin (env, file, Vault, cloud KMS/secrets-manager)
 // resolves secret references to secret values, on demand, never at rest in

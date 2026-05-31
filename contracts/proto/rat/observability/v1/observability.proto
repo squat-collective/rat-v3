@@ -1,4 +1,4 @@
-// Observability axis service contract. DRAFT — sub-phase 0b.
+// Observability axis service contract. Status: v1 (frozen — rat/1.2; ADR-003: control-plane = one ref + conformance).
 //
 // A `kind: observability` plugin (Prometheus, OTel collector, Datadog) RECEIVES
 // telemetry the core + plugins emit and ships it onward.
