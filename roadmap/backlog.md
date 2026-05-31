@@ -12,8 +12,8 @@ The data-plane is frozen ([ADR-009](../docs/architecture/adrs/009-data-plane-con
 
 - ~~**`strategy/v1` second reference**~~ → **✅ DONE (2026-05-31, `rat/1.1`)** — `examples/strategy/scd2-py` (SCD2) is the divergent second strategy; `strategy/v1` is frozen at `v1`. A *third* strategy (soft-delete) is optional hardening, not required.
 - ~~**Control-plane axis references**~~ → **✅ DONE (2026-05-31, `rat/1.2`)** — 7 axes (identity/secret/scheduler/tenancy/billing/observability/audit-log) referenced + frozen; conformance 27/27.
-- **`deployment-runtime` reference** (data-plane axis, no ref yet) → then freeze `deployment-runtime/v1`. ADR-003 data-plane rule: it needs **two** independent references (e.g. a podman/process runtime + a k8s/lambda runtime).
-- **Experience-axis references** (`ui`, `notifications`, `marketplace`) — one ref + conformance each, then freeze.
+- ~~**`deployment-runtime` reference**~~ → **✅ DONE (2026-05-31, `rat/1.3`)** — two divergent refs (local-process + k8s-dryrun) + freeze; conformance 29/29.
+- **Experience-axis references** (`ui`, `notifications`, `marketplace`) — one ref + conformance each, then freeze. **The last axis references before Phase 0's contract surface is fully frozen.**
 - **Manifest schema freeze** (`plugin/v1`) — iterate until stable across the remaining reference work, then freeze.
 
 ## Post-`rat/1` residuals (accepted into `v1`, tracked for GA)

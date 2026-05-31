@@ -4,6 +4,19 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 🧊 **`deployment-runtime/v1` FROZEN** (`rat/1.3`) — two divergent references
+
+Built two technologically-divergent references for the tier-0 `deployment-runtime` axis (the I9 trust boundary) and froze it. `make conformance` **29/29** (commits `119a1a0` refs, `50f21ee` freeze, tag **`rat/1.3`**).
+
+- **`examples/deploymentruntime/local-process-py`** — runs each plugin instance as a real child OS process (the `chmod +x ./rat` runtime); real Launch → Healthcheck (PID liveness) → Terminate lifecycle.
+- **`examples/deploymentruntime/k8s-dryrun-py`** — models a managed/declarative runtime: maps the `LaunchSpec` + I9 `IsolationProfile` → a Kubernetes Pod `securityContext` and admits the manifest (dry-run, no cluster). Where the isolation profile gets a real enforcement target.
+- **Shared I9 gate** (the load-bearing obligation): both refuse to launch below the I9 minimum (`run_as_non_root` + `drop_all_capabilities` + `no_new_privileges`) → `FAILED_PRECONDITION`; empty image → `INVALID_ARGUMENT`. Both expose an isolation-honored receipt in `Healthcheck.detail`. Both pass the shared [`deploymentruntime-v1.json`](../contracts/conformance/deploymentruntime-v1.json) — local fork vs container proving the contract composes across runtime technologies.
+- **Freeze:** flipped the proto Status DRAFT → `v1` (`rat/1.3`). Like the 6 ADR-003-listed data-plane axes, it got the full two-reference rigor (it's outside ADR-003's explicit list, like strategy, but it's the trust boundary the 3rd-party-plugin bet leans on).
+
+**Still `v1-preview`:** the experience axes (`ui`, `notifications`, `marketplace`) + the manifest schema — the last of the Phase 0 tail.
+
+---
+
 ## 2026-05-31 — 🧊 **Control-plane axes FROZEN** (`rat/1.2`) — 7 references + freeze
 
 Built one reference per control-plane axis (ADR-003 requires only one for control-plane, vs two for data-plane) and froze them. `make conformance` now **27/27** (commits `5bcedf9` refs, `ba9269b` freeze, tag **`rat/1.2`**).

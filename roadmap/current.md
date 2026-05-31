@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (🧊 **`rat/1` + `rat/1.1` + `rat/1.2` FROZEN.** Data-plane at **`v1`** ([ADR-009](../docs/architecture/adrs/009-data-plane-contract-freeze-v1.md), `rat/1`) + `strategy/v1` (`rat/1.1`, scd2 2nd ref) + the **7 control-plane axes** (`rat/1.2`: identity, secret, scheduler, tenancy, billing, observability, audit-log — one ref + conformance each, ADR-003). **`make conformance` 27/27**; `make composition` green. **Frozen `v1` = 14 axes** + `common/v1/*` + `core/v1/invoke` + `ERROR_MODEL.md`. **Still `v1-preview`:** `deployment-runtime` (data-plane, no ref) + experience axes (ui/notifications/marketplace) + manifest schema. **Next:** the `deployment-runtime` reference + experience-axis refs + manifest freeze fully close Phase 0 — OR start **Phase 1 (the core)**; Gate A (`rat/1`) is satisfied. USER'S CALL.)
+> Updated: 2026-05-31 (🧊 **`rat/1` → `rat/1.3` FROZEN.** Data-plane (`rat/1`, [ADR-009](../docs/architecture/adrs/009-data-plane-contract-freeze-v1.md)) + `strategy/v1` (`rat/1.1`) + **7 control-plane axes** (`rat/1.2`) + **`deployment-runtime/v1`** (`rat/1.3`: two divergent refs — local-process + k8s-dryrun, sharing the I9 gate). **`make conformance` 29/29**; `make composition` green. **Frozen `v1` = 15 axes** + `common/v1/*` + `core/v1/invoke` + `ERROR_MODEL.md`. **Still `v1-preview` (the whole remaining tail):** the 3 experience axes (ui/notifications/marketplace) + the manifest schema. **Next:** experience-axis refs + manifest freeze fully close Phase 0 — OR start **Phase 1 (the core)**; Gate A (`rat/1`) is satisfied. USER'S CALL.)
 
 ## Status one-liner
 
