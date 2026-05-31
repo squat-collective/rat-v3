@@ -1,0 +1,15 @@
+{
+  "_comment": "Golden vectors for marketplace/v1. The capability-aware 'works on my deployment?' filtering is the load-bearing job: Search returns a listing only when the deployment advertises every one of the listing's required capabilities (set subset). compat_unsatisfied filters out scd2 because it also requires rat://format/v1/merge, missing from the deployment caps; compat_satisfied includes it once merge is present.",
+  "axis": "marketplace/v1",
+  "search": [
+    {"step": "by_kind_engine", "kind": "engine", "expect": {"plugin_ids": ["rat-engine-duckdb-py"]}},
+    {"step": "compat_unsatisfied", "kind": "strategy", "deployment_capabilities": ["rat://catalog/v1/get-table", "rat://format/v1/scan"], "expect": {"plugin_ids": []}},
+    {"step": "compat_satisfied", "kind": "strategy", "deployment_capabilities": ["rat://catalog/v1/get-table", "rat://format/v1/scan", "rat://format/v1/merge"], "expect": {"plugin_ids": ["rat-strategy-scd2-py"]}}
+  ],
+  "get": [
+    {"step": "get_engine", "plugin_id": "rat-engine-duckdb-py", "expect": {"kind": "engine", "signed": true}}
+  ],
+  "errors": [
+    {"step": "get_unknown", "plugin_id": "rat-nonexistent", "expect": {"code": "NOT_FOUND"}}
+  ]
+}

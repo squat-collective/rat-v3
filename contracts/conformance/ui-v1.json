@@ -1,0 +1,29 @@
+{
+  "_comment": "RAT ui/v1 conformance vectors — the golden data for the experience-axis `ui` reference (examples/ui/web-portal-py). A `kind: ui` plugin is an experience surface; the platform's multi-UI story (overview.md / Phase 5) is 'each UI is a separate ui plugin'. The contract is deliberately thin — a UI mostly CONSUMES the API gateway like any other client. What the core needs is (a) Describe: discovery of the surfaces/slots this UI exposes, and (b) RenderSlot: resolving a slot + a contributing component to render info (asset ref + props schema), so OTHER plugins can contribute components into a UI's slots via contributes.slots[].target in their plugin.v1.json. Slot ids are capability-shaped URIs (rat://ui/v1/<slot>). Unlike storage, this axis carries no tenant/context — Describe/RenderSlot are surface metadata, not tenant-scoped operations. The harness asserts: display_name + the SET of hosted slot ids on Describe; a known component resolves to a non-empty asset_ref + a non-empty JSON-object props_schema; an unknown component → NOT_FOUND.",
+  "axis": "ui/v1",
+  "describe": {
+    "expect": {
+      "display_name": "Web Portal",
+      "slots": [
+        "rat://ui/v1/pipeline-detail",
+        "rat://ui/v1/dataset-overview"
+      ]
+    }
+  },
+  "render": [
+    {
+      "step": "known_component",
+      "slot": "rat://ui/v1/pipeline-detail",
+      "component": "lineage-graph",
+      "expect": {"asset_ref_present": true, "props_schema_present": true}
+    }
+  ],
+  "errors": [
+    {
+      "step": "unknown_component",
+      "slot": "rat://ui/v1/pipeline-detail",
+      "component": "does-not-exist",
+      "expect": {"code": "NOT_FOUND"}
+    }
+  ]
+}
