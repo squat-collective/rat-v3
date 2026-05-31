@@ -4,6 +4,21 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — Sub-phase 0g: per-axis `CONTRACT.md` author guides (6 data-plane axes)
+
+Wrote the author-facing contract guide for every data-plane axis — the canonical "how do I implement a `kind: <axis>` plugin" doc, grounded in the now-existing protos, golden vectors, and both reference rounds.
+
+- **6 files, one per axis**, placed **next to the proto** (`contracts/proto/rat/<axis>/v1/CONTRACT.md`) so an author reads the wire contract + the guide together: `state`, `engine`, `format`, `storage`, `runtime`, `catalog`.
+- Each covers: what the axis is, the **capabilities + method/cardinality table**, the **RPCs** (request/response + semantics), the **conformance obligations** (the axis-specific ones spelled out — state's key grammar + linearizable CAS, catalog's merge-safety, storage's C7 tenant-scoping, format's bidirectional Arrow leg, engine's typed-Arrow, runtime's streaming framing), the **cross-cutting rules** (context-in-metadata ADR-007, core-mediation ADR-005/008, bulk-bypasses-core), a **"writing a plugin"** checklist, and a **reference-implementations** table (round-1 wire + round-2 real backend, with what each demonstrates).
+- **All cross-links verified** (proto, conformance vectors, ADRs, reviews, cross-axis docs, reference dirs — every relative path resolves); `buf lint` ignores the `.md` files in the proto module (clean).
+- Index added to [`contracts/conformance/README.md`](../contracts/conformance/README.md) ("Per-axis contract docs"). Control/experience axes get their `CONTRACT.md` when referenced.
+
+This is the 0g deliverable for the axes that have references (the grounded, non-speculative ones). Remaining toward freeze: 0c (finalize cross-cutting protos) + 0h (peer review + `rat/1` freeze).
+
+**Files:** `contracts/proto/rat/{state,engine,format,storage,runtime,catalog}/v1/CONTRACT.md`, `contracts/conformance/README.md` (index).
+
+---
+
 ## 2026-05-31 — Sub-phase 0f COMPLETE: per-RPC latency benchmark — the ADR-005 mediation hop, measured
 
 The second + final 0f sub-item: a benchmark that quantifies the one perf number the architecture trades on — the **core-mediated gateway's overhead vs a direct call** (ADR-005 accepted "a latency hop per control call", with a direct-dial fast-path *only if a profiling pass shows it's needed*; ADR-008 added a streaming relay). This IS that profiling pass.

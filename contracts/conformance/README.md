@@ -39,6 +39,24 @@ Exit 0 iff every reference conforms — so CI / the freeze gate can hang on it. 
 reference joins the suite automatically the moment it lands. This is the operational
 form of ADR-003's "both pass the axis's conformance suite": one command, one matrix.
 
+## Per-axis contract docs (sub-phase 0g)
+
+The author-facing guide for each data-plane axis — what the axis is, its capabilities +
+RPCs, the conformance obligations, how to write a plugin, and the reference impls —
+lives as a `CONTRACT.md` **next to that axis's proto** (so authors read the wire
+contract + the guide together):
+
+| Axis | Contract guide |
+|---|---|
+| `state/v1` | [`proto/rat/state/v1/CONTRACT.md`](../proto/rat/state/v1/CONTRACT.md) |
+| `engine/v1` | [`proto/rat/engine/v1/CONTRACT.md`](../proto/rat/engine/v1/CONTRACT.md) |
+| `format/v1` | [`proto/rat/format/v1/CONTRACT.md`](../proto/rat/format/v1/CONTRACT.md) |
+| `storage/v1` | [`proto/rat/storage/v1/CONTRACT.md`](../proto/rat/storage/v1/CONTRACT.md) |
+| `runtime/v1` | [`proto/rat/runtime/v1/CONTRACT.md`](../proto/rat/runtime/v1/CONTRACT.md) |
+| `catalog/v1` | [`proto/rat/catalog/v1/CONTRACT.md`](../proto/rat/catalog/v1/CONTRACT.md) |
+
+(The control/experience axes get their `CONTRACT.md` when they're referenced.)
+
 ## Files
 
 | File | Axis | Consumed by |

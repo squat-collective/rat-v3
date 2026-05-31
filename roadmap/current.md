@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (🎉 ROUND 1 + ROUND 2 BOTH COMPLETE. All 6 data-plane axes have two language refs (wire contract) AND a technologically-divergent real backend (semantic): state=sqlite, storage=local-fs, catalog=sqlite, runtime=subprocess, engine=duckdb+datafusion, format=parquet+delta. ADR-007 + ADR-008 decided AND migrated. Typed-Arrow gap retired + real Arrow Flight transport landed (parquet-py). 🎉 Sub-phase 0f COMPLETE: conformance suite (`make conformance` → 20/20) + latency benchmark (`make bench` → core-mediation hop ≈ +0.2ms/+270%, validates ADR-005). Next: freeze prep — 0c/0g/0h.)
+> Updated: 2026-05-31 (🎉 ROUND 1 + ROUND 2 BOTH COMPLETE. All 6 data-plane axes have two language refs (wire contract) AND a technologically-divergent real backend (semantic): state=sqlite, storage=local-fs, catalog=sqlite, runtime=subprocess, engine=duckdb+datafusion, format=parquet+delta. ADR-007 + ADR-008 decided AND migrated. Typed-Arrow gap retired + real Arrow Flight transport landed (parquet-py). 0f COMPLETE (conformance suite `make conformance` 20/20 + latency benchmark `make bench`). 0g DONE: per-axis `CONTRACT.md` author guides for all 6 data-plane axes. Next: 0c (finalize cross-cutting protos) + 0h (peer review + `rat/1` freeze).)
 
 ## Status one-liner
 
@@ -68,7 +68,8 @@ ADR-007 + ADR-008 decided AND migrated; typed-Arrow gap retired for engine+forma
 **Genuinely remaining toward `rat/1` freeze (no longer reference-impl work):**
 1. **Real Arrow Flight transport — ✅ DONE** (`examples/format/parquet-py/flight.py`): the data leg now crosses real TCP sockets via Flight `DoGet`, both directions, with zero contract change — proving the in-process registry was always a transport choice. (Other refs keep the in-process stand-in for simplicity; making them all Flight is optional polish.)
 2. **Sub-phase 0f — ✅ COMPLETE.** Conformance suite runner (`make conformance` → auto-discovers + runs every reference → one pass/fail matrix; **20/20 conform**; CI/freeze-gateable) + per-RPC latency benchmark (`make bench` → core-mediation hop ≈ **+0.2ms / +270%** at p50, unary + streaming; absolute is sub-ms, bulk bypasses via ArrowStream — validates ADR-005's "the hop is acceptable" bet with real numbers).
-3. **Sub-phase 0c / 0g / 0h** — finalize cross-cutting protos; per-axis `CONTRACT.md`; peer review + `rat/1` freeze.
+3. **Sub-phase 0g — ✅ DONE for the data-plane axes**: per-axis `CONTRACT.md` author guides (`contracts/proto/rat/{state,engine,format,storage,runtime,catalog}/v1/CONTRACT.md`), indexed in the conformance README. Control/experience axes get theirs when referenced.
+4. **Sub-phase 0c / 0h** — finalize cross-cutting protos (0c); peer review + the `rat/1` freeze (0h).
 4. **Polish (not blocking):** real **SDK metadata interceptor** (so plugin code gets the reconstructed context automatically); wire `InvokeBidiStream` (`observability.Ingest` bidi relay) when referenced; roll `(rat.capability)` across the remaining control/experience axis services (strategy, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log, ui, notifications, marketplace, billing).
 
 SDK distribution + layout + codegen are decided in **[ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md)**: vendored `contracts/sdks/<lang>/` (Go/Python/TS peers), reference plugins under `examples/<axis>/<impl>-<lang>/`, containerized `buf generate` via `scripts/gen-sdks.sh`.
