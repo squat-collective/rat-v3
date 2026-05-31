@@ -4,6 +4,22 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — 0d: `engine` axis — two references (Go + Python) + shared golden vectors → `engine/v1` ADR-003 gate MET
+
+Second data-plane axis through the 0d two-reference gate, reusing the format pattern (shared conformance JSON + two independent impls + the stub ADR-005/007 gateway).
+
+- **Shared golden vectors** — `contracts/conformance/engine-v1.json` (+ README grammar note): CREATE/INSERT via Execute (rows_affected 0 vs 1), Query (SELECT, WHERE, projection), Preview (bounded by `limit`), + `rows_exclude_keys` to assert projection drops columns; 2 error vectors (unknown table, empty SQL).
+- **Mini-SQL** — a deliberately tiny, fully-specified grammar (`CREATE TABLE` / `INSERT … VALUES` / `SELECT … [WHERE] [LIMIT]`) so two independent parsers stay in lockstep: the SAME three regexes in Go (`sql.go`) and Python (`sql.py`). The point under test is the engine WIRE contract, not SQL fidelity. Self-contained in-memory tables (the engine↔format handoff is separate integration work, noted).
+- **inmemory-go** (`examples/engine/inmemory-go/`) — first reference: store/sql/stream/server/main + a stub gateway (`gateway_test.go`, the axis-generic ADR-005/007 stub re-pointed at `EngineService`) + harness routing Execute/Query/Preview through the gateway (C5 + C8 + traceparent gate). Green in `golang:1.25`.
+- **inmemory-py** (`examples/engine/inmemory-py/`) — second, from-scratch reference; imports the vendored Python SDK; loads the same JSON. Green in `python:3.12`.
+- Context rides in `rat-callmeta-bin` metadata throughout (ADR-007) — these references are built natively on the post-migration contract.
+
+**Verified (containers):** all FOUR references (format + engine, Go + Python) green together — `go test ./...` (both Go) and `python harness_test.py` (both Python).
+
+**Files:** `contracts/conformance/engine-v1.json` + README, `examples/engine/inmemory-go/**`, `examples/engine/inmemory-py/**`.
+
+---
+
 ## 2026-05-31 — ADR-007 migration executed: `RequestContext` field → `rat-callmeta-bin` metadata across the contract
 
 Implemented [ADR-007](../docs/architecture/adrs/007-call-context-transport.md) (the decision landed in commit `9ff3cac`; this is the implementation, kept separate per one-ADR-per-commit).

@@ -1,0 +1,73 @@
+{
+  "_comment": "RAT engine/v1 conformance vectors — ADR-003 shared golden data. The SINGLE source of truth for the engine axis's expected behavior. Every independent engine implementation's harness (Go: examples/engine/inmemory-go, Python: examples/engine/inmemory-py, ...) loads THIS file and drives its EngineService through these steps over real gRPC, asserting the expectations. Both impls passing the identical vectors from one shared artifact is how ADR-003's 'run against each other on golden data' is met literally. The references implement a deliberately tiny, fully-specified mini-SQL (see contracts/conformance/README.md) so two independent parsers stay in lockstep — the point under test is the engine WIRE contract (sql+tables -> WriteResult / ArrowStream, projection, WHERE, limit), not SQL fidelity.",
+  "axis": "engine/v1",
+  "lifecycle": [
+    {
+      "step": "create_table",
+      "op": "execute",
+      "sql": "CREATE TABLE orders (id, region, amount)",
+      "expect": {"rows_affected": 0, "snapshot_id_set": true}
+    },
+    {
+      "step": "insert_west_1",
+      "op": "execute",
+      "sql": "INSERT INTO orders VALUES (1, west, 100)",
+      "expect": {"rows_affected": 1}
+    },
+    {
+      "step": "insert_east_2",
+      "op": "execute",
+      "sql": "INSERT INTO orders VALUES (2, east, 200)",
+      "expect": {"rows_affected": 1}
+    },
+    {
+      "step": "insert_west_3",
+      "op": "execute",
+      "sql": "INSERT INTO orders VALUES (3, west, 300)",
+      "expect": {"rows_affected": 1}
+    },
+    {
+      "step": "query_all",
+      "op": "query",
+      "sql": "SELECT * FROM orders",
+      "expect": {"row_count": 3, "rows_contain": [{"id": "2", "region": "east", "amount": "200"}]}
+    },
+    {
+      "step": "query_where_projection",
+      "op": "query",
+      "sql": "SELECT id, amount FROM orders WHERE region = west",
+      "expect": {
+        "row_count": 2,
+        "rows_contain": [{"id": "1", "amount": "100"}, {"id": "3", "amount": "300"}],
+        "rows_exclude_keys": ["region"]
+      }
+    },
+    {
+      "step": "query_single_projection",
+      "op": "query",
+      "sql": "SELECT id FROM orders WHERE region = east",
+      "expect": {"row_count": 1, "rows_contain": [{"id": "2"}], "rows_exclude_keys": ["region", "amount"]}
+    },
+    {
+      "step": "preview_bounded",
+      "op": "preview",
+      "sql": "SELECT * FROM orders",
+      "limit": 2,
+      "expect": {"row_count": 2, "rows_contain": [{"id": "1", "region": "west", "amount": "100"}]}
+    }
+  ],
+  "errors": [
+    {
+      "step": "query_unknown_table",
+      "op": "query",
+      "sql": "SELECT * FROM ghosts",
+      "expect": {"code": "INVALID_ARGUMENT"}
+    },
+    {
+      "step": "execute_empty_sql",
+      "op": "execute",
+      "sql": "",
+      "expect": {"code": "INVALID_ARGUMENT"}
+    }
+  ]
+}

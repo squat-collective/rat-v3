@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (0d: `format/v1` ADR-003 gate MET; ADR-007 decided AND its proto migration executed — context now rides in `rat-callmeta-bin` metadata, both refs green)
+> Updated: 2026-05-31 (0d: `format/v1` + `engine/v1` ADR-003 gates MET — two refs each on shared golden vectors; ADR-007 decided + migrated, context rides in `rat-callmeta-bin` metadata)
 
 ## Status one-liner
 
@@ -59,11 +59,11 @@ The 23 other prospective ADRs are in [backlog.md](backlog.md). They land as they
 
 ## Immediate next concrete step
 
-Sub-phase **0d is underway and `format/v1`'s ADR-003 two-reference gate is MET** (first axis done). The identity-transport finding is **decided ([ADR-007](../docs/architecture/adrs/007-call-context-transport.md)) AND its migration is executed** — `RequestContext` is stripped from all 37 control-message field sites and now rides in the `rat-callmeta-bin` metadata header; both references are green on the unchanged golden vectors. The next concrete step:
+Sub-phase **0d is underway. TWO data-plane axes are through the ADR-003 two-reference gate: `format/v1` and `engine/v1`** — each has two independent references (Go + Python) passing one shared golden-vector file, all routed through the stub ADR-005/007 gateway. ADR-007 is decided + migrated (context rides in `rat-callmeta-bin` metadata). The harness pattern is now proven + repeatable (shared `contracts/conformance/<axis>-v1.json` + two impls + the axis-generic stub gateway). The next concrete step:
 
-1. **Pick the second data-plane axis for 0d** — `engine` (3 methods already 1:1 capability↔method, no Write-split needed) or `storage` (local-fs vs an S3-shaped impl is a clean independent pair). Reuse the proven harness pattern: shared `contracts/conformance/<axis>-v1.json` + two impls + the stub gateway.
+1. **Pick the third data-plane axis for 0d** — `storage` (local-fs vs an S3-shaped impl is a clean independent pair) or `catalog` / `runtime` / `state`. Same pattern. (The six ADR-003 data-plane axes are engine ✅, format ✅, runtime, catalog, storage, state.)
 2. **(Carry-over polish, optional)** roll a real **SDK metadata interceptor** into the generated SDKs so plugin code gets the reconstructed context object automatically (the references currently read/stamp `rat-callmeta-bin` by hand). Cheap, not blocking.
-3. **(Before `format/v1` → `v1`)** the typed-Arrow conformance pass (blocker #2 below) — still the one open item for that specific freeze.
+3. **(Before any data-plane axis → `v1`)** the typed-Arrow conformance pass — both format + engine refs still carry the bulk leg as an in-process registry stand-in. This is the shared remaining item for every data-plane freeze.
 
 SDK distribution + layout + codegen are decided in **[ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md)**: vendored `contracts/sdks/<lang>/` (Go/Python/TS peers), reference plugins under `examples/<axis>/<impl>-<lang>/`, containerized `buf generate` via `scripts/gen-sdks.sh`.
 
@@ -71,9 +71,9 @@ SDK distribution + layout + codegen are decided in **[ADR-006](../docs/architect
 - **inmemory-go** (commit `c472620`, then refactored): now loads the shared JSON and runs **through the stub core-mediated gateway** (`gateway_test.go`, a faithful ADR-005 generic byte-relay — routes by the `(rat.common.v1.capability)` annotation, enforces C5, emits C8 audit). Green in `golang:1.25`.
 - **inmemory-py** (`examples/format/inmemory-py/`): from-scratch second reference, imports the vendored Python SDK, loads the same JSON. Green in `python:3.12` (grpcio 1.80.0 / protobuf 7.35.0).
 
-**Two things gate `format/v1` advancing `v1-preview` → `v1`:**
-1. **Identity-transport — DONE ✅ ([ADR-007](../docs/architecture/adrs/007-call-context-transport.md) decided + migrated).** `RequestContext` moved from message field 1 to the `rat-callmeta-bin` metadata header across all 37 control sites; the gateway now validates traceparent + re-stamps identity from metadata without touching the payload; both refs green on the unchanged vectors. No longer a blocker.
-2. **Typed-Arrow conformance pass** — both refs still carry the bulk leg as an in-process registry stand-in; the real Arrow Flight wire is unexercised.
+**What gates the data-plane axes (`format/v1`, `engine/v1`, …) advancing `v1-preview` → `v1`:**
+1. **Identity-transport — DONE ✅ ([ADR-007](../docs/architecture/adrs/007-call-context-transport.md) decided + migrated).** `RequestContext` moved from message field 1 to the `rat-callmeta-bin` metadata header across all 37 control sites; the gateway now validates traceparent + re-stamps identity from metadata without touching the payload; all four refs green on the unchanged vectors. No longer a blocker.
+2. **Typed-Arrow conformance pass** — every data-plane ref (format + engine) still carries the bulk leg as an in-process registry stand-in; the real Arrow Flight wire is unexercised. This is the shared remaining item before any of these axes freeze.
 
 The deferred **additive tail** is still open and cheap to clear while in the contracts: #10b (manifest `artifact`/digest block), #9f doc-pins, per-kind manifest schemas, and rolling `(rat.capability)` across the other 14 axis services.
 

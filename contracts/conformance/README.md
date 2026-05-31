@@ -19,6 +19,23 @@ truth on its next run.
 | File | Axis | Consumed by |
 |---|---|---|
 | `format-v1.json` | `format/v1` | `examples/format/inmemory-go` (Go harness), `examples/format/inmemory-py` (Python harness) |
+| `engine-v1.json` | `engine/v1` | `examples/engine/inmemory-go` (Go harness), `examples/engine/inmemory-py` (Python harness) |
+
+### `engine-v1.json` mini-SQL grammar
+
+The engine references implement a deliberately tiny, fully-specified mini-SQL so
+two independent parsers stay in lockstep (the SAME three regexes in Go + Python).
+Case-sensitive keywords, single-space separated; identifiers/values `[A-Za-z0-9_]+`:
+
+```
+CREATE TABLE <t> (<col>, <col>, ...)        -- Execute; rows_affected = 0
+INSERT INTO <t> VALUES (<v>, <v>, ...)       -- Execute; rows_affected = 1 (values bind positionally to columns)
+SELECT <* | col, col, ...> FROM <t> [WHERE <col> = <val>] [LIMIT <n>]  -- Query / Preview
+```
+
+`Query` returns an ArrowStream of all matching rows; `Preview` bounds it by the
+request `limit`. The vectors add `rows_exclude_keys` to assert projected-out
+columns are absent. SQL fidelity is NOT the point — the engine WIRE contract is.
 
 ## Vector shape (`format-v1.json`)
 
