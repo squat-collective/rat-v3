@@ -1,5 +1,5 @@
 // Shared data-plane handoff types referenced across data-plane axes
-// (strategy ↔ runtime ↔ format). DRAFT — sub-phase 0b.
+// (strategy ↔ runtime ↔ format). Status: v1 (frozen — rat/1, ADR-009).
 //
 // Design invariant (overview.md "Data plane bypasses core for bytes"): the
 // CONTROL-plane RPCs carry references + small metadata, NEVER bulk row data.

@@ -1,4 +1,4 @@
-// Format axis service contract. DRAFT — sub-phase 0b.
+// Format axis service contract. Status: v1 (frozen — rat/1, ADR-009).
 //
 // A `kind: format` plugin (Iceberg, Delta, Hudi, …) implements table-format
 // semantics: resolving refs to physical files, writing data, doing maintenance.

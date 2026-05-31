@@ -2,7 +2,7 @@
 
 > Canonical guide for implementing a `kind: state-backend` plugin. Pairs with the
 > wire contract [`state.proto`](state.proto) and the golden vectors
-> [`state-v1.json`](../../../../conformance/state-v1.json). Status: **v1-preview**.
+> [`state-v1.json`](../../../../conformance/state-v1.json). Status: **v1 (frozen — rat/1, ADR-009)**.
 
 ## What a `state-backend` plugin is
 

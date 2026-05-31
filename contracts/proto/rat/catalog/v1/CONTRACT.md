@@ -2,7 +2,7 @@
 
 > Canonical guide for implementing a `kind: catalog` plugin. Pairs with the wire
 > contract [`catalog.proto`](catalog.proto) and the golden vectors
-> [`catalog-v1.json`](../../../../conformance/catalog-v1.json). Status: **v1-preview**.
+> [`catalog-v1.json`](../../../../conformance/catalog-v1.json). Status: **v1 (frozen — rat/1, ADR-009)**.
 
 ## What a `catalog` plugin is
 

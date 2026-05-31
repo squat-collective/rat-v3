@@ -2,7 +2,7 @@
 
 > Canonical guide for implementing a `kind: storage` plugin. Pairs with the wire
 > contract [`storage.proto`](storage.proto) and the golden vectors
-> [`storage-v1.json`](../../../../conformance/storage-v1.json). Status: **v1-preview**.
+> [`storage-v1.json`](../../../../conformance/storage-v1.json). Status: **v1 (frozen — rat/1, ADR-009)**.
 
 ## What a `storage` plugin is
 

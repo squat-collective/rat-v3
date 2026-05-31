@@ -21,6 +21,8 @@
 // WIRE-COMPATIBLE: field numbers are unchanged, so the canonical serialization +
 // signatures + hash chain are byte-identical; only the proto package (and the
 // generated type name) moves rat.auditlog.v1 → rat.common.v1.
+//
+// Status: v1 (frozen — rat/1, ADR-009).
 syntax = "proto3";
 
 package rat.common.v1;

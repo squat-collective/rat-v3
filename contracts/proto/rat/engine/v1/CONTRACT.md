@@ -4,7 +4,7 @@
 > contract [`engine.proto`](engine.proto) and the golden vectors
 > [`engine-v1.json`](../../../../conformance/engine-v1.json) (wire) +
 > [`engine-real-v1.json`](../../../../conformance/engine-real-v1.json) (real SQL).
-> Status: **v1-preview**.
+> Status: **v1 (frozen — rat/1, ADR-009)**.
 
 ## What an `engine` plugin is
 

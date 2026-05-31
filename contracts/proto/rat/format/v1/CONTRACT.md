@@ -2,7 +2,7 @@
 
 > Canonical guide for implementing a `kind: format` plugin. Pairs with the wire
 > contract [`format.proto`](format.proto) and the golden vectors
-> [`format-v1.json`](../../../../conformance/format-v1.json). Status: **v1-preview**.
+> [`format-v1.json`](../../../../conformance/format-v1.json). Status: **v1 (frozen — rat/1, ADR-009)**.
 
 ## What a `format` plugin is
 

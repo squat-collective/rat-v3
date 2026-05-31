@@ -2,7 +2,7 @@
 
 > Canonical guide for implementing a `kind: runtime` plugin. Pairs with the wire
 > contract [`runtime.proto`](runtime.proto) and the golden vectors
-> [`runtime-v1.json`](../../../../conformance/runtime-v1.json). Status: **v1-preview**.
+> [`runtime-v1.json`](../../../../conformance/runtime-v1.json). Status: **v1 (frozen — rat/1, ADR-009)**.
 
 ## What a `runtime` plugin is
 

@@ -1,4 +1,4 @@
-// Custom proto annotations for RAT contracts. DRAFT — freeze-blocker #5.
+// Custom proto annotations for RAT contracts. Status: v1 (frozen — rat/1, ADR-009).
 //
 // This file defines the MACHINE-READABLE capability⇄method binding that
 // reviews/06 I-4 (AUTH-9) requires. Before this, the mapping from a capability

@@ -19,6 +19,20 @@
 
 ---
 
+> ## ✅ RESOLUTION (2026-05-31) — this NO-GO is now CLOSED.
+> The user chose the **strict ADR-003** path. All of it landed:
+> - **M1–M4 + S1–S4 remediated** — commits `16d9c37` (error model), `7e169e1` (`key_id` +
+>   verification cross-check), `df07ff9` (S-cluster). Conformance held 20/20.
+> - **Cross-axis composition gate MET** — sub-phase 0i (`abd1228`): the
+>   [composition test](../examples/composition) runs the strategy across all four ADR-003
+>   cross-combinations on golden data; every one produces the identical target.
+> - **Freeze executed** — [ADR-009](../docs/architecture/adrs/009-data-plane-contract-freeze-v1.md)
+>   advances the six data-plane axes + the cross-cutting types to `v1` (tag `rat/1`).
+> Residuals R1–R3 accepted into `v1` (documented in ADR-009 + backlog). The rest of this
+> document is the original NO-GO analysis, preserved as the record of what was fixed.
+
+---
+
 ## Part A — prior freeze-blockers (reviews/06): RESOLVED ✅
 
 The 15 freeze-blockers + the AUTH-2 open decision from [reviews/06](06-proto-contract-review.md)
