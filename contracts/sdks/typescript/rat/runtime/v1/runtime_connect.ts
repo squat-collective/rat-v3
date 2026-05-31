@@ -26,7 +26,7 @@ export const RuntimeService = {
      * reconciler/UI can show liveness on long tasks; terminal message carries the
      * outcome. Each streamed message is an ExecuteResponse (a progress-or-completed
      * oneof) — named per the *Response convention buf STANDARD requires, even for
-     * streaming RPCs.
+     * streaming RPCs. Mediated via core InvokeServerStream (ADR-008).
      *
      * @generated from rpc rat.runtime.v1.RuntimeService.Execute
      */

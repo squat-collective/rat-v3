@@ -13,6 +13,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_rat_common_v1_annotations } from "../../common/v1/annotations_pb";
 import type { ArrowStream, WriteResult } from "../../common/v1/data_pb";
 import { file_rat_common_v1_data } from "../../common/v1/data_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -21,7 +22,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/runtime/v1/runtime.proto.
  */
 export const file_rat_runtime_v1_runtime: GenFile = /*@__PURE__*/
-  fileDesc("ChxyYXQvcnVudGltZS92MS9ydW50aW1lLnByb3RvEg5yYXQucnVudGltZS52MSJVCg5FeGVjdXRlUmVxdWVzdBIRCgl3b3JrX3NwZWMYAiABKAwSKgoGaW5wdXRzGAMgAygLMhoucmF0LmNvbW1vbi52MS5BcnJvd1N0cmVhbUoECAEQAiJGCg9FeGVjdXRlUHJvZ3Jlc3MSFQoIZnJhY3Rpb24YASABKAFIAIgBARIPCgdtZXNzYWdlGAIgASgJQgsKCV9mcmFjdGlvbiJeChBFeGVjdXRlQ29tcGxldGVkEg8KB3N1Y2Nlc3MYASABKAgSDQoFZXJyb3IYAiABKAkSKgoGcmVzdWx0GAMgASgLMhoucmF0LmNvbW1vbi52MS5Xcml0ZVJlc3VsdCKGAQoPRXhlY3V0ZVJlc3BvbnNlEjMKCHByb2dyZXNzGAEgASgLMh8ucmF0LnJ1bnRpbWUudjEuRXhlY3V0ZVByb2dyZXNzSAASNQoJY29tcGxldGVkGAIgASgLMiAucmF0LnJ1bnRpbWUudjEuRXhlY3V0ZUNvbXBsZXRlZEgAQgcKBWV2ZW50Ml4KDlJ1bnRpbWVTZXJ2aWNlEkwKB0V4ZWN1dGUSHi5yYXQucnVudGltZS52MS5FeGVjdXRlUmVxdWVzdBofLnJhdC5ydW50aW1lLnYxLkV4ZWN1dGVSZXNwb25zZTABQjVaM2dpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9ydW50aW1lL3YxO3J1bnRpbWV2MWIGcHJvdG8z", [file_rat_common_v1_data]);
+  fileDesc("ChxyYXQvcnVudGltZS92MS9ydW50aW1lLnByb3RvEg5yYXQucnVudGltZS52MSJVCg5FeGVjdXRlUmVxdWVzdBIRCgl3b3JrX3NwZWMYAiABKAwSKgoGaW5wdXRzGAMgAygLMhoucmF0LmNvbW1vbi52MS5BcnJvd1N0cmVhbUoECAEQAiJGCg9FeGVjdXRlUHJvZ3Jlc3MSFQoIZnJhY3Rpb24YASABKAFIAIgBARIPCgdtZXNzYWdlGAIgASgJQgsKCV9mcmFjdGlvbiJeChBFeGVjdXRlQ29tcGxldGVkEg8KB3N1Y2Nlc3MYASABKAgSDQoFZXJyb3IYAiABKAkSKgoGcmVzdWx0GAMgASgLMhoucmF0LmNvbW1vbi52MS5Xcml0ZVJlc3VsdCKGAQoPRXhlY3V0ZVJlc3BvbnNlEjMKCHByb2dyZXNzGAEgASgLMh8ucmF0LnJ1bnRpbWUudjEuRXhlY3V0ZVByb2dyZXNzSAASNQoJY29tcGxldGVkGAIgASgLMiAucmF0LnJ1bnRpbWUudjEuRXhlY3V0ZUNvbXBsZXRlZEgAQgcKBWV2ZW50MnwKDlJ1bnRpbWVTZXJ2aWNlEmoKB0V4ZWN1dGUSHi5yYXQucnVudGltZS52MS5FeGVjdXRlUmVxdWVzdBofLnJhdC5ydW50aW1lLnYxLkV4ZWN1dGVSZXNwb25zZSIcipciGHJhdDovL3J1bnRpbWUvdjEvZXhlY3V0ZTABQjVaM2dpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9ydW50aW1lL3YxO3J1bnRpbWV2MWIGcHJvdG8z", [file_rat_common_v1_annotations, file_rat_common_v1_data]);
 
 /**
  * @generated from message rat.runtime.v1.ExecuteRequest
@@ -150,7 +151,7 @@ export const RuntimeService: GenService<{
    * reconciler/UI can show liveness on long tasks; terminal message carries the
    * outcome. Each streamed message is an ExecuteResponse (a progress-or-completed
    * oneof) — named per the *Response convention buf STANDARD requires, even for
-   * streaming RPCs.
+   * streaming RPCs. Mediated via core InvokeServerStream (ADR-008).
    *
    * @generated from rpc rat.runtime.v1.RuntimeService.Execute
    */

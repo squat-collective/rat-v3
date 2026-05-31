@@ -53,17 +53,35 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CapabilityInvokeService_Invoke_FullMethodName = "/rat.core.v1.CapabilityInvokeService/Invoke"
+	CapabilityInvokeService_Invoke_FullMethodName             = "/rat.core.v1.CapabilityInvokeService/Invoke"
+	CapabilityInvokeService_InvokeServerStream_FullMethodName = "/rat.core.v1.CapabilityInvokeService/InvokeServerStream"
+	CapabilityInvokeService_InvokeBidiStream_FullMethodName   = "/rat.core.v1.CapabilityInvokeService/InvokeBidiStream"
 )
 
 // CapabilityInvokeServiceClient is the client API for CapabilityInvokeService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// CapabilityInvokeService has one Invoke variant per RPC cardinality (ADR-008).
+// All three are GENERIC byte-relays: the core enforces C2/C5/C7/C8 + traceparent
+// and stamps the downstream rat-callmeta-bin envelope (ADR-007) ONCE at the call
+// (for streams: once at stream-open), then relays opaque payload/result frames
+// without deserializing them. The caller's SDK picks the variant from the target
+// capability's cardinality. Bulk data (if any) still flows out-of-band via the
+// ArrowStream descriptors inside the relayed frames — never through this service.
 type CapabilityInvokeServiceClient interface {
-	// Invoke one capability on its resolved provider, mediated + enforced by the
-	// core. Unary control call; bulk data (if any) flows out-of-band via the
-	// ArrowStream descriptors inside the relayed payload/result.
+	// Unary→unary capabilities. One request, one response.
 	Invoke(ctx context.Context, in *InvokeRequest, opts ...grpc.CallOption) (*InvokeResponse, error)
+	// Server-streaming capabilities (e.g. runtime.Execute, state.Watch,
+	// scheduler.WatchDue). One request opens the call; the core relays a stream of
+	// responses, each `result` being one serialized axis response frame. Enforcement
+	// + identity-stamp happen once at open; one C8 audit record per stream.
+	InvokeServerStream(ctx context.Context, in *InvokeServerStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[InvokeServerStreamResponse], error)
+	// Bidirectional capabilities (e.g. observability.Ingest) — and pure
+	// client-streaming (the provider returns a single response frame). The FIRST
+	// request frame establishes `capability` (and triggers enforcement); subsequent
+	// request frames carry only `payload` and MUST leave `capability` empty.
+	InvokeBidiStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[InvokeBidiStreamRequest, InvokeBidiStreamResponse], error)
 }
 
 type capabilityInvokeServiceClient struct {
@@ -84,14 +102,62 @@ func (c *capabilityInvokeServiceClient) Invoke(ctx context.Context, in *InvokeRe
 	return out, nil
 }
 
+func (c *capabilityInvokeServiceClient) InvokeServerStream(ctx context.Context, in *InvokeServerStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[InvokeServerStreamResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &CapabilityInvokeService_ServiceDesc.Streams[0], CapabilityInvokeService_InvokeServerStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[InvokeServerStreamRequest, InvokeServerStreamResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type CapabilityInvokeService_InvokeServerStreamClient = grpc.ServerStreamingClient[InvokeServerStreamResponse]
+
+func (c *capabilityInvokeServiceClient) InvokeBidiStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[InvokeBidiStreamRequest, InvokeBidiStreamResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &CapabilityInvokeService_ServiceDesc.Streams[1], CapabilityInvokeService_InvokeBidiStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[InvokeBidiStreamRequest, InvokeBidiStreamResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type CapabilityInvokeService_InvokeBidiStreamClient = grpc.BidiStreamingClient[InvokeBidiStreamRequest, InvokeBidiStreamResponse]
+
 // CapabilityInvokeServiceServer is the server API for CapabilityInvokeService service.
 // All implementations must embed UnimplementedCapabilityInvokeServiceServer
 // for forward compatibility.
+//
+// CapabilityInvokeService has one Invoke variant per RPC cardinality (ADR-008).
+// All three are GENERIC byte-relays: the core enforces C2/C5/C7/C8 + traceparent
+// and stamps the downstream rat-callmeta-bin envelope (ADR-007) ONCE at the call
+// (for streams: once at stream-open), then relays opaque payload/result frames
+// without deserializing them. The caller's SDK picks the variant from the target
+// capability's cardinality. Bulk data (if any) still flows out-of-band via the
+// ArrowStream descriptors inside the relayed frames — never through this service.
 type CapabilityInvokeServiceServer interface {
-	// Invoke one capability on its resolved provider, mediated + enforced by the
-	// core. Unary control call; bulk data (if any) flows out-of-band via the
-	// ArrowStream descriptors inside the relayed payload/result.
+	// Unary→unary capabilities. One request, one response.
 	Invoke(context.Context, *InvokeRequest) (*InvokeResponse, error)
+	// Server-streaming capabilities (e.g. runtime.Execute, state.Watch,
+	// scheduler.WatchDue). One request opens the call; the core relays a stream of
+	// responses, each `result` being one serialized axis response frame. Enforcement
+	// + identity-stamp happen once at open; one C8 audit record per stream.
+	InvokeServerStream(*InvokeServerStreamRequest, grpc.ServerStreamingServer[InvokeServerStreamResponse]) error
+	// Bidirectional capabilities (e.g. observability.Ingest) — and pure
+	// client-streaming (the provider returns a single response frame). The FIRST
+	// request frame establishes `capability` (and triggers enforcement); subsequent
+	// request frames carry only `payload` and MUST leave `capability` empty.
+	InvokeBidiStream(grpc.BidiStreamingServer[InvokeBidiStreamRequest, InvokeBidiStreamResponse]) error
 	mustEmbedUnimplementedCapabilityInvokeServiceServer()
 }
 
@@ -104,6 +170,12 @@ type UnimplementedCapabilityInvokeServiceServer struct{}
 
 func (UnimplementedCapabilityInvokeServiceServer) Invoke(context.Context, *InvokeRequest) (*InvokeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Invoke not implemented")
+}
+func (UnimplementedCapabilityInvokeServiceServer) InvokeServerStream(*InvokeServerStreamRequest, grpc.ServerStreamingServer[InvokeServerStreamResponse]) error {
+	return status.Error(codes.Unimplemented, "method InvokeServerStream not implemented")
+}
+func (UnimplementedCapabilityInvokeServiceServer) InvokeBidiStream(grpc.BidiStreamingServer[InvokeBidiStreamRequest, InvokeBidiStreamResponse]) error {
+	return status.Error(codes.Unimplemented, "method InvokeBidiStream not implemented")
 }
 func (UnimplementedCapabilityInvokeServiceServer) mustEmbedUnimplementedCapabilityInvokeServiceServer() {
 }
@@ -145,6 +217,24 @@ func _CapabilityInvokeService_Invoke_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CapabilityInvokeService_InvokeServerStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(InvokeServerStreamRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(CapabilityInvokeServiceServer).InvokeServerStream(m, &grpc.GenericServerStream[InvokeServerStreamRequest, InvokeServerStreamResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type CapabilityInvokeService_InvokeServerStreamServer = grpc.ServerStreamingServer[InvokeServerStreamResponse]
+
+func _CapabilityInvokeService_InvokeBidiStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(CapabilityInvokeServiceServer).InvokeBidiStream(&grpc.GenericServerStream[InvokeBidiStreamRequest, InvokeBidiStreamResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type CapabilityInvokeService_InvokeBidiStreamServer = grpc.BidiStreamingServer[InvokeBidiStreamRequest, InvokeBidiStreamResponse]
+
 // CapabilityInvokeService_ServiceDesc is the grpc.ServiceDesc for CapabilityInvokeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -157,6 +247,18 @@ var CapabilityInvokeService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CapabilityInvokeService_Invoke_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "InvokeServerStream",
+			Handler:       _CapabilityInvokeService_InvokeServerStream_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "InvokeBidiStream",
+			Handler:       _CapabilityInvokeService_InvokeBidiStream_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "rat/core/v1/invoke.proto",
 }

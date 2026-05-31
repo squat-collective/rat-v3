@@ -17,15 +17,18 @@ indeterminate, exercising the proto3 optional double) then a terminal completion
 carrying `success` + `WriteResult.rows_affected`, or `success=false`+`error` when
 `fail` is set. The point under test is the **streaming wire contract**, not compute.
 
-## ⚠️ Driven directly, not gateway-mediated
+## Gateway mediation (ADR-008)
 
-Unlike the format/engine/storage references, runtime is **not** routed through the
-stub core gateway. The gateway's `CapabilityInvokeService.Invoke` is **unary**
-([invoke.proto](../../../contracts/proto/rat/core/v1/invoke.proto)), so it cannot
-mediate a server-streaming capability — a contract finding this axis surfaced
-([ideas/inbox.md](../../../ideas/inbox.md); a candidate streaming-invoke ADR). The
-two references still cross-check on the shared golden vectors over real streaming
-gRPC; the gateway-mediation seam is simply blocked until that ADR lands.
+This axis surfaced a contract finding: the gateway's original `Invoke` was **unary**
+and couldn't mediate a server-streaming capability. That was resolved by
+[ADR-008](../../../docs/architecture/adrs/008-streaming-capability-invocation.md),
+which added `InvokeServerStream` to
+[invoke.proto](../../../contracts/proto/rat/core/v1/invoke.proto). The **Go**
+reference (`inmemory-go`) now routes `Execute` through the stub gateway's streaming
+relay, exercising the C1/C5/C8 + identity-stamp seams on a streaming call. This
+**Python** harness, like the other Python references, drives the plugin **directly**
+over real streaming gRPC (the stub gateway lives only in the Go reference). Both
+still cross-check on the same shared golden vectors.
 
 ## Files
 

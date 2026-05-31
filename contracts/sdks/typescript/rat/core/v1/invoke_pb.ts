@@ -44,7 +44,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/core/v1/invoke.proto.
  */
 export const file_rat_core_v1_invoke: GenFile = /*@__PURE__*/
-  fileDesc("ChhyYXQvY29yZS92MS9pbnZva2UucHJvdG8SC3JhdC5jb3JlLnYxIjoKDUludm9rZVJlcXVlc3QSEgoKY2FwYWJpbGl0eRgCIAEoCRIPCgdwYXlsb2FkGAMgASgMSgQIARACIiAKDkludm9rZVJlc3BvbnNlEg4KBnJlc3VsdBgBIAEoDDJcChdDYXBhYmlsaXR5SW52b2tlU2VydmljZRJBCgZJbnZva2USGi5yYXQuY29yZS52MS5JbnZva2VSZXF1ZXN0GhsucmF0LmNvcmUudjEuSW52b2tlUmVzcG9uc2VCL1otZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L2NvcmUvdjE7Y29yZXYxYgZwcm90bzM");
+  fileDesc("ChhyYXQvY29yZS92MS9pbnZva2UucHJvdG8SC3JhdC5jb3JlLnYxIjoKDUludm9rZVJlcXVlc3QSEgoKY2FwYWJpbGl0eRgCIAEoCRIPCgdwYXlsb2FkGAMgASgMSgQIARACIiAKDkludm9rZVJlc3BvbnNlEg4KBnJlc3VsdBgBIAEoDCJGChlJbnZva2VTZXJ2ZXJTdHJlYW1SZXF1ZXN0EhIKCmNhcGFiaWxpdHkYAiABKAkSDwoHcGF5bG9hZBgDIAEoDEoECAEQAiIsChpJbnZva2VTZXJ2ZXJTdHJlYW1SZXNwb25zZRIOCgZyZXN1bHQYASABKAwiRAoXSW52b2tlQmlkaVN0cmVhbVJlcXVlc3QSEgoKY2FwYWJpbGl0eRgCIAEoCRIPCgdwYXlsb2FkGAMgASgMSgQIARACIioKGEludm9rZUJpZGlTdHJlYW1SZXNwb25zZRIOCgZyZXN1bHQYASABKAwyqgIKF0NhcGFiaWxpdHlJbnZva2VTZXJ2aWNlEkEKBkludm9rZRIaLnJhdC5jb3JlLnYxLkludm9rZVJlcXVlc3QaGy5yYXQuY29yZS52MS5JbnZva2VSZXNwb25zZRJnChJJbnZva2VTZXJ2ZXJTdHJlYW0SJi5yYXQuY29yZS52MS5JbnZva2VTZXJ2ZXJTdHJlYW1SZXF1ZXN0GicucmF0LmNvcmUudjEuSW52b2tlU2VydmVyU3RyZWFtUmVzcG9uc2UwARJjChBJbnZva2VCaWRpU3RyZWFtEiQucmF0LmNvcmUudjEuSW52b2tlQmlkaVN0cmVhbVJlcXVlc3QaJS5yYXQuY29yZS52MS5JbnZva2VCaWRpU3RyZWFtUmVzcG9uc2UoATABQi9aLWdpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9jb3JlL3YxO2NvcmV2MWIGcHJvdG8z");
 
 /**
  * @generated from message rat.core.v1.InvokeRequest
@@ -105,13 +105,114 @@ export const InvokeResponseSchema: GenMessage<InvokeResponse> = /*@__PURE__*/
   messageDesc(file_rat_core_v1_invoke, 1);
 
 /**
+ * @generated from message rat.core.v1.InvokeServerStreamRequest
+ */
+export type InvokeServerStreamRequest = Message<"rat.core.v1.InvokeServerStreamRequest"> & {
+  /**
+   * The capability being invoked; same grammar + resolution as InvokeRequest. Must
+   * resolve to a server-streaming provider method.
+   *
+   * @generated from field: string capability = 2;
+   */
+  capability: string;
+
+  /**
+   * The serialized request message for the target method (e.g. an encoded
+   * rat.runtime.v1.ExecuteRequest). Opaque to the core.
+   *
+   * @generated from field: bytes payload = 3;
+   */
+  payload: Uint8Array;
+};
+
+/**
+ * Describes the message rat.core.v1.InvokeServerStreamRequest.
+ * Use `create(InvokeServerStreamRequestSchema)` to create a new message.
+ */
+export const InvokeServerStreamRequestSchema: GenMessage<InvokeServerStreamRequest> = /*@__PURE__*/
+  messageDesc(file_rat_core_v1_invoke, 2);
+
+/**
+ * @generated from message rat.core.v1.InvokeServerStreamResponse
+ */
+export type InvokeServerStreamResponse = Message<"rat.core.v1.InvokeServerStreamResponse"> & {
+  /**
+   * One serialized axis response frame (e.g. an encoded
+   * rat.runtime.v1.ExecuteResponse). Opaque to the core; relayed verbatim.
+   * Failures surface via gRPC status, not a field here.
+   *
+   * @generated from field: bytes result = 1;
+   */
+  result: Uint8Array;
+};
+
+/**
+ * Describes the message rat.core.v1.InvokeServerStreamResponse.
+ * Use `create(InvokeServerStreamResponseSchema)` to create a new message.
+ */
+export const InvokeServerStreamResponseSchema: GenMessage<InvokeServerStreamResponse> = /*@__PURE__*/
+  messageDesc(file_rat_core_v1_invoke, 3);
+
+/**
+ * @generated from message rat.core.v1.InvokeBidiStreamRequest
+ */
+export type InvokeBidiStreamRequest = Message<"rat.core.v1.InvokeBidiStreamRequest"> & {
+  /**
+   * Set on the FIRST frame only to establish + authorize the call; MUST be empty
+   * on subsequent frames (the core ignores it after open).
+   *
+   * @generated from field: string capability = 2;
+   */
+  capability: string;
+
+  /**
+   * One serialized axis request frame. Opaque to the core.
+   *
+   * @generated from field: bytes payload = 3;
+   */
+  payload: Uint8Array;
+};
+
+/**
+ * Describes the message rat.core.v1.InvokeBidiStreamRequest.
+ * Use `create(InvokeBidiStreamRequestSchema)` to create a new message.
+ */
+export const InvokeBidiStreamRequestSchema: GenMessage<InvokeBidiStreamRequest> = /*@__PURE__*/
+  messageDesc(file_rat_core_v1_invoke, 4);
+
+/**
+ * @generated from message rat.core.v1.InvokeBidiStreamResponse
+ */
+export type InvokeBidiStreamResponse = Message<"rat.core.v1.InvokeBidiStreamResponse"> & {
+  /**
+   * One serialized axis response frame. Opaque to the core; relayed verbatim.
+   *
+   * @generated from field: bytes result = 1;
+   */
+  result: Uint8Array;
+};
+
+/**
+ * Describes the message rat.core.v1.InvokeBidiStreamResponse.
+ * Use `create(InvokeBidiStreamResponseSchema)` to create a new message.
+ */
+export const InvokeBidiStreamResponseSchema: GenMessage<InvokeBidiStreamResponse> = /*@__PURE__*/
+  messageDesc(file_rat_core_v1_invoke, 5);
+
+/**
+ * CapabilityInvokeService has one Invoke variant per RPC cardinality (ADR-008).
+ * All three are GENERIC byte-relays: the core enforces C2/C5/C7/C8 + traceparent
+ * and stamps the downstream rat-callmeta-bin envelope (ADR-007) ONCE at the call
+ * (for streams: once at stream-open), then relays opaque payload/result frames
+ * without deserializing them. The caller's SDK picks the variant from the target
+ * capability's cardinality. Bulk data (if any) still flows out-of-band via the
+ * ArrowStream descriptors inside the relayed frames — never through this service.
+ *
  * @generated from service rat.core.v1.CapabilityInvokeService
  */
 export const CapabilityInvokeService: GenService<{
   /**
-   * Invoke one capability on its resolved provider, mediated + enforced by the
-   * core. Unary control call; bulk data (if any) flows out-of-band via the
-   * ArrowStream descriptors inside the relayed payload/result.
+   * Unary→unary capabilities. One request, one response.
    *
    * @generated from rpc rat.core.v1.CapabilityInvokeService.Invoke
    */
@@ -119,6 +220,32 @@ export const CapabilityInvokeService: GenService<{
     methodKind: "unary";
     input: typeof InvokeRequestSchema;
     output: typeof InvokeResponseSchema;
+  },
+  /**
+   * Server-streaming capabilities (e.g. runtime.Execute, state.Watch,
+   * scheduler.WatchDue). One request opens the call; the core relays a stream of
+   * responses, each `result` being one serialized axis response frame. Enforcement
+   * + identity-stamp happen once at open; one C8 audit record per stream.
+   *
+   * @generated from rpc rat.core.v1.CapabilityInvokeService.InvokeServerStream
+   */
+  invokeServerStream: {
+    methodKind: "server_streaming";
+    input: typeof InvokeServerStreamRequestSchema;
+    output: typeof InvokeServerStreamResponseSchema;
+  },
+  /**
+   * Bidirectional capabilities (e.g. observability.Ingest) — and pure
+   * client-streaming (the provider returns a single response frame). The FIRST
+   * request frame establishes `capability` (and triggers enforcement); subsequent
+   * request frames carry only `payload` and MUST leave `capability` empty.
+   *
+   * @generated from rpc rat.core.v1.CapabilityInvokeService.InvokeBidiStream
+   */
+  invokeBidiStream: {
+    methodKind: "bidi_streaming";
+    input: typeof InvokeBidiStreamRequestSchema;
+    output: typeof InvokeBidiStreamResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_rat_core_v1_invoke, 0);

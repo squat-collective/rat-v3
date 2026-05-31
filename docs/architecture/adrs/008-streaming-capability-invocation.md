@@ -39,18 +39,18 @@ A streaming capability invocation is still a capability call: WHO may invoke `ra
 
 ```proto
 service CapabilityInvokeService {
-  rpc Invoke(InvokeRequest) returns (InvokeResponse);                          // unary (ADR-005)
-  rpc InvokeServerStream(InvokeRequest) returns (stream InvokeResponse);       // server-streaming
-  rpc InvokeBidiStream(stream InvokeRequest) returns (stream InvokeResponse);  // bidi (+ client-streaming)
+  rpc Invoke(InvokeRequest) returns (InvokeResponse);                                          // unary (ADR-005)
+  rpc InvokeServerStream(InvokeServerStreamRequest) returns (stream InvokeServerStreamResponse); // server-streaming
+  rpc InvokeBidiStream(stream InvokeBidiStreamRequest) returns (stream InvokeBidiStreamResponse); // bidi (+ client-streaming)
 }
 ```
 
-- **`InvokeServerStream`** mediates server-streaming capabilities (`runtime.Execute`, `state.Watch`, `scheduler.WatchDue`). One `InvokeRequest` `{capability, payload}`; the gateway relays a stream of `InvokeResponse`, each `result` being one serialized axis response frame (e.g. one `ExecuteResponse`).
-- **`InvokeBidiStream`** mediates bidirectional capabilities (`observability.Ingest`) **and** pure client-streaming (the provider simply returns a single response frame). The **first** `InvokeRequest` frame establishes the `capability` (and triggers enforcement); subsequent request frames carry only `payload` and MUST leave `capability` empty.
+- **`InvokeServerStream`** mediates server-streaming capabilities (`runtime.Execute`, `state.Watch`, `scheduler.WatchDue`). One request `{capability, payload}`; the gateway relays a stream of responses, each `result` being one serialized axis response frame (e.g. one `ExecuteResponse`).
+- **`InvokeBidiStream`** mediates bidirectional capabilities (`observability.Ingest`) **and** pure client-streaming (the provider simply returns a single response frame). The **first** request frame establishes the `capability` (and triggers enforcement); subsequent request frames carry only `payload` and MUST leave `capability` empty.
 
 No `InvokeClientStream` is added — `InvokeBidiStream` subsumes it. The existing unary `Invoke` is unchanged. The caller's generated SDK selects the variant from the target method's cardinality (known from the method descriptor + the `(rat.common.v1.capability)` annotation).
 
-`InvokeRequest` / `InvokeResponse` are reused as-is (`{capability, payload}` / `{result}`) — no new message types.
+**Message types (refined 2026-05-31 during the migration):** the three variants carry the SAME `{capability, payload}` → `{result}` envelope, but **buf STANDARD's `RPC_REQUEST_RESPONSE_UNIQUE` rule forbids sharing one request/response type across RPCs** — and the project follows `STANDARD` with no exceptions. So each variant gets its own distinct types (`InvokeServerStreamRequest`/`Response`, `InvokeBidiStreamRequest`/`Response`), not a reuse of `InvokeRequest`/`InvokeResponse`. This is also the more evolvable choice (each cardinality can grow + document its own framing — e.g. the bidi request's "capability on first frame only" semantics). Context still rides in `rat-callmeta-bin` metadata in every variant, never in these bodies (field 1 reserved). *(Supersedes this section's original "reuse `InvokeRequest`/`InvokeResponse`, no new message types" wording.)*
 
 ### 3. Enforce once at stream-open; stamp identity for the stream's lifetime
 
@@ -109,7 +109,7 @@ Use a single `InvokeBidiStream(stream InvokeRequest) returns (stream InvokeRespo
 
 Pre-freeze; additive. This is an ADR-only commit (one-ADR-per-commit). The implementation lands separately:
 
-1. **`invoke.proto`** — add `InvokeServerStream` + `InvokeBidiStream` to `CapabilityInvokeService` (reusing `InvokeRequest`/`InvokeResponse`); document enforce-at-open + the first-frame-establishes-capability rule for bidi. `buf lint/build` clean; added methods are non-breaking.
+1. **`invoke.proto`** — add `InvokeServerStream` + `InvokeBidiStream` to `CapabilityInvokeService` with distinct per-variant request/response types (buf STANDARD `RPC_REQUEST_RESPONSE_UNIQUE`; see Decision §2); document enforce-at-open + the first-frame-establishes-capability rule for bidi. `buf lint/build` clean; added methods + messages are non-breaking.
 2. **Regenerate the 4 SDKs.**
 3. **Stub gateway** — add a server-stream relay (the runtime case); enforce once at open, stamp downstream `rat-callmeta-bin`, relay frames via the passthrough codec, one C8 audit per stream.
 4. **Route `runtime.Execute` through `InvokeServerStream`** in `examples/runtime/inmemory-go` (replacing the direct-dial workaround + updating its header note); add `runtime.proto`'s **deferred** `(rat.common.v1.capability) = "rat://runtime/v1/execute"` annotation (+ import) so the gateway can route it. Re-run the **unchanged** runtime golden vectors (must stay green — behavior-preserving, like ADR-007's migration).

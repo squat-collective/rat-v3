@@ -6,7 +6,14 @@ from rat.core.v1 import invoke_pb2 as rat_dot_core_dot_v1_dot_invoke__pb2
 
 
 class CapabilityInvokeServiceStub(object):
-    """Missing associated documentation comment in .proto file."""
+    """CapabilityInvokeService has one Invoke variant per RPC cardinality (ADR-008).
+    All three are GENERIC byte-relays: the core enforces C2/C5/C7/C8 + traceparent
+    and stamps the downstream rat-callmeta-bin envelope (ADR-007) ONCE at the call
+    (for streams: once at stream-open), then relays opaque payload/result frames
+    without deserializing them. The caller's SDK picks the variant from the target
+    capability's cardinality. Bulk data (if any) still flows out-of-band via the
+    ArrowStream descriptors inside the relayed frames — never through this service.
+    """
 
     def __init__(self, channel):
         """Constructor.
@@ -19,15 +26,50 @@ class CapabilityInvokeServiceStub(object):
                 request_serializer=rat_dot_core_dot_v1_dot_invoke__pb2.InvokeRequest.SerializeToString,
                 response_deserializer=rat_dot_core_dot_v1_dot_invoke__pb2.InvokeResponse.FromString,
                 _registered_method=True)
+        self.InvokeServerStream = channel.unary_stream(
+                '/rat.core.v1.CapabilityInvokeService/InvokeServerStream',
+                request_serializer=rat_dot_core_dot_v1_dot_invoke__pb2.InvokeServerStreamRequest.SerializeToString,
+                response_deserializer=rat_dot_core_dot_v1_dot_invoke__pb2.InvokeServerStreamResponse.FromString,
+                _registered_method=True)
+        self.InvokeBidiStream = channel.stream_stream(
+                '/rat.core.v1.CapabilityInvokeService/InvokeBidiStream',
+                request_serializer=rat_dot_core_dot_v1_dot_invoke__pb2.InvokeBidiStreamRequest.SerializeToString,
+                response_deserializer=rat_dot_core_dot_v1_dot_invoke__pb2.InvokeBidiStreamResponse.FromString,
+                _registered_method=True)
 
 
 class CapabilityInvokeServiceServicer(object):
-    """Missing associated documentation comment in .proto file."""
+    """CapabilityInvokeService has one Invoke variant per RPC cardinality (ADR-008).
+    All three are GENERIC byte-relays: the core enforces C2/C5/C7/C8 + traceparent
+    and stamps the downstream rat-callmeta-bin envelope (ADR-007) ONCE at the call
+    (for streams: once at stream-open), then relays opaque payload/result frames
+    without deserializing them. The caller's SDK picks the variant from the target
+    capability's cardinality. Bulk data (if any) still flows out-of-band via the
+    ArrowStream descriptors inside the relayed frames — never through this service.
+    """
 
     def Invoke(self, request, context):
-        """Invoke one capability on its resolved provider, mediated + enforced by the
-        core. Unary control call; bulk data (if any) flows out-of-band via the
-        ArrowStream descriptors inside the relayed payload/result.
+        """Unary→unary capabilities. One request, one response.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def InvokeServerStream(self, request, context):
+        """Server-streaming capabilities (e.g. runtime.Execute, state.Watch,
+        scheduler.WatchDue). One request opens the call; the core relays a stream of
+        responses, each `result` being one serialized axis response frame. Enforcement
+        + identity-stamp happen once at open; one C8 audit record per stream.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def InvokeBidiStream(self, request_iterator, context):
+        """Bidirectional capabilities (e.g. observability.Ingest) — and pure
+        client-streaming (the provider returns a single response frame). The FIRST
+        request frame establishes `capability` (and triggers enforcement); subsequent
+        request frames carry only `payload` and MUST leave `capability` empty.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -41,6 +83,16 @@ def add_CapabilityInvokeServiceServicer_to_server(servicer, server):
                     request_deserializer=rat_dot_core_dot_v1_dot_invoke__pb2.InvokeRequest.FromString,
                     response_serializer=rat_dot_core_dot_v1_dot_invoke__pb2.InvokeResponse.SerializeToString,
             ),
+            'InvokeServerStream': grpc.unary_stream_rpc_method_handler(
+                    servicer.InvokeServerStream,
+                    request_deserializer=rat_dot_core_dot_v1_dot_invoke__pb2.InvokeServerStreamRequest.FromString,
+                    response_serializer=rat_dot_core_dot_v1_dot_invoke__pb2.InvokeServerStreamResponse.SerializeToString,
+            ),
+            'InvokeBidiStream': grpc.stream_stream_rpc_method_handler(
+                    servicer.InvokeBidiStream,
+                    request_deserializer=rat_dot_core_dot_v1_dot_invoke__pb2.InvokeBidiStreamRequest.FromString,
+                    response_serializer=rat_dot_core_dot_v1_dot_invoke__pb2.InvokeBidiStreamResponse.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
             'rat.core.v1.CapabilityInvokeService', rpc_method_handlers)
@@ -50,7 +102,14 @@ def add_CapabilityInvokeServiceServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class CapabilityInvokeService(object):
-    """Missing associated documentation comment in .proto file."""
+    """CapabilityInvokeService has one Invoke variant per RPC cardinality (ADR-008).
+    All three are GENERIC byte-relays: the core enforces C2/C5/C7/C8 + traceparent
+    and stamps the downstream rat-callmeta-bin envelope (ADR-007) ONCE at the call
+    (for streams: once at stream-open), then relays opaque payload/result frames
+    without deserializing them. The caller's SDK picks the variant from the target
+    capability's cardinality. Bulk data (if any) still flows out-of-band via the
+    ArrowStream descriptors inside the relayed frames — never through this service.
+    """
 
     @staticmethod
     def Invoke(request,
@@ -69,6 +128,60 @@ class CapabilityInvokeService(object):
             '/rat.core.v1.CapabilityInvokeService/Invoke',
             rat_dot_core_dot_v1_dot_invoke__pb2.InvokeRequest.SerializeToString,
             rat_dot_core_dot_v1_dot_invoke__pb2.InvokeResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def InvokeServerStream(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/rat.core.v1.CapabilityInvokeService/InvokeServerStream',
+            rat_dot_core_dot_v1_dot_invoke__pb2.InvokeServerStreamRequest.SerializeToString,
+            rat_dot_core_dot_v1_dot_invoke__pb2.InvokeServerStreamResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def InvokeBidiStream(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_stream(
+            request_iterator,
+            target,
+            '/rat.core.v1.CapabilityInvokeService/InvokeBidiStream',
+            rat_dot_core_dot_v1_dot_invoke__pb2.InvokeBidiStreamRequest.SerializeToString,
+            rat_dot_core_dot_v1_dot_invoke__pb2.InvokeBidiStreamResponse.FromString,
             options,
             channel_credentials,
             insecure,

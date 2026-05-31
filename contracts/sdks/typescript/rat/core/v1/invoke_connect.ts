@@ -37,19 +37,25 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { InvokeRequest, InvokeResponse } from "./invoke_pb.js";
+import { InvokeBidiStreamRequest, InvokeBidiStreamResponse, InvokeRequest, InvokeResponse, InvokeServerStreamRequest, InvokeServerStreamResponse } from "./invoke_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
+ * CapabilityInvokeService has one Invoke variant per RPC cardinality (ADR-008).
+ * All three are GENERIC byte-relays: the core enforces C2/C5/C7/C8 + traceparent
+ * and stamps the downstream rat-callmeta-bin envelope (ADR-007) ONCE at the call
+ * (for streams: once at stream-open), then relays opaque payload/result frames
+ * without deserializing them. The caller's SDK picks the variant from the target
+ * capability's cardinality. Bulk data (if any) still flows out-of-band via the
+ * ArrowStream descriptors inside the relayed frames — never through this service.
+ *
  * @generated from service rat.core.v1.CapabilityInvokeService
  */
 export const CapabilityInvokeService = {
   typeName: "rat.core.v1.CapabilityInvokeService",
   methods: {
     /**
-     * Invoke one capability on its resolved provider, mediated + enforced by the
-     * core. Unary control call; bulk data (if any) flows out-of-band via the
-     * ArrowStream descriptors inside the relayed payload/result.
+     * Unary→unary capabilities. One request, one response.
      *
      * @generated from rpc rat.core.v1.CapabilityInvokeService.Invoke
      */
@@ -58,6 +64,34 @@ export const CapabilityInvokeService = {
       I: InvokeRequest,
       O: InvokeResponse,
       kind: MethodKind.Unary,
+    },
+    /**
+     * Server-streaming capabilities (e.g. runtime.Execute, state.Watch,
+     * scheduler.WatchDue). One request opens the call; the core relays a stream of
+     * responses, each `result` being one serialized axis response frame. Enforcement
+     * + identity-stamp happen once at open; one C8 audit record per stream.
+     *
+     * @generated from rpc rat.core.v1.CapabilityInvokeService.InvokeServerStream
+     */
+    invokeServerStream: {
+      name: "InvokeServerStream",
+      I: InvokeServerStreamRequest,
+      O: InvokeServerStreamResponse,
+      kind: MethodKind.ServerStreaming,
+    },
+    /**
+     * Bidirectional capabilities (e.g. observability.Ingest) — and pure
+     * client-streaming (the provider returns a single response frame). The FIRST
+     * request frame establishes `capability` (and triggers enforcement); subsequent
+     * request frames carry only `payload` and MUST leave `capability` empty.
+     *
+     * @generated from rpc rat.core.v1.CapabilityInvokeService.InvokeBidiStream
+     */
+    invokeBidiStream: {
+      name: "InvokeBidiStream",
+      I: InvokeBidiStreamRequest,
+      O: InvokeBidiStreamResponse,
+      kind: MethodKind.BiDiStreaming,
     },
   }
 } as const;

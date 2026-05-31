@@ -167,6 +167,209 @@ func (x *InvokeResponse) GetResult() []byte {
 	return nil
 }
 
+type InvokeServerStreamRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The capability being invoked; same grammar + resolution as InvokeRequest. Must
+	// resolve to a server-streaming provider method.
+	Capability string `protobuf:"bytes,2,opt,name=capability,proto3" json:"capability,omitempty"`
+	// The serialized request message for the target method (e.g. an encoded
+	// rat.runtime.v1.ExecuteRequest). Opaque to the core.
+	Payload       []byte `protobuf:"bytes,3,opt,name=payload,proto3" json:"payload,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InvokeServerStreamRequest) Reset() {
+	*x = InvokeServerStreamRequest{}
+	mi := &file_rat_core_v1_invoke_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InvokeServerStreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InvokeServerStreamRequest) ProtoMessage() {}
+
+func (x *InvokeServerStreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_rat_core_v1_invoke_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InvokeServerStreamRequest.ProtoReflect.Descriptor instead.
+func (*InvokeServerStreamRequest) Descriptor() ([]byte, []int) {
+	return file_rat_core_v1_invoke_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *InvokeServerStreamRequest) GetCapability() string {
+	if x != nil {
+		return x.Capability
+	}
+	return ""
+}
+
+func (x *InvokeServerStreamRequest) GetPayload() []byte {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+type InvokeServerStreamResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// One serialized axis response frame (e.g. an encoded
+	// rat.runtime.v1.ExecuteResponse). Opaque to the core; relayed verbatim.
+	// Failures surface via gRPC status, not a field here.
+	Result        []byte `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InvokeServerStreamResponse) Reset() {
+	*x = InvokeServerStreamResponse{}
+	mi := &file_rat_core_v1_invoke_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InvokeServerStreamResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InvokeServerStreamResponse) ProtoMessage() {}
+
+func (x *InvokeServerStreamResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rat_core_v1_invoke_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InvokeServerStreamResponse.ProtoReflect.Descriptor instead.
+func (*InvokeServerStreamResponse) Descriptor() ([]byte, []int) {
+	return file_rat_core_v1_invoke_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *InvokeServerStreamResponse) GetResult() []byte {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+type InvokeBidiStreamRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Set on the FIRST frame only to establish + authorize the call; MUST be empty
+	// on subsequent frames (the core ignores it after open).
+	Capability string `protobuf:"bytes,2,opt,name=capability,proto3" json:"capability,omitempty"`
+	// One serialized axis request frame. Opaque to the core.
+	Payload       []byte `protobuf:"bytes,3,opt,name=payload,proto3" json:"payload,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InvokeBidiStreamRequest) Reset() {
+	*x = InvokeBidiStreamRequest{}
+	mi := &file_rat_core_v1_invoke_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InvokeBidiStreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InvokeBidiStreamRequest) ProtoMessage() {}
+
+func (x *InvokeBidiStreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_rat_core_v1_invoke_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InvokeBidiStreamRequest.ProtoReflect.Descriptor instead.
+func (*InvokeBidiStreamRequest) Descriptor() ([]byte, []int) {
+	return file_rat_core_v1_invoke_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *InvokeBidiStreamRequest) GetCapability() string {
+	if x != nil {
+		return x.Capability
+	}
+	return ""
+}
+
+func (x *InvokeBidiStreamRequest) GetPayload() []byte {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+type InvokeBidiStreamResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// One serialized axis response frame. Opaque to the core; relayed verbatim.
+	Result        []byte `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InvokeBidiStreamResponse) Reset() {
+	*x = InvokeBidiStreamResponse{}
+	mi := &file_rat_core_v1_invoke_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InvokeBidiStreamResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InvokeBidiStreamResponse) ProtoMessage() {}
+
+func (x *InvokeBidiStreamResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rat_core_v1_invoke_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InvokeBidiStreamResponse.ProtoReflect.Descriptor instead.
+func (*InvokeBidiStreamResponse) Descriptor() ([]byte, []int) {
+	return file_rat_core_v1_invoke_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *InvokeBidiStreamResponse) GetResult() []byte {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
 var File_rat_core_v1_invoke_proto protoreflect.FileDescriptor
 
 const file_rat_core_v1_invoke_proto_rawDesc = "" +
@@ -178,9 +381,25 @@ const file_rat_core_v1_invoke_proto_rawDesc = "" +
 	"capability\x12\x18\n" +
 	"\apayload\x18\x03 \x01(\fR\apayloadJ\x04\b\x01\x10\x02\"(\n" +
 	"\x0eInvokeResponse\x12\x16\n" +
-	"\x06result\x18\x01 \x01(\fR\x06result2\\\n" +
+	"\x06result\x18\x01 \x01(\fR\x06result\"[\n" +
+	"\x19InvokeServerStreamRequest\x12\x1e\n" +
+	"\n" +
+	"capability\x18\x02 \x01(\tR\n" +
+	"capability\x12\x18\n" +
+	"\apayload\x18\x03 \x01(\fR\apayloadJ\x04\b\x01\x10\x02\"4\n" +
+	"\x1aInvokeServerStreamResponse\x12\x16\n" +
+	"\x06result\x18\x01 \x01(\fR\x06result\"Y\n" +
+	"\x17InvokeBidiStreamRequest\x12\x1e\n" +
+	"\n" +
+	"capability\x18\x02 \x01(\tR\n" +
+	"capability\x12\x18\n" +
+	"\apayload\x18\x03 \x01(\fR\apayloadJ\x04\b\x01\x10\x02\"2\n" +
+	"\x18InvokeBidiStreamResponse\x12\x16\n" +
+	"\x06result\x18\x01 \x01(\fR\x06result2\xaa\x02\n" +
 	"\x17CapabilityInvokeService\x12A\n" +
-	"\x06Invoke\x12\x1a.rat.core.v1.InvokeRequest\x1a\x1b.rat.core.v1.InvokeResponseB/Z-github.com/rat-dev/rat/gen/rat/core/v1;corev1b\x06proto3"
+	"\x06Invoke\x12\x1a.rat.core.v1.InvokeRequest\x1a\x1b.rat.core.v1.InvokeResponse\x12g\n" +
+	"\x12InvokeServerStream\x12&.rat.core.v1.InvokeServerStreamRequest\x1a'.rat.core.v1.InvokeServerStreamResponse0\x01\x12c\n" +
+	"\x10InvokeBidiStream\x12$.rat.core.v1.InvokeBidiStreamRequest\x1a%.rat.core.v1.InvokeBidiStreamResponse(\x010\x01B/Z-github.com/rat-dev/rat/gen/rat/core/v1;corev1b\x06proto3"
 
 var (
 	file_rat_core_v1_invoke_proto_rawDescOnce sync.Once
@@ -194,16 +413,24 @@ func file_rat_core_v1_invoke_proto_rawDescGZIP() []byte {
 	return file_rat_core_v1_invoke_proto_rawDescData
 }
 
-var file_rat_core_v1_invoke_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_rat_core_v1_invoke_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_rat_core_v1_invoke_proto_goTypes = []any{
-	(*InvokeRequest)(nil),  // 0: rat.core.v1.InvokeRequest
-	(*InvokeResponse)(nil), // 1: rat.core.v1.InvokeResponse
+	(*InvokeRequest)(nil),              // 0: rat.core.v1.InvokeRequest
+	(*InvokeResponse)(nil),             // 1: rat.core.v1.InvokeResponse
+	(*InvokeServerStreamRequest)(nil),  // 2: rat.core.v1.InvokeServerStreamRequest
+	(*InvokeServerStreamResponse)(nil), // 3: rat.core.v1.InvokeServerStreamResponse
+	(*InvokeBidiStreamRequest)(nil),    // 4: rat.core.v1.InvokeBidiStreamRequest
+	(*InvokeBidiStreamResponse)(nil),   // 5: rat.core.v1.InvokeBidiStreamResponse
 }
 var file_rat_core_v1_invoke_proto_depIdxs = []int32{
 	0, // 0: rat.core.v1.CapabilityInvokeService.Invoke:input_type -> rat.core.v1.InvokeRequest
-	1, // 1: rat.core.v1.CapabilityInvokeService.Invoke:output_type -> rat.core.v1.InvokeResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: rat.core.v1.CapabilityInvokeService.InvokeServerStream:input_type -> rat.core.v1.InvokeServerStreamRequest
+	4, // 2: rat.core.v1.CapabilityInvokeService.InvokeBidiStream:input_type -> rat.core.v1.InvokeBidiStreamRequest
+	1, // 3: rat.core.v1.CapabilityInvokeService.Invoke:output_type -> rat.core.v1.InvokeResponse
+	3, // 4: rat.core.v1.CapabilityInvokeService.InvokeServerStream:output_type -> rat.core.v1.InvokeServerStreamResponse
+	5, // 5: rat.core.v1.CapabilityInvokeService.InvokeBidiStream:output_type -> rat.core.v1.InvokeBidiStreamResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -220,7 +447,7 @@ func file_rat_core_v1_invoke_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rat_core_v1_invoke_proto_rawDesc), len(file_rat_core_v1_invoke_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

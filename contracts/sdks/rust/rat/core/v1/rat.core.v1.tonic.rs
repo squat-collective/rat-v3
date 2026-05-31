@@ -115,6 +115,66 @@ pub mod capability_invoke_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn invoke_server_stream(
+            &mut self,
+            request: impl tonic::IntoRequest<super::InvokeServerStreamRequest>,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::InvokeServerStreamResponse>>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/rat.core.v1.CapabilityInvokeService/InvokeServerStream",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "rat.core.v1.CapabilityInvokeService",
+                        "InvokeServerStream",
+                    ),
+                );
+            self.inner.server_streaming(req, path, codec).await
+        }
+        pub async fn invoke_bidi_stream(
+            &mut self,
+            request: impl tonic::IntoStreamingRequest<
+                Message = super::InvokeBidiStreamRequest,
+            >,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::InvokeBidiStreamResponse>>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/rat.core.v1.CapabilityInvokeService/InvokeBidiStream",
+            );
+            let mut req = request.into_streaming_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "rat.core.v1.CapabilityInvokeService",
+                        "InvokeBidiStream",
+                    ),
+                );
+            self.inner.streaming(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -134,6 +194,38 @@ pub mod capability_invoke_service_server {
             &self,
             request: tonic::Request<super::InvokeRequest>,
         ) -> std::result::Result<tonic::Response<super::InvokeResponse>, tonic::Status>;
+        /// Server streaming response type for the InvokeServerStream method.
+        type InvokeServerStreamStream: tonic::codegen::tokio_stream::Stream<
+                Item = std::result::Result<
+                    super::InvokeServerStreamResponse,
+                    tonic::Status,
+                >,
+            >
+            + std::marker::Send
+            + 'static;
+        async fn invoke_server_stream(
+            &self,
+            request: tonic::Request<super::InvokeServerStreamRequest>,
+        ) -> std::result::Result<
+            tonic::Response<Self::InvokeServerStreamStream>,
+            tonic::Status,
+        >;
+        /// Server streaming response type for the InvokeBidiStream method.
+        type InvokeBidiStreamStream: tonic::codegen::tokio_stream::Stream<
+                Item = std::result::Result<
+                    super::InvokeBidiStreamResponse,
+                    tonic::Status,
+                >,
+            >
+            + std::marker::Send
+            + 'static;
+        async fn invoke_bidi_stream(
+            &self,
+            request: tonic::Request<tonic::Streaming<super::InvokeBidiStreamRequest>>,
+        ) -> std::result::Result<
+            tonic::Response<Self::InvokeBidiStreamStream>,
+            tonic::Status,
+        >;
     }
     #[derive(Debug)]
     pub struct CapabilityInvokeServiceServer<T> {
@@ -254,6 +346,109 @@ pub mod capability_invoke_service_server {
                                 max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rat.core.v1.CapabilityInvokeService/InvokeServerStream" => {
+                    #[allow(non_camel_case_types)]
+                    struct InvokeServerStreamSvc<T: CapabilityInvokeService>(pub Arc<T>);
+                    impl<
+                        T: CapabilityInvokeService,
+                    > tonic::server::ServerStreamingService<
+                        super::InvokeServerStreamRequest,
+                    > for InvokeServerStreamSvc<T> {
+                        type Response = super::InvokeServerStreamResponse;
+                        type ResponseStream = T::InvokeServerStreamStream;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::InvokeServerStreamRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as CapabilityInvokeService>::invoke_server_stream(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = InvokeServerStreamSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rat.core.v1.CapabilityInvokeService/InvokeBidiStream" => {
+                    #[allow(non_camel_case_types)]
+                    struct InvokeBidiStreamSvc<T: CapabilityInvokeService>(pub Arc<T>);
+                    impl<
+                        T: CapabilityInvokeService,
+                    > tonic::server::StreamingService<super::InvokeBidiStreamRequest>
+                    for InvokeBidiStreamSvc<T> {
+                        type Response = super::InvokeBidiStreamResponse;
+                        type ResponseStream = T::InvokeBidiStreamStream;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                tonic::Streaming<super::InvokeBidiStreamRequest>,
+                            >,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as CapabilityInvokeService>::invoke_bidi_stream(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = InvokeBidiStreamSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.streaming(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

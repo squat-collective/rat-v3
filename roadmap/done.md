@@ -4,6 +4,22 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-05-31 — ADR-008 migration executed: `InvokeServerStream` + `InvokeBidiStream`; runtime now gateway-mediated
+
+Implemented [ADR-008](../docs/architecture/adrs/008-streaming-capability-invocation.md) (decided in the prior commit; this is the implementation, kept separate per one-ADR-per-commit).
+
+- **`invoke.proto`:** added `InvokeServerStream(InvokeServerStreamRequest) returns (stream InvokeServerStreamResponse)` + `InvokeBidiStream(stream InvokeBidiStreamRequest) returns (stream InvokeBidiStreamResponse)` to `CapabilityInvokeService`, with 4 new distinct message types. **Refinement vs the ADR's first draft:** buf STANDARD's `RPC_REQUEST_RESPONSE_UNIQUE` forbids sharing `InvokeRequest`/`InvokeResponse` across RPCs, so each variant got its own request/response (also the more evolvable choice). ADR-008 §2 + Migration amended to record this (same-day). `buf lint`/`build` clean; `buf format` applied; the added methods + messages are non-breaking (`buf breaking` FILE).
+- **`runtime.proto`:** added the deferred `(rat.common.v1.capability) = "rat://runtime/v1/execute"` method option (+ annotations import) so the gateway can route it.
+- **SDKs:** regenerated all 4 (Go/Python/TS/Rust) — the Go SDK now exposes `InvokeServerStream` client/server + the 4 new types.
+- **Stub gateway (runtime example):** added the **server-stream relay** — enforce C5 + validate traceparent + stamp the downstream `rat-callmeta-bin` envelope (ADR-007) + one C8 audit ALL once at stream-open, then open a downstream server-streaming call (`ClientConn.NewStream` + `StreamDesc{ServerStreams:true}` + passthrough codec) and relay each `ExecuteResponse` frame's opaque bytes upstream — never deserializing.
+- **Runtime harness:** rewired from direct-dial to route `Execute` through `gw.InvokeServerStream` (replacing the direct path + updating the header note; the Python harness stays direct like the other Python refs). Added the C8 one-audit-per-stream assertion.
+
+**Behavior-preserving — verified:** the **unchanged** runtime golden vectors still pass, now over the mediated streaming path (Go `golang:1.25`); INVALID_ARGUMENT relays through the streaming gateway verbatim. All EIGHT references (format+engine+storage+runtime, Go+Python) green together after the invoke.proto + SDK changes.
+
+**Files:** `contracts/proto/rat/core/v1/invoke.proto`, `contracts/proto/rat/runtime/v1/runtime.proto`, `contracts/sdks/**` (regenerated), `docs/architecture/adrs/008-*.md` (§2 + Migration amended), `examples/runtime/inmemory-go/{gateway_test.go,harness_test.go}`, `examples/runtime/inmemory-py/README.md`.
+
+---
+
 ## 2026-05-31 — ADR-008: streaming capability invocation (per-cardinality Invoke variants)
 
 Resolved the streaming-mediation finding the `runtime` 0d reference surfaced. **[ADR-008](../docs/architecture/adrs/008-streaming-capability-invocation.md) (Accepted):** add `InvokeServerStream(InvokeRequest) returns (stream InvokeResponse)` + `InvokeBidiStream(stream InvokeRequest) returns (stream InvokeResponse)` to `core/v1 CapabilityInvokeService`. Streaming capabilities stay core-mediated — the gateway enforces C2/C5/C7/C8 + traceparent **once at stream-open**, stamps the downstream `rat-callmeta-bin` envelope for the stream's lifetime (ADR-007), and relays each frame's opaque bytes via the passthrough codec (never deserializing). One C8 audit per stream.

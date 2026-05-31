@@ -39,7 +39,7 @@ type RuntimeServiceClient interface {
 	// reconciler/UI can show liveness on long tasks; terminal message carries the
 	// outcome. Each streamed message is an ExecuteResponse (a progress-or-completed
 	// oneof) — named per the *Response convention buf STANDARD requires, even for
-	// streaming RPCs.
+	// streaming RPCs. Mediated via core InvokeServerStream (ADR-008).
 	Execute(ctx context.Context, in *ExecuteRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ExecuteResponse], error)
 }
 
@@ -78,7 +78,7 @@ type RuntimeServiceServer interface {
 	// reconciler/UI can show liveness on long tasks; terminal message carries the
 	// outcome. Each streamed message is an ExecuteResponse (a progress-or-completed
 	// oneof) — named per the *Response convention buf STANDARD requires, even for
-	// streaming RPCs.
+	// streaming RPCs. Mediated via core InvokeServerStream (ADR-008).
 	Execute(*ExecuteRequest, grpc.ServerStreamingServer[ExecuteResponse]) error
 	mustEmbedUnimplementedRuntimeServiceServer()
 }

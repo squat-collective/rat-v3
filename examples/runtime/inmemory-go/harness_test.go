@@ -5,13 +5,12 @@
 // collecting the progress messages + terminal completion and asserting against the
 // vectors.
 //
-// DIRECT, NOT GATEWAY-MEDIATED — and that is the point of a finding. Every prior
-// 0d axis routed its control RPC through the stub core gateway (ADR-005/007). The
-// gateway's CapabilityInvokeService.Invoke is UNARY (invoke.proto), so it cannot
-// mediate a server-streaming capability like Execute. Until a streaming-invoke
-// path exists (a candidate follow-up ADR — see ideas/inbox.md), runtime is driven
-// directly. The rat-callmeta-bin envelope is still attached for faithfulness
-// (a real call carries it), but nothing validates it on this direct path.
+// MEDIATED via the stub core gateway's InvokeServerStream (ADR-008). Earlier this
+// axis had to be driven directly because the gateway's only Invoke was unary; the
+// ADR-008 migration added a server-streaming relay, so runtime now routes through
+// the core-mediated path like every other axis — exercising the C1/C5/C8 +
+// identity-stamp seams on a STREAMING call (the gateway relays each ExecuteResponse
+// frame's opaque bytes without deserializing it).
 package main
 
 import (
@@ -24,6 +23,7 @@ import (
 	"time"
 
 	commonv1 "github.com/rat-dev/rat/gen/rat/common/v1"
+	corev1 "github.com/rat-dev/rat/gen/rat/core/v1"
 	runtimev1 "github.com/rat-dev/rat/gen/rat/runtime/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -83,7 +83,7 @@ func loadVectors(t *testing.T) vectors {
 }
 
 // workSpecBytes turns the vector's `work` into the work_spec wire bytes. A JSON
-// `null` (or absent) → empty bytes, the INVALID_ARGUMENT case; otherwise the raw
+// `null` (or absent) → empty bytes (the INVALID_ARGUMENT case); otherwise the raw
 // JSON object is sent as-is (the runtime parses it).
 func workSpecBytes(raw json.RawMessage) []byte {
 	if len(raw) == 0 || string(raw) == "null" {
@@ -92,20 +92,15 @@ func workSpecBytes(raw json.RawMessage) []byte {
 	return []byte(raw)
 }
 
-// ---- harness wiring: plugin dialed directly (no gateway — see file header) ----
+// ---- harness wiring: plugin behind the stub core gateway (ADR-008) ----
 
 type rig struct {
-	client runtimev1.RuntimeServiceClient
+	gw   corev1.CapabilityInvokeServiceClient
+	core *stubGateway
 }
 
-func newRig(t *testing.T) *rig {
+func bufDial(t *testing.T, lis *bufconn.Listener) *grpc.ClientConn {
 	t.Helper()
-	lis := bufconn.Listen(1 << 20)
-	srv := grpc.NewServer()
-	runtimev1.RegisterRuntimeServiceServer(srv, newServer())
-	go func() { _ = srv.Serve(lis) }()
-	t.Cleanup(srv.Stop)
-
 	conn, err := grpc.NewClient(
 		"passthrough:///bufnet",
 		grpc.WithContextDialer(func(_ context.Context, _ string) (net.Conn, error) { return lis.Dial() }),
@@ -115,7 +110,30 @@ func newRig(t *testing.T) *rig {
 		t.Fatalf("dial: %v", err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	return &rig{client: runtimev1.NewRuntimeServiceClient(conn)}
+	return conn
+}
+
+func newRig(t *testing.T) *rig {
+	t.Helper()
+
+	// Hop 2: the runtime plugin.
+	plis := bufconn.Listen(1 << 20)
+	psrv := grpc.NewServer()
+	runtimev1.RegisterRuntimeServiceServer(psrv, newServer())
+	go func() { _ = psrv.Serve(plis) }()
+	t.Cleanup(psrv.Stop)
+	providerConn := bufDial(t, plis)
+
+	core := newGateway(providerConn, "rat-strategy-test", []string{"rat://runtime/v1/execute"})
+
+	// Hop 1: the core's capability-invoke gateway.
+	glis := bufconn.Listen(1 << 20)
+	gsrv := grpc.NewServer()
+	corev1.RegisterCapabilityInvokeServiceServer(gsrv, core)
+	go func() { _ = gsrv.Serve(glis) }()
+	t.Cleanup(gsrv.Stop)
+
+	return &rig{gw: corev1.NewCapabilityInvokeServiceClient(bufDial(t, glis)), core: core}
 }
 
 func tctx(t *testing.T) context.Context {
@@ -125,39 +143,47 @@ func tctx(t *testing.T) context.Context {
 	return ctx
 }
 
-// withCallMeta attaches the rat-callmeta-bin envelope a real call carries (ADR-007).
-// Nothing validates it on this direct path; it documents that streaming calls carry
-// the envelope too.
 func withCallMeta(ctx context.Context) context.Context {
 	rc := &commonv1.RequestContext{
 		Trace:    &commonv1.TraceContext{Traceparent: "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01", CorrelationId: "corr-golden"},
 		Identity: &commonv1.Identity{Tenant: "acme"},
 	}
 	b, _ := proto.Marshal(rc)
-	return metadata.AppendToOutgoingContext(ctx, "rat-callmeta-bin", string(b))
+	return metadata.AppendToOutgoingContext(ctx, callMetaHeader, string(b))
 }
 
-// execute drives one server-streaming Execute, returning the collected progress
-// messages + the terminal completion (nil if the stream errored first).
+// execute drives one Execute through the gateway's InvokeServerStream, unmarshals
+// each relayed frame back into an ExecuteResponse, and returns the collected
+// progress + terminal completion (nil if the stream errored first).
 func (r *rig) execute(ctx context.Context, spec []byte) ([]*runtimev1.ExecuteProgress, *runtimev1.ExecuteCompleted, error) {
-	stream, err := r.client.Execute(withCallMeta(ctx), &runtimev1.ExecuteRequest{WorkSpec: spec})
+	payload, err := proto.Marshal(&runtimev1.ExecuteRequest{WorkSpec: spec})
+	if err != nil {
+		return nil, nil, err
+	}
+	stream, err := r.gw.InvokeServerStream(withCallMeta(ctx), &corev1.InvokeServerStreamRequest{
+		Capability: "rat://runtime/v1/execute", Payload: payload,
+	})
 	if err != nil {
 		return nil, nil, err
 	}
 	var progs []*runtimev1.ExecuteProgress
 	var done *runtimev1.ExecuteCompleted
 	for {
-		msg, err := stream.Recv()
+		frame, err := stream.Recv()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
 			return progs, done, err
 		}
-		if p := msg.GetProgress(); p != nil {
+		var resp runtimev1.ExecuteResponse
+		if err := proto.Unmarshal(frame.GetResult(), &resp); err != nil {
+			return progs, done, err
+		}
+		if p := resp.GetProgress(); p != nil {
 			progs = append(progs, p)
 		}
-		if c := msg.GetCompleted(); c != nil {
+		if c := resp.GetCompleted(); c != nil {
 			done = c
 		}
 	}
@@ -180,6 +206,11 @@ func TestRuntimeConformance_GoldenVectors(t *testing.T) {
 			}
 			assertExecute(t, progs, done, s.Expect)
 		})
+	}
+
+	// C8: one audit record per mediated stream.
+	if got, want := len(r.core.auditLog()), len(v.Lifecycle); got != want {
+		t.Fatalf("audit log = %d entries, want one per mediated stream (%d)", got, want)
 	}
 }
 

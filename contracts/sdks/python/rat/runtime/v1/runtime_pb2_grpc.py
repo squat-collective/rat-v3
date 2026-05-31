@@ -29,7 +29,7 @@ class RuntimeServiceServicer(object):
         reconciler/UI can show liveness on long tasks; terminal message carries the
         outcome. Each streamed message is an ExecuteResponse (a progress-or-completed
         oneof) — named per the *Response convention buf STANDARD requires, even for
-        streaming RPCs.
+        streaming RPCs. Mediated via core InvokeServerStream (ADR-008).
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

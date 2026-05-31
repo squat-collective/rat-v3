@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (0d: 4 of 6 data-plane axes MET — format/engine/storage/runtime; ADR-007 decided+migrated; ADR-008 decided (streaming-invoke) — its migration is the next step)
+> Updated: 2026-05-31 (0d: 4 of 6 data-plane axes MET — format/engine/storage/runtime; ADR-007 + ADR-008 both decided AND migrated; runtime now gateway-mediated via InvokeServerStream; all 8 refs green)
 
 ## Status one-liner
 
@@ -61,8 +61,9 @@ The 23 other prospective ADRs are in [backlog.md](backlog.md). They land as they
 
 Sub-phase **0d is underway. FOUR data-plane axes are through the ADR-003 two-reference gate: `format/v1`, `engine/v1`, `storage/v1`, `runtime/v1`** — each has two independent references (Go + Python) passing one shared golden-vector file. `format`/`engine`/`storage` route through the stub ADR-005/007 gateway; `runtime` is driven **directly** (the gateway can't mediate its streaming Execute — see the finding below). ADR-007 is decided + migrated; `storage` reads tenant from the envelope (C7); `runtime` is the first streaming axis. The harness pattern is proven + repeatable. The next concrete step:
 
-1. **Execute the ADR-008 migration** (streaming-invoke is now DECIDED — [ADR-008](../docs/architecture/adrs/008-streaming-capability-invocation.md)): add `InvokeServerStream` + `InvokeBidiStream` to `invoke.proto`; regen SDKs; add a server-stream relay to the stub gateway; route `runtime.Execute` through `InvokeServerStream` (replacing the direct-dial) + add runtime's deferred `(rat.capability)` annotation; re-run the **unchanged** runtime golden vectors. Like ADR-007's migration, behavior-preserving + cross-cutting (unblocks gateway mediation for `state.Watch`/`scheduler.WatchDue`/`observability.Ingest` too).
-2. **Or pick the fifth data-plane axis for 0d** — `catalog` or `state` (the two remaining of the six: engine ✅ format ✅ storage ✅ runtime ✅, catalog, state). Same pattern; each unannotated axis needs its `(rat.common.v1.capability)` option added (storage did, 13 remain). NOTE: `state.Watch` is server-streaming, so a full `state` reference benefits from the ADR-008 migration landing first.
+1. **Pick the fifth data-plane axis for 0d** — `catalog` or `state` (the two remaining of the six: engine ✅ format ✅ storage ✅ runtime ✅, catalog, state). Same pattern (shared `contracts/conformance/<axis>-v1.json` + two impls + the stub gateway); each unannotated axis needs its `(rat.common.v1.capability)` option added (storage + runtime did; 12 remain). `state` mixes unary RPCs (Get/Put/List) **and** a server-streaming one (`Watch`) — the ADR-008 `InvokeServerStream` relay now exists, so a full `state` reference can route Watch through it (the relay code is in `examples/runtime/inmemory-go/gateway_test.go`, ready to lift). `catalog` is fully unary (simplest next).
+2. **(Carry-over polish, optional)** a real **SDK metadata interceptor** so plugin code gets the reconstructed context object automatically; and wiring `InvokeBidiStream` (the `observability.Ingest` bidi relay) when that axis is referenced.
+3. **(Before any data-plane axis → `v1`)** the typed-Arrow conformance pass — format + engine refs still carry the bulk leg as an in-process stand-in.
 3. **(Carry-over polish, optional)** a real **SDK metadata interceptor** so plugin code gets the reconstructed context object automatically.
 4. **(Before any data-plane axis → `v1`)** the typed-Arrow conformance pass — format + engine refs still carry the bulk leg as an in-process stand-in (storage + runtime have no bulk leg under test).
 

@@ -292,7 +292,7 @@ var File_rat_runtime_v1_runtime_proto protoreflect.FileDescriptor
 
 const file_rat_runtime_v1_runtime_proto_rawDesc = "" +
 	"\n" +
-	"\x1crat/runtime/v1/runtime.proto\x12\x0erat.runtime.v1\x1a\x18rat/common/v1/data.proto\"g\n" +
+	"\x1crat/runtime/v1/runtime.proto\x12\x0erat.runtime.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"g\n" +
 	"\x0eExecuteRequest\x12\x1b\n" +
 	"\twork_spec\x18\x02 \x01(\fR\bworkSpec\x122\n" +
 	"\x06inputs\x18\x03 \x03(\v2\x1a.rat.common.v1.ArrowStreamR\x06inputsJ\x04\b\x01\x10\x02\"Y\n" +
@@ -307,9 +307,9 @@ const file_rat_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x0fExecuteResponse\x12=\n" +
 	"\bprogress\x18\x01 \x01(\v2\x1f.rat.runtime.v1.ExecuteProgressH\x00R\bprogress\x12@\n" +
 	"\tcompleted\x18\x02 \x01(\v2 .rat.runtime.v1.ExecuteCompletedH\x00R\tcompletedB\a\n" +
-	"\x05event2^\n" +
-	"\x0eRuntimeService\x12L\n" +
-	"\aExecute\x12\x1e.rat.runtime.v1.ExecuteRequest\x1a\x1f.rat.runtime.v1.ExecuteResponse0\x01B5Z3github.com/rat-dev/rat/gen/rat/runtime/v1;runtimev1b\x06proto3"
+	"\x05event2|\n" +
+	"\x0eRuntimeService\x12j\n" +
+	"\aExecute\x12\x1e.rat.runtime.v1.ExecuteRequest\x1a\x1f.rat.runtime.v1.ExecuteResponse\"\x1c\x8a\x97\"\x18rat://runtime/v1/execute0\x01B5Z3github.com/rat-dev/rat/gen/rat/runtime/v1;runtimev1b\x06proto3"
 
 var (
 	file_rat_runtime_v1_runtime_proto_rawDescOnce sync.Once
