@@ -1,4 +1,4 @@
-// UI (experience) axis service contract. DRAFT — sub-phase 0b.
+// UI (experience) axis service contract. Status: v1 (frozen — rat/1.4; ADR-003: experience = one ref + conformance).
 //
 // A `kind: ui` plugin (web-portal, CLI, Slack bot, VS Code extension) is an
 // experience surface. The platform's multi-UI story (overview.md / Phase 5) is

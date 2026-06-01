@@ -76,9 +76,11 @@ message WriteResult {
   // engine/format cannot report a count (replaces the old -1 sentinel —
   // reviews/06 API-13). Present 0 means "zero rows", distinctly from "unknown".
   optional int64 rows_affected = 1;
-  // Resulting version id of the written table state — empty if none. Set by a
-  // versioned format/table (a snapshot id) OR by an engine whose write produced a
-  // new table version (S1, reviews/07: the field is not format-only — engine
-  // Execute that creates/mutates a versioned table returns its resulting version).
-  string snapshot_id = 2;
+  // Resulting version id of the written table state. proto3 `optional` for explicit
+  // presence (A1, reviews/08 — the sibling fix to rows_affected's, absorbed into the
+  // `rat/1` re-cut before publication): ABSENT == the engine/format cannot report a
+  // version; present-empty == the write produced no version (unversioned format);
+  // present-nonempty == the version id. Set by a versioned format/table (a snapshot
+  // id) or by an engine whose write produced a new table version.
+  optional string snapshot_id = 2;
 }

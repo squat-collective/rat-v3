@@ -1,4 +1,4 @@
-// Catalog axis service contract. DRAFT — sub-phase 0b.
+// Catalog axis service contract. Status: v1 (frozen — rat/1, ADR-009).
 //
 // A `kind: catalog` plugin (Nessie, Unity, Lakekeeper, Glue, Polaris) owns
 // table metadata + branch/version semantics. It is what makes "branch-isolated

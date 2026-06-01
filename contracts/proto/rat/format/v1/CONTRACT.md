@@ -1,5 +1,12 @@
 # `format/v1` — plugin contract (author guide)
 
+> ⚠️ **Status (2026-06-01) — the orchestrating core is NOT built yet (Phase 1).** The C2/C5/C7
+> enforcement, capability routing, and audit emission this guide describes are the contract the
+> core MUST implement — they do **not** run today. The wire contract + reference plugins here are
+> real and frozen (`rat/1`); the core is *designed, not running*, and `make conformance` tests
+> references against golden vectors, **not** a live deployment. See
+> [reviews/08](../../../../../reviews/08-post-freeze-board-review.md).
+
 > Canonical guide for implementing a `kind: format` plugin. Pairs with the wire
 > contract [`format.proto`](format.proto) and the golden vectors
 > [`format-v1.json`](../../../../conformance/format-v1.json). Status: **v1 (frozen — rat/1, ADR-009)**.

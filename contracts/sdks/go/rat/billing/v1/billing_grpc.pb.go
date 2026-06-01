@@ -1,4 +1,4 @@
-// Billing axis service contract. DRAFT — sub-phase 0b.
+// Billing axis service contract. Status: v1 (frozen — rat/1.2; ADR-003: control-plane = one ref + conformance).
 //
 // A `kind: billing` plugin (none/noop, usage-metering, cloud-marketplace billing)
 // records meterable usage so a deployment can be costed/charged. It is a metering

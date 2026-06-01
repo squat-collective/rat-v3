@@ -1,5 +1,5 @@
 // Shared data-plane handoff types referenced across data-plane axes
-// (strategy ↔ runtime ↔ format). DRAFT — sub-phase 0b.
+// (strategy ↔ runtime ↔ format). Status: v1 (frozen — rat/1, ADR-009).
 //
 // Design invariant (overview.md "Data plane bypasses core for bytes"): the
 // CONTROL-plane RPCs carry references + small metadata, NEVER bulk row data.
@@ -18,7 +18,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/common/v1/data.proto.
  */
 export const file_rat_common_v1_data: GenFile = /*@__PURE__*/
-  fileDesc("ChhyYXQvY29tbW9uL3YxL2RhdGEucHJvdG8SDXJhdC5jb21tb24udjEiOwoIVGFibGVSZWYSEgoKaWRlbnRpZmllchgBIAEoCRILCgN1cmkYAiABKAkSDgoGYnJhbmNoGAMgASgJIqgBCgtBcnJvd1N0cmVhbRIQCghlbmRwb2ludBgBIAEoCRITCgZ0aWNrZXQYAiABKAxCA4ABARISCgppcGNfc2NoZW1hGAMgASgMEjAKCXRyYW5zcG9ydBgEIAEoDjIdLnJhdC5jb21tb24udjEuQXJyb3dUcmFuc3BvcnQSLAoEcm9sZRgFIAEoDjIeLnJhdC5jb21tb24udjEuQXJyb3dTdHJlYW1Sb2xlIlAKC1dyaXRlUmVzdWx0EhoKDXJvd3NfYWZmZWN0ZWQYASABKANIAIgBARITCgtzbmFwc2hvdF9pZBgCIAEoCUIQCg5fcm93c19hZmZlY3RlZCpNCg5BcnJvd1RyYW5zcG9ydBIfChtBUlJPV19UUkFOU1BPUlRfVU5TUEVDSUZJRUQQABIaChZBUlJPV19UUkFOU1BPUlRfRkxJR0hUEAEqggEKD0Fycm93U3RyZWFtUm9sZRIhCh1BUlJPV19TVFJFQU1fUk9MRV9VTlNQRUNJRklFRBAAEiUKIUFSUk9XX1NUUkVBTV9ST0xFX1BST0RVQ0VSX0hPU1RFRBABEiUKIUFSUk9XX1NUUkVBTV9ST0xFX0NPTlNVTUVSX0hPU1RFRBACQjNaMWdpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9jb21tb24vdjE7Y29tbW9udjFiBnByb3RvMw");
+  fileDesc("ChhyYXQvY29tbW9uL3YxL2RhdGEucHJvdG8SDXJhdC5jb21tb24udjEiOwoIVGFibGVSZWYSEgoKaWRlbnRpZmllchgBIAEoCRILCgN1cmkYAiABKAkSDgoGYnJhbmNoGAMgASgJIqgBCgtBcnJvd1N0cmVhbRIQCghlbmRwb2ludBgBIAEoCRITCgZ0aWNrZXQYAiABKAxCA4ABARISCgppcGNfc2NoZW1hGAMgASgMEjAKCXRyYW5zcG9ydBgEIAEoDjIdLnJhdC5jb21tb24udjEuQXJyb3dUcmFuc3BvcnQSLAoEcm9sZRgFIAEoDjIeLnJhdC5jb21tb24udjEuQXJyb3dTdHJlYW1Sb2xlImUKC1dyaXRlUmVzdWx0EhoKDXJvd3NfYWZmZWN0ZWQYASABKANIAIgBARIYCgtzbmFwc2hvdF9pZBgCIAEoCUgBiAEBQhAKDl9yb3dzX2FmZmVjdGVkQg4KDF9zbmFwc2hvdF9pZCpNCg5BcnJvd1RyYW5zcG9ydBIfChtBUlJPV19UUkFOU1BPUlRfVU5TUEVDSUZJRUQQABIaChZBUlJPV19UUkFOU1BPUlRfRkxJR0hUEAEqggEKD0Fycm93U3RyZWFtUm9sZRIhCh1BUlJPV19TVFJFQU1fUk9MRV9VTlNQRUNJRklFRBAAEiUKIUFSUk9XX1NUUkVBTV9ST0xFX1BST0RVQ0VSX0hPU1RFRBABEiUKIUFSUk9XX1NUUkVBTV9ST0xFX0NPTlNVTUVSX0hPU1RFRBACQjNaMWdpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9jb21tb24vdjE7Y29tbW9udjFiBnByb3RvMw");
 
 /**
  * A reference to a table/dataset, resolvable by a format/catalog plugin.
@@ -131,11 +131,16 @@ export type WriteResult = Message<"rat.common.v1.WriteResult"> & {
   rowsAffected?: bigint | undefined;
 
   /**
-   * Resulting snapshot/version id, if the format is versioned (else empty).
+   * Resulting version id of the written table state. proto3 `optional` for explicit
+   * presence (A1, reviews/08 — the sibling fix to rows_affected's, absorbed into the
+   * `rat/1` re-cut before publication): ABSENT == the engine/format cannot report a
+   * version; present-empty == the write produced no version (unversioned format);
+   * present-nonempty == the version id. Set by a versioned format/table (a snapshot
+   * id) or by an engine whose write produced a new table version.
    *
-   * @generated from field: string snapshot_id = 2;
+   * @generated from field: optional string snapshot_id = 2;
    */
-  snapshotId: string;
+  snapshotId?: string | undefined;
 };
 
 /**

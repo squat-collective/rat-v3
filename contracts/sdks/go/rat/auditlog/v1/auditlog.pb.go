@@ -1,4 +1,4 @@
-// Audit-log axis service contract. DRAFT — sub-phase 0b.
+// Audit-log axis service contract. Status: v1 (frozen — rat/1.2; ADR-003: control-plane = one ref + conformance).
 //
 // A `kind: audit-log` plugin (file, syslog, SIEM, immutable object store) is a
 // SINK for the core's audit stream.

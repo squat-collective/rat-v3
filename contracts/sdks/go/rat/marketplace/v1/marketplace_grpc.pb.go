@@ -1,4 +1,4 @@
-// Marketplace axis service contract. DRAFT — sub-phase 0b.
+// Marketplace axis service contract. Status: v1 (frozen — rat/1.4; ADR-003: experience = one ref + conformance).
 //
 // A `kind: marketplace` plugin (community-open, curated, enterprise-internal)
 // is a discovery surface for plugins. Multiple marketplaces coexist (ADR-002 D9);

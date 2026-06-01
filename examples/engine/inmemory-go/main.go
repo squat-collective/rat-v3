@@ -17,7 +17,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func snapshotID(n int64) string { return "snap-" + strconv.FormatInt(n, 10) }
+func snapshotID(n int64) *string { s := "snap-" + strconv.FormatInt(n, 10); return &s }
 
 func main() {
 	addr := os.Getenv("RAT_PLUGIN_ADDR")

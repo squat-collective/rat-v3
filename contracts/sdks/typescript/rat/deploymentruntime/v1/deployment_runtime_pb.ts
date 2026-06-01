@@ -1,4 +1,4 @@
-// Deployment-runtime axis service contract. DRAFT — sub-phase 0b.
+// Deployment-runtime axis service contract. Status: v1 (frozen — rat/1.3; two divergent references: local-process + k8s-dryrun).
 //
 // A `kind: deployment-runtime` plugin (local-process, docker, podman, k8s,
 // nomad, lambda, fargate) is WHERE PLUGINS RUN. Distinct from `runtime` (where

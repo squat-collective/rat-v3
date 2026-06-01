@@ -1,4 +1,4 @@
-// Identity axis service contract. DRAFT — sub-phase 0b.
+// Identity axis service contract. Status: v1 (frozen — rat/1.2; ADR-003: control-plane = one ref + conformance).
 //
 // A `kind: identity` plugin (static-token, OIDC, mTLS) backs the core's Identity
 // Gateway (one of the six core things). Every request the API gateway accepts is

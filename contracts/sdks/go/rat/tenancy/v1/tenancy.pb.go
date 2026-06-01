@@ -1,4 +1,4 @@
-// Tenancy axis service contract. DRAFT — sub-phase 0b.
+// Tenancy axis service contract. Status: v1 (frozen — rat/1.2; ADR-003: control-plane = one ref + conformance).
 //
 // A `kind: tenancy` plugin decides tenant-boundary questions the core asks at
 // decision points (a permission check, a sharing grant, a quota test).

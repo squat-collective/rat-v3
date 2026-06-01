@@ -61,7 +61,10 @@ pub struct InvokeServerStreamResponse {
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct InvokeBidiStreamRequest {
     /// Set on the FIRST frame only to establish + authorize the call; MUST be empty
-    /// on subsequent frames (the core ignores it after open).
+    /// on subsequent frames. A non-empty `capability` on a non-first frame is a
+    /// protocol violation — the core ABORTS the stream with INVALID_ARGUMENT (S2,
+    /// reviews/07: "ignored" would let a client attempt a silent mid-stream capability
+    /// switch; reject it, never tolerate it).
     #[prost(string, tag="2")]
     pub capability: ::prost::alloc::string::String,
     /// One serialized axis request frame. Opaque to the core.

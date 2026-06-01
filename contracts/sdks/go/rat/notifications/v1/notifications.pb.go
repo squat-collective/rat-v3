@@ -1,4 +1,4 @@
-// Notifications axis service contract. DRAFT — sub-phase 0b.
+// Notifications axis service contract. Status: v1 (frozen — rat/1.4; ADR-003: experience = one ref + conformance).
 //
 // A `kind: notifications` plugin (slack, email, webhook, PagerDuty) delivers
 // messages triggered by platform events (pipeline failed, plane warmed, etc.).

@@ -1,4 +1,4 @@
-// Scheduler-backend axis service contract. DRAFT — sub-phase 0b.
+// Scheduler-backend axis service contract. Status: v1 (frozen — rat/1.2; ADR-003: control-plane = one ref + conformance).
 //
 // A `kind: scheduler-backend` plugin (in-process timer, cron, Temporal,
 // cloud scheduler) owns "fire this at this time / on this interval". The

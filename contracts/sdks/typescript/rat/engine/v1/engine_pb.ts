@@ -1,4 +1,4 @@
-// Engine axis service contract. DRAFT — sub-phase 0b.
+// Engine axis service contract. Status: v1 (frozen — rat/1, ADR-009).
 //
 // A `kind: engine` plugin (DuckDB, ClickHouse, Spark, Trino, BigQuery) turns
 // SQL into Arrow. It is the compute axis: the strategy/runtime hand it SQL +

@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18rat/common/v1/data.proto\x12\rrat.common.v1\"T\n\x08TableRef\x12\x1e\n\nidentifier\x18\x01 \x01(\tR\nidentifier\x12\x10\n\x03uri\x18\x02 \x01(\tR\x03uri\x12\x16\n\x06\x62ranch\x18\x03 \x01(\tR\x06\x62ranch\"\xd6\x01\n\x0b\x41rrowStream\x12\x1a\n\x08\x65ndpoint\x18\x01 \x01(\tR\x08\x65ndpoint\x12\x1b\n\x06ticket\x18\x02 \x01(\x0c\x42\x03\x80\x01\x01R\x06ticket\x12\x1d\n\nipc_schema\x18\x03 \x01(\x0cR\tipcSchema\x12;\n\ttransport\x18\x04 \x01(\x0e\x32\x1d.rat.common.v1.ArrowTransportR\ttransport\x12\x32\n\x04role\x18\x05 \x01(\x0e\x32\x1e.rat.common.v1.ArrowStreamRoleR\x04role\"j\n\x0bWriteResult\x12(\n\rrows_affected\x18\x01 \x01(\x03H\x00R\x0crowsAffected\x88\x01\x01\x12\x1f\n\x0bsnapshot_id\x18\x02 \x01(\tR\nsnapshotIdB\x10\n\x0e_rows_affected*M\n\x0e\x41rrowTransport\x12\x1f\n\x1b\x41RROW_TRANSPORT_UNSPECIFIED\x10\x00\x12\x1a\n\x16\x41RROW_TRANSPORT_FLIGHT\x10\x01*\x82\x01\n\x0f\x41rrowStreamRole\x12!\n\x1d\x41RROW_STREAM_ROLE_UNSPECIFIED\x10\x00\x12%\n!ARROW_STREAM_ROLE_PRODUCER_HOSTED\x10\x01\x12%\n!ARROW_STREAM_ROLE_CONSUMER_HOSTED\x10\x02\x42\x33Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18rat/common/v1/data.proto\x12\rrat.common.v1\"T\n\x08TableRef\x12\x1e\n\nidentifier\x18\x01 \x01(\tR\nidentifier\x12\x10\n\x03uri\x18\x02 \x01(\tR\x03uri\x12\x16\n\x06\x62ranch\x18\x03 \x01(\tR\x06\x62ranch\"\xd6\x01\n\x0b\x41rrowStream\x12\x1a\n\x08\x65ndpoint\x18\x01 \x01(\tR\x08\x65ndpoint\x12\x1b\n\x06ticket\x18\x02 \x01(\x0c\x42\x03\x80\x01\x01R\x06ticket\x12\x1d\n\nipc_schema\x18\x03 \x01(\x0cR\tipcSchema\x12;\n\ttransport\x18\x04 \x01(\x0e\x32\x1d.rat.common.v1.ArrowTransportR\ttransport\x12\x32\n\x04role\x18\x05 \x01(\x0e\x32\x1e.rat.common.v1.ArrowStreamRoleR\x04role\"\x7f\n\x0bWriteResult\x12(\n\rrows_affected\x18\x01 \x01(\x03H\x00R\x0crowsAffected\x88\x01\x01\x12$\n\x0bsnapshot_id\x18\x02 \x01(\tH\x01R\nsnapshotId\x88\x01\x01\x42\x10\n\x0e_rows_affectedB\x0e\n\x0c_snapshot_id*M\n\x0e\x41rrowTransport\x12\x1f\n\x1b\x41RROW_TRANSPORT_UNSPECIFIED\x10\x00\x12\x1a\n\x16\x41RROW_TRANSPORT_FLIGHT\x10\x01*\x82\x01\n\x0f\x41rrowStreamRole\x12!\n\x1d\x41RROW_STREAM_ROLE_UNSPECIFIED\x10\x00\x12%\n!ARROW_STREAM_ROLE_PRODUCER_HOSTED\x10\x01\x12%\n!ARROW_STREAM_ROLE_CONSUMER_HOSTED\x10\x02\x42\x33Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,14 +34,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1'
   _globals['_ARROWSTREAM'].fields_by_name['ticket']._loaded_options = None
   _globals['_ARROWSTREAM'].fields_by_name['ticket']._serialized_options = b'\200\001\001'
-  _globals['_ARROWTRANSPORT']._serialized_start=454
-  _globals['_ARROWTRANSPORT']._serialized_end=531
-  _globals['_ARROWSTREAMROLE']._serialized_start=534
-  _globals['_ARROWSTREAMROLE']._serialized_end=664
+  _globals['_ARROWTRANSPORT']._serialized_start=475
+  _globals['_ARROWTRANSPORT']._serialized_end=552
+  _globals['_ARROWSTREAMROLE']._serialized_start=555
+  _globals['_ARROWSTREAMROLE']._serialized_end=685
   _globals['_TABLEREF']._serialized_start=43
   _globals['_TABLEREF']._serialized_end=127
   _globals['_ARROWSTREAM']._serialized_start=130
   _globals['_ARROWSTREAM']._serialized_end=344
   _globals['_WRITERESULT']._serialized_start=346
-  _globals['_WRITERESULT']._serialized_end=452
+  _globals['_WRITERESULT']._serialized_end=473
 # @@protoc_insertion_point(module_scope)

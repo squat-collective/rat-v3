@@ -1,4 +1,4 @@
-// State-backend axis service contract. DRAFT — sub-phase 0b.
+// State-backend axis service contract. Status: v1 (frozen — rat/1, ADR-009).
 //
 // A `kind: state-backend` plugin (sqlite, postgres, etcd, …) backs the core's
 // State Gateway (one of the six core things). This is a TIER-0 plugin

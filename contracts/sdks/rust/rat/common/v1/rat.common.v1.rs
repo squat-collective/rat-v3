@@ -137,9 +137,14 @@ pub struct WriteResult {
     /// reviews/06 API-13). Present 0 means "zero rows", distinctly from "unknown".
     #[prost(int64, optional, tag="1")]
     pub rows_affected: ::core::option::Option<i64>,
-    /// Resulting snapshot/version id, if the format is versioned (else empty).
-    #[prost(string, tag="2")]
-    pub snapshot_id: ::prost::alloc::string::String,
+    /// Resulting version id of the written table state. proto3 `optional` for explicit
+    /// presence (A1, reviews/08 — the sibling fix to rows_affected's, absorbed into the
+    /// `rat/1` re-cut before publication): ABSENT == the engine/format cannot report a
+    /// version; present-empty == the write produced no version (unversioned format);
+    /// present-nonempty == the version id. Set by a versioned format/table (a snapshot
+    /// id) or by an engine whose write produced a new table version.
+    #[prost(string, optional, tag="2")]
+    pub snapshot_id: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// The wire protocol of an out-of-band data stream. PINNED at freeze
 /// (reviews/06 AUTH-3): "gRPC/Flight-style" was not a spec — two authors would

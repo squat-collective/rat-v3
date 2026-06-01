@@ -1,5 +1,5 @@
 // Shared data-plane handoff types referenced across data-plane axes
-// (strategy ↔ runtime ↔ format). DRAFT — sub-phase 0b.
+// (strategy ↔ runtime ↔ format). Status: v1 (frozen — rat/1, ADR-009).
 //
 // Design invariant (overview.md "Data plane bypasses core for bytes"): the
 // CONTROL-plane RPCs carry references + small metadata, NEVER bulk row data.
@@ -301,8 +301,13 @@ type WriteResult struct {
 	// engine/format cannot report a count (replaces the old -1 sentinel —
 	// reviews/06 API-13). Present 0 means "zero rows", distinctly from "unknown".
 	RowsAffected *int64 `protobuf:"varint,1,opt,name=rows_affected,json=rowsAffected,proto3,oneof" json:"rows_affected,omitempty"`
-	// Resulting snapshot/version id, if the format is versioned (else empty).
-	SnapshotId    string `protobuf:"bytes,2,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
+	// Resulting version id of the written table state. proto3 `optional` for explicit
+	// presence (A1, reviews/08 — the sibling fix to rows_affected's, absorbed into the
+	// `rat/1` re-cut before publication): ABSENT == the engine/format cannot report a
+	// version; present-empty == the write produced no version (unversioned format);
+	// present-nonempty == the version id. Set by a versioned format/table (a snapshot
+	// id) or by an engine whose write produced a new table version.
+	SnapshotId    *string `protobuf:"bytes,2,opt,name=snapshot_id,json=snapshotId,proto3,oneof" json:"snapshot_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -345,8 +350,8 @@ func (x *WriteResult) GetRowsAffected() int64 {
 }
 
 func (x *WriteResult) GetSnapshotId() string {
-	if x != nil {
-		return x.SnapshotId
+	if x != nil && x.SnapshotId != nil {
+		return *x.SnapshotId
 	}
 	return ""
 }
@@ -368,12 +373,13 @@ const file_rat_common_v1_data_proto_rawDesc = "" +
 	"\n" +
 	"ipc_schema\x18\x03 \x01(\fR\tipcSchema\x12;\n" +
 	"\ttransport\x18\x04 \x01(\x0e2\x1d.rat.common.v1.ArrowTransportR\ttransport\x122\n" +
-	"\x04role\x18\x05 \x01(\x0e2\x1e.rat.common.v1.ArrowStreamRoleR\x04role\"j\n" +
+	"\x04role\x18\x05 \x01(\x0e2\x1e.rat.common.v1.ArrowStreamRoleR\x04role\"\x7f\n" +
 	"\vWriteResult\x12(\n" +
-	"\rrows_affected\x18\x01 \x01(\x03H\x00R\frowsAffected\x88\x01\x01\x12\x1f\n" +
-	"\vsnapshot_id\x18\x02 \x01(\tR\n" +
-	"snapshotIdB\x10\n" +
-	"\x0e_rows_affected*M\n" +
+	"\rrows_affected\x18\x01 \x01(\x03H\x00R\frowsAffected\x88\x01\x01\x12$\n" +
+	"\vsnapshot_id\x18\x02 \x01(\tH\x01R\n" +
+	"snapshotId\x88\x01\x01B\x10\n" +
+	"\x0e_rows_affectedB\x0e\n" +
+	"\f_snapshot_id*M\n" +
 	"\x0eArrowTransport\x12\x1f\n" +
 	"\x1bARROW_TRANSPORT_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16ARROW_TRANSPORT_FLIGHT\x10\x01*\x82\x01\n" +

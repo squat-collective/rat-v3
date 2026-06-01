@@ -1,4 +1,5 @@
-// Strategy axis service contract. DRAFT — sub-phase 0b.
+// Strategy axis service contract. Status: v1 (frozen — rat/1.1, ADR-009 trigger:
+// two strategy references — fullrefresh-py + scd2-py — validate the contract).
 //
 // A `kind: strategy` plugin (scd2, soft-delete, full-refresh, …) encodes HOW
 // data is transformed/loaded. It is the cleanest expression of the capability

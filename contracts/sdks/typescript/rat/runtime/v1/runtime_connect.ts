@@ -1,4 +1,4 @@
-// Runtime axis service contract. DRAFT — sub-phase 0b.
+// Runtime axis service contract. Status: v1 (frozen — rat/1, ADR-009).
 //
 // A `kind: runtime` plugin (pyarrow, a container exec runtime, a WASM host, …)
 // executes a unit of work on behalf of a strategy/engine. It is the "where does

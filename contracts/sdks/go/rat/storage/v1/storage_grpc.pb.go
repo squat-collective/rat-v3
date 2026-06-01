@@ -1,4 +1,4 @@
-// Storage axis service contract. DRAFT — sub-phase 0b.
+// Storage axis service contract. Status: v1 (frozen — rat/1, ADR-009).
 //
 // A `kind: storage` plugin (S3, GCS, Azure Blob, local-fs) owns byte storage +
 // credential vending. The control plane NEVER sees bytes (overview.md "data
