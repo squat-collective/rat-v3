@@ -9,7 +9,7 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | Phase | What | Status | Effort | Notes |
 |---|---|---|---|---|
 | **−1** | Architectural design + adversarial review | **done** (2026-05-30) | ~1 day | ADRs 001-003, vision, overview, 5-perspective review, synthesis |
-| **0** | Lock the contracts (with Critical concerns baked in) | **in-flight** — 🧊 **data-plane FROZEN `rat/1`** (2026-05-31, ADR-009) | 4-6 months | Headline deliverable DONE; remaining = control-plane refs + `strategy` 2nd ref + manifest freeze |
+| **0** | Lock the contracts (with Critical concerns baked in) | **in-flight** — 🧊 **ALL 18 axes FROZEN `v1`** (`rat/1`→`rat/1.4`); contract surface COMPLETE | 4-6 months | Headline deliverable DONE + board-reviewed ([reviews/08](../reviews/08-post-freeze-board-review.md)). **Close-out (chosen 2026-06-01):** catalog commit-linkage + manifest freeze + doc tail → cut `v1.1`. See [current.md](current.md). |
 | **1** | Build the core (~12-15k LOC) | not-started | 3 months | Six things + cross-cutting enforcement |
 | **2** | Solo deployment reference plugins (production-grade) | not-started | 2 months | `chmod +x ./rat` works end-to-end |
 | **3** | Self-hosted team reference plugins | not-started | 2 months | Match v2's operational shape |
@@ -74,7 +74,13 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 - C9: Two-reference rule (this ADR)
 - C10: API gateway listener split (port v2 ADR-019)
 
-**Phase 0 detail:** lives in this file + ADR-001 + ADR-003. (No separate `phase-0-detail.md` yet — referenced from ADR-001 but write only if scope grows beyond what this section captures.)
+**Phase 0 close-out (chosen 2026-06-01 — "complete & seal Phase 0"):** the contract surface is frozen + board-reviewed; four items remain before Phase 1, then cut contract **`v1.1`**:
+1. **Catalog commit-linkage** — `RegisterTable`/commit RPC (additive) so the branch-pipeline loop closes on the wire (reviews/08 B1 — the #1 functional gap). ADR + proto + vector + wire `examples/composition` to it.
+2. **Manifest schema freeze + 18 per-kind schemas** — the last `v1-preview` artifact + the only author-hand-written one (reviews/08 E2).
+3. **Doc tail** — `overview.md` drift, the 12 missing control/experience `CONTRACT.md`, round-1-refs-are-not-templates labels, temptation ledger (reviews/08 E1/E3/E4/E7).
+4. **Cut `v1.1`** — tag the sealed surface.
+
+**Phase 0 detail:** lives in this file + ADR-001 + ADR-003 + the close-out in [current.md](current.md). (No separate `phase-0-detail.md` yet.)
 
 ---
 
@@ -101,6 +107,14 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 - A second mock plugin can't read the first plugin's state
 - Lease handover works in <20s
 - All Phase 0 contracts exercised by real code paths
+
+**Acceptance criteria from the board review ([reviews/08](../reviews/08-post-freeze-board-review.md)) — the core isn't "done" until these *pass*** (the review converted "the core will enforce X" into testable exit conditions):
+- **C5** capability enforcement — a plugin invoking a capability not in its manifest `requires` is denied (`declared == provided` is *enforced*, not self-asserted — D4).
+- **C4** audit-on-every-decision — every enforcement decision (incl. DENIED) emits one signed record; streams emit a terminal close record.
+- **C3** provider-call deadline — the core bounds the provider call by `min(channel, deadline_unix_ms)` + a streaming idle-timeout (a hung provider can't pin the gateway).
+- **D1** isolation conformance — a real *enforcing* deployment-runtime (podman, not dry-run) passes a full-profile vector.
+- **D2/D3** bytes-plane isolation — ArrowStream-ticket (TTL/single-use/binding) + storage-cred scoping are vector-tested, not honor-system.
+- **C1** crash-safety — at-least-once re-runs don't double-apply (effect-leg idempotency key), and a broken stream fails the write rather than committing partial.
 
 ---
 

@@ -10,6 +10,8 @@ When an item moves to active work, promote it: cut it from here, add it to [curr
 
 The 5-agent post-freeze review. Grouped by when to act.
 
+> **⏩ Now ACTIVE (Phase 0 close-out, chosen 2026-06-01 — see [current.md](current.md)):** **B1** catalog commit-linkage (first), the **manifest freeze + per-kind schemas** (E2), and the **doc tail** (E4 `overview.md` drift + E1 the 12 missing CONTRACT.md + E3/E7) — all four feed the **`v1.1` cut**. The items below stay queued: the rest of the `v1.1` additives land opportunistically with that cut, and the **enforcement-layer findings are Phase 1 acceptance criteria** (see phases.md Phase 1).
+
 **NOW — the freeze is still local/unpushed (closing window):**
 - ~~**A1 [V2-REGRET]** — `WriteResult.snapshot_id` `optional` + re-cut `rat/1`.~~ **✅ DONE 2026-06-01** (commit `0e81314`; `rat/1` re-cut from `b9dbe2d`). The one V2-regret is resolved, not carried to a v2.
 - ~~**D5/E4 honesty banner** on `plugin.v1.json` + `CONTRACT.md`.~~ **✅ DONE 2026-06-01** (`0e81314`). *Residual:* the `overview.md` drift (`plane-manager-plugin`→`deployment-runtime`; tier-0 callout; "core never commands") is still TODO — tracked as E4 in the process list below.
