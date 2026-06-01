@@ -16,6 +16,15 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — Spike core: the capability-invoke gateway — C5 enforced end-to-end at the wire
+
+Second spike increment ([ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md)), on `phase-1-invoke-gateway`. `core/gateway` implements the `core/v1` `CapabilityInvokeService` (`Invoke` + `InvokeServerStream`), seeded from the faithful non-test `examples/bench/latency-go/gateway.go` — but its **C5 decision is `registry.Authorize` (derived from declared manifests), audited per decision (C4)**, not the stubs' hardcoded allowlist. Routes `capability→method` from the `(rat.common.v1.capability)` annotation; relays opaque frames (passthrough codec); re-stamps identity + propagates traceparent (ADR-007); rejects a missing/ill-formed traceparent (C1).
+
+- **Real gRPC enforcement test** (state axis, bufconn): an allowed `Get` relayed intact; an undeclared `put` + an unknown caller → `PERMISSION_DENIED`; a server-stream `watch` denied at open (ADR-008 enforce-at-open); a missing envelope → `InvalidArgument` before the decision. `go vet` + `go test ./core/...` **PASS** (`golang:1.25`). Commit `de34989`.
+- **C5 is now real end-to-end** — the self-asserted stub is replaced by a decision derived from what plugins declare. Next: composition-on-Go (the full pipeline through this gateway) + the C1/C2 cases + CI.
+
+---
+
 ## 2026-06-01 — Spike core: the registry foundation (C5 derived from real manifests) — `go test` green
 
 First real Phase-1 spike code (ADR-014), on `phase-1-registry-core`. New Go module `github.com/rat-dev/rat/core`:
