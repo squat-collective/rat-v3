@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — D4 conformance attestation — the core verifies `declared == conformed` (ed25519)
+
+`core/conformance` + `core/registry` ([reviews/10](../reviews/10-phase-1-spike-exit.md) D4 exit), on `phase-1-d4-conformance-attestation`. A plugin's manifest `provides` was **self-asserted** (plugin.v1.json: *"no enforcer exists yet"*). D4 makes it **derived**: the core trusts a declared capability only if a **signed conformance attestation** proves the plugin conformed it (marketplace.proto `conformed_capabilities`; format/v1 CONTRACT C6 — "capability declared is meaningless without capability conformed").
+
+- **`core/conformance`:** `Attestation{PluginName, Conformed[], KeyID, Signature}`, signed by a conformance authority over a canonical form (plugin + **sorted** conformed caps + keyID, so the signature commits to the key id — key-substitution defense). `Authority` is the core's keyring (key id → ed25519 public key); `Verify` rejects unknown key ids + bad signatures. **The core's first real signature verification** — the unsigned audit record (C4) + isolation receipt are the GA-signing seeds; the keyID model mirrors `common/v1.AuditRecord.key_id` (rotation/agility via new key ids).
+- **`registry.NewVerified(manifests, attestations, authority)`:** for every manifest that provides any capability, require an attestation that **verifies** AND **covers every provided capability**; refuse on missing / bad-signature / declared-but-not-conformed. A pure caller/driver (no `provides`) needs none. On success it delegates to `New`, so the gateway's C5 path is unchanged — it just can no longer be fed a self-asserted provider. (The full bring-up adopts D4 by building its registry via `NewVerified`.)
+- **Tests:** genuine verifies; wrong-key / tampered-set / unknown-key-id rejected; `NewVerified` accepts a fully-conformed provider (and the registry then authorizes the cap) and refuses declared-but-not-conformed / forged / missing. `make core-test` + `make breaking` green (no wire change — the attestation is a core type, `contracts/` untouched). Commit `9e7edca`.
+- **Milestone:** 7 of 9 Phase-1 exit criteria cleared (C5/C4/C3/C1/D1/D3/D4). **Remaining:** D2 (real Arrow bulk leg — ticket TTL/single-use/binding) · sre#4 (reconciler crash-loop backoff/jitter).
+
+---
+
 ## 2026-06-01 — D3 storage-cred isolation — scoped, tenant-isolated, contained (real local-fs ref)
 
 `core/composition` ([reviews/10](../reviews/10-phase-1-spike-exit.md) D3 exit), on `phase-1-d3-storage-creds`. The storage axis's C7 obligation — *vended creds are scoped to the caller's tenant + prefix + mode, short-TTL, and a prefix can't escape the tenant root* — is now **vector-tested through the real launched plugin behind the gateway**, not honor-system.
