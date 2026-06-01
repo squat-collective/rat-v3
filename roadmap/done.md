@@ -16,6 +16,15 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — D1 step 2: the supervisor — the core brings plugins up as launched processes behind the gateway
+
+`core/supervisor` ([ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md)), on `phase-1-supervisor`. `BringUp(runtime, specs, …)` Launches each provider via the deployment-runtime → waits healthy → dials the endpoint → registers; caller/driver specs (no `Launch`) are registered for their `requires` only; it then builds the registry + gateway over the launched providers. `Plane.Shutdown` terminates every instance + closes conns; a failed launch tears down what already came up. **Replaces the spike's dial-pre-running** — provider conns now come from isolated processes the core launched.
+
+- **Test:** `BringUp` launches a real `stateplugin` via the local-process runtime; the gateway routes a C5-authorized `Get` to the **launched child** (distinct PID); an undeclared `put` → `PERMISSION_DENIED`; a below-I9 plugin aborts `BringUp`. Commit `61be935`; `make core-test` green.
+- **Next:** promote the catalog/format fakes to standalone binaries → re-run composition-on-Go through launched providers; then a podman runtime for the full I9 profile = **D1 complete**.
+
+---
+
 ## 2026-06-01 — D1 step 1: the `local-process` deployment-runtime — real child-process isolation, I9-enforced
 
 First code of the committed full build's D1 ([ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md)), on `phase-1-local-process-runtime`. `core/deploymentruntime.LocalProcess` implements the frozen `DeploymentRuntimeService`:
