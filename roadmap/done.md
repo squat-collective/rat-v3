@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — 🎯 Phase-1 commitment gate CLEARED — full core build committed ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md))
+
+The decision [ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) deferred to the spike's report. The spike validated the frozen contracts ([reviews/10](../reviews/10-phase-1-spike-exit.md)) — C5/C1/C3/D2 green via a real enforcer, `make breaking` clean, **no freeze-reopen** — and on that evidence Tom cleared the gate: **commit to the full Phase-1 core build.** The exploratory posture (held since pre-Phase-0) ends.
+
+- **Scope:** clears the **Phase-0 → Phase-1** gate (full core build). The later user-pull gates stay hard — phases.md **Gate B** (≥10 solo users), **Gate C/D** — and **Q02** (external peer review) is still owed (schedule *during* the build).
+- **Rationale (Q01):** the founding premise — v2's baked-in assumptions (postgres-mandatory, ratd-as-orchestrator, portal-as-only-UI) can't evolve into the everything-is-a-plugin thesis; v3 is the from-scratch design, now evidence-backed by the spike. Recorded in ADR-015.
+- **Definition of done = the full Phase-1 acceptance criteria:** C5 (real providers), C4-terminal, C3 (idle-timeout backstop), D1 real isolation, D2 (real bulk leg), D3, D4-enforced, C1 (real backends), sre#4.
+- **Next:** D1 — a real process-isolating deployment-runtime (the spike used in-process providers).
+
+---
+
 ## 2026-06-01 — Spike CLOSED: C3 deadline + D2 ticket + CI + exit report — frozen wire HELD, no freeze-reopen
 
 Closed the Phase-1 contract-de-risking spike ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) / [ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md)), on `phase-1-spike-closeout`.

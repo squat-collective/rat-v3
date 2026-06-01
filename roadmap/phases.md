@@ -10,7 +10,7 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 |---|---|---|---|---|
 | **−1** | Architectural design + adversarial review | **done** (2026-05-30) | ~1 day | ADRs 001-003, vision, overview, 5-perspective review, synthesis |
 | **0** | Lock the contracts (with Critical concerns baked in) | ✅ **DONE — SEALED `rat/1.5`** (2026-06-01) | 4-6 months | All 18 axes frozen + board-reviewed ([reviews/08](../reviews/08-post-freeze-board-review.md)); the close-out is complete — catalog commit-linkage (ADR-010), manifest freeze + 18 per-kind schemas (ADR-011), all 18 `CONTRACT.md` + doc tail (E1/E3/E4/E7), C1/C2 crash-safety (ADR-012) — and `rat/1.5` is cut. Phase 1 acceptance criteria = the deferred C3–C5/D1–D5 findings. |
-| **1** | Build the core (~12-15k LOC) | **in-flight** (spike) | 3 months | Began 2026-06-01 as a time-boxed contract-de-risking spike ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md)); full build gated on the spike's exit report. Six things + cross-cutting enforcement. |
+| **1** | Build the core (~12-15k LOC) | **in-flight** (committed) | 3 months | Spike validated the contracts ([reviews/10](../reviews/10-phase-1-spike-exit.md), no freeze-reopen) → **gate CLEARED ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md))** → full core build committed. Six things + cross-cutting enforcement. |
 | **2** | Solo deployment reference plugins (production-grade) | not-started | 2 months | `chmod +x ./rat` works end-to-end |
 | **3** | Self-hosted team reference plugins | not-started | 2 months | Match v2's operational shape |
 | **4** | Hardening + GTM motion | not-started | 3 months | 4-of-5 non-engineering GTM gaps land here |
@@ -86,7 +86,7 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 
 ## Phase 1 — Build the core (3 months)
 
-> **Entered 2026-06-01 as a time-boxed 2–4 week contract-de-risking spike** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md)) — stand up a minimal real registry + capability enforcer and try to break a frozen contract (C5 + crash-mid-strategy + C3/D2) while the freeze is still local. The full ~3-month build below is **gated on the spike's exit report** + Tom's 12–18mo commitment call ([current.md](current.md)).
+> **Spike COMPLETE → gate CLEARED (2026-06-01).** Entered as a time-boxed contract-de-risking spike ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md)); it stood up a real registry + capability enforcer and validated the frozen wire (C5/C1/C3/D2 green, no freeze-reopen — [reviews/10](../reviews/10-phase-1-spike-exit.md)). On that evidence the commitment gate is **CLEARED** ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md)) and the full ~3-month build below is **committed**. Next increment: **D1** (real process isolation).
 
 **Goal:** `rat` binary that boots, accepts manifest installs (rejecting unsatisfied requires), runs the reconciler loop on a leader-elected single replica, emits `/metrics` + OTel, and exercises every Phase 0 contract via mock plugins. No functional plugins yet — the substrate.
 
@@ -202,7 +202,7 @@ These gates exist because the synthesis flagged "shipping more architecture with
 
 Two decision gates the project must clear before phases proceed:
 
-- **Before Phase 0:** Tom commits to 12-18 months of focused runway + the GTM work (not just the architecture work). Without this, the project should freeze at "great public design corpus" and not enter Phase 0. **Status (2026-06-01):** acknowledged, not cleared → resolved into a recorded decision by [ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md): proceed in exploratory mode via a time-boxed spike; the full commitment is deferred to the spike's exit report.
+- **Before Phase 0:** Tom commits to 12-18 months of focused runway + the GTM work (not just the architecture work). Without this, the project should freeze at "great public design corpus" and not enter Phase 0. **Status (2026-06-01):** acknowledged → spike-deferred ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md)) → **CLEARED ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md))**: the spike validated the contracts ([reviews/10](../reviews/10-phase-1-spike-exit.md)) and the full **core build** is committed (the Phase-0→1 gate). The GTM-specific commitment remains gated at Phase 4 + the user-pull Gates B/C/D below.
 - **Before Phase 4:** Tom commits to the non-engineering work (design partners, content, distribution). Without this, hardening produces a beautifully-architected platform with no users — the unflattering scenario.
 
 These aren't dates; they're commitments. The roadmap is honest about them because the synthesis was.
