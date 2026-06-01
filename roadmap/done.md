@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — D2 — the ArrowStream ticket is the only gate on a real bulk leg
+
+`core/arrowticket` ([reviews/10](../reviews/10-phase-1-spike-exit.md) D2 exit), on `phase-1-d2-bulk-leg`. The `Minter` (HMAC-signed, TTL'd, single-use, `{stream,caller,tenant}`-bound tickets) was proven at the unit level (reviews/10 "field sufficient"); D2's remaining half is **wiring it into a real out-of-band transfer**. The Arrow bytes leg **bypasses the core**, so unlike the control plane (gateway/C5) there is no mediator — the `ArrowStream.ticket` is the *sole* authorization.
+
+- **The proof** (`bulkleg_test.go`): a Flight-shaped (DoGet) stand-in — a real `httptest` endpoint that streams the payload ONLY when the presented `ArrowStream.ticket` validates (via the `Minter`) against the presenting identity (caller/tenant — the spike's stand-in for the authenticated Flight channel; C2 tightens the source at GA) + this endpoint's stream. The frozen `commonv1.ArrowStream` carries endpoint+ticket. Vectors, **through the real transfer**: happy (exact payload received) · replay (single-use → 403, no bytes) · cross-binding (a leaked ticket from another tenant → 403 and NOT consumed, so the rightful holder still succeeds) · expired (past-TTL → 403) · tamper (mutated ticket → 403). On every rejection, no bytes leak.
+- **Flake hunt:** the test failed once under concurrent `make core-test` load (HTTP keep-alive connection reuse — a classic `httptest`+`DefaultClient` flake class), so it now uses a dedicated keep-alives-disabled client (fresh connection per fetch, never the global client) — verified 5× under full concurrent load + 40× isolated + `-race`. `make core-test` + `make breaking` green (no wire change — exercises the frozen `ArrowStream` + the existing reference; `contracts/` untouched). Commit `af6e55c`.
+- **Milestone:** 7 of 9 Phase-1 exit criteria cleared (C5/C4/C3/D1/D2/D3/D4). **Remaining:** **C1** *against real backends* (the crash-mid-strategy idempotency re-proven against a real idempotent backend, e.g. the sqlite catalog — so far only proven against fakes) · **sre#4** (reconciler crash-loop backoff/jitter).
+
+---
+
 ## 2026-06-01 — D4 conformance attestation — the core verifies `declared == conformed` (ed25519)
 
 `core/conformance` + `core/registry` ([reviews/10](../reviews/10-phase-1-spike-exit.md) D4 exit), on `phase-1-d4-conformance-attestation`. A plugin's manifest `provides` was **self-asserted** (plugin.v1.json: *"no enforcer exists yet"*). D4 makes it **derived**: the core trusts a declared capability only if a **signed conformance attestation** proves the plugin conformed it (marketplace.proto `conformed_capabilities`; format/v1 CONTRACT C6 — "capability declared is meaningless without capability conformed").
@@ -23,7 +33,7 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 - **`core/conformance`:** `Attestation{PluginName, Conformed[], KeyID, Signature}`, signed by a conformance authority over a canonical form (plugin + **sorted** conformed caps + keyID, so the signature commits to the key id — key-substitution defense). `Authority` is the core's keyring (key id → ed25519 public key); `Verify` rejects unknown key ids + bad signatures. **The core's first real signature verification** — the unsigned audit record (C4) + isolation receipt are the GA-signing seeds; the keyID model mirrors `common/v1.AuditRecord.key_id` (rotation/agility via new key ids).
 - **`registry.NewVerified(manifests, attestations, authority)`:** for every manifest that provides any capability, require an attestation that **verifies** AND **covers every provided capability**; refuse on missing / bad-signature / declared-but-not-conformed. A pure caller/driver (no `provides`) needs none. On success it delegates to `New`, so the gateway's C5 path is unchanged — it just can no longer be fed a self-asserted provider. (The full bring-up adopts D4 by building its registry via `NewVerified`.)
 - **Tests:** genuine verifies; wrong-key / tampered-set / unknown-key-id rejected; `NewVerified` accepts a fully-conformed provider (and the registry then authorizes the cap) and refuses declared-but-not-conformed / forged / missing. `make core-test` + `make breaking` green (no wire change — the attestation is a core type, `contracts/` untouched). Commit `9e7edca`.
-- **Milestone:** 7 of 9 Phase-1 exit criteria cleared (C5/C4/C3/C1/D1/D3/D4). **Remaining:** D2 (real Arrow bulk leg — ticket TTL/single-use/binding) · sre#4 (reconciler crash-loop backoff/jitter).
+- **Milestone:** 6 of 9 Phase-1 exit criteria cleared (C5/C4/C3/D1/D3/D4). **Remaining:** D2 (real Arrow bulk leg — ticket TTL/single-use/binding) · C1 *against real backends* (so far only proven against fakes) · sre#4 (reconciler crash-loop backoff/jitter). *(Corrected count: C1-against-real-backends is still open — an earlier draft miscounted it as cleared.)*
 
 ---
 
