@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — ADR-016: plugin provisioning via the deployment-runtime axis (D1 opened)
+
+First decision of the committed full build ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md)). [ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md): the core **launches** plugins through the frozen `deployment-runtime/v1` axis (`Launch` → `{instance_id, endpoint}` → `Healthcheck` → dial → register → `Terminate`) instead of the spike's dial-pre-running shortcut. The deployment-runtime is **tier-0** (bootstrapped in-core; everything else launched through it — no 7th core thing). The D1 increment = a Go `local-process` runtime enforcing the process-level I9 subset (refuse below non-root / cap-drop / no-new-privs) + the in-test fakes promoted to standalone binaries + composition re-run through launched (distinct-PID) providers; the **podman** runtime (full profile: read-only-fs / metadata-egress) is the follow-on that **completes D1**. Registry/gateway interfaces (ADR-014) unchanged; frozen contracts untouched. Next: build the `local-process` runtime + the supervisor.
+
+---
+
 ## 2026-06-01 — 🎯 Phase-1 commitment gate CLEARED — full core build committed ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md))
 
 The decision [ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) deferred to the spike's report. The spike validated the frozen contracts ([reviews/10](../reviews/10-phase-1-spike-exit.md)) — C5/C1/C3/D2 green via a real enforcer, `make breaking` clean, **no freeze-reopen** — and on that evidence Tom cleared the gate: **commit to the full Phase-1 core build.** The exploratory posture (held since pre-Phase-0) ends.
