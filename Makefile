@@ -94,7 +94,7 @@ core-test-podman: ## Live full-profile proof for the podman deployment-runtime (
 	@$(RUNTIME) run --rm --privileged -e HOME=/tmp -e GOTOOLCHAIN=local -e GOSUMDB=off \
 	  -e GOFLAGS=-mod=mod -e GOPATH=/go -e CGO_ENABLED=0 -e RAT_PODMAN_TEST=1 \
 	  -v "$(CURDIR):/work:Z" -v rat-gocache:/go/pkg/mod -w /work/core \
-	  rat-go-podman:test sh -c 'go test ./deploymentruntime/ -run Podman -v -count=1'
+	  rat-go-podman:test sh -c 'go test ./deploymentruntime/ ./composition/ -run Podman -v -count=1'
 
 breaking: ## Fail on a breaking proto change vs the sealed baseline (branch main)
 	@echo ">> buf breaking vs main"
