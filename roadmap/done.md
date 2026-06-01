@@ -16,6 +16,29 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — Phase-1 commitment gate RE-CONFIRMED (13-agent board) → **time-boxed spike** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) · [reviews/09](../reviews/09-phase-1-gate-review.md))
+
+Before committing to the full Phase 1 core build, re-confirmed readiness + "did we miss anything?" via a 13-agent board workflow: an 8-area completeness audit → a 4-lens board → chair synthesis (audit on Sonnet, board+chair on Opus).
+
+- **Verdict: proceed-with-conditions (strong-majority).** Engineering readiness independently re-verified *this session* (not trusted from the roadmap): `rat/1.5` verified, `make conformance` 32/32 + `make composition` + `make validate-manifests` 32/32 ran live, ADR-003's two-reference bar genuinely met on all 6 data-plane axes over real Arrow Flight, the one true v2-regret (`snapshot_id`) found+fixed pre-publish, the biggest gap (B1) absorbed additively (ADR-010).
+- **"Did we miss anything?" — no.** All 8 audit areas `minor-gaps`; **nothing was dropped from [reviews/08](../reviews/08-post-freeze-board-review.md)**. Two items elevated: **sre#4** (reconciler crash-loop backoff) promoted backlog → explicit Phase-1 AC; the **commitment gate** (governance).
+- **Decision (Tom): a time-boxed 2–4 week contract-de-risking spike** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md)) — stand up a minimal real registry + capability enforcer and actively try to break a frozen contract (C5 + crash-mid-strategy + C3/D2), freeze kept local so any regret is cheap. The 12–18mo runway commitment is **deferred to the spike's exit report**.
+- **Dissent preserved** (business lens WAIT, high): 3-day/112-commit project, zero soak, self-asserted conformance, no external review — green certifies *shapes*, not *obligations*. The spike buys evidence before the bet.
+- **Roadmap reconciled** (board condition #8): C1 clarified (fields done `rat/1.5`; enforcement is Phase 1), "D1–D5"→"D1–D4" (D5 done), deliverable counts corrected (24 protos / 32 refs / 18 CONTRACT.md / SDKs Go·Py·Rust·TS, Java dropped), stale "(Staged; commit pending.)" notes cleared.
+
+---
+
+## 2026-06-01 — Branching discipline landed — `main` / `phase-N` / `phase-N-<slug>` + a `main`-guard hook
+
+As Phase 1 begins, codified "always work on a nice branch" (Tom's ask). Planned by the `claude-engineer` agent; built-in-first (a rule + a hook guard, no new agent/skill).
+
+- **[`.claude/rules/git-branching.md`](../.claude/rules/git-branching.md)** (always-load) — topology (`main` = sealed line tagged `rat/N.M`; `phase-N` = long-lived integration; `phase-N-<slug>` = short-lived topic branches merged back `--no-ff`), naming, merge rules, tag convention.
+- **`main`-guard** added to `.claude/hooks/contracts-check.sh` — blocks direct `git commit` on `main` (exit 2); the phase-seal `git merge`/`git tag` path is unaffected. **Verified both ways** (blocks on `main`, passes on a working branch).
+- **Mechanics:** renamed `master` → `main` (local-only; no remote configured); forked `phase-1` from the `rat/1.5` sealed commit.
+- **Two bugs caught by dogfooding the model on contact** (CLAUDE.md #8 — test the topology, not the feature): (1) the guard was first committed only on `phase-1`, so it was absent on `main` where it's needed → landed the infra on `main` as the baseline (FF); (2) git can't create `phase-1/<slug>` while a branch `phase-1` exists (ref directory/file conflict) → switched sub-branches to a **hyphen** (`phase-1-<slug>`). Both fixes documented in the rule.
+
+---
+
 ## 2026-06-01 — Phase 0 close-out (4/4): **`rat/1.5` cut — 🎉 PHASE 0 SEALED** (C1/C2 crash-safety folded in, [ADR-012](../docs/architecture/adrs/012-crash-safety-additive-fields.md))
 
 The final close-out item. Folded the two cheap additive crash-safety fields into the seal (while the surface is local/unpublished), then cut `rat/1.5` over the complete Phase-0 contract surface.

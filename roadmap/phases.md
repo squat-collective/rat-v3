@@ -10,7 +10,7 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 |---|---|---|---|---|
 | **−1** | Architectural design + adversarial review | **done** (2026-05-30) | ~1 day | ADRs 001-003, vision, overview, 5-perspective review, synthesis |
 | **0** | Lock the contracts (with Critical concerns baked in) | ✅ **DONE — SEALED `rat/1.5`** (2026-06-01) | 4-6 months | All 18 axes frozen + board-reviewed ([reviews/08](../reviews/08-post-freeze-board-review.md)); the close-out is complete — catalog commit-linkage (ADR-010), manifest freeze + 18 per-kind schemas (ADR-011), all 18 `CONTRACT.md` + doc tail (E1/E3/E4/E7), C1/C2 crash-safety (ADR-012) — and `rat/1.5` is cut. Phase 1 acceptance criteria = the deferred C3–C5/D1–D5 findings. |
-| **1** | Build the core (~12-15k LOC) | not-started | 3 months | Six things + cross-cutting enforcement |
+| **1** | Build the core (~12-15k LOC) | **in-flight** (spike) | 3 months | Began 2026-06-01 as a time-boxed contract-de-risking spike ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md)); full build gated on the spike's exit report. Six things + cross-cutting enforcement. |
 | **2** | Solo deployment reference plugins (production-grade) | not-started | 2 months | `chmod +x ./rat` works end-to-end |
 | **3** | Self-hosted team reference plugins | not-started | 2 months | Match v2's operational shape |
 | **4** | Hardening + GTM motion | not-started | 3 months | 4-of-5 non-engineering GTM gaps land here |
@@ -46,13 +46,13 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | — | **Experience FREEZE** | **🧊🎉 DONE (tag `rat/1.4`).** ui/notifications/marketplace — one ref each. **ALL 18 axis contracts now `v1`.** `make conformance` 32/32. Only `v1-preview` left: the manifest schema (`plugin/v1.json`). |
 
 **Deliverables:**
-- `plugin/v1.json` published at stable URL
-- 20 proto files + generated SDKs in Go, Python, Rust, TS, Java
-- 12 reference plugins in `examples/`
-- Conformance test harness (`rat-conformance test`)
-- 20 CONTRACT.md docs
+- `plugin/v1.json` published at stable URL — **frozen `v1`** (ADR-011); kept local/unpushed pending the Phase-1 spike (ADR-013)
+- **24** proto files + generated SDKs in Go, Python, Rust, TypeScript *(Java dropped)*
+- **32** conformance-passing reference implementations in `examples/`
+- Conformance test harness (`make conformance`)
+- **18** CONTRACT.md docs (one per axis)
 - Benchmark report
-- Peer review notes
+- Peer review notes — *adversarial only so far; external human review still owed (reviews/09 dissent, ADR-013 Q02)*
 
 **Done when:**
 - All critical axes have 2 reference implementations
@@ -86,6 +86,8 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 
 ## Phase 1 — Build the core (3 months)
 
+> **Entered 2026-06-01 as a time-boxed 2–4 week contract-de-risking spike** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md)) — stand up a minimal real registry + capability enforcer and try to break a frozen contract (C5 + crash-mid-strategy + C3/D2) while the freeze is still local. The full ~3-month build below is **gated on the spike's exit report** + Tom's 12–18mo commitment call ([current.md](current.md)).
+
 **Goal:** `rat` binary that boots, accepts manifest installs (rejecting unsatisfied requires), runs the reconciler loop on a leader-elected single replica, emits `/metrics` + OTel, and exercises every Phase 0 contract via mock plugins. No functional plugins yet — the substrate.
 
 **Six things implemented:**
@@ -114,7 +116,9 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 - **C3** provider-call deadline — the core bounds the provider call by `min(channel, deadline_unix_ms)` + a streaming idle-timeout (a hung provider can't pin the gateway).
 - **D1** isolation conformance — a real *enforcing* deployment-runtime (podman, not dry-run) passes a full-profile vector.
 - **D2/D3** bytes-plane isolation — ArrowStream-ticket (TTL/single-use/binding) + storage-cred scoping are vector-tested, not honor-system.
-- **C1** crash-safety — at-least-once re-runs don't double-apply (effect-leg idempotency key), and a broken stream fails the write rather than committing partial.
+- **C1** crash-safety — the additive fields (`idempotency_key`, `already_applied`, `expected_rows/batches`) landed in `rat/1.5` (ADR-012); the Phase-1 AC is the *enforced* test: at-least-once re-runs don't double-apply, and a broken stream fails the write rather than committing partial. **A crash-mid-strategy case is a spike exit test; a discovered need for a strategy commit/abort wire shape = a freeze-reopen trigger** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md)).
+- **D4** conformance attestation — the core verifies `declared == conformed` (the marketplace/attestation is *derived*, not self-asserted).
+- **sre#4** reconciler robustness — crash-loop backoff + jitter + lease-thrash guard. **Promoted from the backlog to an explicit Phase-1 exit gate** by [reviews/09](../reviews/09-phase-1-gate-review.md) (don't re-make the K8s CrashLoopBackoff mistake).
 
 ---
 
@@ -198,7 +202,7 @@ These gates exist because the synthesis flagged "shipping more architecture with
 
 Two decision gates the project must clear before phases proceed:
 
-- **Before Phase 0:** Tom commits to 12-18 months of focused runway + the GTM work (not just the architecture work). Without this, the project should freeze at "great public design corpus" and not enter Phase 0.
+- **Before Phase 0:** Tom commits to 12-18 months of focused runway + the GTM work (not just the architecture work). Without this, the project should freeze at "great public design corpus" and not enter Phase 0. **Status (2026-06-01):** acknowledged, not cleared → resolved into a recorded decision by [ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md): proceed in exploratory mode via a time-boxed spike; the full commitment is deferred to the spike's exit report.
 - **Before Phase 4:** Tom commits to the non-engineering work (design partners, content, distribution). Without this, hardening produces a beautifully-architected platform with no users — the unflattering scenario.
 
 These aren't dates; they're commitments. The roadmap is honest about them because the synthesis was.
