@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"io"
 	"net"
 	"strings"
 	"testing"
@@ -166,9 +167,11 @@ func TestInvokeServerStreamEnforcesAtOpen(t *testing.T) {
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("stream open/recv code = %v, want PermissionDenied", status.Code(err))
 	}
+	// A stream denied at open never opens → only the deny decision record, no terminal
+	// close record (C4: the terminal record is for streams that actually opened).
 	recs := audit.Records()
-	if len(recs) != 1 || recs[0].Allowed {
-		t.Errorf("audit = %+v, want one DENY record for watch", recs)
+	if len(recs) != 1 || recs[0].Allowed || recs[0].Terminal {
+		t.Errorf("audit = %+v, want one DENY decision record (no terminal)", recs)
 	}
 }
 
@@ -237,5 +240,118 @@ func TestInvokeBoundsProviderDeadline(t *testing.T) {
 	}
 	if elapsed := time.Since(start); elapsed > time.Second {
 		t.Errorf("call took %v — the soft deadline did not bound the provider", elapsed)
+	}
+}
+
+// streamingState serves Watch as a server-stream: it sends `frames` responses, then
+// either ends cleanly (EOF) or returns an error (failAfter) — to exercise both
+// terminal-audit outcomes.
+type streamingState struct {
+	statev1.UnimplementedStateServiceServer
+	frames    int
+	failAfter bool
+}
+
+func (s streamingState) Watch(_ *statev1.WatchRequest, srv statev1.StateService_WatchServer) error {
+	for i := 0; i < s.frames; i++ {
+		if err := srv.Send(&statev1.WatchResponse{}); err != nil {
+			return err
+		}
+	}
+	if s.failAfter {
+		return status.Error(codes.Internal, "watch boom")
+	}
+	return nil
+}
+
+// newStreamingGateway wires a gateway whose caller DECLARES watch (so it is allowed
+// at open) in front of the given streaming provider.
+func newStreamingGateway(t *testing.T, prov statev1.StateServiceServer) (corev1.CapabilityInvokeServiceClient, *MemAuditor) {
+	t.Helper()
+	caller := &manifest.Manifest{Kind: "strategy", Metadata: manifest.Metadata{Name: "rat-watch-caller"},
+		Requires: []manifest.CapabilityRef{{Capability: "rat://state/v1/watch"}}}
+	provider := &manifest.Manifest{Kind: "state-backend", Metadata: manifest.Metadata{Name: "rat-test-state"},
+		Provides: []manifest.CapabilityRef{{Capability: "rat://state/v1/watch"}}}
+	reg, err := registry.New([]*manifest.Manifest{caller, provider})
+	if err != nil {
+		t.Fatalf("registry.New: %v", err)
+	}
+	providerConn := bufServer(t, func(s *grpc.Server) { statev1.RegisterStateServiceServer(s, prov) })
+	audit := &MemAuditor{}
+	gw := New(reg, map[string]*grpc.ClientConn{"rat-test-state": providerConn}, audit, statev1.File_rat_state_v1_state_proto)
+	gwConn := bufServer(t, func(s *grpc.Server) { corev1.RegisterCapabilityInvokeServiceServer(s, gw) })
+	return corev1.NewCapabilityInvokeServiceClient(gwConn), audit
+}
+
+// TestInvokeServerStreamTerminalAuditSuccess (C4): a stream that completes cleanly
+// produces TWO audit records — the open decision (allowed) and a terminal close
+// record (Outcome=success, Frames=N) that shares the open record's correlation id.
+func TestInvokeServerStreamTerminalAuditSuccess(t *testing.T) {
+	client, audit := newStreamingGateway(t, streamingState{frames: 3})
+	payload, _ := proto.Marshal(&statev1.WatchRequest{})
+	stream, err := client.InvokeServerStream(callerCtx("rat-watch-caller"), &corev1.InvokeServerStreamRequest{
+		Capability: "rat://state/v1/watch", Payload: payload,
+	})
+	if err != nil {
+		t.Fatalf("open stream: %v", err)
+	}
+	n := 0
+	for {
+		_, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("recv frame %d: %v", n, err)
+		}
+		n++
+	}
+	if n != 3 {
+		t.Errorf("relayed %d frames, want 3", n)
+	}
+	recs := audit.Records()
+	if len(recs) != 2 {
+		t.Fatalf("audit = %+v, want 2 (open decision + terminal close)", recs)
+	}
+	open, term := recs[0], recs[1]
+	if !open.Allowed || open.Terminal {
+		t.Errorf("record[0] = %+v, want the open allow decision (Terminal=false)", open)
+	}
+	if !term.Terminal || term.Outcome != "success" || term.Frames != 3 {
+		t.Errorf("record[1] = %+v, want terminal {success, Frames:3}", term)
+	}
+	if term.Correlation == "" || term.Correlation != open.Correlation {
+		t.Errorf("terminal correlation %q != open correlation %q (records must link)", term.Correlation, open.Correlation)
+	}
+}
+
+// TestInvokeServerStreamTerminalAuditError (C4): a stream that errors mid-flight still
+// emits a terminal record — Outcome=error, the frames relayed before the failure, and
+// the error message — so a broken stream is never a silent gap in the audit trail.
+func TestInvokeServerStreamTerminalAuditError(t *testing.T) {
+	client, audit := newStreamingGateway(t, streamingState{frames: 1, failAfter: true})
+	payload, _ := proto.Marshal(&statev1.WatchRequest{})
+	stream, err := client.InvokeServerStream(callerCtx("rat-watch-caller"), &corev1.InvokeServerStreamRequest{
+		Capability: "rat://state/v1/watch", Payload: payload,
+	})
+	if err != nil {
+		t.Fatalf("open stream: %v", err)
+	}
+	var recvErr error
+	for {
+		if _, recvErr = stream.Recv(); recvErr != nil {
+			break
+		}
+	}
+	if status.Code(recvErr) != codes.Internal {
+		t.Fatalf("stream end err = %v, want Internal", status.Code(recvErr))
+	}
+	recs := audit.Records()
+	if len(recs) != 2 {
+		t.Fatalf("audit = %+v, want 2 (open decision + terminal close)", recs)
+	}
+	term := recs[1]
+	if !term.Terminal || term.Outcome != "error" || term.Frames != 1 || term.Error == "" {
+		t.Errorf("record[1] = %+v, want terminal {error, Frames:1, Error set}", term)
 	}
 }

@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — C4 terminal stream-close audit record — the stream audit trail closes
+
+`core/gateway` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C4 exit), on `phase-1-c4-terminal-audit`. Per-decision audit + audit-on-deny were already real (the gateway records exactly one decision record per call, allow or deny). The missing half — the deferred C4 item — was the **terminal stream-close record**: ADR-008 enforces stream authz at OPEN, so a stream's *decision* is audited there, but nothing recorded how the stream **ended**. Now it does.
+
+- **The terminal record:** when a server-stream closes, the gateway emits one terminal `AuditRecord` — `Outcome` ∈ {success, error, canceled}, `Frames` relayed, and the `Error` if any — so a stream that errors or is cut mid-flight (incl. by the C3 soft deadline) is never a silent gap. A stream **denied at open never opens**, so it gets only the deny decision record (no terminal). `AuditRecord` gained `Correlation` (the envelope's correlation_id) so a stream's open + close records link; `Terminal`/`Outcome`/`Frames`/`Error` carry the close. `Outcome` maps to the frozen `common/v1.AuditOutcome` at GA.
+- **Refactor:** `openCall` now returns an `*openedCall` struct (ctx/method/conn/cancel + caller/provider/correlation) so the terminal record can correlate; `Invoke` is behaviour-unchanged; `InvokeServerStream` relays via `relayServerStream` (counts frames) then emits the terminal record.
+- **Tests:** a streaming Watch provider drives both outcomes — clean stream → `[open allow, terminal success Frames=3]` sharing a correlation id; erroring stream → `[open allow, terminal error Frames=1, Error set]`; the deny-at-open test now also asserts *no* terminal record. `make core-test` + `make breaking` green. Commit `1ba9f18`.
+- **Deferred (GA, not C4-blocking):** core signing + the hash chain on the canonical `common/v1.AuditRecord` (the spike uses a simplified in-memory record). **Next DoD:** C3 idle-timeout backstop · D3 storage-cred isolation · D4 conformance-attestation enforced · D2 real bulk leg · C1 real backends · sre#4.
+
+---
+
 ## 2026-06-01 — C5 against REAL providers — enforcement holds beyond our fakes (Go refs + a SQLite container)
 
 `core/composition` + `core/deploymentruntime` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C5 exit), on `phase-1-c5-real-providers`. The spike enforced C5 against our in-repo fakes; this **extends the proof to genuine reference plugins** behind the supervisor + gateway. The manifest-derived authorization holds identically: declared caps route + return **real results**; a capability the real provider genuinely implements but the caller never declared is **denied + audited**.
