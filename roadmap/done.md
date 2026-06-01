@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — C1 against real backends — idempotency survives a real backend crash
+
+`core/composition` + `core/deploymentruntime` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C1 exit), on `phase-1-c1-real-backends`. The crash-mid-strategy at-least-once idempotency was proven against the in-repo fakes (composition_test.go); C1-real re-proves it against the **real catalog refs**, whose commit-key ledgers are genuine (an in-memory map in inmemory-go; a **durable SQL table** in sqlite-py). The format leg can't be re-proven — the real inmemory-go format deliberately ignores `idempotency_key` — so C1-real rides on the catalog's `CommitTable`/`MergeBranch` (a documented gap: no real *idempotent format* ref exists yet).
+
+- **Proof A** (`TestC1AgainstRealCatalogRetry`, core-test): the real inmemory-go catalog launched behind the gateway. A retry with the same `idempotency_key` is a no-op — `CommitTable` replay returns `already_applied` with the ORIGINAL snapshot **even when the retry's payload DRIFTED** (the key, not the payload, anchors the result); `MergeBranch` is idempotent under the same key too.
+- **Proof B** (`TestC1DurableLedgerSurvivesRestartViaPodman`, podman-gated): the **gold-standard crash-safety proof** — the ledger survives a real BACKEND crash. The sqlite catalog runs under the podman runtime with a **persistent data volume**; commit under key K, then tear the catalog container DOWN (`Shutdown`) and relaunch a fresh one on the SAME durable db — a replay still returns `already_applied=true` (`snap-durable`). The durable SQL ledger outlived the crash, which an in-memory backend / our fakes fundamentally cannot.
+- **Podman runtime:** added `Podman.DataRoot` — each launched plugin gets a persistent host dir (`<DataRoot>/<plugin_id>`) mounted at `/data` (`-v dir:/data:Z`, 0777 forced past umask so the non-root container uid can write), surviving `Terminate`+relaunch. Empty == ephemeral only (unchanged). The persistent peer to the `/tmp` tmpfs. (`go vet` caught a proto-by-value copy in a test helper → fixed to return pointers.) `make core-test` + `make core-test-podman` + `make breaking` green. Commit `583d799`.
+- **Milestone:** 8 of 9 Phase-1 exit criteria cleared (C5/C4/C3/C1/D1/D2/D3/D4). **Remaining:** **sre#4** — reconciler crash-loop backoff + jitter + lease-thrash guard. Then the Phase-1 acceptance criteria are met → the `phase-1` → `main` seal (`rat/2.0`).
+
+---
+
 ## 2026-06-01 — D2 — the ArrowStream ticket is the only gate on a real bulk leg
 
 `core/arrowticket` ([reviews/10](../reviews/10-phase-1-spike-exit.md) D2 exit), on `phase-1-d2-bulk-leg`. The `Minter` (HMAC-signed, TTL'd, single-use, `{stream,caller,tenant}`-bound tickets) was proven at the unit level (reviews/10 "field sufficient"); D2's remaining half is **wiring it into a real out-of-band transfer**. The Arrow bytes leg **bypasses the core**, so unlike the control plane (gateway/C5) there is no mediator — the `ArrowStream.ticket` is the *sole* authorization.
