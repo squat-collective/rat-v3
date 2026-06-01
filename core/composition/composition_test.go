@@ -2,15 +2,15 @@ package composition
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/rat-dev/rat/core/gateway"
 	"github.com/rat-dev/rat/core/manifest"
 	"github.com/rat-dev/rat/core/registry"
+	"github.com/rat-dev/rat/core/testplugins/catalogsvc"
+	"github.com/rat-dev/rat/core/testplugins/formatsvc"
 	catalogv1 "github.com/rat-dev/rat/gen/rat/catalog/v1"
 	commonv1 "github.com/rat-dev/rat/gen/rat/common/v1"
 	corev1 "github.com/rat-dev/rat/gen/rat/core/v1"
@@ -31,79 +31,12 @@ const (
 	outputTable = "warehouse.sales.summary"
 )
 
-// ── fake providers: honor the frozen RPCs + the C1 idempotency contract ──────
+// The catalog/format providers are catalogsvc/formatsvc — the SAME impls the
+// launched catalogplugin/formatplugin binaries serve (composition_launched_test.go).
+// Here they run in-process behind bufconn; there they run as isolated child
+// processes. One implementation, two deployment topologies.
 
-type fakeCatalog struct {
-	catalogv1.UnimplementedCatalogServiceServer
-	mu          sync.Mutex
-	committed   map[string]string // identifier -> current committed snapshot
-	commitByKey map[string]string // idempotency_key -> snapshot (idempotent replay)
-	commitCount map[string]int    // identifier -> # of real (non-replay) commits
-}
-
-func newFakeCatalog() *fakeCatalog {
-	return &fakeCatalog{committed: map[string]string{}, commitByKey: map[string]string{}, commitCount: map[string]int{}}
-}
-
-func (c *fakeCatalog) GetTable(_ context.Context, req *catalogv1.GetTableRequest) (*catalogv1.GetTableResponse, error) {
-	return &catalogv1.GetTableResponse{Table: &commonv1.TableRef{Identifier: req.GetIdentifier(), Uri: "mem://" + req.GetIdentifier()}}, nil
-}
-
-func (c *fakeCatalog) RegisterTable(_ context.Context, req *catalogv1.RegisterTableRequest) (*catalogv1.RegisterTableResponse, error) {
-	// Idempotent by contract: re-registering returns the existing ref.
-	return &catalogv1.RegisterTableResponse{Table: &commonv1.TableRef{Identifier: req.GetIdentifier(), Uri: "mem://" + req.GetIdentifier()}}, nil
-}
-
-func (c *fakeCatalog) CommitTable(_ context.Context, req *catalogv1.CommitTableRequest) (*catalogv1.CommitTableResponse, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if k := req.GetIdempotencyKey(); k != "" {
-		if snap, ok := c.commitByKey[k]; ok {
-			return &catalogv1.CommitTableResponse{SnapshotId: snap, AlreadyApplied: true}, nil
-		}
-	}
-	if req.GetSnapshotId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "commit-table: snapshot_id is required")
-	}
-	c.committed[req.GetIdentifier()] = req.GetSnapshotId()
-	c.commitCount[req.GetIdentifier()]++
-	if k := req.GetIdempotencyKey(); k != "" {
-		c.commitByKey[k] = req.GetSnapshotId()
-	}
-	return &catalogv1.CommitTableResponse{SnapshotId: req.GetSnapshotId(), AlreadyApplied: false}, nil
-}
-
-type fakeFormat struct {
-	formatv1.UnimplementedFormatServiceServer
-	mu         sync.Mutex
-	seq        int
-	writeByKey map[string]string // idempotency_key -> snapshot (idempotent replay)
-	writeCount map[string]int    // table identifier -> # of real (non-replay) writes
-}
-
-func newFakeFormat() *fakeFormat {
-	return &fakeFormat{writeByKey: map[string]string{}, writeCount: map[string]int{}}
-}
-
-func (f *fakeFormat) Overwrite(_ context.Context, req *formatv1.OverwriteRequest) (*formatv1.OverwriteResponse, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if k := req.GetIdempotencyKey(); k != "" {
-		if snap, ok := f.writeByKey[k]; ok {
-			// At-least-once replay: a no-op returning the ORIGINAL result (C1).
-			return &formatv1.OverwriteResponse{Result: &commonv1.WriteResult{SnapshotId: proto.String(snap), AlreadyApplied: true, RowsAffected: proto.Int64(0)}}, nil
-		}
-	}
-	f.seq++
-	snap := fmt.Sprintf("snap-%d", f.seq)
-	f.writeCount[req.GetTable().GetIdentifier()]++
-	if k := req.GetIdempotencyKey(); k != "" {
-		f.writeByKey[k] = snap
-	}
-	return &formatv1.OverwriteResponse{Result: &commonv1.WriteResult{SnapshotId: proto.String(snap), AlreadyApplied: false, RowsAffected: proto.Int64(42)}}, nil
-}
-
-// ── harness: registry + gateway in front of the fake providers ───────────────
+// ── harness: registry + gateway in front of the providers ────────────────────
 
 func bufServer(t *testing.T, register func(*grpc.Server)) *grpc.ClientConn {
 	t.Helper()
@@ -138,14 +71,14 @@ func callerCtx(caller string) context.Context {
 
 type harness struct {
 	client  corev1.CapabilityInvokeServiceClient
-	catalog *fakeCatalog
-	format  *fakeFormat
+	catalog *catalogsvc.Server
+	format  *formatsvc.Server
 	audit   *gateway.MemAuditor
 }
 
 func newHarness(t *testing.T) *harness {
 	t.Helper()
-	cat, fmtp := newFakeCatalog(), newFakeFormat()
+	cat, fmtp := catalogsvc.New(), formatsvc.New()
 	catConn := bufServer(t, func(s *grpc.Server) { catalogv1.RegisterCatalogServiceServer(s, cat) })
 	fmtConn := bufServer(t, func(s *grpc.Server) { formatv1.RegisterFormatServiceServer(s, fmtp) })
 
@@ -193,23 +126,39 @@ func invoke(ctx context.Context, client corev1.CapabilityInvokeServiceClient, ca
 	return nil
 }
 
-// runPipeline plays the strategy's capability sequence through the gateway. If
-// crashAfterWrite, it returns right after the format write (before commit-table),
-// modelling a crash mid-strategy. Returns the write snapshot + whether it committed.
-func runPipeline(t *testing.T, h *harness, runID string, crashAfterWrite bool) (writeSnap, finalSnap string, committed bool) {
+// runResult is everything the pipeline run exposes through the gateway — enough to
+// assert commit-linkage, C1 idempotency, and (when launched) the serving PIDs that
+// ride in the free-form sourceURI / writeSnap fields. Observable from RESPONSES
+// only, so it works identically in-process and across a launched process boundary.
+type runResult struct {
+	sourceURI    string // get-table -> TableRef.uri (carries the catalog process PID)
+	writeSnap    string // overwrite -> WriteResult.snapshot_id (carries the format process PID)
+	writeReplay  bool   // overwrite -> WriteResult.already_applied (true == idempotent no-op)
+	finalSnap    string // commit-table -> snapshot_id
+	commitReplay bool   // commit-table -> already_applied
+	committed    bool   // false == returned early (crash before commit-table)
+}
+
+// runPipeline plays the strategy's capability sequence through the gateway client.
+// If crashAfterWrite, it returns right after the format write (before commit-table),
+// modelling a crash mid-strategy. Shared by the in-process and launched tests so
+// both drive the EXACT same call sequence.
+func runPipeline(t *testing.T, client corev1.CapabilityInvokeServiceClient, runID string, crashAfterWrite bool) runResult {
 	t.Helper()
 	ctx := callerCtx("rat-comp-strategy")
+	var res runResult
 
 	var gt catalogv1.GetTableResponse
-	if err := invoke(ctx, h.client, "rat://catalog/v1/get-table", &catalogv1.GetTableRequest{Identifier: sourceTable}, &gt); err != nil {
+	if err := invoke(ctx, client, "rat://catalog/v1/get-table", &catalogv1.GetTableRequest{Identifier: sourceTable}, &gt); err != nil {
 		t.Fatalf("get-table: %v", err)
 	}
 	if gt.GetTable().GetIdentifier() != sourceTable {
 		t.Fatalf("get-table returned %q, want %q", gt.GetTable().GetIdentifier(), sourceTable)
 	}
+	res.sourceURI = gt.GetTable().GetUri()
 
 	var rt catalogv1.RegisterTableResponse
-	if err := invoke(ctx, h.client, "rat://catalog/v1/register-table", &catalogv1.RegisterTableRequest{Identifier: outputTable}, &rt); err != nil {
+	if err := invoke(ctx, client, "rat://catalog/v1/register-table", &catalogv1.RegisterTableRequest{Identifier: outputTable}, &rt); err != nil {
 		t.Fatalf("register-table: %v", err)
 	}
 
@@ -219,21 +168,25 @@ func runPipeline(t *testing.T, h *harness, runID string, crashAfterWrite bool) (
 		Source:         &commonv1.ArrowStream{Transport: commonv1.ArrowTransport_ARROW_TRANSPORT_FLIGHT, Role: commonv1.ArrowStreamRole_ARROW_STREAM_ROLE_PRODUCER_HOSTED},
 		IdempotencyKey: runID,
 	}
-	if err := invoke(ctx, h.client, "rat://format/v1/overwrite", owReq, &ow); err != nil {
+	if err := invoke(ctx, client, "rat://format/v1/overwrite", owReq, &ow); err != nil {
 		t.Fatalf("overwrite: %v", err)
 	}
-	writeSnap = ow.GetResult().GetSnapshotId()
+	res.writeSnap = ow.GetResult().GetSnapshotId()
+	res.writeReplay = ow.GetResult().GetAlreadyApplied()
 
 	if crashAfterWrite {
-		return writeSnap, "", false // crash before commit-table
+		return res // crash before commit-table
 	}
 
 	var ct catalogv1.CommitTableResponse
-	ctReq := &catalogv1.CommitTableRequest{Identifier: outputTable, SnapshotId: writeSnap, IdempotencyKey: runID}
-	if err := invoke(ctx, h.client, "rat://catalog/v1/commit-table", ctReq, &ct); err != nil {
+	ctReq := &catalogv1.CommitTableRequest{Identifier: outputTable, SnapshotId: res.writeSnap, IdempotencyKey: runID}
+	if err := invoke(ctx, client, "rat://catalog/v1/commit-table", ctReq, &ct); err != nil {
 		t.Fatalf("commit-table: %v", err)
 	}
-	return writeSnap, ct.GetSnapshotId(), true
+	res.finalSnap = ct.GetSnapshotId()
+	res.commitReplay = ct.GetAlreadyApplied()
+	res.committed = true
+	return res
 }
 
 // ── tests ────────────────────────────────────────────────────────────────────
@@ -243,17 +196,17 @@ func runPipeline(t *testing.T, h *harness, runID string, crashAfterWrite bool) (
 // ADR-010); every hop is authorized + audited.
 func TestCompositionPipeline(t *testing.T) {
 	h := newHarness(t)
-	writeSnap, finalSnap, committed := runPipeline(t, h, "run-1", false)
-	if !committed {
+	r := runPipeline(t, h.client, "run-1", false)
+	if !r.committed {
 		t.Fatal("pipeline did not commit")
 	}
-	if writeSnap == "" || finalSnap != writeSnap {
-		t.Errorf("commit-linkage broken: write produced %q, catalog committed %q", writeSnap, finalSnap)
+	if r.writeSnap == "" || r.finalSnap != r.writeSnap {
+		t.Errorf("commit-linkage broken: write produced %q, catalog committed %q", r.writeSnap, r.finalSnap)
 	}
-	if got := h.catalog.committed[outputTable]; got != writeSnap {
-		t.Errorf("catalog committed snapshot = %q, want %q", got, writeSnap)
+	if got := h.catalog.Committed(outputTable); got != r.writeSnap {
+		t.Errorf("catalog committed snapshot = %q, want %q", got, r.writeSnap)
 	}
-	if got := h.format.writeCount[outputTable]; got != 1 {
+	if got := h.format.WriteCount(outputTable); got != 1 {
 		t.Errorf("format wrote %d times, want 1", got)
 	}
 	// Four authorized hops, all allowed, routed to the right providers.
@@ -277,32 +230,36 @@ func TestCrashMidStrategyRecovers(t *testing.T) {
 	h := newHarness(t)
 
 	// Attempt 1: crashes after the write, before commit.
-	writeSnap1, _, committed1 := runPipeline(t, h, "run-7", true)
-	if committed1 {
+	r1 := runPipeline(t, h.client, "run-7", true)
+	if r1.committed {
 		t.Fatal("attempt 1 should have crashed before commit")
 	}
-	if writeSnap1 == "" {
+	if r1.writeSnap == "" {
 		t.Fatal("attempt 1 produced no write snapshot")
 	}
 
 	// Attempt 2: full re-run, same run id (the reconciler retry).
-	writeSnap2, finalSnap, committed2 := runPipeline(t, h, "run-7", false)
-	if !committed2 {
+	r2 := runPipeline(t, h.client, "run-7", false)
+	if !r2.committed {
 		t.Fatal("attempt 2 did not commit")
 	}
 
-	// The replayed write returned the ORIGINAL snapshot, and did NOT write again.
-	if writeSnap2 != writeSnap1 {
-		t.Errorf("replay produced a new snapshot %q, want the original %q (not idempotent!)", writeSnap2, writeSnap1)
+	// The replayed write returned the ORIGINAL snapshot, flagged already_applied,
+	// and did NOT write again.
+	if r2.writeSnap != r1.writeSnap {
+		t.Errorf("replay produced a new snapshot %q, want the original %q (not idempotent!)", r2.writeSnap, r1.writeSnap)
 	}
-	if got := h.format.writeCount[outputTable]; got != 1 {
+	if !r2.writeReplay {
+		t.Error("replayed overwrite not flagged already_applied — the write leg is not idempotent")
+	}
+	if got := h.format.WriteCount(outputTable); got != 1 {
 		t.Errorf("format wrote %d times across crash+retry, want exactly 1 (double-apply!)", got)
 	}
-	if got := h.catalog.commitCount[outputTable]; got != 1 {
+	if got := h.catalog.CommitCount(outputTable); got != 1 {
 		t.Errorf("catalog committed %d times, want exactly 1", got)
 	}
-	if finalSnap != writeSnap1 {
-		t.Errorf("final committed snapshot = %q, want %q", finalSnap, writeSnap1)
+	if r2.finalSnap != r1.writeSnap {
+		t.Errorf("final committed snapshot = %q, want %q", r2.finalSnap, r1.writeSnap)
 	}
 }
 
