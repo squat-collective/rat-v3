@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — D3 storage-cred isolation — scoped, tenant-isolated, contained (real local-fs ref)
+
+`core/composition` ([reviews/10](../reviews/10-phase-1-spike-exit.md) D3 exit), on `phase-1-d3-storage-creds`. The storage axis's C7 obligation — *vended creds are scoped to the caller's tenant + prefix + mode, short-TTL, and a prefix can't escape the tenant root* — is now **vector-tested through the real launched plugin behind the gateway**, not honor-system.
+
+- **The proof** (`composition_storagecreds_test.go`): the **round-2 real** `examples/storage/localfs-go` ref (independent module) is launched via local-process (`RAT_STORAGE_ROOT=tempdir`) behind the gateway; `vend-credentials` flows through the C5 gateway and returns the JSON scope receipt. Asserted: **(1) scoping** — bound to (tenant, prefix, mode) + a TTL; **(2) tenant isolation** — `acme` and `globex` vend the SAME logical prefix but resolve to DISTINCT per-tenant roots (`…/acme/warehouse/orders` vs `…/globex/warehouse/orders`); **(3) containment** — `../globex/secrets` from `acme` → `PERMISSION_DENIED`; **(4)** empty prefix → `INVALID_ARGUMENT`; **(5) C5** — an undeclared caller is denied. The tenant comes ONLY from the gateway-re-stamped metadata envelope (not a request field).
+- **Defense in depth, surfaced in the audit:** C5 authorizes the `vend-credentials` *capability*, then the storage plugin enforces tenancy *containment* — so the containment/validation refusals are the **provider's** (C5-allowed in the audit); only the undeclared caller is a C5 denial (the audit shows exactly 1). `make core-test` + `make breaking` green. Commit `7a8b386`.
+- **C2 caveat (deferred):** the spike trusts the tenant claimed in the inbound envelope; the full core re-derives it from the authenticated channel — the scoping mechanism proven here is unchanged, only the source of the trusted tenant tightens. **Next DoD:** D4 conformance-attestation enforced · D2 real bulk leg · C1 against real backends · sre#4.
+
+---
+
 ## 2026-06-01 — C3 streaming idle-timeout backstop — a hung provider can't pin a stream (gateway C-series complete)
 
 `core/gateway` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C3 exit), on `phase-1-c3-idle-timeout`. The deadline bound `min(channel, deadline_unix_ms)` already covered the deadline-SET case (unary + streams). The deferred gap (reviews/10 line 37) was a server-stream with **no** deadline: a provider that sends no frame, no EOF, and no error blocks `RecvMsg` forever and pins the stream. C3 adds the **idle backstop**.
