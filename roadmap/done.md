@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — Spike core: the registry foundation (C5 derived from real manifests) — `go test` green
+
+First real Phase-1 spike code (ADR-014), on `phase-1-registry-core`. New Go module `github.com/rat-dev/rat/core`:
+
+- **`core/manifest`** — loads the frozen `plugin.v1.json` manifest shape (the real `contracts/examples/*.plugin.yaml`) into Go structs + validates the `rat://<axis>/v<major>/<cap>` URI grammar.
+- **`core/registry`** — indexes manifests by name + provided capability; **`Authorize(caller, cap)` allows iff `caller.requires ∋ cap ∧ provider.provides ∋ cap`** — the C5 decision *derived from declared manifests*, replacing the throwaway stubs' hardcoded allowlist. Rejects duplicate providers (no selection policy yet).
+- **Tested green** (containerized `golang:1.25`, `go vet` + `go test ./...`, `GOSUMDB=off`): the allow path (`scd2→format/merge`) + 3 deny modes (undeclared-require / no-provider / unknown-caller) + duplicate-provider + malformed-URI, all against the 2 real manifests. Commit `fdcf780`.
+- **Next:** `core/gateway` (`CapabilityInvokeService` seeded from `examples/bench/latency-go/gateway.go`, C5 wired to `registry.Authorize` + an audit record per decision), then composition-on-Go + the C5-negative / C1 / C2 exit tests.
+
+---
+
 ## 2026-06-01 — ADR-014: the spike-core shape pinned (registry + capability-invoke gateway)
 
 Contracts-before-code for the Phase-1 spike. [ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md) scopes the minimum real core that makes **C5 real**: a Go **registry** (loads the real `plugin.yaml` manifests → indexes `(kind,name,version)` + a capability map; builds the `capability→(service,method)` route table from the `(rat.common.v1.capability)` annotation) + a **capability-invoke gateway** (seeded from the faithful non-test `examples/bench/latency-go/gateway.go`) whose **C5 decision is *derived from the manifests*** — `X allowed iff X ∈ caller.requires ∧ X ∈ provider.provides` — not the test stubs' hardcoded allowlist. Reconciler/bus/identity/state-gateway/process-launch deferred; plugins run as local gRPC servers. Exit tests: composition-on-Go + C5-negative (`PERMISSION_DENIED` + audit) + C1 crash-mid-strategy + C2 truncation; a frozen-wire insufficiency = a freeze-reopen while still local. Lives in a new `core/` module (`replace` → the SDK). Next: build `phase-1-registry-core`.
