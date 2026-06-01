@@ -6,6 +6,30 @@ When an item moves to active work, promote it: cut it from here, add it to [curr
 
 ---
 
+## Board-review findings ([reviews/08](../reviews/08-post-freeze-board-review.md), 2026-06-01)
+
+The 5-agent post-freeze review. Grouped by when to act.
+
+**NOW — the freeze is still local/unpushed (closing window):**
+- **A1 [V2-REGRET]** — make `WriteResult.snapshot_id` `optional` (data.proto:83) + re-cut `rat/1`. The *only* fix that's free now and impossible after the first external pin. (Alt: accept the wart, add `optional string resulting_version = 3` later.)
+- **D5/E4 honesty pass** — add a "the core is not built (Phase 1); enforcement here is the contract the core MUST implement" banner to `plugin.v1.json` + every `CONTRACT.md`; fix `overview.md` drift (`plane-manager-plugin`→`deployment-runtime`; add a tier-0 callout; reconcile "core never commands"). Pure docs.
+- Optional while re-cutting: absorb additive crash-safety fields **C1** (`idempotency_key`/`run_id` on strategy invoke + `WriteResult`) + **C2** (`ArrowStream` `expected_rows`/terminator).
+
+**`v1.1` additive (no break; prioritized):**
+- **B1** — catalog `RegisterTable` + commit-linkage RPC (catalog.proto:27-30). **FIRST** post-freeze additive — the branch-pipeline headline feature can't close its loop without it (3 agents' top concern).
+- **C1/C2/C4** — effect-leg idempotency key · `ArrowStream` completeness/terminator · terminal audit record (`outcome` at stream close; `AUDIT_OUTCOME_ERROR` already exists).
+- Enrichments: structured `IsolationAttestation` (D1), signed **conformance attestation** message so `conformed_capabilities` is derived not self-asserted (D4), `health/v1` liveness/readiness probe the reconciler drives (sre#4), `WriteResult` insert/update/delete breakdown + `TableRef` snapshot_id/as_of (F2), `bound_capability` on `SubjectAssertion` (F1).
+
+**Enforcement-layer / conformance (some need the core — specify now):**
+- **C3** core MUST bound the provider call by `min(channel, deadline_unix_ms)` + streaming idle-timeout. **D1/D2/D3** full-isolation-profile vector + a *real* enforcing deployment-runtime (podman, not dry-run) · `ArrowStream`-ticket TTL/single-use/cross-tenant vector · real-scoped-cred storage integration vector. **D4** marketplace verifies the attestation. **sre#4** crash-loop backoff + jitter. **sre#8** pin a core SLI list + `/metrics` contract while the core is still paper.
+
+**Process / spec (cheap):**
+- **E3** label round-1 refs `WIRE-CONTRACT ONLY — NOT A STARTER TEMPLATE`. **E5** `ERROR_MODEL.md`: add `CANCELLED`/`ABORTED` (streaming), pin `TableRef.branch` vs per-RPC `branch` precedence, pin BidiStream empty-first-frame abort. **E6** state engine output-type stability is the caller's responsibility (SUM→CAST). **E7** add the temptation ledger (CLAUDE.md #2, currently unkept). **E8** make C2/mTLS a deployment-conformance item + document the audit keyring trust-root/rotation + tail-drop detection. **F3** secret timing-equivalence note.
+
+**Accept as documented v1 residual:** F1 (R1 bounded confused-deputy — M4 tenant cross-check confirmed fixed), F2 enrichments, engine SQL portability is inherent.
+
+---
+
 ## Remaining Phase 0 tail (post-`rat/1`)
 
 The data-plane is frozen ([ADR-009](../docs/architecture/adrs/009-data-plane-contract-freeze-v1.md)). What's left to fully close Phase 0 — all loosely-coupled, none blocking the frozen surface:

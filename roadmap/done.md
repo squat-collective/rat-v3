@@ -4,6 +4,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — 5-agent post-freeze board review (communicating team) → [reviews/08]
+
+Ran the first adversarial review *after* the freeze, as a **communicating agent team**: 5 specialists (`architect`, `security`, `ecosystem`, `sre`, `contracts`) reviewed the frozen surface (rat/1..rat/1.4 + 32 refs + composition) in parallel and **cross-consulted each other via direct messages** — several findings changed as a result (the terminal-audit finding came from `sre`→`security`; `architect` cross-corrected `sre` on the health contract; `security`↔`contracts` confirmed the ArrowStream-ticket gap).
+
+- **Artifacts:** [`reviews/08-post-freeze-board-review.md`](../reviews/08-post-freeze-board-review.md) (synthesis) + [`reviews/board/`](../reviews/board/) (5 full reports). Commit `b4c0526`.
+- **Verdict:** the frozen WIRE is sound — **only ONE true V2-regret** across 18 axes (`WriteResult.snapshot_id` empty-sentinel) — but the freeze + "32/32 conformance" badge **overstates the guarantee**: enforcement (I9 isolation, ArrowStream ticket, storage cred scoping), crash-safety (no effect-leg idempotency key, no stream terminator, no provider deadline), and the **core itself** are deferred/unbuilt, and frozen artifacts describe the unbuilt core's enforcement in the present tense.
+- **Strongest signal:** 3 agents independently nominated the **catalog commit-linkage/CreateTable gap** (the headline branch-pipeline feature can't close its loop on the frozen wire).
+- **Actionable now (freeze is still local/unpushed):** make `snapshot_id` `optional` + re-cut `rat/1`; add a "core not built" honesty banner to `plugin.v1.json` + every `CONTRACT.md`. Full prioritized action list in reviews/08 → queued in [backlog](backlog.md).
+
+---
+
 ## 2026-05-31 — 🧊🎉 **Experience axes FROZEN** (`rat/1.4`) — ALL 18 AXIS CONTRACTS NOW `v1`
 
 Built one reference per experience axis and froze them — **completing the entire axis-contract surface**. `make conformance` **32/32** (commits `5ce7b30` refs, `030d406` freeze, tag **`rat/1.4`**).
