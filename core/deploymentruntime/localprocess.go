@@ -46,13 +46,8 @@ func NewLocalProcess() *LocalProcess {
 // binds RAT_PLUGIN_ADDR (a free loopback port the runtime allocates).
 func (r *LocalProcess) Launch(_ context.Context, req *deploymentruntimev1.LaunchRequest) (*deploymentruntimev1.LaunchResponse, error) {
 	spec := req.GetSpec()
-	if spec.GetImage() == "" {
-		return nil, status.Error(codes.InvalidArgument, "launch: spec.image (the plugin binary) is required")
-	}
-	iso := spec.GetIsolation()
-	if !iso.GetRunAsNonRoot() || !iso.GetDropAllCapabilities() || !iso.GetNoNewPrivileges() {
-		return nil, status.Error(codes.FailedPrecondition,
-			"I9: isolation profile is below the minimum (run_as_non_root + drop_all_capabilities + no_new_privileges all required)")
+	if err := checkI9Minimum(spec); err != nil {
+		return nil, err // shared trust gate: image required + the I9 minimum (isolation.go)
 	}
 	// run_as_non_root honoring: a local-process runtime runs the child as its OWN
 	// uid (it cannot drop to another uid without privileges). If the runtime itself
@@ -69,7 +64,7 @@ func (r *LocalProcess) Launch(_ context.Context, req *deploymentruntimev1.Launch
 
 	cmd := exec.Command(spec.GetImage())
 	cmd.Env = childEnv(addr, spec.GetEnv())
-	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr        // surface plugin logs on the runtime's stderr
+	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr         // surface plugin logs on the runtime's stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // own process group → clean group-kill on Terminate
 
 	if err := cmd.Start(); err != nil {
