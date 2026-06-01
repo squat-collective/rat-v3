@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — C3 streaming idle-timeout backstop — a hung provider can't pin a stream (gateway C-series complete)
+
+`core/gateway` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C3 exit), on `phase-1-c3-idle-timeout`. The deadline bound `min(channel, deadline_unix_ms)` already covered the deadline-SET case (unary + streams). The deferred gap (reviews/10 line 37) was a server-stream with **no** deadline: a provider that sends no frame, no EOF, and no error blocks `RecvMsg` forever and pins the stream. C3 adds the **idle backstop**.
+
+- **The backstop:** `relayServerStream` runs the downstream stream under a cancelable `streamCtx` (child of `oc.ctx`, so the deadline bound still applies) with a `time.AfterFunc` idle watchdog reset on each frame. If no frame arrives within the idle window the watchdog cancels → `RecvMsg` returns → the cause is attributed: parent deadline/cancel (the C3 bound), the idle watchdog (→ `DeadlineExceeded` "stream idle timeout"), or a genuine provider error. `Gateway.StreamIdleTimeout` (default **5m**; generous because a legitimately quiet `watch` is normal — such providers should keepalive, or a deployment tunes it). `streamOutcome` gains a **"timeout"** label so an idle/deadline cut is legible in the audit trail (distinct from a provider error).
+- **Tests:** a hung provider (N frames then blocks on `srv.Context().Done()`) is cut **promptly** with `DeadlineExceeded` + a terminal `{timeout, Frames:N}` record — by the idle watchdog when no deadline is set, and by the soft deadline when one is (< idle). `go test -race` clean (watchdog concurrency). `make core-test` + `make breaking` green (no wire change — C3 is an implementation backstop, not a contract). Commit `b9f22f1`.
+- **Milestone:** with C3 done the **gateway C-series is complete** — C5 (capability enforcement, real providers) · C4 (audit every decision + terminal stream-close) · C3 (deadline bound + idle backstop) · C1 (crash-safety idempotency). **Next DoD:** D3 storage-cred isolation · D4 conformance-attestation enforced · D2 real bulk leg · C1 against real backends · sre#4.
+
+---
+
 ## 2026-06-01 — C4 terminal stream-close audit record — the stream audit trail closes
 
 `core/gateway` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C4 exit), on `phase-1-c4-terminal-audit`. Per-decision audit + audit-on-deny were already real (the gateway records exactly one decision record per call, allow or deny). The missing half — the deferred C4 item — was the **terminal stream-close record**: ADR-008 enforces stream authz at OPEN, so a stream's *decision* is audited there, but nothing recorded how the stream **ended**. Now it does.
