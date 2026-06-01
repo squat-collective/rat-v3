@@ -22,9 +22,10 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1crat/billing/v1/billing.proto\x12\x0erat.billing.v1\"\xf5\x01\n\nUsageEvent\x12\x14\n\x05meter\x18\x01 \x01(\tR\x05meter\x12\x1a\n\x08quantity\x18\x02 \x01(\x01R\x08quantity\x12*\n\x11timestamp_unix_ms\x18\x03 \x01(\x03R\x0ftimestampUnixMs\x12J\n\ndimensions\x18\x04 \x03(\x0b\x32*.rat.billing.v1.UsageEvent.DimensionsEntryR\ndimensions\x1a=\n\x0f\x44imensionsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"I\n\rRecordRequest\x12\x32\n\x06\x65vents\x18\x02 \x03(\x0b\x32\x1a.rat.billing.v1.UsageEventR\x06\x65ventsJ\x04\x08\x01\x10\x02\",\n\x0eRecordResponse\x12\x1a\n\x08recorded\x18\x01 \x01(\x03R\x08recorded2Y\n\x0e\x42illingService\x12G\n\x06Record\x12\x1d.rat.billing.v1.RecordRequest\x1a\x1e.rat.billing.v1.RecordResponseB5Z3github.com/rat-dev/rat/gen/rat/billing/v1;billingv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1crat/billing/v1/billing.proto\x12\x0erat.billing.v1\x1a\x1frat/common/v1/annotations.proto\"\xf5\x01\n\nUsageEvent\x12\x14\n\x05meter\x18\x01 \x01(\tR\x05meter\x12\x1a\n\x08quantity\x18\x02 \x01(\x01R\x08quantity\x12*\n\x11timestamp_unix_ms\x18\x03 \x01(\x03R\x0ftimestampUnixMs\x12J\n\ndimensions\x18\x04 \x03(\x0b\x32*.rat.billing.v1.UsageEvent.DimensionsEntryR\ndimensions\x1a=\n\x0f\x44imensionsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"I\n\rRecordRequest\x12\x32\n\x06\x65vents\x18\x02 \x03(\x0b\x32\x1a.rat.billing.v1.UsageEventR\x06\x65ventsJ\x04\x08\x01\x10\x02\",\n\x0eRecordResponse\x12\x1a\n\x08recorded\x18\x01 \x01(\x03R\x08recorded2v\n\x0e\x42illingService\x12\x64\n\x06Record\x12\x1d.rat.billing.v1.RecordRequest\x1a\x1e.rat.billing.v1.RecordResponse\"\x1b\x8a\x97\"\x17rat://billing/v1/recordB5Z3github.com/rat-dev/rat/gen/rat/billing/v1;billingv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,14 +35,16 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z3github.com/rat-dev/rat/gen/rat/billing/v1;billingv1'
   _globals['_USAGEEVENT_DIMENSIONSENTRY']._loaded_options = None
   _globals['_USAGEEVENT_DIMENSIONSENTRY']._serialized_options = b'8\001'
-  _globals['_USAGEEVENT']._serialized_start=49
-  _globals['_USAGEEVENT']._serialized_end=294
-  _globals['_USAGEEVENT_DIMENSIONSENTRY']._serialized_start=233
-  _globals['_USAGEEVENT_DIMENSIONSENTRY']._serialized_end=294
-  _globals['_RECORDREQUEST']._serialized_start=296
-  _globals['_RECORDREQUEST']._serialized_end=369
-  _globals['_RECORDRESPONSE']._serialized_start=371
-  _globals['_RECORDRESPONSE']._serialized_end=415
-  _globals['_BILLINGSERVICE']._serialized_start=417
-  _globals['_BILLINGSERVICE']._serialized_end=506
+  _globals['_BILLINGSERVICE'].methods_by_name['Record']._loaded_options = None
+  _globals['_BILLINGSERVICE'].methods_by_name['Record']._serialized_options = b'\212\227\"\027rat://billing/v1/record'
+  _globals['_USAGEEVENT']._serialized_start=82
+  _globals['_USAGEEVENT']._serialized_end=327
+  _globals['_USAGEEVENT_DIMENSIONSENTRY']._serialized_start=266
+  _globals['_USAGEEVENT_DIMENSIONSENTRY']._serialized_end=327
+  _globals['_RECORDREQUEST']._serialized_start=329
+  _globals['_RECORDREQUEST']._serialized_end=402
+  _globals['_RECORDRESPONSE']._serialized_start=404
+  _globals['_RECORDRESPONSE']._serialized_end=448
+  _globals['_BILLINGSERVICE']._serialized_start=450
+  _globals['_BILLINGSERVICE']._serialized_end=568
 # @@protoc_insertion_point(module_scope)

@@ -37,6 +37,7 @@
 package identityv1
 
 import (
+	_ "github.com/rat-dev/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -337,7 +338,7 @@ var File_rat_identity_v1_identity_proto protoreflect.FileDescriptor
 
 const file_rat_identity_v1_identity_proto_rawDesc = "" +
 	"\n" +
-	"\x1erat/identity/v1/identity.proto\x12\x0frat.identity.v1\"@\n" +
+	"\x1erat/identity/v1/identity.proto\x12\x0frat.identity.v1\x1a\x1frat/common/v1/annotations.proto\"@\n" +
 	"\x13AuthenticateRequest\x12#\n" +
 	"\n" +
 	"credential\x18\x02 \x01(\fB\x03\x80\x01\x01R\n" +
@@ -358,10 +359,10 @@ const file_rat_identity_v1_identity_proto_rawDesc = "" +
 	"\x1bDENY_CODE_NOT_AUTHENTICATED\x10\x01\x12\x1f\n" +
 	"\x1bDENY_CODE_INSUFFICIENT_ROLE\x10\x02\x12\x1e\n" +
 	"\x1aDENY_CODE_ACTION_FORBIDDEN\x10\x03\x12 \n" +
-	"\x1cDENY_CODE_RESOURCE_FORBIDDEN\x10\x042\xc2\x01\n" +
-	"\x0fIdentityService\x12[\n" +
-	"\fAuthenticate\x12$.rat.identity.v1.AuthenticateRequest\x1a%.rat.identity.v1.AuthenticateResponse\x12R\n" +
-	"\tAuthorize\x12!.rat.identity.v1.AuthorizeRequest\x1a\".rat.identity.v1.AuthorizeResponseB7Z5github.com/rat-dev/rat/gen/rat/identity/v1;identityv1b\x06proto3"
+	"\x1cDENY_CODE_RESOURCE_FORBIDDEN\x10\x042\x87\x02\n" +
+	"\x0fIdentityService\x12\x7f\n" +
+	"\fAuthenticate\x12$.rat.identity.v1.AuthenticateRequest\x1a%.rat.identity.v1.AuthenticateResponse\"\"\x8a\x97\"\x1erat://identity/v1/authenticate\x12s\n" +
+	"\tAuthorize\x12!.rat.identity.v1.AuthorizeRequest\x1a\".rat.identity.v1.AuthorizeResponse\"\x1f\x8a\x97\"\x1brat://identity/v1/authorizeB7Z5github.com/rat-dev/rat/gen/rat/identity/v1;identityv1b\x06proto3"
 
 var (
 	file_rat_identity_v1_identity_proto_rawDescOnce sync.Once

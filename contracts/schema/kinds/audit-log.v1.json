@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rat.dev/schema/plugin/kinds/audit-log.v1.json",
+  "title": "RAT v3 plugin manifest \u2014 kind: audit-log (rat/1)",
+  "description": "Per-kind manifest schema for `kind: audit-log` (ADR-011). Composes the kind-agnostic envelope (plugin.v1.json) via `allOf` and adds the per-kind constraints: `kind` is fixed to \"audit-log\", and `provides` MUST contain this kind's minimal mandatory core (`rat://auditlog/v1/append`). The `auditlog` axis defines no further capabilities. NOTE: the capability-URI axis segment `auditlog` differs from the kind name `audit-log`.",
+  "$comment": "Layered per ADR-011. Strictness = minimal mandatory core (NOT all capabilities): negotiation means a plugin implements a subset. The orchestrating core that ENFORCES `provides` at runtime (C5) is not built yet (Phase 1) \u2014 see plugin.v1.json $comment.",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "https://rat.dev/schema/plugin/v1.json"
+    }
+  ],
+  "required": [
+    "kind"
+  ],
+  "properties": {
+    "kind": {
+      "const": "audit-log"
+    },
+    "provides": {
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "capability"
+            ],
+            "properties": {
+              "capability": {
+                "const": "rat://auditlog/v1/append"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

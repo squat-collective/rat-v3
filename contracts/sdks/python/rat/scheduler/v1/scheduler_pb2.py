@@ -22,9 +22,10 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n rat/scheduler/v1/scheduler.proto\x12\x10rat.scheduler.v1\"h\n\x0fScheduleRequest\x12\x1d\n\ntrigger_id\x18\x02 \x01(\tR\ttriggerId\x12\x12\n\x04\x63ron\x18\x03 \x01(\tR\x04\x63ron\x12\x1c\n\nat_unix_ms\x18\x04 \x01(\x03R\x08\x61tUnixMsJ\x04\x08\x01\x10\x02\"1\n\x10ScheduleResponse\x12\x1d\n\ntrigger_id\x18\x01 \x01(\tR\ttriggerId\"4\n\rCancelRequest\x12\x1d\n\ntrigger_id\x18\x02 \x01(\tR\ttriggerIdJ\x04\x08\x01\x10\x02\".\n\x0e\x43\x61ncelResponse\x12\x1c\n\tcancelled\x18\x01 \x01(\x08R\tcancelled\"\x17\n\x0fWatchDueRequestJ\x04\x08\x01\x10\x02\"Z\n\x10WatchDueResponse\x12\x1d\n\ntrigger_id\x18\x01 \x01(\tR\ttriggerId\x12\'\n\x10\x66ired_at_unix_ms\x18\x02 \x01(\x03R\rfiredAtUnixMs2\x87\x02\n\x10SchedulerService\x12Q\n\x08Schedule\x12!.rat.scheduler.v1.ScheduleRequest\x1a\".rat.scheduler.v1.ScheduleResponse\x12K\n\x06\x43\x61ncel\x12\x1f.rat.scheduler.v1.CancelRequest\x1a .rat.scheduler.v1.CancelResponse\x12S\n\x08WatchDue\x12!.rat.scheduler.v1.WatchDueRequest\x1a\".rat.scheduler.v1.WatchDueResponse0\x01\x42\x39Z7github.com/rat-dev/rat/gen/rat/scheduler/v1;schedulerv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n rat/scheduler/v1/scheduler.proto\x12\x10rat.scheduler.v1\x1a\x1frat/common/v1/annotations.proto\"h\n\x0fScheduleRequest\x12\x1d\n\ntrigger_id\x18\x02 \x01(\tR\ttriggerId\x12\x12\n\x04\x63ron\x18\x03 \x01(\tR\x04\x63ron\x12\x1c\n\nat_unix_ms\x18\x04 \x01(\x03R\x08\x61tUnixMsJ\x04\x08\x01\x10\x02\"1\n\x10ScheduleResponse\x12\x1d\n\ntrigger_id\x18\x01 \x01(\tR\ttriggerId\"4\n\rCancelRequest\x12\x1d\n\ntrigger_id\x18\x02 \x01(\tR\ttriggerIdJ\x04\x08\x01\x10\x02\".\n\x0e\x43\x61ncelResponse\x12\x1c\n\tcancelled\x18\x01 \x01(\x08R\tcancelled\"\x17\n\x0fWatchDueRequestJ\x04\x08\x01\x10\x02\"Z\n\x10WatchDueResponse\x12\x1d\n\ntrigger_id\x18\x01 \x01(\tR\ttriggerId\x12\'\n\x10\x66ired_at_unix_ms\x18\x02 \x01(\x03R\rfiredAtUnixMs2\xe9\x02\n\x10SchedulerService\x12r\n\x08Schedule\x12!.rat.scheduler.v1.ScheduleRequest\x1a\".rat.scheduler.v1.ScheduleResponse\"\x1f\x8a\x97\"\x1brat://scheduler/v1/schedule\x12j\n\x06\x43\x61ncel\x12\x1f.rat.scheduler.v1.CancelRequest\x1a .rat.scheduler.v1.CancelResponse\"\x1d\x8a\x97\"\x19rat://scheduler/v1/cancel\x12u\n\x08WatchDue\x12!.rat.scheduler.v1.WatchDueRequest\x1a\".rat.scheduler.v1.WatchDueResponse\" \x8a\x97\"\x1crat://scheduler/v1/watch-due0\x01\x42\x39Z7github.com/rat-dev/rat/gen/rat/scheduler/v1;schedulerv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,18 +33,24 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rat.scheduler.v1.scheduler_
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z7github.com/rat-dev/rat/gen/rat/scheduler/v1;schedulerv1'
-  _globals['_SCHEDULEREQUEST']._serialized_start=54
-  _globals['_SCHEDULEREQUEST']._serialized_end=158
-  _globals['_SCHEDULERESPONSE']._serialized_start=160
-  _globals['_SCHEDULERESPONSE']._serialized_end=209
-  _globals['_CANCELREQUEST']._serialized_start=211
-  _globals['_CANCELREQUEST']._serialized_end=263
-  _globals['_CANCELRESPONSE']._serialized_start=265
-  _globals['_CANCELRESPONSE']._serialized_end=311
-  _globals['_WATCHDUEREQUEST']._serialized_start=313
-  _globals['_WATCHDUEREQUEST']._serialized_end=336
-  _globals['_WATCHDUERESPONSE']._serialized_start=338
-  _globals['_WATCHDUERESPONSE']._serialized_end=428
-  _globals['_SCHEDULERSERVICE']._serialized_start=431
-  _globals['_SCHEDULERSERVICE']._serialized_end=694
+  _globals['_SCHEDULERSERVICE'].methods_by_name['Schedule']._loaded_options = None
+  _globals['_SCHEDULERSERVICE'].methods_by_name['Schedule']._serialized_options = b'\212\227\"\033rat://scheduler/v1/schedule'
+  _globals['_SCHEDULERSERVICE'].methods_by_name['Cancel']._loaded_options = None
+  _globals['_SCHEDULERSERVICE'].methods_by_name['Cancel']._serialized_options = b'\212\227\"\031rat://scheduler/v1/cancel'
+  _globals['_SCHEDULERSERVICE'].methods_by_name['WatchDue']._loaded_options = None
+  _globals['_SCHEDULERSERVICE'].methods_by_name['WatchDue']._serialized_options = b'\212\227\"\034rat://scheduler/v1/watch-due'
+  _globals['_SCHEDULEREQUEST']._serialized_start=87
+  _globals['_SCHEDULEREQUEST']._serialized_end=191
+  _globals['_SCHEDULERESPONSE']._serialized_start=193
+  _globals['_SCHEDULERESPONSE']._serialized_end=242
+  _globals['_CANCELREQUEST']._serialized_start=244
+  _globals['_CANCELREQUEST']._serialized_end=296
+  _globals['_CANCELRESPONSE']._serialized_start=298
+  _globals['_CANCELRESPONSE']._serialized_end=344
+  _globals['_WATCHDUEREQUEST']._serialized_start=346
+  _globals['_WATCHDUEREQUEST']._serialized_end=369
+  _globals['_WATCHDUERESPONSE']._serialized_start=371
+  _globals['_WATCHDUERESPONSE']._serialized_end=461
+  _globals['_SCHEDULERSERVICE']._serialized_start=464
+  _globals['_SCHEDULERSERVICE']._serialized_end=825
 # @@protoc_insertion_point(module_scope)

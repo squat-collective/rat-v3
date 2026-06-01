@@ -17,6 +17,7 @@
 package notificationsv1
 
 import (
+	_ "github.com/rat-dev/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -223,7 +224,7 @@ var File_rat_notifications_v1_notifications_proto protoreflect.FileDescriptor
 
 const file_rat_notifications_v1_notifications_proto_rawDesc = "" +
 	"\n" +
-	"(rat/notifications/v1/notifications.proto\x12\x14rat.notifications.v1\"\xa3\x02\n" +
+	"(rat/notifications/v1/notifications.proto\x12\x14rat.notifications.v1\x1a\x1frat/common/v1/annotations.proto\"\xa3\x02\n" +
 	"\vSendRequest\x12:\n" +
 	"\bseverity\x18\x02 \x01(\x0e2\x1e.rat.notifications.v1.SeverityR\bseverity\x12\x14\n" +
 	"\x05title\x18\x03 \x01(\tR\x05title\x12\x12\n" +
@@ -244,9 +245,9 @@ const file_rat_notifications_v1_notifications_proto_rawDesc = "" +
 	"\rSEVERITY_INFO\x10\x01\x12\x14\n" +
 	"\x10SEVERITY_WARNING\x10\x02\x12\x12\n" +
 	"\x0eSEVERITY_ERROR\x10\x03\x12\x15\n" +
-	"\x11SEVERITY_CRITICAL\x10\x042e\n" +
-	"\x14NotificationsService\x12M\n" +
-	"\x04Send\x12!.rat.notifications.v1.SendRequest\x1a\".rat.notifications.v1.SendResponseBAZ?github.com/rat-dev/rat/gen/rat/notifications/v1;notificationsv1b\x06proto3"
+	"\x11SEVERITY_CRITICAL\x10\x042\x86\x01\n" +
+	"\x14NotificationsService\x12n\n" +
+	"\x04Send\x12!.rat.notifications.v1.SendRequest\x1a\".rat.notifications.v1.SendResponse\"\x1f\x8a\x97\"\x1brat://notifications/v1/sendBAZ?github.com/rat-dev/rat/gen/rat/notifications/v1;notificationsv1b\x06proto3"
 
 var (
 	file_rat_notifications_v1_notifications_proto_rawDescOnce sync.Once

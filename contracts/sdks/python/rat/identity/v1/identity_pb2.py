@@ -22,9 +22,10 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1erat/identity/v1/identity.proto\x12\x0frat.identity.v1\"@\n\x13\x41uthenticateRequest\x12#\n\ncredential\x18\x02 \x01(\x0c\x42\x03\x80\x01\x01R\ncredentialJ\x04\x08\x01\x10\x02\"n\n\x14\x41uthenticateResponse\x12$\n\rauthenticated\x18\x01 \x01(\x08R\rauthenticated\x12\x18\n\x07subject\x18\x02 \x01(\tR\x07subject\x12\x16\n\x06tenant\x18\x03 \x01(\tR\x06tenant\"L\n\x10\x41uthorizeRequest\x12\x16\n\x06\x61\x63tion\x18\x02 \x01(\tR\x06\x61\x63tion\x12\x1a\n\x08resource\x18\x03 \x01(\tR\x08resourceJ\x04\x08\x01\x10\x02\"}\n\x11\x41uthorizeResponse\x12\x18\n\x07\x61llowed\x18\x01 \x01(\x08R\x07\x61llowed\x12\x36\n\tdeny_code\x18\x02 \x01(\x0e\x32\x19.rat.identity.v1.DenyCodeR\x08\x64\x65nyCode\x12\x16\n\x06reason\x18\x03 \x01(\tR\x06reason*\xa9\x01\n\x08\x44\x65nyCode\x12\x19\n\x15\x44\x45NY_CODE_UNSPECIFIED\x10\x00\x12\x1f\n\x1b\x44\x45NY_CODE_NOT_AUTHENTICATED\x10\x01\x12\x1f\n\x1b\x44\x45NY_CODE_INSUFFICIENT_ROLE\x10\x02\x12\x1e\n\x1a\x44\x45NY_CODE_ACTION_FORBIDDEN\x10\x03\x12 \n\x1c\x44\x45NY_CODE_RESOURCE_FORBIDDEN\x10\x04\x32\xc2\x01\n\x0fIdentityService\x12[\n\x0c\x41uthenticate\x12$.rat.identity.v1.AuthenticateRequest\x1a%.rat.identity.v1.AuthenticateResponse\x12R\n\tAuthorize\x12!.rat.identity.v1.AuthorizeRequest\x1a\".rat.identity.v1.AuthorizeResponseB7Z5github.com/rat-dev/rat/gen/rat/identity/v1;identityv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1erat/identity/v1/identity.proto\x12\x0frat.identity.v1\x1a\x1frat/common/v1/annotations.proto\"@\n\x13\x41uthenticateRequest\x12#\n\ncredential\x18\x02 \x01(\x0c\x42\x03\x80\x01\x01R\ncredentialJ\x04\x08\x01\x10\x02\"n\n\x14\x41uthenticateResponse\x12$\n\rauthenticated\x18\x01 \x01(\x08R\rauthenticated\x12\x18\n\x07subject\x18\x02 \x01(\tR\x07subject\x12\x16\n\x06tenant\x18\x03 \x01(\tR\x06tenant\"L\n\x10\x41uthorizeRequest\x12\x16\n\x06\x61\x63tion\x18\x02 \x01(\tR\x06\x61\x63tion\x12\x1a\n\x08resource\x18\x03 \x01(\tR\x08resourceJ\x04\x08\x01\x10\x02\"}\n\x11\x41uthorizeResponse\x12\x18\n\x07\x61llowed\x18\x01 \x01(\x08R\x07\x61llowed\x12\x36\n\tdeny_code\x18\x02 \x01(\x0e\x32\x19.rat.identity.v1.DenyCodeR\x08\x64\x65nyCode\x12\x16\n\x06reason\x18\x03 \x01(\tR\x06reason*\xa9\x01\n\x08\x44\x65nyCode\x12\x19\n\x15\x44\x45NY_CODE_UNSPECIFIED\x10\x00\x12\x1f\n\x1b\x44\x45NY_CODE_NOT_AUTHENTICATED\x10\x01\x12\x1f\n\x1b\x44\x45NY_CODE_INSUFFICIENT_ROLE\x10\x02\x12\x1e\n\x1a\x44\x45NY_CODE_ACTION_FORBIDDEN\x10\x03\x12 \n\x1c\x44\x45NY_CODE_RESOURCE_FORBIDDEN\x10\x04\x32\x87\x02\n\x0fIdentityService\x12\x7f\n\x0c\x41uthenticate\x12$.rat.identity.v1.AuthenticateRequest\x1a%.rat.identity.v1.AuthenticateResponse\"\"\x8a\x97\"\x1erat://identity/v1/authenticate\x12s\n\tAuthorize\x12!.rat.identity.v1.AuthorizeRequest\x1a\".rat.identity.v1.AuthorizeResponse\"\x1f\x8a\x97\"\x1brat://identity/v1/authorizeB7Z5github.com/rat-dev/rat/gen/rat/identity/v1;identityv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,16 +35,20 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z5github.com/rat-dev/rat/gen/rat/identity/v1;identityv1'
   _globals['_AUTHENTICATEREQUEST'].fields_by_name['credential']._loaded_options = None
   _globals['_AUTHENTICATEREQUEST'].fields_by_name['credential']._serialized_options = b'\200\001\001'
-  _globals['_DENYCODE']._serialized_start=435
-  _globals['_DENYCODE']._serialized_end=604
-  _globals['_AUTHENTICATEREQUEST']._serialized_start=51
-  _globals['_AUTHENTICATEREQUEST']._serialized_end=115
-  _globals['_AUTHENTICATERESPONSE']._serialized_start=117
-  _globals['_AUTHENTICATERESPONSE']._serialized_end=227
-  _globals['_AUTHORIZEREQUEST']._serialized_start=229
-  _globals['_AUTHORIZEREQUEST']._serialized_end=305
-  _globals['_AUTHORIZERESPONSE']._serialized_start=307
-  _globals['_AUTHORIZERESPONSE']._serialized_end=432
-  _globals['_IDENTITYSERVICE']._serialized_start=607
-  _globals['_IDENTITYSERVICE']._serialized_end=801
+  _globals['_IDENTITYSERVICE'].methods_by_name['Authenticate']._loaded_options = None
+  _globals['_IDENTITYSERVICE'].methods_by_name['Authenticate']._serialized_options = b'\212\227\"\036rat://identity/v1/authenticate'
+  _globals['_IDENTITYSERVICE'].methods_by_name['Authorize']._loaded_options = None
+  _globals['_IDENTITYSERVICE'].methods_by_name['Authorize']._serialized_options = b'\212\227\"\033rat://identity/v1/authorize'
+  _globals['_DENYCODE']._serialized_start=468
+  _globals['_DENYCODE']._serialized_end=637
+  _globals['_AUTHENTICATEREQUEST']._serialized_start=84
+  _globals['_AUTHENTICATEREQUEST']._serialized_end=148
+  _globals['_AUTHENTICATERESPONSE']._serialized_start=150
+  _globals['_AUTHENTICATERESPONSE']._serialized_end=260
+  _globals['_AUTHORIZEREQUEST']._serialized_start=262
+  _globals['_AUTHORIZEREQUEST']._serialized_end=338
+  _globals['_AUTHORIZERESPONSE']._serialized_start=340
+  _globals['_AUTHORIZERESPONSE']._serialized_end=465
+  _globals['_IDENTITYSERVICE']._serialized_start=640
+  _globals['_IDENTITYSERVICE']._serialized_end=903
 # @@protoc_insertion_point(module_scope)

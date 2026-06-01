@@ -24,12 +24,16 @@ syntax = "proto3";
 
 package rat.tenancy.v1;
 
+import "rat/common/v1/annotations.proto";
+
 option go_package = "github.com/rat-dev/rat/gen/rat/tenancy/v1;tenancyv1";
 
 service TenancyService {
   // rat://tenancy/v1/decide — answer a policy decision the core poses at a hook
   // point. The core enforces the verdict; the plugin only computes it.
-  rpc Decide(DecideRequest) returns (DecideResponse);
+  rpc Decide(DecideRequest) returns (DecideResponse) {
+    option (rat.common.v1.capability) = "rat://tenancy/v1/decide";
+  }
 }
 
 enum DecisionKind {

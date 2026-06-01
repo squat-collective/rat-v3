@@ -4,6 +4,19 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — Phase 0 close-out (2/4): **manifest schema FROZEN `v1` + 18 per-kind schemas** ([ADR-011](../docs/architecture/adrs/011-manifest-schema-freeze-and-per-kind-layer.md))
+
+Closed reviews/08 **E2** + the **last `v1-preview` artifact**. The one author-hand-written contract is now frozen, and a per-kind layer catches the wrong/missing-required-capability mistake the envelope can't.
+
+- **[ADR-011](../docs/architecture/adrs/011-manifest-schema-freeze-and-per-kind-layer.md)** — freeze `plugin.v1.json` at `v1` (additive-only within `rat/1`; breaking → `plugin.v2.json`) + the per-kind schema layer + **minimal-mandatory-core** strictness (the per-axis core table, e.g. `format`→`scan`, `catalog`→`get-table`, `state-backend`→`get`+`put`) + the enabling annotation roll.
+- **Annotation roll** — added `(rat.common.v1.capability)` to all **12** previously-unannotated axes (strategy/identity/tenancy/deployment-runtime/scheduler/secret/observability/audit-log/ui/notifications/marketplace/billing); URIs from each proto's header comment. **Additive** (`buf breaking` FILE clean vs HEAD; lint+build clean). SDKs regenerated — 12 axes × {Go,Py,TS} descriptors (Rust + `_grpc` stubs unchanged, as expected: a method *option* lives only in the embedded FileDescriptor). All 18 axes now machine-readable; also unblocks the Phase-1 C5 gateway + C6 conformance for the control/experience tail.
+- **Envelope frozen** — `plugin.v1.json` → `v1`; `schema/README.md` + `contracts/README.md` flipped to frozen; fixed an inaccurate illustrative example (`kind:engine`/`scan` → `kind:format`/`scan`).
+- **18 per-kind schemas** — `contracts/schema/kinds/<kind>.v1.json`, each `allOf` the envelope + `kind` const + a `provides`-MUST-contain rule for the mandatory core. kind↔axis-segment mapping handled (`state-backend`→`state`, `secret-backend`→`secret`, `scheduler-backend`→`scheduler`, `audit-log`→`auditlog`).
+- **Validation** — new [`scripts/validate-manifests.py`](../scripts/validate-manifests.py) + **`make validate-manifests`** gate (the static half of `rat plugin validate`): **32/32** checks — examples pass envelope+per-kind, the *new* per-kind rejections fire (missing core, wrong-axis, kind mismatch), INVALID #1–3/#5 rejected, #4 (semantic impl-naming) documented as the remaining lint gap. `INVALID-examples.md` +#6 (wrong-cap-for-kind); fixed 2 stale example capability refs (catalog `register`→`register-table`, storage `read`/`write`→`vend-credentials`). **`make conformance` still 32/32.**
+- **Status:** staged, verified green; commit pending. *(gen-check BSR-throttled locally; freshness proven by the successful `make gen-sdks` + scoped 12-axis diff + the live conformance run.)*
+
+---
+
 ## 2026-06-01 — Phase 0 close-out (1/4): **catalog commit-linkage** — the headline-feature hole closed on-wire ([ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md))
 
 Closed reviews/08 **B1** (3 agents' top concern) — the first `v1.1` additive. The branch-pipeline headline feature now completes its **create → write → register → merge** loop entirely on the frozen wire; the composition no longer fakes table registration out-of-band.

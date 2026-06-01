@@ -22,9 +22,10 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1crat/tenancy/v1/tenancy.proto\x12\x0erat.tenancy.v1\"\x9f\x01\n\rDecideRequest\x12\x30\n\x04kind\x18\x02 \x01(\x0e\x32\x1c.rat.tenancy.v1.DecisionKindR\x04kind\x12%\n\x0esubject_action\x18\x03 \x01(\tR\rsubjectAction\x12/\n\x13\x63ounterparty_tenant\x18\x04 \x01(\tR\x12\x63ounterpartyTenantJ\x04\x08\x01\x10\x02\"y\n\x0e\x44\x65\x63ideResponse\x12\x18\n\x07\x61llowed\x18\x01 \x01(\x08R\x07\x61llowed\x12\x35\n\tdeny_code\x18\x02 \x01(\x0e\x32\x18.rat.tenancy.v1.DenyCodeR\x08\x64\x65nyCode\x12\x16\n\x06reason\x18\x03 \x01(\tR\x06reason*\x7f\n\x0c\x44\x65\x63isionKind\x12\x1d\n\x19\x44\x45\x43ISION_KIND_UNSPECIFIED\x10\x00\x12\x1c\n\x18\x44\x45\x43ISION_KIND_PERMISSION\x10\x01\x12\x19\n\x15\x44\x45\x43ISION_KIND_SHARING\x10\x02\x12\x17\n\x13\x44\x45\x43ISION_KIND_QUOTA\x10\x03*\x86\x01\n\x08\x44\x65nyCode\x12\x19\n\x15\x44\x45NY_CODE_UNSPECIFIED\x10\x00\x12\x1e\n\x1a\x44\x45NY_CODE_POLICY_FORBIDDEN\x10\x01\x12\x1c\n\x18\x44\x45NY_CODE_QUOTA_EXCEEDED\x10\x02\x12!\n\x1d\x44\x45NY_CODE_CROSS_TENANT_DENIED\x10\x03\x32Y\n\x0eTenancyService\x12G\n\x06\x44\x65\x63ide\x12\x1d.rat.tenancy.v1.DecideRequest\x1a\x1e.rat.tenancy.v1.DecideResponseB5Z3github.com/rat-dev/rat/gen/rat/tenancy/v1;tenancyv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1crat/tenancy/v1/tenancy.proto\x12\x0erat.tenancy.v1\x1a\x1frat/common/v1/annotations.proto\"\x9f\x01\n\rDecideRequest\x12\x30\n\x04kind\x18\x02 \x01(\x0e\x32\x1c.rat.tenancy.v1.DecisionKindR\x04kind\x12%\n\x0esubject_action\x18\x03 \x01(\tR\rsubjectAction\x12/\n\x13\x63ounterparty_tenant\x18\x04 \x01(\tR\x12\x63ounterpartyTenantJ\x04\x08\x01\x10\x02\"y\n\x0e\x44\x65\x63ideResponse\x12\x18\n\x07\x61llowed\x18\x01 \x01(\x08R\x07\x61llowed\x12\x35\n\tdeny_code\x18\x02 \x01(\x0e\x32\x18.rat.tenancy.v1.DenyCodeR\x08\x64\x65nyCode\x12\x16\n\x06reason\x18\x03 \x01(\tR\x06reason*\x7f\n\x0c\x44\x65\x63isionKind\x12\x1d\n\x19\x44\x45\x43ISION_KIND_UNSPECIFIED\x10\x00\x12\x1c\n\x18\x44\x45\x43ISION_KIND_PERMISSION\x10\x01\x12\x19\n\x15\x44\x45\x43ISION_KIND_SHARING\x10\x02\x12\x17\n\x13\x44\x45\x43ISION_KIND_QUOTA\x10\x03*\x86\x01\n\x08\x44\x65nyCode\x12\x19\n\x15\x44\x45NY_CODE_UNSPECIFIED\x10\x00\x12\x1e\n\x1a\x44\x45NY_CODE_POLICY_FORBIDDEN\x10\x01\x12\x1c\n\x18\x44\x45NY_CODE_QUOTA_EXCEEDED\x10\x02\x12!\n\x1d\x44\x45NY_CODE_CROSS_TENANT_DENIED\x10\x03\x32v\n\x0eTenancyService\x12\x64\n\x06\x44\x65\x63ide\x12\x1d.rat.tenancy.v1.DecideRequest\x1a\x1e.rat.tenancy.v1.DecideResponse\"\x1b\x8a\x97\"\x17rat://tenancy/v1/decideB5Z3github.com/rat-dev/rat/gen/rat/tenancy/v1;tenancyv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,14 +33,16 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rat.tenancy.v1.tenancy_pb2'
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z3github.com/rat-dev/rat/gen/rat/tenancy/v1;tenancyv1'
-  _globals['_DECISIONKIND']._serialized_start=333
-  _globals['_DECISIONKIND']._serialized_end=460
-  _globals['_DENYCODE']._serialized_start=463
-  _globals['_DENYCODE']._serialized_end=597
-  _globals['_DECIDEREQUEST']._serialized_start=49
-  _globals['_DECIDEREQUEST']._serialized_end=208
-  _globals['_DECIDERESPONSE']._serialized_start=210
-  _globals['_DECIDERESPONSE']._serialized_end=331
-  _globals['_TENANCYSERVICE']._serialized_start=599
-  _globals['_TENANCYSERVICE']._serialized_end=688
+  _globals['_TENANCYSERVICE'].methods_by_name['Decide']._loaded_options = None
+  _globals['_TENANCYSERVICE'].methods_by_name['Decide']._serialized_options = b'\212\227\"\027rat://tenancy/v1/decide'
+  _globals['_DECISIONKIND']._serialized_start=366
+  _globals['_DECISIONKIND']._serialized_end=493
+  _globals['_DENYCODE']._serialized_start=496
+  _globals['_DENYCODE']._serialized_end=630
+  _globals['_DECIDEREQUEST']._serialized_start=82
+  _globals['_DECIDEREQUEST']._serialized_end=241
+  _globals['_DECIDERESPONSE']._serialized_start=243
+  _globals['_DECIDERESPONSE']._serialized_end=364
+  _globals['_TENANCYSERVICE']._serialized_start=632
+  _globals['_TENANCYSERVICE']._serialized_end=750
 # @@protoc_insertion_point(module_scope)

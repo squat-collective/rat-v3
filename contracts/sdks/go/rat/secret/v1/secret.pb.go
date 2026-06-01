@@ -24,6 +24,7 @@
 package secretv1
 
 import (
+	_ "github.com/rat-dev/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -160,16 +161,16 @@ var File_rat_secret_v1_secret_proto protoreflect.FileDescriptor
 
 const file_rat_secret_v1_secret_proto_rawDesc = "" +
 	"\n" +
-	"\x1arat/secret/v1/secret.proto\x12\rrat.secret.v1\"5\n" +
+	"\x1arat/secret/v1/secret.proto\x12\rrat.secret.v1\x1a\x1frat/common/v1/annotations.proto\"5\n" +
 	"\x0eResolveRequest\x12\x1d\n" +
 	"\n" +
 	"secret_ref\x18\x02 \x01(\tR\tsecretRefJ\x04\b\x01\x10\x02\"j\n" +
 	"\x0fResolveResponse\x12\x14\n" +
 	"\x05found\x18\x01 \x01(\bR\x05found\x12\x19\n" +
 	"\x05value\x18\x02 \x01(\fB\x03\x80\x01\x01R\x05value\x12&\n" +
-	"\x0fexpires_unix_ms\x18\x03 \x01(\x03R\rexpiresUnixMs2Y\n" +
-	"\rSecretService\x12H\n" +
-	"\aResolve\x12\x1d.rat.secret.v1.ResolveRequest\x1a\x1e.rat.secret.v1.ResolveResponseB3Z1github.com/rat-dev/rat/gen/rat/secret/v1;secretv1b\x06proto3"
+	"\x0fexpires_unix_ms\x18\x03 \x01(\x03R\rexpiresUnixMs2v\n" +
+	"\rSecretService\x12e\n" +
+	"\aResolve\x12\x1d.rat.secret.v1.ResolveRequest\x1a\x1e.rat.secret.v1.ResolveResponse\"\x1b\x8a\x97\"\x17rat://secret/v1/resolveB3Z1github.com/rat-dev/rat/gen/rat/secret/v1;secretv1b\x06proto3"
 
 var (
 	file_rat_secret_v1_secret_proto_rawDescOnce sync.Once

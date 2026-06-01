@@ -15,11 +15,15 @@ syntax = "proto3";
 
 package rat.billing.v1;
 
+import "rat/common/v1/annotations.proto";
+
 option go_package = "github.com/rat-dev/rat/gen/rat/billing/v1;billingv1";
 
 service BillingService {
   // rat://billing/v1/record — record one meterable usage event.
-  rpc Record(RecordRequest) returns (RecordResponse);
+  rpc Record(RecordRequest) returns (RecordResponse) {
+    option (rat.common.v1.capability) = "rat://billing/v1/record";
+  }
 }
 
 message UsageEvent {

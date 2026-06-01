@@ -23,6 +23,7 @@
 package observabilityv1
 
 import (
+	_ "github.com/rat-dev/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -270,7 +271,7 @@ var File_rat_observability_v1_observability_proto protoreflect.FileDescriptor
 
 const file_rat_observability_v1_observability_proto_rawDesc = "" +
 	"\n" +
-	"(rat/observability/v1/observability.proto\x12\x14rat.observability.v1\"\xb1\x02\n" +
+	"(rat/observability/v1/observability.proto\x12\x14rat.observability.v1\x1a\x1frat/common/v1/annotations.proto\"\xb1\x02\n" +
 	"\x0eTelemetryPoint\x124\n" +
 	"\x04type\x18\x01 \x01(\x0e2 .rat.observability.v1.SignalTypeR\x04type\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -292,9 +293,9 @@ const file_rat_observability_v1_observability_proto_rawDesc = "" +
 	"\x17SIGNAL_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12SIGNAL_TYPE_METRIC\x10\x01\x12\x14\n" +
 	"\x10SIGNAL_TYPE_SPAN\x10\x02\x12\x13\n" +
-	"\x0fSIGNAL_TYPE_LOG\x10\x032o\n" +
-	"\x14ObservabilityService\x12W\n" +
-	"\x06Ingest\x12#.rat.observability.v1.IngestRequest\x1a$.rat.observability.v1.IngestResponse(\x010\x01BAZ?github.com/rat-dev/rat/gen/rat/observability/v1;observabilityv1b\x06proto3"
+	"\x0fSIGNAL_TYPE_LOG\x10\x032\x92\x01\n" +
+	"\x14ObservabilityService\x12z\n" +
+	"\x06Ingest\x12#.rat.observability.v1.IngestRequest\x1a$.rat.observability.v1.IngestResponse\"!\x8a\x97\"\x1drat://observability/v1/ingest(\x010\x01BAZ?github.com/rat-dev/rat/gen/rat/observability/v1;observabilityv1b\x06proto3"
 
 var (
 	file_rat_observability_v1_observability_proto_rawDescOnce sync.Once

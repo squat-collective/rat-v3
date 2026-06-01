@@ -17,6 +17,8 @@ syntax = "proto3";
 
 package rat.observability.v1;
 
+import "rat/common/v1/annotations.proto";
+
 option go_package = "github.com/rat-dev/rat/gen/rat/observability/v1;observabilityv1";
 
 service ObservabilityService {
@@ -29,7 +31,9 @@ service ObservabilityService {
   // IngestResponse per batch (or periodically), so the emitter sees accepted /
   // rejected counts incrementally and can flow-control. Streaming-shape changes
   // are wire-breaking, hence pre-freeze.
-  rpc Ingest(stream IngestRequest) returns (stream IngestResponse);
+  rpc Ingest(stream IngestRequest) returns (stream IngestResponse) {
+    option (rat.common.v1.capability) = "rat://observability/v1/ingest";
+  }
 }
 
 enum SignalType {

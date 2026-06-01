@@ -17,7 +17,7 @@ requires:
   - capability: rat://format/v1/merge
   - capability: rat://runtime/v1/execute
 suggests:
-  - capability: rat://catalog/v1/register
+  - capability: rat://catalog/v1/register-table
 contributes:
   slots:
     - target:

@@ -22,9 +22,10 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n(rat/notifications/v1/notifications.proto\x12\x14rat.notifications.v1\"\xa3\x02\n\x0bSendRequest\x12:\n\x08severity\x18\x02 \x01(\x0e\x32\x1e.rat.notifications.v1.SeverityR\x08severity\x12\x14\n\x05title\x18\x03 \x01(\tR\x05title\x12\x12\n\x04\x62ody\x18\x04 \x01(\tR\x04\x62ody\x12\x16\n\x06target\x18\x05 \x01(\tR\x06target\x12Q\n\nattributes\x18\x06 \x03(\x0b\x32\x31.rat.notifications.v1.SendRequest.AttributesEntryR\nattributes\x1a=\n\x0f\x41ttributesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01J\x04\x08\x01\x10\x02\"K\n\x0cSendResponse\x12\x1c\n\tdelivered\x18\x01 \x01(\x08R\tdelivered\x12\x1d\n\nmessage_id\x18\x02 \x01(\tR\tmessageId*x\n\x08Severity\x12\x18\n\x14SEVERITY_UNSPECIFIED\x10\x00\x12\x11\n\rSEVERITY_INFO\x10\x01\x12\x14\n\x10SEVERITY_WARNING\x10\x02\x12\x12\n\x0eSEVERITY_ERROR\x10\x03\x12\x15\n\x11SEVERITY_CRITICAL\x10\x04\x32\x65\n\x14NotificationsService\x12M\n\x04Send\x12!.rat.notifications.v1.SendRequest\x1a\".rat.notifications.v1.SendResponseBAZ?github.com/rat-dev/rat/gen/rat/notifications/v1;notificationsv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n(rat/notifications/v1/notifications.proto\x12\x14rat.notifications.v1\x1a\x1frat/common/v1/annotations.proto\"\xa3\x02\n\x0bSendRequest\x12:\n\x08severity\x18\x02 \x01(\x0e\x32\x1e.rat.notifications.v1.SeverityR\x08severity\x12\x14\n\x05title\x18\x03 \x01(\tR\x05title\x12\x12\n\x04\x62ody\x18\x04 \x01(\tR\x04\x62ody\x12\x16\n\x06target\x18\x05 \x01(\tR\x06target\x12Q\n\nattributes\x18\x06 \x03(\x0b\x32\x31.rat.notifications.v1.SendRequest.AttributesEntryR\nattributes\x1a=\n\x0f\x41ttributesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01J\x04\x08\x01\x10\x02\"K\n\x0cSendResponse\x12\x1c\n\tdelivered\x18\x01 \x01(\x08R\tdelivered\x12\x1d\n\nmessage_id\x18\x02 \x01(\tR\tmessageId*x\n\x08Severity\x12\x18\n\x14SEVERITY_UNSPECIFIED\x10\x00\x12\x11\n\rSEVERITY_INFO\x10\x01\x12\x14\n\x10SEVERITY_WARNING\x10\x02\x12\x12\n\x0eSEVERITY_ERROR\x10\x03\x12\x15\n\x11SEVERITY_CRITICAL\x10\x04\x32\x86\x01\n\x14NotificationsService\x12n\n\x04Send\x12!.rat.notifications.v1.SendRequest\x1a\".rat.notifications.v1.SendResponse\"\x1f\x8a\x97\"\x1brat://notifications/v1/sendBAZ?github.com/rat-dev/rat/gen/rat/notifications/v1;notificationsv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,14 +35,16 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z?github.com/rat-dev/rat/gen/rat/notifications/v1;notificationsv1'
   _globals['_SENDREQUEST_ATTRIBUTESENTRY']._loaded_options = None
   _globals['_SENDREQUEST_ATTRIBUTESENTRY']._serialized_options = b'8\001'
-  _globals['_SEVERITY']._serialized_start=437
-  _globals['_SEVERITY']._serialized_end=557
-  _globals['_SENDREQUEST']._serialized_start=67
-  _globals['_SENDREQUEST']._serialized_end=358
-  _globals['_SENDREQUEST_ATTRIBUTESENTRY']._serialized_start=291
-  _globals['_SENDREQUEST_ATTRIBUTESENTRY']._serialized_end=352
-  _globals['_SENDRESPONSE']._serialized_start=360
-  _globals['_SENDRESPONSE']._serialized_end=435
-  _globals['_NOTIFICATIONSSERVICE']._serialized_start=559
-  _globals['_NOTIFICATIONSSERVICE']._serialized_end=660
+  _globals['_NOTIFICATIONSSERVICE'].methods_by_name['Send']._loaded_options = None
+  _globals['_NOTIFICATIONSSERVICE'].methods_by_name['Send']._serialized_options = b'\212\227\"\033rat://notifications/v1/send'
+  _globals['_SEVERITY']._serialized_start=470
+  _globals['_SEVERITY']._serialized_end=590
+  _globals['_SENDREQUEST']._serialized_start=100
+  _globals['_SENDREQUEST']._serialized_end=391
+  _globals['_SENDREQUEST_ATTRIBUTESENTRY']._serialized_start=324
+  _globals['_SENDREQUEST_ATTRIBUTESENTRY']._serialized_end=385
+  _globals['_SENDRESPONSE']._serialized_start=393
+  _globals['_SENDRESPONSE']._serialized_end=468
+  _globals['_NOTIFICATIONSSERVICE']._serialized_start=593
+  _globals['_NOTIFICATIONSSERVICE']._serialized_end=727
 # @@protoc_insertion_point(module_scope)

@@ -24,6 +24,7 @@
 package uiv1
 
 import (
+	_ "github.com/rat-dev/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -292,7 +293,7 @@ var File_rat_ui_v1_ui_proto protoreflect.FileDescriptor
 
 const file_rat_ui_v1_ui_proto_rawDesc = "" +
 	"\n" +
-	"\x12rat/ui/v1/ui.proto\x12\trat.ui.v1\"\x17\n" +
+	"\x12rat/ui/v1/ui.proto\x12\trat.ui.v1\x1a\x1frat/common/v1/annotations.proto\"\x17\n" +
 	"\x0fDescribeRequestJ\x04\b\x01\x10\x02\"B\n" +
 	"\n" +
 	"HostedSlot\x12\x12\n" +
@@ -306,11 +307,11 @@ const file_rat_ui_v1_ui_proto_rawDesc = "" +
 	"\tcomponent\x18\x03 \x01(\tR\tcomponentJ\x04\b\x01\x10\x02\"T\n" +
 	"\x12RenderSlotResponse\x12\x1b\n" +
 	"\tasset_ref\x18\x01 \x01(\tR\bassetRef\x12!\n" +
-	"\fprops_schema\x18\x02 \x01(\fR\vpropsSchema2\x9b\x01\n" +
-	"\tUiService\x12C\n" +
-	"\bDescribe\x12\x1a.rat.ui.v1.DescribeRequest\x1a\x1b.rat.ui.v1.DescribeResponse\x12I\n" +
+	"\fprops_schema\x18\x02 \x01(\fR\vpropsSchema2\xd2\x01\n" +
+	"\tUiService\x12]\n" +
+	"\bDescribe\x12\x1a.rat.ui.v1.DescribeRequest\x1a\x1b.rat.ui.v1.DescribeResponse\"\x18\x8a\x97\"\x14rat://ui/v1/describe\x12f\n" +
 	"\n" +
-	"RenderSlot\x12\x1c.rat.ui.v1.RenderSlotRequest\x1a\x1d.rat.ui.v1.RenderSlotResponseB+Z)github.com/rat-dev/rat/gen/rat/ui/v1;uiv1b\x06proto3"
+	"RenderSlot\x12\x1c.rat.ui.v1.RenderSlotRequest\x1a\x1d.rat.ui.v1.RenderSlotResponse\"\x1b\x8a\x97\"\x17rat://ui/v1/render-slotB+Z)github.com/rat-dev/rat/gen/rat/ui/v1;uiv1b\x06proto3"
 
 var (
 	file_rat_ui_v1_ui_proto_rawDescOnce sync.Once

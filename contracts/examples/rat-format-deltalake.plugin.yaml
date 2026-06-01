@@ -18,8 +18,7 @@ provides:
   - capability: rat://format/v1/merge
   - capability: rat://format/v1/append
 requires:
-  - capability: rat://storage/v1/read
-  - capability: rat://storage/v1/write
+  - capability: rat://storage/v1/vend-credentials
 resources:
   requests:
     cpu: "250m"

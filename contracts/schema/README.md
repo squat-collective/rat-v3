@@ -35,9 +35,20 @@ capability-URI grammar). It deliberately does **not** encode per-kind rules like
 **Decision for 0a:** ship the envelope now; layer per-kind schemas in 0b as each
 axis proto lands (the proto *is* the source of truth for that kind's required
 capabilities, so the per-kind schema is generated/derived from it, keeping them
-in sync). This is recorded here rather than in an ADR because it's a structural
-choice within an already-decided approach (D3); promote to an ADR if the per-kind
-layering turns out to need its own contract.
+in sync).
+
+**✅ RESOLVED (2026-06-01, [ADR-011](../../docs/architecture/adrs/011-manifest-schema-freeze-and-per-kind-layer.md)).**
+The per-kind layer now exists: [`kinds/<kind>.v1.json`](kinds/) × 18, each `allOf`-ing
+the envelope and adding `kind` (const) + a `provides`-MUST-contain rule for that kind's
+**minimal mandatory core** (e.g. `format`→`scan`, `catalog`→`get-table`, `state-backend`
+→`get`+`put`; gap #1 above closed). Strictness is *minimal core*, not all-capabilities —
+capability negotiation means a plugin implements a subset (a non-branching catalog, a
+read-only format). The cores were made derivable by first rolling the
+`(rat.common.v1.capability)` annotation across all 18 axis protos. Gap #2 (semantic
+"`iceberg` is an impl name, not a verb") remains a `rat plugin validate` lint, NOT a schema
+check — its static half lives in [`scripts/validate-manifests.py`](../../scripts/validate-manifests.py)
+(envelope + per-kind + negative vectors). See ADR-011 for the full per-axis core table +
+the kind↔capability-axis-segment mapping.
 
 ## Notable field choices
 
@@ -61,7 +72,8 @@ layering turns out to need its own contract.
 
 ## Changing this schema
 
-Until the `rat/1` freeze (sub-phase 0h), edit freely. After freeze: additive,
-backward-compatible changes only within `rat/1`; anything breaking ships as
-`plugin.v2.json` under a new `api_version: rat/2` (mirrors capability
-major-versioning, ADR-002 D4).
+**FROZEN at `v1` ([ADR-011](../../docs/architecture/adrs/011-manifest-schema-freeze-and-per-kind-layer.md), `rat/1.1`).**
+Additive, backward-compatible changes only within `rat/1`; anything breaking ships as
+`plugin.v2.json` under a new `api_version: rat/2` (mirrors capability major-versioning,
+ADR-002 D4). The 18 per-kind schemas in [`kinds/`](kinds/) layer on top (see below) and
+follow the same additive-only rule.

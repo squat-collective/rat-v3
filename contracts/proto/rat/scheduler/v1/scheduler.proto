@@ -13,14 +13,20 @@ syntax = "proto3";
 
 package rat.scheduler.v1;
 
+import "rat/common/v1/annotations.proto";
+
 option go_package = "github.com/rat-dev/rat/gen/rat/scheduler/v1;schedulerv1";
 
 service SchedulerService {
   // rat://scheduler/v1/schedule — register a trigger (cron expr or one-shot).
-  rpc Schedule(ScheduleRequest) returns (ScheduleResponse);
+  rpc Schedule(ScheduleRequest) returns (ScheduleResponse) {
+    option (rat.common.v1.capability) = "rat://scheduler/v1/schedule";
+  }
 
   // rat://scheduler/v1/cancel — remove a previously-registered trigger.
-  rpc Cancel(CancelRequest) returns (CancelResponse);
+  rpc Cancel(CancelRequest) returns (CancelResponse) {
+    option (rat.common.v1.capability) = "rat://scheduler/v1/cancel";
+  }
 
   // rat://scheduler/v1/watch-due — stream of triggers as they fire. The
   // reconciler consumes this to know a pipeline is due.
@@ -34,7 +40,9 @@ service SchedulerService {
   // due-ness from declared schedule state on reconnect (the reconciler already
   // re-evaluates schedules each loop). A richer ack/lease mechanism is additive
   // (GA); the at-least-once guarantee is what's pinned now.
-  rpc WatchDue(WatchDueRequest) returns (stream WatchDueResponse);
+  rpc WatchDue(WatchDueRequest) returns (stream WatchDueResponse) {
+    option (rat.common.v1.capability) = "rat://scheduler/v1/watch-due";
+  }
 }
 
 message ScheduleRequest {

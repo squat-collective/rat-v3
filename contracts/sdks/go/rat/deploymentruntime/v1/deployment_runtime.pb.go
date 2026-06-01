@@ -27,6 +27,7 @@
 package deploymentruntimev1
 
 import (
+	_ "github.com/rat-dev/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -607,7 +608,7 @@ var File_rat_deploymentruntime_v1_deployment_runtime_proto protoreflect.FileDesc
 
 const file_rat_deploymentruntime_v1_deployment_runtime_proto_rawDesc = "" +
 	"\n" +
-	"1rat/deploymentruntime/v1/deployment_runtime.proto\x12\x18rat.deploymentruntime.v1\">\n" +
+	"1rat/deploymentruntime/v1/deployment_runtime.proto\x12\x18rat.deploymentruntime.v1\x1a\x1frat/common/v1/annotations.proto\">\n" +
 	"\x12ResourceQuantities\x12\x10\n" +
 	"\x03cpu\x18\x01 \x01(\tR\x03cpu\x12\x16\n" +
 	"\x06memory\x18\x02 \x01(\tR\x06memory\"\xa1\x02\n" +
@@ -652,11 +653,11 @@ const file_rat_deploymentruntime_v1_deployment_runtime_proto_rawDesc = "" +
 	"\x19HEALTH_STATUS_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15HEALTH_STATUS_HEALTHY\x10\x01\x12\x1b\n" +
 	"\x17HEALTH_STATUS_UNHEALTHY\x10\x02\x12\x19\n" +
-	"\x15HEALTH_STATUS_UNKNOWN\x10\x032\xc9\x02\n" +
-	"\x18DeploymentRuntimeService\x12[\n" +
-	"\x06Launch\x12'.rat.deploymentruntime.v1.LaunchRequest\x1a(.rat.deploymentruntime.v1.LaunchResponse\x12d\n" +
-	"\tTerminate\x12*.rat.deploymentruntime.v1.TerminateRequest\x1a+.rat.deploymentruntime.v1.TerminateResponse\x12j\n" +
-	"\vHealthcheck\x12,.rat.deploymentruntime.v1.HealthcheckRequest\x1a-.rat.deploymentruntime.v1.HealthcheckResponseBIZGgithub.com/rat-dev/rat/gen/rat/deploymentruntime/v1;deploymentruntimev1b\x06proto3"
+	"\x15HEALTH_STATUS_UNKNOWN\x10\x032\xcc\x03\n" +
+	"\x18DeploymentRuntimeService\x12\x83\x01\n" +
+	"\x06Launch\x12'.rat.deploymentruntime.v1.LaunchRequest\x1a(.rat.deploymentruntime.v1.LaunchResponse\"&\x8a\x97\"\"rat://deployment-runtime/v1/launch\x12\x8f\x01\n" +
+	"\tTerminate\x12*.rat.deploymentruntime.v1.TerminateRequest\x1a+.rat.deploymentruntime.v1.TerminateResponse\")\x8a\x97\"%rat://deployment-runtime/v1/terminate\x12\x97\x01\n" +
+	"\vHealthcheck\x12,.rat.deploymentruntime.v1.HealthcheckRequest\x1a-.rat.deploymentruntime.v1.HealthcheckResponse\"+\x8a\x97\"'rat://deployment-runtime/v1/healthcheckBIZGgithub.com/rat-dev/rat/gen/rat/deploymentruntime/v1;deploymentruntimev1b\x06proto3"
 
 var (
 	file_rat_deploymentruntime_v1_deployment_runtime_proto_rawDescOnce sync.Once

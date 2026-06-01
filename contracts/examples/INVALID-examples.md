@@ -1,9 +1,11 @@
 # Invalid manifest examples (negative test vectors)
 
-These are deliberately-broken manifests. Once the conformance/validation tooling
-exists (sub-phase 0f, `rat plugin validate`), these become the negative test
-corpus: each must be **rejected**, with the cited error. They live as Markdown
-(not `.yaml`) so no validator picks them up as real plugins.
+These are deliberately-broken manifests. Each must be **rejected**, with the cited
+error. They live as Markdown (not `.yaml`) so no validator picks them up as real
+plugins. The **static** half (envelope + per-kind schema, #1–#3, #5, #6) is enforced
+today by [`scripts/validate-manifests.py`](../../scripts/validate-manifests.py); the
+**semantic** half (#4) still needs `rat plugin validate`'s curated-capability lint
+(sub-phase 0f).
 
 ## 1. Missing mandatory `resources` (violates C4)
 
@@ -54,10 +56,11 @@ requires:
 resources: { requests: { cpu: "100m" } }
 ```
 **Expected rejection:** `iceberg` is an implementation name, not a capability verb.
-NOTE: the envelope schema's regex *cannot* catch this on its own (`iceberg` is a
-syntactically-valid capability segment). This is a **semantic** rule the per-kind
-schema + `rat plugin validate` lint must enforce — captured here so the gap is
-explicit, not forgotten. See README.md "The per-kind schema question".
+NOTE: neither the envelope **nor** the per-kind schema can catch this — `iceberg` is a
+syntactically-valid capability segment, and per-kind schemas only constrain `provides`
+(not `requires`), and only by URI string, not by a curated set of real capability verbs.
+This is a **semantic** rule for `rat plugin validate`'s lint — captured here so the gap is
+explicit, not forgotten. See README.md "The per-kind schema question" + ADR-011.
 
 ## 5. Wrong `api_version`
 
@@ -71,3 +74,22 @@ resources: { requests: { cpu: "100m" } }
 ```
 **Expected rejection:** `api_version` must be `rat/1` for this schema.
 (A future `rat/2` ships its own `plugin.v2.json`.)
+
+## 6. Wrong / missing required capability for the `kind` (per-kind schema, ADR-011)
+
+```yaml
+api_version: rat/1
+kind: format
+metadata: { name: rat-format-nocaps, version: 0.1.0 }
+provides:
+  - capability: rat://format/v1/append   # a "format" that cannot be READ
+resources: { requests: { cpu: "100m" } }
+```
+**Expected rejection:** a `kind: format` MUST provide its mandatory core
+`rat://format/v1/scan` (a table format you can't read isn't one). Caught by the per-kind
+schema [`schema/kinds/format.v1.json`](../schema/kinds/format.v1.json) (ADR-011) — the
+**envelope alone passes this** (it only checks `provides` *shape*, not per-kind
+obligations), which is exactly why the per-kind layer exists. The same schema rejects a
+manifest whose `provides` are all the **wrong axis** for its `kind` (e.g. a `kind: format`
+providing only `rat://engine/v1/query`). Both are exercised by
+[`scripts/validate-manifests.py`](../../scripts/validate-manifests.py).

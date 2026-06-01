@@ -26,6 +26,7 @@
 package marketplacev1
 
 import (
+	_ "github.com/rat-dev/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -365,7 +366,7 @@ var File_rat_marketplace_v1_marketplace_proto protoreflect.FileDescriptor
 
 const file_rat_marketplace_v1_marketplace_proto_rawDesc = "" +
 	"\n" +
-	"$rat/marketplace/v1/marketplace.proto\x12\x12rat.marketplace.v1\"\xed\x02\n" +
+	"$rat/marketplace/v1/marketplace.proto\x12\x12rat.marketplace.v1\x1a\x1frat/common/v1/annotations.proto\"\xed\x02\n" +
 	"\aListing\x12\x1b\n" +
 	"\tplugin_id\x18\x01 \x01(\tR\bpluginId\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x18\n" +
@@ -389,10 +390,10 @@ const file_rat_marketplace_v1_marketplace_proto_rawDesc = "" +
 	"GetRequest\x12\x1b\n" +
 	"\tplugin_id\x18\x02 \x01(\tR\bpluginIdJ\x04\b\x01\x10\x02\"D\n" +
 	"\vGetResponse\x125\n" +
-	"\alisting\x18\x01 \x01(\v2\x1b.rat.marketplace.v1.ListingR\alisting2\xad\x01\n" +
-	"\x12MarketplaceService\x12O\n" +
-	"\x06Search\x12!.rat.marketplace.v1.SearchRequest\x1a\".rat.marketplace.v1.SearchResponse\x12F\n" +
-	"\x03Get\x12\x1e.rat.marketplace.v1.GetRequest\x1a\x1f.rat.marketplace.v1.GetResponseB=Z;github.com/rat-dev/rat/gen/rat/marketplace/v1;marketplacev1b\x06proto3"
+	"\alisting\x18\x01 \x01(\v2\x1b.rat.marketplace.v1.ListingR\alisting2\xec\x01\n" +
+	"\x12MarketplaceService\x12p\n" +
+	"\x06Search\x12!.rat.marketplace.v1.SearchRequest\x1a\".rat.marketplace.v1.SearchResponse\"\x1f\x8a\x97\"\x1brat://marketplace/v1/search\x12d\n" +
+	"\x03Get\x12\x1e.rat.marketplace.v1.GetRequest\x1a\x1f.rat.marketplace.v1.GetResponse\"\x1c\x8a\x97\"\x18rat://marketplace/v1/getB=Z;github.com/rat-dev/rat/gen/rat/marketplace/v1;marketplacev1b\x06proto3"
 
 var (
 	file_rat_marketplace_v1_marketplace_proto_rawDescOnce sync.Once

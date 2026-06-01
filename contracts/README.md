@@ -52,10 +52,10 @@ contracts/
 
 | Sub-phase | Artifact | Status |
 |---|---|---|
-| 0a | Manifest envelope schema (`plugin.v1.json`) | ✅ draft |
-| 0a | Example + negative manifests | ✅ draft |
+| 0a | Manifest envelope schema (`plugin.v1.json`) | ✅ **FROZEN v1** (ADR-011) |
+| 0a | Example + negative manifests | ✅ draft (validated by `scripts/validate-manifests.py`) |
 | 0b | 18 axis protos + 2 common (all v1 axes drafted) | ✅ draft — buf lint + build + generate clean |
-| 0b | Per-kind manifest schemas (derive from protos) | ⬜ not started |
+| 0b | Per-kind manifest schemas (derive from protos) | ✅ **DONE** — 18 in `schema/kinds/` (ADR-011) |
 | 0c | Cross-cutting protos (`common/v1/context.proto` ✅ + `data.proto` ✅; event-bus envelope ⬜) | 🔶 context+data drafted |
 | 0d–0e | 12 reference implementations | ⬜ not started |
 | 0f | Conformance harness + `rat plugin validate` | ⬜ not started |

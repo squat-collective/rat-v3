@@ -11,11 +11,15 @@ syntax = "proto3";
 
 package rat.notifications.v1;
 
+import "rat/common/v1/annotations.proto";
+
 option go_package = "github.com/rat-dev/rat/gen/rat/notifications/v1;notificationsv1";
 
 service NotificationsService {
   // rat://notifications/v1/send — deliver one notification.
-  rpc Send(SendRequest) returns (SendResponse);
+  rpc Send(SendRequest) returns (SendResponse) {
+    option (rat.common.v1.capability) = "rat://notifications/v1/send";
+  }
 }
 
 enum Severity {

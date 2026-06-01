@@ -30,6 +30,7 @@
 package tenancyv1
 
 import (
+	_ "github.com/rat-dev/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -279,7 +280,7 @@ var File_rat_tenancy_v1_tenancy_proto protoreflect.FileDescriptor
 
 const file_rat_tenancy_v1_tenancy_proto_rawDesc = "" +
 	"\n" +
-	"\x1crat/tenancy/v1/tenancy.proto\x12\x0erat.tenancy.v1\"\x9f\x01\n" +
+	"\x1crat/tenancy/v1/tenancy.proto\x12\x0erat.tenancy.v1\x1a\x1frat/common/v1/annotations.proto\"\x9f\x01\n" +
 	"\rDecideRequest\x120\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x1c.rat.tenancy.v1.DecisionKindR\x04kind\x12%\n" +
 	"\x0esubject_action\x18\x03 \x01(\tR\rsubjectAction\x12/\n" +
@@ -297,9 +298,9 @@ const file_rat_tenancy_v1_tenancy_proto_rawDesc = "" +
 	"\x15DENY_CODE_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aDENY_CODE_POLICY_FORBIDDEN\x10\x01\x12\x1c\n" +
 	"\x18DENY_CODE_QUOTA_EXCEEDED\x10\x02\x12!\n" +
-	"\x1dDENY_CODE_CROSS_TENANT_DENIED\x10\x032Y\n" +
-	"\x0eTenancyService\x12G\n" +
-	"\x06Decide\x12\x1d.rat.tenancy.v1.DecideRequest\x1a\x1e.rat.tenancy.v1.DecideResponseB5Z3github.com/rat-dev/rat/gen/rat/tenancy/v1;tenancyv1b\x06proto3"
+	"\x1dDENY_CODE_CROSS_TENANT_DENIED\x10\x032v\n" +
+	"\x0eTenancyService\x12d\n" +
+	"\x06Decide\x12\x1d.rat.tenancy.v1.DecideRequest\x1a\x1e.rat.tenancy.v1.DecideResponse\"\x1b\x8a\x97\"\x17rat://tenancy/v1/decideB5Z3github.com/rat-dev/rat/gen/rat/tenancy/v1;tenancyv1b\x06proto3"
 
 var (
 	file_rat_tenancy_v1_tenancy_proto_rawDescOnce sync.Once

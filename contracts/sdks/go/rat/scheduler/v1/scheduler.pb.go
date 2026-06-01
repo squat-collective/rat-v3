@@ -19,6 +19,7 @@
 package schedulerv1
 
 import (
+	_ "github.com/rat-dev/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -320,7 +321,7 @@ var File_rat_scheduler_v1_scheduler_proto protoreflect.FileDescriptor
 
 const file_rat_scheduler_v1_scheduler_proto_rawDesc = "" +
 	"\n" +
-	" rat/scheduler/v1/scheduler.proto\x12\x10rat.scheduler.v1\"h\n" +
+	" rat/scheduler/v1/scheduler.proto\x12\x10rat.scheduler.v1\x1a\x1frat/common/v1/annotations.proto\"h\n" +
 	"\x0fScheduleRequest\x12\x1d\n" +
 	"\n" +
 	"trigger_id\x18\x02 \x01(\tR\ttriggerId\x12\x12\n" +
@@ -339,11 +340,11 @@ const file_rat_scheduler_v1_scheduler_proto_rawDesc = "" +
 	"\x10WatchDueResponse\x12\x1d\n" +
 	"\n" +
 	"trigger_id\x18\x01 \x01(\tR\ttriggerId\x12'\n" +
-	"\x10fired_at_unix_ms\x18\x02 \x01(\x03R\rfiredAtUnixMs2\x87\x02\n" +
-	"\x10SchedulerService\x12Q\n" +
-	"\bSchedule\x12!.rat.scheduler.v1.ScheduleRequest\x1a\".rat.scheduler.v1.ScheduleResponse\x12K\n" +
-	"\x06Cancel\x12\x1f.rat.scheduler.v1.CancelRequest\x1a .rat.scheduler.v1.CancelResponse\x12S\n" +
-	"\bWatchDue\x12!.rat.scheduler.v1.WatchDueRequest\x1a\".rat.scheduler.v1.WatchDueResponse0\x01B9Z7github.com/rat-dev/rat/gen/rat/scheduler/v1;schedulerv1b\x06proto3"
+	"\x10fired_at_unix_ms\x18\x02 \x01(\x03R\rfiredAtUnixMs2\xe9\x02\n" +
+	"\x10SchedulerService\x12r\n" +
+	"\bSchedule\x12!.rat.scheduler.v1.ScheduleRequest\x1a\".rat.scheduler.v1.ScheduleResponse\"\x1f\x8a\x97\"\x1brat://scheduler/v1/schedule\x12j\n" +
+	"\x06Cancel\x12\x1f.rat.scheduler.v1.CancelRequest\x1a .rat.scheduler.v1.CancelResponse\"\x1d\x8a\x97\"\x19rat://scheduler/v1/cancel\x12u\n" +
+	"\bWatchDue\x12!.rat.scheduler.v1.WatchDueRequest\x1a\".rat.scheduler.v1.WatchDueResponse\" \x8a\x97\"\x1crat://scheduler/v1/watch-due0\x01B9Z7github.com/rat-dev/rat/gen/rat/scheduler/v1;schedulerv1b\x06proto3"
 
 var (
 	file_rat_scheduler_v1_scheduler_proto_rawDescOnce sync.Once

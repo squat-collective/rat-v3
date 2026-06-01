@@ -31,14 +31,20 @@ syntax = "proto3";
 
 package rat.identity.v1;
 
+import "rat/common/v1/annotations.proto";
+
 option go_package = "github.com/rat-dev/rat/gen/rat/identity/v1;identityv1";
 
 service IdentityService {
   // rat://identity/v1/authenticate — validate a credential, resolve the subject.
-  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse) {
+    option (rat.common.v1.capability) = "rat://identity/v1/authenticate";
+  }
 
   // rat://identity/v1/authorize — coarse allow/deny for a subject + action.
-  rpc Authorize(AuthorizeRequest) returns (AuthorizeResponse);
+  rpc Authorize(AuthorizeRequest) returns (AuthorizeResponse) {
+    option (rat.common.v1.capability) = "rat://identity/v1/authorize";
+  }
 }
 
 message AuthenticateRequest {

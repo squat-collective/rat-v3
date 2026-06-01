@@ -13,6 +13,7 @@ syntax = "proto3";
 
 package rat.strategy.v1;
 
+import "rat/common/v1/annotations.proto";
 import "rat/common/v1/data.proto";
 
 option go_package = "github.com/rat-dev/rat/gen/rat/strategy/v1;strategyv1";
@@ -25,7 +26,9 @@ service StrategyService {
   // The strategy reaches those providers through the core capability-invoke
   // gateway (core/v1 Invoke, ADR-005), which resolves each capability URI to a
   // concrete provider via the registry and mediates the call.
-  rpc Apply(ApplyRequest) returns (ApplyResponse);
+  rpc Apply(ApplyRequest) returns (ApplyResponse) {
+    option (rat.common.v1.capability) = "rat://strategy/v1/apply";
+  }
 }
 
 message ApplyRequest {

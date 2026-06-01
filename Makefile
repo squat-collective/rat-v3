@@ -13,6 +13,7 @@
 CONTRACTS := contracts
 BUF_IMAGE ?= docker.io/bufbuild/buf:1.47.2
 GO_IMAGE  ?= docker.io/library/golang:1.25
+PY_IMAGE  ?= docker.io/library/python:3.12
 
 # Container runtime detection (podman first).
 RUNTIME := $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null)
@@ -26,7 +27,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-check compile-sdks conformance composition bench help
+.PHONY: check verify lint build gen-sdks gen-check compile-sdks conformance composition validate-manifests bench help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -65,6 +66,11 @@ conformance: ## Run EVERY reference plugin against its golden vectors → pass/f
 ## --- cross-axis composition (0i / ADR-003 cross-combination gate) -------------
 composition: ## Boot catalog+engine+format together; run the strategy across 4 ADR-003 combos
 	@scripts/composition.sh
+
+## --- manifest validation (ADR-011 / the static half of `rat plugin validate`) -
+validate-manifests: ## Validate example manifests vs envelope + per-kind schemas; assert the INVALID corpus is rejected
+	@$(RUNTIME) run --rm -v "$(CURDIR)":/work:Z -v rat-pipcache:/root/.cache/pip -w /work \
+	  $(PY_IMAGE) bash -c 'pip install -q --root-user-action=ignore jsonschema pyyaml >/dev/null 2>&1 && python scripts/validate-manifests.py'
 
 bench: ## Per-RPC latency benchmark: core-mediated gateway overhead vs direct (0f)
 	@$(RUNTIME) run --rm $(RUNFLAGS) -v "$(CURDIR)":/work:Z -v rat-gocache:/go/pkg/mod \

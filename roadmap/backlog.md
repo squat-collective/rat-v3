@@ -10,7 +10,7 @@ When an item moves to active work, promote it: cut it from here, add it to [curr
 
 The 5-agent post-freeze review. Grouped by when to act.
 
-> **⏩ Now ACTIVE (Phase 0 close-out, chosen 2026-06-01 — see [current.md](current.md)):** ~~**B1** catalog commit-linkage (first)~~ **✅ DONE 2026-06-01 ([ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md))**; **NEXT** is the **manifest freeze + per-kind schemas** (E2), then the **doc tail** (E4 `overview.md` drift + E1 the 12 missing CONTRACT.md + E3/E7) — all feed the **`v1.1` cut**. The items below stay queued: the rest of the `v1.1` additives land opportunistically with that cut, and the **enforcement-layer findings are Phase 1 acceptance criteria** (see phases.md Phase 1).
+> **⏩ Now ACTIVE (Phase 0 close-out, chosen 2026-06-01 — see [current.md](current.md)):** ~~**B1** catalog commit-linkage~~ **✅ DONE ([ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md))** + ~~**E2** manifest freeze + per-kind schemas~~ **✅ DONE ([ADR-011](../docs/architecture/adrs/011-manifest-schema-freeze-and-per-kind-layer.md))**; **NEXT** is the **doc tail** (E4 `overview.md` drift + E1 the 12 missing CONTRACT.md + E3/E7), then the **`v1.1` cut**. The items below stay queued: the rest of the `v1.1` additives land opportunistically with that cut, and the **enforcement-layer findings are Phase 1 acceptance criteria** (see phases.md Phase 1).
 
 **NOW — the freeze is still local/unpushed (closing window):**
 - ~~**A1 [V2-REGRET]** — `WriteResult.snapshot_id` `optional` + re-cut `rat/1`.~~ **✅ DONE 2026-06-01** (commit `0e81314`; `rat/1` re-cut from `b9dbe2d`). The one V2-regret is resolved, not carried to a v2.
@@ -40,7 +40,7 @@ The data-plane is frozen ([ADR-009](../docs/architecture/adrs/009-data-plane-con
 - ~~**Control-plane axis references**~~ → **✅ DONE (2026-05-31, `rat/1.2`)** — 7 axes (identity/secret/scheduler/tenancy/billing/observability/audit-log) referenced + frozen; conformance 27/27.
 - ~~**`deployment-runtime` reference**~~ → **✅ DONE (2026-05-31, `rat/1.3`)** — two divergent refs (local-process + k8s-dryrun) + freeze; conformance 29/29.
 - ~~**Experience-axis references**~~ → **✅ DONE (2026-05-31, `rat/1.4`)** — ui/notifications/marketplace referenced + frozen. **🎉 ALL 18 axis contracts are now `v1`.**
-- **Manifest schema freeze** (`plugin/v1`) — iterate until stable across the remaining reference work, then freeze.
+- ~~**Manifest schema freeze** (`plugin/v1`)~~ → **✅ DONE 2026-06-01 ([ADR-011](../docs/architecture/adrs/011-manifest-schema-freeze-and-per-kind-layer.md))** — `plugin.v1.json` frozen at `v1` + 18 per-kind schemas (`schema/kinds/`) + `make validate-manifests` gate.
 
 ## Post-`rat/1` residuals (accepted into `v1`, tracked for GA)
 
@@ -52,9 +52,9 @@ From the freeze review ([reviews/07](../reviews/07-freeze-review.md)); all addit
 
 ---
 
-## Additive (NOT freeze-blocking) — roll `(rat.capability)` across remaining axes
+## ✅ DONE — `(rat.capability)` rolled across ALL 18 axes
 
-Freeze-blocker #5 created `contracts/proto/rat/common/v1/annotations.proto` (the `(rat.common.v1.capability)` method option) and applied it to **format** + **engine**; **storage**, **runtime**, **catalog**, and **state** were added during their 0d work (2026-05-31) — so all 6 DATA-PLANE axes are annotated. Applying it to the remaining control/experience axis services (strategy, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log, ui, notifications, marketplace, billing) is **additive** — adding a method option is wire-compatible (`buf breaking` FILE does not flag it), so it does NOT block the `rat/1` freeze. But the C5 gateway + C6 conformance harness need it on every method to function, so it should land before those are built (and each axis needs it before that axis can be 0d-tested through the stub gateway). Per method: add `import "rat/common/v1/annotations.proto";` + `option (rat.common.v1.capability) = "rat://<axis>/v1/<cap>";` inside each rpc (capability URIs already documented in each proto's header comment). Source: reviews/06 I-4 (AUTH-9).
+**✅ DONE 2026-06-01 (with [ADR-011](../docs/architecture/adrs/011-manifest-schema-freeze-and-per-kind-layer.md), as the enabling step for the per-kind schemas).** The 6 data-plane axes were annotated during 0d (2026-05-31); the remaining **12** control/experience axes (strategy, identity, tenancy, deployment-runtime, scheduler, secret, observability, audit-log, ui, notifications, marketplace, billing) were annotated 2026-06-01 — additive (`buf breaking` FILE clean), SDKs regenerated. Every axis method now carries `option (rat.common.v1.capability)`, so the C5 gateway + C6 conformance (Phase 1) have the machine-readable capability map they need. Source: reviews/06 I-4 (AUTH-9).
 
 ---
 

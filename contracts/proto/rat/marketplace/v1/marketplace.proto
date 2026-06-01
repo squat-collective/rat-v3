@@ -20,15 +20,21 @@ syntax = "proto3";
 
 package rat.marketplace.v1;
 
+import "rat/common/v1/annotations.proto";
+
 option go_package = "github.com/rat-dev/rat/gen/rat/marketplace/v1;marketplacev1";
 
 service MarketplaceService {
   // rat://marketplace/v1/search — find plugins, optionally filtered to those
   // compatible with the caller's advertised deployment capabilities.
-  rpc Search(SearchRequest) returns (SearchResponse);
+  rpc Search(SearchRequest) returns (SearchResponse) {
+    option (rat.common.v1.capability) = "rat://marketplace/v1/search";
+  }
 
   // rat://marketplace/v1/get — full detail for one listing.
-  rpc Get(GetRequest) returns (GetResponse);
+  rpc Get(GetRequest) returns (GetResponse) {
+    option (rat.common.v1.capability) = "rat://marketplace/v1/get";
+  }
 }
 
 // What a marketplace advertises about a plugin. Capability sets + conformance +

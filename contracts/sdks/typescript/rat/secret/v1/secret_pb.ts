@@ -21,13 +21,14 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_rat_common_v1_annotations } from "../../common/v1/annotations_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file rat/secret/v1/secret.proto.
  */
 export const file_rat_secret_v1_secret: GenFile = /*@__PURE__*/
-  fileDesc("ChpyYXQvc2VjcmV0L3YxL3NlY3JldC5wcm90bxINcmF0LnNlY3JldC52MSIqCg5SZXNvbHZlUmVxdWVzdBISCgpzZWNyZXRfcmVmGAIgASgJSgQIARACIk0KD1Jlc29sdmVSZXNwb25zZRINCgVmb3VuZBgBIAEoCBISCgV2YWx1ZRgCIAEoDEIDgAEBEhcKD2V4cGlyZXNfdW5peF9tcxgDIAEoAzJZCg1TZWNyZXRTZXJ2aWNlEkgKB1Jlc29sdmUSHS5yYXQuc2VjcmV0LnYxLlJlc29sdmVSZXF1ZXN0Gh4ucmF0LnNlY3JldC52MS5SZXNvbHZlUmVzcG9uc2VCM1oxZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3NlY3JldC92MTtzZWNyZXR2MWIGcHJvdG8z");
+  fileDesc("ChpyYXQvc2VjcmV0L3YxL3NlY3JldC5wcm90bxINcmF0LnNlY3JldC52MSIqCg5SZXNvbHZlUmVxdWVzdBISCgpzZWNyZXRfcmVmGAIgASgJSgQIARACIk0KD1Jlc29sdmVSZXNwb25zZRINCgVmb3VuZBgBIAEoCBISCgV2YWx1ZRgCIAEoDEIDgAEBEhcKD2V4cGlyZXNfdW5peF9tcxgDIAEoAzJ2Cg1TZWNyZXRTZXJ2aWNlEmUKB1Jlc29sdmUSHS5yYXQuc2VjcmV0LnYxLlJlc29sdmVSZXF1ZXN0Gh4ucmF0LnNlY3JldC52MS5SZXNvbHZlUmVzcG9uc2UiG4qXIhdyYXQ6Ly9zZWNyZXQvdjEvcmVzb2x2ZUIzWjFnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvc2VjcmV0L3YxO3NlY3JldHYxYgZwcm90bzM", [file_rat_common_v1_annotations]);
 
 /**
  * @generated from message rat.secret.v1.ResolveRequest

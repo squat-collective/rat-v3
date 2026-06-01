@@ -148,15 +148,15 @@ var File_rat_strategy_v1_strategy_proto protoreflect.FileDescriptor
 
 const file_rat_strategy_v1_strategy_proto_rawDesc = "" +
 	"\n" +
-	"\x1erat/strategy/v1/strategy.proto\x12\x0frat.strategy.v1\x1a\x18rat/common/v1/data.proto\"\x90\x01\n" +
+	"\x1erat/strategy/v1/strategy.proto\x12\x0frat.strategy.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"\x90\x01\n" +
 	"\fApplyRequest\x12/\n" +
 	"\x06source\x18\x02 \x01(\v2\x17.rat.common.v1.TableRefR\x06source\x12/\n" +
 	"\x06target\x18\x03 \x01(\v2\x17.rat.common.v1.TableRefR\x06target\x12\x18\n" +
 	"\aoptions\x18\x04 \x01(\fR\aoptionsJ\x04\b\x01\x10\x02\"C\n" +
 	"\rApplyResponse\x122\n" +
-	"\x06result\x18\x01 \x01(\v2\x1a.rat.common.v1.WriteResultR\x06result2Y\n" +
-	"\x0fStrategyService\x12F\n" +
-	"\x05Apply\x12\x1d.rat.strategy.v1.ApplyRequest\x1a\x1e.rat.strategy.v1.ApplyResponseB7Z5github.com/rat-dev/rat/gen/rat/strategy/v1;strategyv1b\x06proto3"
+	"\x06result\x18\x01 \x01(\v2\x1a.rat.common.v1.WriteResultR\x06result2v\n" +
+	"\x0fStrategyService\x12c\n" +
+	"\x05Apply\x12\x1d.rat.strategy.v1.ApplyRequest\x1a\x1e.rat.strategy.v1.ApplyResponse\"\x1b\x8a\x97\"\x17rat://strategy/v1/applyB7Z5github.com/rat-dev/rat/gen/rat/strategy/v1;strategyv1b\x06proto3"
 
 var (
 	file_rat_strategy_v1_strategy_proto_rawDescOnce sync.Once

@@ -76,7 +76,7 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 
 **Phase 0 close-out (chosen 2026-06-01 — "complete & seal Phase 0"):** the contract surface is frozen + board-reviewed; four items remain before Phase 1, then cut contract **`v1.1`**:
 1. ✅ **Catalog commit-linkage** — **DONE 2026-06-01 ([ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md))**: additive `RegisterTable` + `CommitTable` RPCs so the branch-pipeline loop closes on the wire (reviews/08 B1 — the #1 functional gap). Proto + 4 SDKs + 3 refs + 6 golden steps + `examples/composition` rewired off out-of-band seeding; 32/32 + composition green. Resolves R3.
-2. **Manifest schema freeze + 18 per-kind schemas** — the last `v1-preview` artifact + the only author-hand-written one (reviews/08 E2).
+2. ✅ **Manifest schema freeze + 18 per-kind schemas** — **DONE 2026-06-01 ([ADR-011](../docs/architecture/adrs/011-manifest-schema-freeze-and-per-kind-layer.md))**: `plugin.v1.json` frozen at `v1` (the last `v1-preview` artifact); `(rat.capability)` rolled across the 12 unannotated axes (additive); 18 per-kind schemas in `schema/kinds/` with minimal-mandatory-core `provides`; `make validate-manifests` gate (32/32).
 3. **Doc tail** — `overview.md` drift, the 12 missing control/experience `CONTRACT.md`, round-1-refs-are-not-templates labels, temptation ledger (reviews/08 E1/E3/E4/E7).
 4. **Cut `v1.1`** — tag the sealed surface.
 

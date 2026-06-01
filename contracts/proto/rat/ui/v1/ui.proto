@@ -18,16 +18,22 @@ syntax = "proto3";
 
 package rat.ui.v1;
 
+import "rat/common/v1/annotations.proto";
+
 option go_package = "github.com/rat-dev/rat/gen/rat/ui/v1;uiv1";
 
 service UiService {
   // rat://ui/v1/describe — enumerate the surfaces this UI exposes and the slots
   // it can host contributions into.
-  rpc Describe(DescribeRequest) returns (DescribeResponse);
+  rpc Describe(DescribeRequest) returns (DescribeResponse) {
+    option (rat.common.v1.capability) = "rat://ui/v1/describe";
+  }
 
   // rat://ui/v1/render-slot — given a slot + the contributing component, return
   // what the UI needs to render it (asset ref, props schema).
-  rpc RenderSlot(RenderSlotRequest) returns (RenderSlotResponse);
+  rpc RenderSlot(RenderSlotRequest) returns (RenderSlotResponse) {
+    option (rat.common.v1.capability) = "rat://ui/v1/render-slot";
+  }
 }
 
 message DescribeRequest {

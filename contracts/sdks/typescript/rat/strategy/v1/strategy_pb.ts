@@ -16,6 +16,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_rat_common_v1_annotations } from "../../common/v1/annotations_pb";
 import type { TableRef, WriteResult } from "../../common/v1/data_pb";
 import { file_rat_common_v1_data } from "../../common/v1/data_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -24,7 +25,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/strategy/v1/strategy.proto.
  */
 export const file_rat_strategy_v1_strategy: GenFile = /*@__PURE__*/
-  fileDesc("Ch5yYXQvc3RyYXRlZ3kvdjEvc3RyYXRlZ3kucHJvdG8SD3JhdC5zdHJhdGVneS52MSJ3CgxBcHBseVJlcXVlc3QSJwoGc291cmNlGAIgASgLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZhInCgZ0YXJnZXQYAyABKAsyFy5yYXQuY29tbW9uLnYxLlRhYmxlUmVmEg8KB29wdGlvbnMYBCABKAxKBAgBEAIiOwoNQXBwbHlSZXNwb25zZRIqCgZyZXN1bHQYASABKAsyGi5yYXQuY29tbW9uLnYxLldyaXRlUmVzdWx0MlkKD1N0cmF0ZWd5U2VydmljZRJGCgVBcHBseRIdLnJhdC5zdHJhdGVneS52MS5BcHBseVJlcXVlc3QaHi5yYXQuc3RyYXRlZ3kudjEuQXBwbHlSZXNwb25zZUI3WjVnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvc3RyYXRlZ3kvdjE7c3RyYXRlZ3l2MWIGcHJvdG8z", [file_rat_common_v1_data]);
+  fileDesc("Ch5yYXQvc3RyYXRlZ3kvdjEvc3RyYXRlZ3kucHJvdG8SD3JhdC5zdHJhdGVneS52MSJ3CgxBcHBseVJlcXVlc3QSJwoGc291cmNlGAIgASgLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZhInCgZ0YXJnZXQYAyABKAsyFy5yYXQuY29tbW9uLnYxLlRhYmxlUmVmEg8KB29wdGlvbnMYBCABKAxKBAgBEAIiOwoNQXBwbHlSZXNwb25zZRIqCgZyZXN1bHQYASABKAsyGi5yYXQuY29tbW9uLnYxLldyaXRlUmVzdWx0MnYKD1N0cmF0ZWd5U2VydmljZRJjCgVBcHBseRIdLnJhdC5zdHJhdGVneS52MS5BcHBseVJlcXVlc3QaHi5yYXQuc3RyYXRlZ3kudjEuQXBwbHlSZXNwb25zZSIbipciF3JhdDovL3N0cmF0ZWd5L3YxL2FwcGx5QjdaNWdpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9zdHJhdGVneS92MTtzdHJhdGVneXYxYgZwcm90bzM", [file_rat_common_v1_annotations, file_rat_common_v1_data]);
 
 /**
  * @generated from message rat.strategy.v1.ApplyRequest

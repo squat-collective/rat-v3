@@ -22,9 +22,10 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n1rat/deploymentruntime/v1/deployment_runtime.proto\x12\x18rat.deploymentruntime.v1\">\n\x12ResourceQuantities\x12\x10\n\x03\x63pu\x18\x01 \x01(\tR\x03\x63pu\x12\x16\n\x06memory\x18\x02 \x01(\tR\x06memory\"\xa1\x02\n\x10IsolationProfile\x12%\n\x0frun_as_non_root\x18\x01 \x01(\x08R\x0crunAsNonRoot\x12\x32\n\x15\x64rop_all_capabilities\x18\x02 \x01(\x08R\x13\x64ropAllCapabilities\x12*\n\x11no_new_privileges\x18\x03 \x01(\x08R\x0fnoNewPrivileges\x12)\n\x11read_only_root_fs\x18\x04 \x01(\x08R\x0ereadOnlyRootFs\x12\x32\n\x15\x62lock_metadata_egress\x18\x05 \x01(\x08R\x13\x62lockMetadataEgress\x12\'\n\x0fseccomp_profile\x18\x06 \x01(\tR\x0eseccompProfile\"\xf5\x02\n\nLaunchSpec\x12\x14\n\x05image\x18\x01 \x01(\tR\x05image\x12H\n\x08requests\x18\x02 \x01(\x0b\x32,.rat.deploymentruntime.v1.ResourceQuantitiesR\x08requests\x12\x44\n\x06limits\x18\x03 \x01(\x0b\x32,.rat.deploymentruntime.v1.ResourceQuantitiesR\x06limits\x12H\n\tisolation\x18\x04 \x01(\x0b\x32*.rat.deploymentruntime.v1.IsolationProfileR\tisolation\x12?\n\x03\x65nv\x18\x05 \x03(\x0b\x32-.rat.deploymentruntime.v1.LaunchSpec.EnvEntryR\x03\x65nv\x1a\x36\n\x08\x45nvEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"l\n\rLaunchRequest\x12\x1b\n\tplugin_id\x18\x02 \x01(\tR\x08pluginId\x12\x38\n\x04spec\x18\x03 \x01(\x0b\x32$.rat.deploymentruntime.v1.LaunchSpecR\x04specJ\x04\x08\x01\x10\x02\"M\n\x0eLaunchResponse\x12\x1f\n\x0binstance_id\x18\x01 \x01(\tR\ninstanceId\x12\x1a\n\x08\x65ndpoint\x18\x02 \x01(\tR\x08\x65ndpoint\"9\n\x10TerminateRequest\x12\x1f\n\x0binstance_id\x18\x02 \x01(\tR\ninstanceIdJ\x04\x08\x01\x10\x02\"3\n\x11TerminateResponse\x12\x1e\n\nterminated\x18\x01 \x01(\x08R\nterminated\";\n\x12HealthcheckRequest\x12\x1f\n\x0binstance_id\x18\x02 \x01(\tR\ninstanceIdJ\x04\x08\x01\x10\x02\"m\n\x13HealthcheckResponse\x12>\n\x06status\x18\x01 \x01(\x0e\x32&.rat.deploymentruntime.v1.HealthStatusR\x06status\x12\x16\n\x06\x64\x65tail\x18\x02 \x01(\tR\x06\x64\x65tail*\x80\x01\n\x0cHealthStatus\x12\x1d\n\x19HEALTH_STATUS_UNSPECIFIED\x10\x00\x12\x19\n\x15HEALTH_STATUS_HEALTHY\x10\x01\x12\x1b\n\x17HEALTH_STATUS_UNHEALTHY\x10\x02\x12\x19\n\x15HEALTH_STATUS_UNKNOWN\x10\x03\x32\xc9\x02\n\x18\x44\x65ploymentRuntimeService\x12[\n\x06Launch\x12\'.rat.deploymentruntime.v1.LaunchRequest\x1a(.rat.deploymentruntime.v1.LaunchResponse\x12\x64\n\tTerminate\x12*.rat.deploymentruntime.v1.TerminateRequest\x1a+.rat.deploymentruntime.v1.TerminateResponse\x12j\n\x0bHealthcheck\x12,.rat.deploymentruntime.v1.HealthcheckRequest\x1a-.rat.deploymentruntime.v1.HealthcheckResponseBIZGgithub.com/rat-dev/rat/gen/rat/deploymentruntime/v1;deploymentruntimev1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n1rat/deploymentruntime/v1/deployment_runtime.proto\x12\x18rat.deploymentruntime.v1\x1a\x1frat/common/v1/annotations.proto\">\n\x12ResourceQuantities\x12\x10\n\x03\x63pu\x18\x01 \x01(\tR\x03\x63pu\x12\x16\n\x06memory\x18\x02 \x01(\tR\x06memory\"\xa1\x02\n\x10IsolationProfile\x12%\n\x0frun_as_non_root\x18\x01 \x01(\x08R\x0crunAsNonRoot\x12\x32\n\x15\x64rop_all_capabilities\x18\x02 \x01(\x08R\x13\x64ropAllCapabilities\x12*\n\x11no_new_privileges\x18\x03 \x01(\x08R\x0fnoNewPrivileges\x12)\n\x11read_only_root_fs\x18\x04 \x01(\x08R\x0ereadOnlyRootFs\x12\x32\n\x15\x62lock_metadata_egress\x18\x05 \x01(\x08R\x13\x62lockMetadataEgress\x12\'\n\x0fseccomp_profile\x18\x06 \x01(\tR\x0eseccompProfile\"\xf5\x02\n\nLaunchSpec\x12\x14\n\x05image\x18\x01 \x01(\tR\x05image\x12H\n\x08requests\x18\x02 \x01(\x0b\x32,.rat.deploymentruntime.v1.ResourceQuantitiesR\x08requests\x12\x44\n\x06limits\x18\x03 \x01(\x0b\x32,.rat.deploymentruntime.v1.ResourceQuantitiesR\x06limits\x12H\n\tisolation\x18\x04 \x01(\x0b\x32*.rat.deploymentruntime.v1.IsolationProfileR\tisolation\x12?\n\x03\x65nv\x18\x05 \x03(\x0b\x32-.rat.deploymentruntime.v1.LaunchSpec.EnvEntryR\x03\x65nv\x1a\x36\n\x08\x45nvEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"l\n\rLaunchRequest\x12\x1b\n\tplugin_id\x18\x02 \x01(\tR\x08pluginId\x12\x38\n\x04spec\x18\x03 \x01(\x0b\x32$.rat.deploymentruntime.v1.LaunchSpecR\x04specJ\x04\x08\x01\x10\x02\"M\n\x0eLaunchResponse\x12\x1f\n\x0binstance_id\x18\x01 \x01(\tR\ninstanceId\x12\x1a\n\x08\x65ndpoint\x18\x02 \x01(\tR\x08\x65ndpoint\"9\n\x10TerminateRequest\x12\x1f\n\x0binstance_id\x18\x02 \x01(\tR\ninstanceIdJ\x04\x08\x01\x10\x02\"3\n\x11TerminateResponse\x12\x1e\n\nterminated\x18\x01 \x01(\x08R\nterminated\";\n\x12HealthcheckRequest\x12\x1f\n\x0binstance_id\x18\x02 \x01(\tR\ninstanceIdJ\x04\x08\x01\x10\x02\"m\n\x13HealthcheckResponse\x12>\n\x06status\x18\x01 \x01(\x0e\x32&.rat.deploymentruntime.v1.HealthStatusR\x06status\x12\x16\n\x06\x64\x65tail\x18\x02 \x01(\tR\x06\x64\x65tail*\x80\x01\n\x0cHealthStatus\x12\x1d\n\x19HEALTH_STATUS_UNSPECIFIED\x10\x00\x12\x19\n\x15HEALTH_STATUS_HEALTHY\x10\x01\x12\x1b\n\x17HEALTH_STATUS_UNHEALTHY\x10\x02\x12\x19\n\x15HEALTH_STATUS_UNKNOWN\x10\x03\x32\xcc\x03\n\x18\x44\x65ploymentRuntimeService\x12\x83\x01\n\x06Launch\x12\'.rat.deploymentruntime.v1.LaunchRequest\x1a(.rat.deploymentruntime.v1.LaunchResponse\"&\x8a\x97\"\"rat://deployment-runtime/v1/launch\x12\x8f\x01\n\tTerminate\x12*.rat.deploymentruntime.v1.TerminateRequest\x1a+.rat.deploymentruntime.v1.TerminateResponse\")\x8a\x97\"%rat://deployment-runtime/v1/terminate\x12\x97\x01\n\x0bHealthcheck\x12,.rat.deploymentruntime.v1.HealthcheckRequest\x1a-.rat.deploymentruntime.v1.HealthcheckResponse\"+\x8a\x97\"\'rat://deployment-runtime/v1/healthcheckBIZGgithub.com/rat-dev/rat/gen/rat/deploymentruntime/v1;deploymentruntimev1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,28 +35,34 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'ZGgithub.com/rat-dev/rat/gen/rat/deploymentruntime/v1;deploymentruntimev1'
   _globals['_LAUNCHSPEC_ENVENTRY']._loaded_options = None
   _globals['_LAUNCHSPEC_ENVENTRY']._serialized_options = b'8\001'
-  _globals['_HEALTHSTATUS']._serialized_start=1285
-  _globals['_HEALTHSTATUS']._serialized_end=1413
-  _globals['_RESOURCEQUANTITIES']._serialized_start=79
-  _globals['_RESOURCEQUANTITIES']._serialized_end=141
-  _globals['_ISOLATIONPROFILE']._serialized_start=144
-  _globals['_ISOLATIONPROFILE']._serialized_end=433
-  _globals['_LAUNCHSPEC']._serialized_start=436
-  _globals['_LAUNCHSPEC']._serialized_end=809
-  _globals['_LAUNCHSPEC_ENVENTRY']._serialized_start=755
-  _globals['_LAUNCHSPEC_ENVENTRY']._serialized_end=809
-  _globals['_LAUNCHREQUEST']._serialized_start=811
-  _globals['_LAUNCHREQUEST']._serialized_end=919
-  _globals['_LAUNCHRESPONSE']._serialized_start=921
-  _globals['_LAUNCHRESPONSE']._serialized_end=998
-  _globals['_TERMINATEREQUEST']._serialized_start=1000
-  _globals['_TERMINATEREQUEST']._serialized_end=1057
-  _globals['_TERMINATERESPONSE']._serialized_start=1059
-  _globals['_TERMINATERESPONSE']._serialized_end=1110
-  _globals['_HEALTHCHECKREQUEST']._serialized_start=1112
-  _globals['_HEALTHCHECKREQUEST']._serialized_end=1171
-  _globals['_HEALTHCHECKRESPONSE']._serialized_start=1173
-  _globals['_HEALTHCHECKRESPONSE']._serialized_end=1282
-  _globals['_DEPLOYMENTRUNTIMESERVICE']._serialized_start=1416
-  _globals['_DEPLOYMENTRUNTIMESERVICE']._serialized_end=1745
+  _globals['_DEPLOYMENTRUNTIMESERVICE'].methods_by_name['Launch']._loaded_options = None
+  _globals['_DEPLOYMENTRUNTIMESERVICE'].methods_by_name['Launch']._serialized_options = b'\212\227\"\"rat://deployment-runtime/v1/launch'
+  _globals['_DEPLOYMENTRUNTIMESERVICE'].methods_by_name['Terminate']._loaded_options = None
+  _globals['_DEPLOYMENTRUNTIMESERVICE'].methods_by_name['Terminate']._serialized_options = b'\212\227\"%rat://deployment-runtime/v1/terminate'
+  _globals['_DEPLOYMENTRUNTIMESERVICE'].methods_by_name['Healthcheck']._loaded_options = None
+  _globals['_DEPLOYMENTRUNTIMESERVICE'].methods_by_name['Healthcheck']._serialized_options = b'\212\227\"\'rat://deployment-runtime/v1/healthcheck'
+  _globals['_HEALTHSTATUS']._serialized_start=1318
+  _globals['_HEALTHSTATUS']._serialized_end=1446
+  _globals['_RESOURCEQUANTITIES']._serialized_start=112
+  _globals['_RESOURCEQUANTITIES']._serialized_end=174
+  _globals['_ISOLATIONPROFILE']._serialized_start=177
+  _globals['_ISOLATIONPROFILE']._serialized_end=466
+  _globals['_LAUNCHSPEC']._serialized_start=469
+  _globals['_LAUNCHSPEC']._serialized_end=842
+  _globals['_LAUNCHSPEC_ENVENTRY']._serialized_start=788
+  _globals['_LAUNCHSPEC_ENVENTRY']._serialized_end=842
+  _globals['_LAUNCHREQUEST']._serialized_start=844
+  _globals['_LAUNCHREQUEST']._serialized_end=952
+  _globals['_LAUNCHRESPONSE']._serialized_start=954
+  _globals['_LAUNCHRESPONSE']._serialized_end=1031
+  _globals['_TERMINATEREQUEST']._serialized_start=1033
+  _globals['_TERMINATEREQUEST']._serialized_end=1090
+  _globals['_TERMINATERESPONSE']._serialized_start=1092
+  _globals['_TERMINATERESPONSE']._serialized_end=1143
+  _globals['_HEALTHCHECKREQUEST']._serialized_start=1145
+  _globals['_HEALTHCHECKREQUEST']._serialized_end=1204
+  _globals['_HEALTHCHECKRESPONSE']._serialized_start=1206
+  _globals['_HEALTHCHECKRESPONSE']._serialized_end=1315
+  _globals['_DEPLOYMENTRUNTIMESERVICE']._serialized_start=1449
+  _globals['_DEPLOYMENTRUNTIMESERVICE']._serialized_end=1909
 # @@protoc_insertion_point(module_scope)

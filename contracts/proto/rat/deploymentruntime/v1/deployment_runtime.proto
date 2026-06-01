@@ -21,18 +21,26 @@ syntax = "proto3";
 
 package rat.deploymentruntime.v1;
 
+import "rat/common/v1/annotations.proto";
+
 option go_package = "github.com/rat-dev/rat/gen/rat/deploymentruntime/v1;deploymentruntimev1";
 
 service DeploymentRuntimeService {
   // rat://deployment-runtime/v1/launch — start a plugin instance from an image.
-  rpc Launch(LaunchRequest) returns (LaunchResponse);
+  rpc Launch(LaunchRequest) returns (LaunchResponse) {
+    option (rat.common.v1.capability) = "rat://deployment-runtime/v1/launch";
+  }
 
   // rat://deployment-runtime/v1/terminate — stop a running plugin instance.
-  rpc Terminate(TerminateRequest) returns (TerminateResponse);
+  rpc Terminate(TerminateRequest) returns (TerminateResponse) {
+    option (rat.common.v1.capability) = "rat://deployment-runtime/v1/terminate";
+  }
 
   // rat://deployment-runtime/v1/healthcheck — liveness/readiness of an instance.
   // The reconciler calls this to drive convergence (overview.md).
-  rpc Healthcheck(HealthcheckRequest) returns (HealthcheckResponse);
+  rpc Healthcheck(HealthcheckRequest) returns (HealthcheckResponse) {
+    option (rat.common.v1.capability) = "rat://deployment-runtime/v1/healthcheck";
+  }
 }
 
 // K8s-shaped resource asks, mirroring the manifest `resources` block (C4).

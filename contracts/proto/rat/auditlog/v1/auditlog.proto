@@ -50,6 +50,7 @@ syntax = "proto3";
 
 package rat.auditlog.v1;
 
+import "rat/common/v1/annotations.proto";
 import "rat/common/v1/audit.proto";
 
 option go_package = "github.com/rat-dev/rat/gen/rat/auditlog/v1;auditlogv1";
@@ -64,7 +65,9 @@ service AuditLogService {
   // to the sink. CORE-ONLY: this capability is not grantable to ordinary
   // plugins. Records are also retained core-locally, so the sink is a fan-out,
   // not the only copy.
-  rpc Append(AppendRequest) returns (AppendResponse);
+  rpc Append(AppendRequest) returns (AppendResponse) {
+    option (rat.common.v1.capability) = "rat://auditlog/v1/append";
+  }
 }
 
 message AppendRequest {

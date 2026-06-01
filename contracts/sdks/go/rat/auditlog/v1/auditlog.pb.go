@@ -363,7 +363,7 @@ var File_rat_auditlog_v1_auditlog_proto protoreflect.FileDescriptor
 
 const file_rat_auditlog_v1_auditlog_proto_rawDesc = "" +
 	"\n" +
-	"\x1erat/auditlog/v1/auditlog.proto\x12\x0frat.auditlog.v1\x1a\x19rat/common/v1/audit.proto\"K\n" +
+	"\x1erat/auditlog/v1/auditlog.proto\x12\x0frat.auditlog.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x19rat/common/v1/audit.proto\"K\n" +
 	"\rAppendRequest\x124\n" +
 	"\arecords\x18\x02 \x03(\v2\x1a.rat.common.v1.AuditRecordR\arecordsJ\x04\b\x01\x10\x02\"\x90\x01\n" +
 	"\tRecordAck\x12\x0e\n" +
@@ -385,9 +385,9 @@ const file_rat_auditlog_v1_auditlog_proto_rawDesc = "" +
 	"\x17REJECT_CODE_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19REJECT_CODE_BAD_SIGNATURE\x10\x01\x12\x1b\n" +
 	"\x17REJECT_CODE_CHAIN_BREAK\x10\x02\x12\x1d\n" +
-	"\x19REJECT_CODE_STORAGE_ERROR\x10\x032\\\n" +
-	"\x0fAuditLogService\x12I\n" +
-	"\x06Append\x12\x1e.rat.auditlog.v1.AppendRequest\x1a\x1f.rat.auditlog.v1.AppendResponseB7Z5github.com/rat-dev/rat/gen/rat/auditlog/v1;auditlogv1b\x06proto3"
+	"\x19REJECT_CODE_STORAGE_ERROR\x10\x032z\n" +
+	"\x0fAuditLogService\x12g\n" +
+	"\x06Append\x12\x1e.rat.auditlog.v1.AppendRequest\x1a\x1f.rat.auditlog.v1.AppendResponse\"\x1c\x8a\x97\"\x18rat://auditlog/v1/appendB7Z5github.com/rat-dev/rat/gen/rat/auditlog/v1;auditlogv1b\x06proto3"
 
 var (
 	file_rat_auditlog_v1_auditlog_proto_rawDescOnce sync.Once

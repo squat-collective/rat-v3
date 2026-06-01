@@ -21,6 +21,7 @@
 package billingv1
 
 import (
+	_ "github.com/rat-dev/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -199,7 +200,7 @@ var File_rat_billing_v1_billing_proto protoreflect.FileDescriptor
 
 const file_rat_billing_v1_billing_proto_rawDesc = "" +
 	"\n" +
-	"\x1crat/billing/v1/billing.proto\x12\x0erat.billing.v1\"\xf5\x01\n" +
+	"\x1crat/billing/v1/billing.proto\x12\x0erat.billing.v1\x1a\x1frat/common/v1/annotations.proto\"\xf5\x01\n" +
 	"\n" +
 	"UsageEvent\x12\x14\n" +
 	"\x05meter\x18\x01 \x01(\tR\x05meter\x12\x1a\n" +
@@ -214,9 +215,9 @@ const file_rat_billing_v1_billing_proto_rawDesc = "" +
 	"\rRecordRequest\x122\n" +
 	"\x06events\x18\x02 \x03(\v2\x1a.rat.billing.v1.UsageEventR\x06eventsJ\x04\b\x01\x10\x02\",\n" +
 	"\x0eRecordResponse\x12\x1a\n" +
-	"\brecorded\x18\x01 \x01(\x03R\brecorded2Y\n" +
-	"\x0eBillingService\x12G\n" +
-	"\x06Record\x12\x1d.rat.billing.v1.RecordRequest\x1a\x1e.rat.billing.v1.RecordResponseB5Z3github.com/rat-dev/rat/gen/rat/billing/v1;billingv1b\x06proto3"
+	"\brecorded\x18\x01 \x01(\x03R\brecorded2v\n" +
+	"\x0eBillingService\x12d\n" +
+	"\x06Record\x12\x1d.rat.billing.v1.RecordRequest\x1a\x1e.rat.billing.v1.RecordResponse\"\x1b\x8a\x97\"\x17rat://billing/v1/recordB5Z3github.com/rat-dev/rat/gen/rat/billing/v1;billingv1b\x06proto3"
 
 var (
 	file_rat_billing_v1_billing_proto_rawDescOnce sync.Once
