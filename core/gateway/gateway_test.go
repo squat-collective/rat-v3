@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rat-dev/rat/core/manifest"
 	"github.com/rat-dev/rat/core/registry"
@@ -184,5 +185,57 @@ func TestInvokeMissingTraceparent(t *testing.T) {
 	}
 	if recs := audit.Records(); len(recs) != 0 {
 		t.Errorf("audit = %+v, want no record (rejected before the C5 decision)", recs)
+	}
+}
+
+// slowState is a provider whose Get blocks ~2s — used to prove the gateway bounds
+// a hung provider by the soft deadline (C3).
+type slowState struct {
+	statev1.UnimplementedStateServiceServer
+}
+
+func (slowState) Get(ctx context.Context, _ *statev1.GetRequest) (*statev1.GetResponse, error) {
+	select {
+	case <-time.After(2 * time.Second):
+		return &statev1.GetResponse{Found: true}, nil
+	case <-ctx.Done():
+		return nil, status.FromContextError(ctx.Err()).Err()
+	}
+}
+
+// callerCtxDeadline is callerCtx plus a soft deadline (deadline_unix_ms) d from now.
+func callerCtxDeadline(caller string, d time.Duration) context.Context {
+	rc := &commonv1.RequestContext{
+		Trace: &commonv1.TraceContext{
+			Traceparent:   "00-" + strings.Repeat("a", 32) + "-" + strings.Repeat("b", 16) + "-01",
+			CorrelationId: "corr-1",
+		},
+		Identity:       &commonv1.Identity{CallerPlugin: caller, Tenant: "t1"},
+		DeadlineUnixMs: time.Now().Add(d).UnixMilli(),
+	}
+	b, _ := proto.Marshal(rc)
+	return metadata.AppendToOutgoingContext(context.Background(), callMetaHeader, string(b))
+}
+
+// TestInvokeBoundsProviderDeadline (C3): a soft deadline (deadline_unix_ms) sooner
+// than the channel deadline bounds the downstream call — a hung provider returns
+// DeadlineExceeded fast instead of pinning the gateway.
+func TestInvokeBoundsProviderDeadline(t *testing.T) {
+	providerConn := bufServer(t, func(s *grpc.Server) { statev1.RegisterStateServiceServer(s, slowState{}) })
+	gw := New(testRegistry(t), map[string]*grpc.ClientConn{"rat-test-state": providerConn}, &MemAuditor{},
+		statev1.File_rat_state_v1_state_proto)
+	gwConn := bufServer(t, func(s *grpc.Server) { corev1.RegisterCapabilityInvokeServiceServer(s, gw) })
+	client := corev1.NewCapabilityInvokeServiceClient(gwConn)
+
+	payload, _ := proto.Marshal(&statev1.GetRequest{Key: "k"})
+	start := time.Now()
+	_, err := client.Invoke(callerCtxDeadline("rat-test-caller", 150*time.Millisecond), &corev1.InvokeRequest{
+		Capability: "rat://state/v1/get", Payload: payload,
+	})
+	if status.Code(err) != codes.DeadlineExceeded {
+		t.Fatalf("Invoke against a 2s-slow provider with a 150ms soft deadline = %v, want DeadlineExceeded", status.Code(err))
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Errorf("call took %v — the soft deadline did not bound the provider", elapsed)
 	}
 }

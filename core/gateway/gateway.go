@@ -16,6 +16,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rat-dev/rat/core/registry"
 	commonv1 "github.com/rat-dev/rat/gen/rat/common/v1"
@@ -138,14 +139,16 @@ func wellFormedTraceparent(tp string) bool {
 	return len(p) == 4 && len(p[0]) == 2 && len(p[1]) == 32 && len(p[2]) == 16 && len(p[3]) == 2
 }
 
-// openCall is the shared C1-check -> C5-authorize(+audit) -> route -> re-stamp
-// path for both unary and streaming invocations. On a denied/failed decision it
-// returns the appropriate gRPC status; on success it returns the downstream
-// context, the resolved method path, and the provider connection to relay to.
-func (g *Gateway) openCall(ctx context.Context, capURI string) (context.Context, string, *grpc.ClientConn, error) {
+// openCall is the shared C1-check -> C5-authorize(+audit) -> route -> re-stamp ->
+// deadline-bound path for both unary and streaming invocations. On a denied/failed
+// decision it returns the appropriate gRPC status; on success it returns the
+// downstream context (bounded by min(channel, deadline_unix_ms) — C3), the resolved
+// method, the provider connection, and a cancel func the caller MUST defer.
+func (g *Gateway) openCall(ctx context.Context, capURI string) (context.Context, string, *grpc.ClientConn, context.CancelFunc, error) {
+	noop := context.CancelFunc(func() {})
 	in := readCallMeta(ctx)
 	if !wellFormedTraceparent(in.GetTrace().GetTraceparent()) {
-		return nil, "", nil, status.Error(codes.InvalidArgument, "C1: missing or ill-formed traceparent")
+		return nil, "", nil, noop, status.Error(codes.InvalidArgument, "C1: missing or ill-formed traceparent")
 	}
 	// caller_plugin is derived from the inbound envelope. NOTE: real channel
 	// authentication (C2) is deferred (ADR-014) — for the spike the caller is taken
@@ -156,18 +159,18 @@ func (g *Gateway) openCall(ctx context.Context, capURI string) (context.Context,
 	d := g.reg.Authorize(caller, capURI)
 	g.auditor.Record(AuditRecord{Capability: capURI, Caller: caller, Provider: d.Provider, Allowed: d.Allowed, Reason: d.Reason})
 	if !d.Allowed {
-		return nil, "", nil, status.Error(codes.PermissionDenied, d.Reason)
+		return nil, "", nil, noop, status.Error(codes.PermissionDenied, d.Reason)
 	}
 
 	method, ok := g.routes[capURI]
 	if !ok {
 		// A provider declares it, but no loaded descriptor maps it to a method — a
 		// wiring gap in the core's setup, not a caller error.
-		return nil, "", nil, status.Errorf(codes.Internal, "no route for capability %q (descriptor not loaded)", capURI)
+		return nil, "", nil, noop, status.Errorf(codes.Internal, "no route for capability %q (descriptor not loaded)", capURI)
 	}
 	conn := g.providers[d.Provider]
 	if conn == nil {
-		return nil, "", nil, status.Errorf(codes.Unavailable, "provider %q for %q is not connected", d.Provider, capURI)
+		return nil, "", nil, noop, status.Errorf(codes.Unavailable, "provider %q for %q is not connected", d.Provider, capURI)
 	}
 
 	// Re-stamp identity for the downstream hop; trace is propagated verbatim (ADR-007).
@@ -182,15 +185,29 @@ func (g *Gateway) openCall(ctx context.Context, capURI string) (context.Context,
 	}
 	b, err := proto.Marshal(downstream)
 	if err != nil {
-		return nil, "", nil, status.Errorf(codes.Internal, "marshal call-meta: %v", err)
+		return nil, "", nil, noop, status.Errorf(codes.Internal, "marshal call-meta: %v", err)
 	}
-	return metadata.AppendToOutgoingContext(ctx, callMetaHeader, string(b)), method, conn, nil
+	octx := metadata.AppendToOutgoingContext(ctx, callMetaHeader, string(b))
+
+	// C3 — bound the provider call by the soft deadline when it is sooner than the
+	// channel deadline, so a hung provider can't pin the gateway. deadline_unix_ms
+	// == 0 means "no soft deadline"; the channel deadline (if any) still applies and
+	// propagates to the downstream call via octx.
+	cancel := noop
+	if soft := in.GetDeadlineUnixMs(); soft > 0 {
+		softTime := time.UnixMilli(soft)
+		if dl, hasDL := octx.Deadline(); !hasDL || softTime.Before(dl) {
+			octx, cancel = context.WithDeadline(octx, softTime)
+		}
+	}
+	return octx, method, conn, cancel, nil
 }
 
 // Invoke is the unary capability call: authorize, then relay the opaque payload
 // to the provider's method and return its opaque result.
 func (g *Gateway) Invoke(ctx context.Context, req *corev1.InvokeRequest) (*corev1.InvokeResponse, error) {
-	octx, method, conn, err := g.openCall(ctx, req.GetCapability())
+	octx, method, conn, cancel, err := g.openCall(ctx, req.GetCapability())
+	defer cancel()
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +221,8 @@ func (g *Gateway) Invoke(ctx context.Context, req *corev1.InvokeRequest) (*corev
 // InvokeServerStream is the server-streaming capability call: authorize at open
 // (ADR-008 enforce-at-open), then relay opaque response frames.
 func (g *Gateway) InvokeServerStream(req *corev1.InvokeServerStreamRequest, up grpc.ServerStreamingServer[corev1.InvokeServerStreamResponse]) error {
-	octx, method, conn, err := g.openCall(up.Context(), req.GetCapability())
+	octx, method, conn, cancel, err := g.openCall(up.Context(), req.GetCapability())
+	defer cancel()
 	if err != nil {
 		return err
 	}

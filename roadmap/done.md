@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — Spike CLOSED: C3 deadline + D2 ticket + CI + exit report — frozen wire HELD, no freeze-reopen
+
+Closed the Phase-1 contract-de-risking spike ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) / [ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md)), on `phase-1-spike-closeout`.
+
+- **C3 (provider deadline)** — `core/gateway` bounds the downstream call by `min(channel, deadline_unix_ms)`; a 2s-slow provider returns `DeadlineExceeded` in ~150ms (a hung provider can't pin the gateway). Test green.
+- **D2 (ArrowStream ticket)** — `core/arrowticket`: an HMAC-signed, TTL'd, single-use, `{stream,caller,tenant}`-bound credential carried in `bytes ticket`; replay / expiry / cross-binding / tamper all rejected. Proves the frozen field suffices (producer-side; an SDK helper eventually). Tests green.
+- **CI** — `make core-test` (build+vet+test `./core/...`, folded into `verify`) + `make breaking` (buf-breaking `contracts` vs `main`). Both run green; **`make breaking` confirms the spike touched no frozen contract.**
+- **Exit report** — [reviews/10](../reviews/10-phase-1-spike-exit.md): C5/C1/C3/D2 all validated by a real enforcer; **no freeze-reopen triggered**; the board's "shapes-not-obligations" risk is materially reduced. The recommendation feeds Tom's deferred commitment-gate decision (ADR-013): **commit** / **continue-exploratory** both well-supported; the strategic v2-vs-v3 call (Q01) + external review (Q02) remain his.
+- **NOT proven (= the full build, not freeze risks):** D1 real process isolation, D3 storage-cred, D4 attestation-enforcement, C4 terminal audit, sre#4 backoff.
+
+---
+
 ## 2026-06-01 — Spike core: cross-axis composition-on-Go — C5 + crash recovery validated; the frozen wire SUFFICES
 
 The spike's centerpiece, end-to-end ([ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md) §5), on `phase-1-composition`. `core/composition` drives the real pipeline (catalog `get-table` → format `overwrite` → catalog `commit-table`) through the Go enforcing gateway, a manifest per plugin, against Go providers honoring the frozen RPCs + idempotency contract.
