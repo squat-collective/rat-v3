@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # contracts-check.sh — PreToolUse hook for git commit
 #
-# Runs `make check` (buf lint, fast — seconds) only when contracts/proto files
-# are staged. Costs nothing when no proto files are in the commit.
+# Two guards, both cheap:
+#   1. Block direct commits to `main` (the sealed-state line; see git-branching.md).
+#   2. Run `make check` (buf lint, fast) only when contracts/proto files are staged.
+# Costs effectively nothing on a normal commit on a working branch.
 #
 # Exit codes (per Claude Code hook spec):
 #   0  — no objection; proceed normally
@@ -12,6 +14,19 @@
 # Doc: https://code.claude.com/docs/en/hooks-guide.md
 
 set -euo pipefail
+
+# ── guard: never commit directly to main ─────────────────────────────────────
+# main is the sealed-state line (see .claude/rules/git-branching.md). Active work
+# lives on phase-N / phase-N/<slug> branches. Block direct commits to main.
+CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+if [[ "$CURRENT_BRANCH" == "main" ]]; then
+  echo "ERROR: You are on 'main'. Direct commits to main are not allowed." >&2
+  echo "  main only receives phase-seal merges. For active work, use a branch:" >&2
+  echo "    git checkout phase-1                 # the integration branch, or" >&2
+  echo "    git checkout -b phase-1/<slug>       # a new topic branch" >&2
+  echo "  See .claude/rules/git-branching.md" >&2
+  exit 2
+fi
 
 # ── guard: only act when contracts/proto files are staged ─────────────────────
 # Pure shell, no containers. If nothing in contracts/proto is staged, exit 0
