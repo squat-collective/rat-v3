@@ -16,9 +16,9 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
-## 2026-06-01 — Q02 external-review reviewer brief drafted
+## 2026-06-01 — Q02 external-review kit drafted (reviewer brief + outreach note)
 
-[`reviews/Q02-external-review-brief.md`](../reviews/Q02-external-review-brief.md), on `phase-1-q02-brief`. The ask for the owed **Q02 external peer review** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) / [reviews/09](../reviews/09-phase-1-gate-review.md) dissent: zero external human review so far). It frames the premise, states what internal review already covered (so reviewers don't re-derive it), lists the load-bearing questions we most want challenged (premise / contracts-freeze / data-plane / operability / ecosystem / prior-art), the already-acknowledged residuals, a reading order, and a findings template + severity scale. **Next on Q02: recruit reviewers** (OSGi/K8s/VSCode/Temporal-class practitioners) and run it; freeze stays local/unpushed until then.
+[`reviews/Q02-external-review-brief.md`](../reviews/Q02-external-review-brief.md) + [`reviews/Q02-outreach-note.md`](../reviews/Q02-outreach-note.md), on `phase-1-q02-brief` / `phase-1-q02-outreach`. The recruiting kit for the owed **Q02 external peer review** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) / [reviews/09](../reviews/09-phase-1-gate-review.md) dissent: zero external human review so far). The **brief** frames the premise, states what internal review already covered (so reviewers don't re-derive it), lists the load-bearing questions we most want challenged (premise / contracts-freeze / data-plane / operability / ecosystem / prior-art), the already-acknowledged residuals, a reading order, and a findings template + severity scale. The **outreach note** is the short, personalize-and-send recruiting message. **Next on Q02: recruit reviewers** (OSGi/K8s/VSCode/Temporal-class practitioners) and run it; freeze stays local/unpushed until then.
 
 ---
 
