@@ -16,6 +16,19 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — 🎉 D1 COMPLETE: the podman deployment-runtime — full I9 profile, kernel-enforced
+
+`core/deploymentruntime` + `core/testplugins/probeplugin` ([ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md) §4), on `phase-1-podman-runtime`. The second deployment-runtime reference and the one that **closes D1**: where `local-process` honors only the process-level I9 subset, **`Podman` ENFORCES the full profile at the kernel level** — closing the [reviews/08](../reviews/08-post-freeze-board-review.md) D1 honesty gap (the v1 refs *self-attest* `read_only_root_fs` while enforcing nothing). The board's literal exit criterion — "a real *enforcing* deployment-runtime (podman, not dry-run) passes a full-profile vector" — is met.
+
+- **`podman.go`:** `Launch` maps the `IsolationProfile` 1:1 onto podman's real enforcement surface — `--user` (non-root), `--cap-drop=ALL`, `--security-opt=no-new-privileges`, `--read-only`, default/named seccomp, and `--network=bridge` to force a **private netns** (never inherit a host-network default — which would defeat metadata isolation *and* break port publishing; learned by dogfooding the nested env). Publishes the in-container port to an ephemeral host port; `Healthcheck` = running + endpoint-accepts + a **structured JSON isolation receipt** (CONTRACT.md shape — the receipt the honesty note wanted, not a free-form string); `Terminate` = `podman rm -f`.
+- **`isolation.go`:** extracted the shared I9 trust gate (`checkI9Minimum`, the Go twin of the Python refs' `check_spec`) + the receipt types; `localprocess.go` now calls it.
+- **`testplugins/probeplugin`:** an in-container prober that self-reports its sandbox (uid, CapEff, NoNewPrivs, root-writable, metadata-reachable), so the test proves the **kernel** enforced the profile — not merely that the runtime requested it. Static (CGO_ENABLED=0), runs `FROM scratch`.
+- **`testimage/Dockerfile` + `make core-test-podman`:** a privileged go+podman image driving a **real nested `podman run`** under the full profile. Kept OUT of `core-test` (no podman in the plain go image → the live test SKIPs there).
+- **Live proof** (`make core-test-podman` → `TestPodmanFullProfile` PASS): `uid=1000`, `CapEff=0000000000000000`, `NoNewPrivs=1`, root not writable (EROFS), `169.254.169.254` unreachable, `seccomp=RuntimeDefault`. `make core-test` green (live test skips; I9-gate + empty-image tests run); `make breaking` green (contracts/ untouched). Commit `4f3854e`.
+- **Next:** the real process boundary now unblocks **C5 against real providers** + **D3** storage-cred isolation; the structured receipt seeds **D4** (conformance attestation). Remaining Phase-1 DoD: C4 terminal audit, C3 idle-timeout, D2 real bulk leg, C1 real backends, sre#4.
+
+---
+
 ## 2026-06-01 — D1 steps 3–4: composition through launched providers — the cross-axis pipeline over isolated processes
 
 `core/composition` + `core/testplugins` ([ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md)), on `phase-1-composition-launched`. The in-test `fakeCatalog`/`fakeFormat` are **promoted to standalone binaries**, and the full cross-axis pipeline is **re-run through the supervisor** — so catalog + format now serve from **launched, isolated child processes**, not in-process bufconn fakes.

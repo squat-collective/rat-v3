@@ -27,7 +27,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-check compile-sdks conformance composition validate-manifests bench core-test breaking help
+.PHONY: check verify lint build gen-sdks gen-check compile-sdks conformance composition validate-manifests bench core-test core-test-podman breaking help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -82,6 +82,19 @@ core-test: ## Build + vet + test the spike core (core/) in a container
 	@$(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e GOTOOLCHAIN=local -e GOSUMDB=off -e GOFLAGS=-mod=mod \
 	  -v "$(CURDIR):/work:Z" -v rat-gocache:/go/pkg/mod -w /work/core \
 	  $(GO_IMAGE) sh -c 'go build ./... && go vet ./... && go test ./...'
+
+## --- podman deployment-runtime LIVE full-profile proof (D1 / ADR-016 §4) ------
+# Drives a REAL `podman run` (nested) under the full I9 profile and asserts the kernel
+# enforced every control. Needs Go + podman together (the testimage/) and a privileged
+# container for nested podman; kept OUT of `core-test`/`verify` (the plain go image has
+# no podman, so the test SKIPs there). Run this explicitly to close D1.
+core-test-podman: ## Live full-profile proof for the podman deployment-runtime (privileged; nested podman)
+	@echo ">> podman runtime: live full-profile launch (nested, privileged)"
+	@$(RUNTIME) build -t rat-go-podman:test core/deploymentruntime/testimage
+	@$(RUNTIME) run --rm --privileged -e HOME=/tmp -e GOTOOLCHAIN=local -e GOSUMDB=off \
+	  -e GOFLAGS=-mod=mod -e GOPATH=/go -e CGO_ENABLED=0 -e RAT_PODMAN_TEST=1 \
+	  -v "$(CURDIR):/work:Z" -v rat-gocache:/go/pkg/mod -w /work/core \
+	  rat-go-podman:test sh -c 'go test ./deploymentruntime/ -run Podman -v -count=1'
 
 breaking: ## Fail on a breaking proto change vs the sealed baseline (branch main)
 	@echo ">> buf breaking vs main"
