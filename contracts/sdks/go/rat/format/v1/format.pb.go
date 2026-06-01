@@ -159,9 +159,14 @@ type AppendRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Table *v1.TableRef           `protobuf:"bytes,2,opt,name=table,proto3" json:"table,omitempty"`
 	// Source Arrow stream the format pulls rows from.
-	Source        *v1.ArrowStream `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Source *v1.ArrowStream `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+	// Stable id for THIS logical write (e.g. the run id). Makes the write idempotent
+	// under an at-least-once retry (C1, ADR-012): a repeated key that already committed
+	// is a no-op returning the original WriteResult with already_applied=true. Empty ==
+	// not idempotent. The effect-leg twin of catalog MergeBranch/CommitTable idempotency.
+	IdempotencyKey string `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *AppendRequest) Reset() {
@@ -206,6 +211,13 @@ func (x *AppendRequest) GetSource() *v1.ArrowStream {
 		return x.Source
 	}
 	return nil
+}
+
+func (x *AppendRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
 }
 
 type AppendResponse struct {
@@ -257,9 +269,12 @@ type MergeRequest struct {
 	Table  *v1.TableRef           `protobuf:"bytes,2,opt,name=table,proto3" json:"table,omitempty"`
 	Source *v1.ArrowStream        `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
 	// The key columns to match existing rows on.
-	MergeKeys     []string `protobuf:"bytes,4,rep,name=merge_keys,json=mergeKeys,proto3" json:"merge_keys,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	MergeKeys []string `protobuf:"bytes,4,rep,name=merge_keys,json=mergeKeys,proto3" json:"merge_keys,omitempty"`
+	// Idempotent-write key — see AppendRequest.idempotency_key (C1, ADR-012). Empty ==
+	// not idempotent.
+	IdempotencyKey string `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *MergeRequest) Reset() {
@@ -313,6 +328,13 @@ func (x *MergeRequest) GetMergeKeys() []string {
 	return nil
 }
 
+func (x *MergeRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
 type MergeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Result        *v1.WriteResult        `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
@@ -358,11 +380,14 @@ func (x *MergeResponse) GetResult() *v1.WriteResult {
 }
 
 type OverwriteRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Table         *v1.TableRef           `protobuf:"bytes,2,opt,name=table,proto3" json:"table,omitempty"`
-	Source        *v1.ArrowStream        `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Table  *v1.TableRef           `protobuf:"bytes,2,opt,name=table,proto3" json:"table,omitempty"`
+	Source *v1.ArrowStream        `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+	// Idempotent-write key — see AppendRequest.idempotency_key (C1, ADR-012). Empty ==
+	// not idempotent.
+	IdempotencyKey string `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *OverwriteRequest) Reset() {
@@ -407,6 +432,13 @@ func (x *OverwriteRequest) GetSource() *v1.ArrowStream {
 		return x.Source
 	}
 	return nil
+}
+
+func (x *OverwriteRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
 }
 
 type OverwriteResponse struct {
@@ -551,22 +583,25 @@ const file_rat_format_v1_format_proto_rawDesc = "" +
 	"\acolumns\x18\x03 \x03(\tR\acolumns\x12\x1c\n" +
 	"\tpredicate\x18\x04 \x01(\tR\tpredicateJ\x04\b\x01\x10\x02\"E\n" +
 	"\x0fResolveResponse\x122\n" +
-	"\x06stream\x18\x01 \x01(\v2\x1a.rat.common.v1.ArrowStreamR\x06stream\"x\n" +
+	"\x06stream\x18\x01 \x01(\v2\x1a.rat.common.v1.ArrowStreamR\x06stream\"\xa1\x01\n" +
 	"\rAppendRequest\x12-\n" +
 	"\x05table\x18\x02 \x01(\v2\x17.rat.common.v1.TableRefR\x05table\x122\n" +
-	"\x06source\x18\x03 \x01(\v2\x1a.rat.common.v1.ArrowStreamR\x06sourceJ\x04\b\x01\x10\x02\"D\n" +
+	"\x06source\x18\x03 \x01(\v2\x1a.rat.common.v1.ArrowStreamR\x06source\x12'\n" +
+	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKeyJ\x04\b\x01\x10\x02\"D\n" +
 	"\x0eAppendResponse\x122\n" +
-	"\x06result\x18\x01 \x01(\v2\x1a.rat.common.v1.WriteResultR\x06result\"\x96\x01\n" +
+	"\x06result\x18\x01 \x01(\v2\x1a.rat.common.v1.WriteResultR\x06result\"\xbf\x01\n" +
 	"\fMergeRequest\x12-\n" +
 	"\x05table\x18\x02 \x01(\v2\x17.rat.common.v1.TableRefR\x05table\x122\n" +
 	"\x06source\x18\x03 \x01(\v2\x1a.rat.common.v1.ArrowStreamR\x06source\x12\x1d\n" +
 	"\n" +
-	"merge_keys\x18\x04 \x03(\tR\tmergeKeysJ\x04\b\x01\x10\x02\"C\n" +
+	"merge_keys\x18\x04 \x03(\tR\tmergeKeys\x12'\n" +
+	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKeyJ\x04\b\x01\x10\x02\"C\n" +
 	"\rMergeResponse\x122\n" +
-	"\x06result\x18\x01 \x01(\v2\x1a.rat.common.v1.WriteResultR\x06result\"{\n" +
+	"\x06result\x18\x01 \x01(\v2\x1a.rat.common.v1.WriteResultR\x06result\"\xa4\x01\n" +
 	"\x10OverwriteRequest\x12-\n" +
 	"\x05table\x18\x02 \x01(\v2\x17.rat.common.v1.TableRefR\x05table\x122\n" +
-	"\x06source\x18\x03 \x01(\v2\x1a.rat.common.v1.ArrowStreamR\x06sourceJ\x04\b\x01\x10\x02\"G\n" +
+	"\x06source\x18\x03 \x01(\v2\x1a.rat.common.v1.ArrowStreamR\x06source\x12'\n" +
+	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKeyJ\x04\b\x01\x10\x02\"G\n" +
 	"\x11OverwriteResponse\x122\n" +
 	"\x06result\x18\x01 \x01(\v2\x1a.rat.common.v1.WriteResultR\x06result\"F\n" +
 	"\x0fMaintainRequest\x12-\n" +

@@ -38,10 +38,12 @@ merge simply does not `provide` `merge`.
 - **`Resolve(table, columns, predicate)` → `{stream: ArrowStream}`** — returns a
   **producer-hosted** `ArrowStream` the caller pulls matching record batches from
   (Flight `DoGet`). `columns`/`predicate` are projection/pushdown hints.
-- **`Append`/`Merge`/`Overwrite`(table, source[, merge_keys])` → `{result: WriteResult}`**
-  — the caller hands a **source `ArrowStream`** (caller-hosted) the format pulls rows
-  from (Flight `DoGet` against the caller's endpoint), and writes them. `Merge` requires
-  non-empty `merge_keys` → else `INVALID_ARGUMENT`.
+- **`Append`/`Merge`/`Overwrite`(table, source, idempotency_key[, merge_keys])` →
+  `{result: WriteResult}`** — the caller hands a **source `ArrowStream`** (caller-hosted)
+  the format pulls rows from (Flight `DoGet` against the caller's endpoint), and writes
+  them. `Merge` requires non-empty `merge_keys` → else `INVALID_ARGUMENT`. Each write
+  carries an `idempotency_key` (C1) and the `source` may declare `expected_rows`/
+  `expected_batches` (C2) — see **Crash-safety** below.
 - **`Maintain(table)` → `{result: WriteResult}`** — idempotent upkeep; `rows_affected`
   may be absent (unknown).
 
@@ -56,6 +58,24 @@ OUT (Resolve). Both are out-of-band `ArrowStream`s, never through the control pl
   uses proto3 `optional` for presence (absent == unknown, distinct from 0).
 - C6: every capability has a golden-data vector; "capability declared" is meaningless
   without "capability conformed" (reviews/02 Stage5).
+
+## Conformance obligations — Crash-safety ([ADR-012](../../../../../docs/architecture/adrs/012-crash-safety-additive-fields-v1.1.md), `rat/1.1`)
+
+The at-least-once write path gets two additive guards (field shapes pinned at `rat/1.1`;
+full per-axis vectors land in Phase 1 — demonstrated end-to-end now in
+[examples/composition](../../../../../examples/composition)):
+
+- **C1 — idempotent writes.** A write submitted with a non-empty `idempotency_key` that
+  already committed MUST be a **no-op returning the original `WriteResult` with
+  `already_applied=true`** — never a second write. This is the effect-leg twin of catalog
+  `MergeBranch`/`CommitTable` idempotency; it makes a reconciler retry of an `append`
+  safe. Empty key == not idempotent.
+- **C2 — stream completeness.** When the `source` `ArrowStream` declares `expected_rows`
+  (or `expected_batches`), the format MUST verify it received exactly that many before
+  committing; a stream that ends early (a producer that died mid-send) MUST **fail the
+  write**, never commit a partial dataset or return a complete-looking `rows_affected`.
+  Absent == the producer could not pre-declare; fall back to the transport's clean
+  end-of-stream.
 
 ## Cross-cutting (every axis)
 

@@ -51,13 +51,17 @@ class FullRefreshStrategy:
         resp = self._invoke(CAP_GET_TABLE, catalog_pb2.GetTableRequest(identifier=identifier))
         return resp.table
 
-    def apply(self, source_id: str, target_id: str, options: bytes):
+    def apply(self, source_id: str, target_id: str, options: bytes, run_id: str = ""):
         # options is UTF-8 JSON validated against the strategy's metadata_schema
         # (manifest) — here just {"sql": "..."} (strategy.proto API-12 encoding pin).
         spec = json.loads(options.decode("utf-8")) if options else {}
         sql = spec.get("sql")
         if not sql:
             raise ValueError("strategy options must carry a non-empty 'sql'")
+        # idempotency_key for the WHOLE run (ApplyRequest.idempotency_key, arriving here
+        # as run_id) — threaded to BOTH the format write and the catalog commit so a
+        # re-applied run is a no-op end-to-end under an at-least-once scheduler (C1, ADR-012).
+        idem = run_id or f"{source_id}->{target_id}"
 
         source_ref = self._get_table(source_id)
         # The pipeline OWNS its output: register the target table in the catalog
@@ -71,15 +75,16 @@ class FullRefreshStrategy:
         # and streams the transformed result back out-of-band as Arrow.
         q = self._invoke(CAP_QUERY, engine_pb2.QueryRequest(sql=sql, tables=[source_ref]))
 
-        # format.Overwrite pulls that result stream and replaces the target.
+        # format.Overwrite pulls that result stream and replaces the target. The
+        # idempotency_key makes a repeated write a no-op (already_applied) — C1.
         w = self._invoke(
-            CAP_OVERWRITE, format_pb2.OverwriteRequest(table=target_ref, source=q.stream)
+            CAP_OVERWRITE,
+            format_pb2.OverwriteRequest(table=target_ref, source=q.stream, idempotency_key=idem),
         )
 
         # Commit-linkage: record WHICH snapshot the write produced, so the catalog
-        # learns what format.Write landed (ADR-010). idempotency_key makes a reconciler
-        # retry of the same logical run a no-op.
+        # learns what format.Write landed (ADR-010), under the same idempotency key.
         self._invoke(CAP_COMMIT, catalog_pb2.CommitTableRequest(
             identifier=target_id, branch=target_ref.branch,
-            snapshot_id=w.result.snapshot_id, idempotency_key=f"{source_id}->{target_id}"))
+            snapshot_id=w.result.snapshot_id, idempotency_key=idem))
         return w.result

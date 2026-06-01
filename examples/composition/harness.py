@@ -88,7 +88,8 @@ class CompFormatServicer(format_pb2_grpc.FormatServiceServicer):
     def __init__(self, store):
         self.store = store
         self.flight = FlightHost()
-        self._versions = {}  # identifier -> write counter; mints a per-write snapshot id
+        self._versions = {}    # identifier -> write counter; mints a per-write snapshot id
+        self._committed = {}   # idempotency_key -> WriteResult (C1 effect-leg dedup ledger)
 
     def close(self):
         self.flight.stop()
@@ -100,29 +101,53 @@ class CompFormatServicer(format_pb2_grpc.FormatServiceServicer):
         self._versions[identifier] = self._versions.get(identifier, 0) + 1
         return f"{identifier}@v{self._versions[identifier]}"
 
+    def _idem(self, key):
+        # C1 (ADR-012): a write with a key that already committed is a no-op returning
+        # the ORIGINAL result with already_applied=true — never a second write.
+        if key and key in self._committed:
+            r = data_pb2.WriteResult()
+            r.CopyFrom(self._committed[key])
+            r.already_applied = True
+            return r
+        return None
+
+    def _commit(self, key, result):
+        if key:
+            self._committed[key] = result
+        return result
+
     def Resolve(self, request, context):
         rows = self.store.scan(request.table.identifier)
         table = pa.Table.from_pylist(rows) if rows else pa.table({})
         return format_pb2.ResolveResponse(stream=self.flight.put(table))
 
     def Append(self, request, context):
+        dup = self._idem(request.idempotency_key)
+        if dup is not None:
+            return format_pb2.AppendResponse(result=dup)
         t = flight_pull(request.source)
         n = self.store.append(request.table.identifier, t.to_pylist() if t else [])
-        return format_pb2.AppendResponse(result=data_pb2.WriteResult(
-            rows_affected=n, snapshot_id=self._snapshot(request.table.identifier)))
+        return format_pb2.AppendResponse(result=self._commit(request.idempotency_key,
+            data_pb2.WriteResult(rows_affected=n, snapshot_id=self._snapshot(request.table.identifier))))
 
     def Overwrite(self, request, context):
+        dup = self._idem(request.idempotency_key)
+        if dup is not None:
+            return format_pb2.OverwriteResponse(result=dup)
         t = flight_pull(request.source)
         n = self.store.overwrite(request.table.identifier, t.to_pylist() if t else [])
-        return format_pb2.OverwriteResponse(result=data_pb2.WriteResult(
-            rows_affected=n, snapshot_id=self._snapshot(request.table.identifier)))
+        return format_pb2.OverwriteResponse(result=self._commit(request.idempotency_key,
+            data_pb2.WriteResult(rows_affected=n, snapshot_id=self._snapshot(request.table.identifier))))
 
     def Merge(self, request, context):
+        dup = self._idem(request.idempotency_key)
+        if dup is not None:
+            return format_pb2.MergeResponse(result=dup)
         t = flight_pull(request.source)
         n = self.store.merge(request.table.identifier, list(request.merge_keys),
                              t.to_pylist() if t else [])
-        return format_pb2.MergeResponse(result=data_pb2.WriteResult(
-            rows_affected=n, snapshot_id=self._snapshot(request.table.identifier)))
+        return format_pb2.MergeResponse(result=self._commit(request.idempotency_key,
+            data_pb2.WriteResult(rows_affected=n, snapshot_id=self._snapshot(request.table.identifier))))
 
 
 class CompCatalogServicer(catalog_pb2_grpc.CatalogServiceServicer):
@@ -188,9 +213,14 @@ def build_engine(impl, tmp):
                      "Engine")
     backend = Engine()
     if impl == "duckdb-py":
-        bind = lambda name, table: backend.con.register(name, table)
-    else:  # datafusion-py
-        bind = lambda name, table: backend.ctx.register_record_batches(name, [table.to_batches()])
+        bind = lambda name, table: backend.con.register(name, table)  # register replaces
+    else:  # datafusion-py — deregister-then-register so a re-bind (C1 retry) is idempotent
+        def bind(name, table):
+            try:
+                backend.ctx.deregister_table(name)
+            except Exception:  # noqa — not registered yet
+                pass
+            backend.ctx.register_record_batches(name, [table.to_batches()])
     return backend, bind
 
 
@@ -209,7 +239,7 @@ def run_combo(combo, v, tmp):
     gw.register(format_pb2_grpc.FormatServiceStub(fmt_ch), _service_desc(format_pb2, "FormatService"))
     gw.register(catalog_pb2_grpc.CatalogServiceStub(cat_ch), _service_desc(catalog_pb2, "CatalogService"))
 
-    backend, bind = build_engine(combo["engine"], tmp)
+    backend, bind = build_engine(combo["engine"], tmp)  # bind is idempotent (C1 replay re-binds)
     eng = CompositionEngineServicer(backend, bind, gw.invoker_for(["rat://format/v1/scan"]))
     eng_srv, eng_ch = _serve(engine_pb2_grpc.add_EngineServiceServicer_to_server, eng)
     gw.register(engine_pb2_grpc.EngineServiceStub(eng_ch), _service_desc(engine_pb2, "EngineService"))
@@ -228,7 +258,15 @@ def run_combo(combo, v, tmp):
         #     closes entirely on the frozen surface, no out-of-band poking. ---
         from strategy_store import FullRefreshStrategy, REQUIRES as FR_REQUIRES
         strat = FullRefreshStrategy(gw.invoker_for(list(FR_REQUIRES)))
-        result = strat.apply(src_id, tgt_id, json.dumps({"sql": sql}).encode())
+        run_id = f"{combo['name']}-run-1"
+        result = strat.apply(src_id, tgt_id, json.dumps({"sql": sql}).encode(), run_id=run_id)
+        assert not result.already_applied, "first apply must not report already_applied"
+
+        # --- C1 (ADR-012): a reconciler RETRY of the same run is a no-op. Re-apply with
+        #     the SAME idempotency_key (run_id) and assert the write reports
+        #     already_applied — the effect leg did not write twice. ---
+        replay = strat.apply(src_id, tgt_id, json.dumps({"sql": sql}).encode(), run_id=run_id)
+        assert replay.already_applied, "replay with the same run_id must be already_applied (C1)"
 
         # --- prove the loop closed ON THE WIRE: the catalog now resolves the target
         #     the strategy created (RegisterTable) — the harness never seeded it. ---
@@ -297,6 +335,23 @@ def run_scd2(sv, tmp):
             s.stop(None)
 
 
+def check_c2_truncation():
+    """C2 (ADR-012): a consumer MUST fail the write when an ArrowStream delivers fewer
+    rows than the producer declared (a truncated / aborted transfer). Host 4 rows but
+    DECLARE 9 — simulating a producer that died after 4 — and assert flight_pull raises
+    instead of silently committing the partial dataset."""
+    host = FlightHost()
+    try:
+        stream = host.put(pa.Table.from_pylist([{"id": i} for i in range(4)]), declare_rows=9)
+        try:
+            flight_pull(stream)
+            return False, "consumer accepted a truncated stream (expected a failure)"
+        except ValueError as e:
+            return ("truncated" in str(e)), str(e)
+    finally:
+        host.stop()
+
+
 def main():
     with open(VECTORS, encoding="utf-8") as f:
         v = json.load(f)
@@ -351,9 +406,17 @@ def main():
         print(f"  strategy reference 2 — scd2-py: ERROR {type(e).__name__}: {e}")
     ok = ok and scd2_ok
 
+    # --- C2 (ADR-012): truncated-stream detection ---
+    c2_ok, c2_msg = check_c2_truncation()
+    print()
+    print("  C2 truncated-stream detection (declare 9 rows, deliver 4):",
+          "OK ✅ — consumer failed the write" if c2_ok else f"FAILED ❌ — {c2_msg}")
+    ok = ok and c2_ok
+
     print()
     if ok:
-        print(">> COMPOSITION CONFORMANT ✅ — cross-axis matrix + both strategy references pass")
+        print(">> COMPOSITION CONFORMANT ✅ — cross-axis matrix + both strategy references + "
+              "C1 idempotent-replay + C2 truncation-detection pass")
         sys.exit(0)
     print(">> COMPOSITION FAILED ❌")
     sys.exit(1)

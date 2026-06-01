@@ -25,7 +25,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/strategy/v1/strategy.proto.
  */
 export const file_rat_strategy_v1_strategy: GenFile = /*@__PURE__*/
-  fileDesc("Ch5yYXQvc3RyYXRlZ3kvdjEvc3RyYXRlZ3kucHJvdG8SD3JhdC5zdHJhdGVneS52MSJ3CgxBcHBseVJlcXVlc3QSJwoGc291cmNlGAIgASgLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZhInCgZ0YXJnZXQYAyABKAsyFy5yYXQuY29tbW9uLnYxLlRhYmxlUmVmEg8KB29wdGlvbnMYBCABKAxKBAgBEAIiOwoNQXBwbHlSZXNwb25zZRIqCgZyZXN1bHQYASABKAsyGi5yYXQuY29tbW9uLnYxLldyaXRlUmVzdWx0MnYKD1N0cmF0ZWd5U2VydmljZRJjCgVBcHBseRIdLnJhdC5zdHJhdGVneS52MS5BcHBseVJlcXVlc3QaHi5yYXQuc3RyYXRlZ3kudjEuQXBwbHlSZXNwb25zZSIbipciF3JhdDovL3N0cmF0ZWd5L3YxL2FwcGx5QjdaNWdpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9zdHJhdGVneS92MTtzdHJhdGVneXYxYgZwcm90bzM", [file_rat_common_v1_annotations, file_rat_common_v1_data]);
+  fileDesc("Ch5yYXQvc3RyYXRlZ3kvdjEvc3RyYXRlZ3kucHJvdG8SD3JhdC5zdHJhdGVneS52MSKQAQoMQXBwbHlSZXF1ZXN0EicKBnNvdXJjZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYSJwoGdGFyZ2V0GAMgASgLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZhIPCgdvcHRpb25zGAQgASgMEhcKD2lkZW1wb3RlbmN5X2tleRgFIAEoCUoECAEQAiI7Cg1BcHBseVJlc3BvbnNlEioKBnJlc3VsdBgBIAEoCzIaLnJhdC5jb21tb24udjEuV3JpdGVSZXN1bHQydgoPU3RyYXRlZ3lTZXJ2aWNlEmMKBUFwcGx5Eh0ucmF0LnN0cmF0ZWd5LnYxLkFwcGx5UmVxdWVzdBoeLnJhdC5zdHJhdGVneS52MS5BcHBseVJlc3BvbnNlIhuKlyIXcmF0Oi8vc3RyYXRlZ3kvdjEvYXBwbHlCN1o1Z2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3N0cmF0ZWd5L3YxO3N0cmF0ZWd5djFiBnByb3RvMw", [file_rat_common_v1_annotations, file_rat_common_v1_data]);
 
 /**
  * @generated from message rat.strategy.v1.ApplyRequest
@@ -54,6 +54,16 @@ export type ApplyRequest = Message<"rat.strategy.v1.ApplyRequest"> & {
    * @generated from field: bytes options = 4;
    */
   options: Uint8Array;
+
+  /**
+   * Stable id for THIS logical run (e.g. the run id). The strategy threads it down to
+   * its format writes (format.*Request.idempotency_key) so a re-applied run is
+   * idempotent END-TO-END under an at-least-once scheduler (C1, ADR-012). Empty == not
+   * idempotent.
+   *
+   * @generated from field: string idempotency_key = 5;
+   */
+  idempotencyKey: string;
 };
 
 /**

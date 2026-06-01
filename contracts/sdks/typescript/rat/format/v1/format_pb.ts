@@ -40,7 +40,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/format/v1/format.proto.
  */
 export const file_rat_format_v1_format: GenFile = /*@__PURE__*/
-  fileDesc("ChpyYXQvZm9ybWF0L3YxL2Zvcm1hdC5wcm90bxINcmF0LmZvcm1hdC52MSJiCg5SZXNvbHZlUmVxdWVzdBImCgV0YWJsZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYSDwoHY29sdW1ucxgDIAMoCRIRCglwcmVkaWNhdGUYBCABKAlKBAgBEAIiPQoPUmVzb2x2ZVJlc3BvbnNlEioKBnN0cmVhbRgBIAEoCzIaLnJhdC5jb21tb24udjEuQXJyb3dTdHJlYW0iaQoNQXBwZW5kUmVxdWVzdBImCgV0YWJsZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYSKgoGc291cmNlGAMgASgLMhoucmF0LmNvbW1vbi52MS5BcnJvd1N0cmVhbUoECAEQAiI8Cg5BcHBlbmRSZXNwb25zZRIqCgZyZXN1bHQYASABKAsyGi5yYXQuY29tbW9uLnYxLldyaXRlUmVzdWx0InwKDE1lcmdlUmVxdWVzdBImCgV0YWJsZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYSKgoGc291cmNlGAMgASgLMhoucmF0LmNvbW1vbi52MS5BcnJvd1N0cmVhbRISCgptZXJnZV9rZXlzGAQgAygJSgQIARACIjsKDU1lcmdlUmVzcG9uc2USKgoGcmVzdWx0GAEgASgLMhoucmF0LmNvbW1vbi52MS5Xcml0ZVJlc3VsdCJsChBPdmVyd3JpdGVSZXF1ZXN0EiYKBXRhYmxlGAIgASgLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZhIqCgZzb3VyY2UYAyABKAsyGi5yYXQuY29tbW9uLnYxLkFycm93U3RyZWFtSgQIARACIj8KEU92ZXJ3cml0ZVJlc3BvbnNlEioKBnJlc3VsdBgBIAEoCzIaLnJhdC5jb21tb24udjEuV3JpdGVSZXN1bHQiPwoPTWFpbnRhaW5SZXF1ZXN0EiYKBXRhYmxlGAIgASgLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZkoECAEQAiI+ChBNYWludGFpblJlc3BvbnNlEioKBnJlc3VsdBgBIAEoCzIaLnJhdC5jb21tb24udjEuV3JpdGVSZXN1bHQyjwQKDUZvcm1hdFNlcnZpY2USYgoHUmVzb2x2ZRIdLnJhdC5mb3JtYXQudjEuUmVzb2x2ZVJlcXVlc3QaHi5yYXQuZm9ybWF0LnYxLlJlc29sdmVSZXNwb25zZSIYipciFHJhdDovL2Zvcm1hdC92MS9zY2FuEmEKBkFwcGVuZBIcLnJhdC5mb3JtYXQudjEuQXBwZW5kUmVxdWVzdBodLnJhdC5mb3JtYXQudjEuQXBwZW5kUmVzcG9uc2UiGoqXIhZyYXQ6Ly9mb3JtYXQvdjEvYXBwZW5kEl0KBU1lcmdlEhsucmF0LmZvcm1hdC52MS5NZXJnZVJlcXVlc3QaHC5yYXQuZm9ybWF0LnYxLk1lcmdlUmVzcG9uc2UiGYqXIhVyYXQ6Ly9mb3JtYXQvdjEvbWVyZ2USbQoJT3ZlcndyaXRlEh8ucmF0LmZvcm1hdC52MS5PdmVyd3JpdGVSZXF1ZXN0GiAucmF0LmZvcm1hdC52MS5PdmVyd3JpdGVSZXNwb25zZSIdipciGXJhdDovL2Zvcm1hdC92MS9vdmVyd3JpdGUSaQoITWFpbnRhaW4SHi5yYXQuZm9ybWF0LnYxLk1haW50YWluUmVxdWVzdBofLnJhdC5mb3JtYXQudjEuTWFpbnRhaW5SZXNwb25zZSIcipciGHJhdDovL2Zvcm1hdC92MS9tYWludGFpbkIzWjFnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvZm9ybWF0L3YxO2Zvcm1hdHYxYgZwcm90bzM", [file_rat_common_v1_annotations, file_rat_common_v1_data]);
+  fileDesc("ChpyYXQvZm9ybWF0L3YxL2Zvcm1hdC5wcm90bxINcmF0LmZvcm1hdC52MSJiCg5SZXNvbHZlUmVxdWVzdBImCgV0YWJsZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYSDwoHY29sdW1ucxgDIAMoCRIRCglwcmVkaWNhdGUYBCABKAlKBAgBEAIiPQoPUmVzb2x2ZVJlc3BvbnNlEioKBnN0cmVhbRgBIAEoCzIaLnJhdC5jb21tb24udjEuQXJyb3dTdHJlYW0iggEKDUFwcGVuZFJlcXVlc3QSJgoFdGFibGUYAiABKAsyFy5yYXQuY29tbW9uLnYxLlRhYmxlUmVmEioKBnNvdXJjZRgDIAEoCzIaLnJhdC5jb21tb24udjEuQXJyb3dTdHJlYW0SFwoPaWRlbXBvdGVuY3lfa2V5GAQgASgJSgQIARACIjwKDkFwcGVuZFJlc3BvbnNlEioKBnJlc3VsdBgBIAEoCzIaLnJhdC5jb21tb24udjEuV3JpdGVSZXN1bHQilQEKDE1lcmdlUmVxdWVzdBImCgV0YWJsZRgCIAEoCzIXLnJhdC5jb21tb24udjEuVGFibGVSZWYSKgoGc291cmNlGAMgASgLMhoucmF0LmNvbW1vbi52MS5BcnJvd1N0cmVhbRISCgptZXJnZV9rZXlzGAQgAygJEhcKD2lkZW1wb3RlbmN5X2tleRgFIAEoCUoECAEQAiI7Cg1NZXJnZVJlc3BvbnNlEioKBnJlc3VsdBgBIAEoCzIaLnJhdC5jb21tb24udjEuV3JpdGVSZXN1bHQihQEKEE92ZXJ3cml0ZVJlcXVlc3QSJgoFdGFibGUYAiABKAsyFy5yYXQuY29tbW9uLnYxLlRhYmxlUmVmEioKBnNvdXJjZRgDIAEoCzIaLnJhdC5jb21tb24udjEuQXJyb3dTdHJlYW0SFwoPaWRlbXBvdGVuY3lfa2V5GAQgASgJSgQIARACIj8KEU92ZXJ3cml0ZVJlc3BvbnNlEioKBnJlc3VsdBgBIAEoCzIaLnJhdC5jb21tb24udjEuV3JpdGVSZXN1bHQiPwoPTWFpbnRhaW5SZXF1ZXN0EiYKBXRhYmxlGAIgASgLMhcucmF0LmNvbW1vbi52MS5UYWJsZVJlZkoECAEQAiI+ChBNYWludGFpblJlc3BvbnNlEioKBnJlc3VsdBgBIAEoCzIaLnJhdC5jb21tb24udjEuV3JpdGVSZXN1bHQyjwQKDUZvcm1hdFNlcnZpY2USYgoHUmVzb2x2ZRIdLnJhdC5mb3JtYXQudjEuUmVzb2x2ZVJlcXVlc3QaHi5yYXQuZm9ybWF0LnYxLlJlc29sdmVSZXNwb25zZSIYipciFHJhdDovL2Zvcm1hdC92MS9zY2FuEmEKBkFwcGVuZBIcLnJhdC5mb3JtYXQudjEuQXBwZW5kUmVxdWVzdBodLnJhdC5mb3JtYXQudjEuQXBwZW5kUmVzcG9uc2UiGoqXIhZyYXQ6Ly9mb3JtYXQvdjEvYXBwZW5kEl0KBU1lcmdlEhsucmF0LmZvcm1hdC52MS5NZXJnZVJlcXVlc3QaHC5yYXQuZm9ybWF0LnYxLk1lcmdlUmVzcG9uc2UiGYqXIhVyYXQ6Ly9mb3JtYXQvdjEvbWVyZ2USbQoJT3ZlcndyaXRlEh8ucmF0LmZvcm1hdC52MS5PdmVyd3JpdGVSZXF1ZXN0GiAucmF0LmZvcm1hdC52MS5PdmVyd3JpdGVSZXNwb25zZSIdipciGXJhdDovL2Zvcm1hdC92MS9vdmVyd3JpdGUSaQoITWFpbnRhaW4SHi5yYXQuZm9ybWF0LnYxLk1haW50YWluUmVxdWVzdBofLnJhdC5mb3JtYXQudjEuTWFpbnRhaW5SZXNwb25zZSIcipciGHJhdDovL2Zvcm1hdC92MS9tYWludGFpbkIzWjFnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvZm9ybWF0L3YxO2Zvcm1hdHYxYgZwcm90bzM", [file_rat_common_v1_annotations, file_rat_common_v1_data]);
 
 /**
  * @generated from message rat.format.v1.ResolveRequest
@@ -105,6 +105,16 @@ export type AppendRequest = Message<"rat.format.v1.AppendRequest"> & {
    * @generated from field: rat.common.v1.ArrowStream source = 3;
    */
   source?: ArrowStream | undefined;
+
+  /**
+   * Stable id for THIS logical write (e.g. the run id). Makes the write idempotent
+   * under an at-least-once retry (C1, ADR-012): a repeated key that already committed
+   * is a no-op returning the original WriteResult with already_applied=true. Empty ==
+   * not idempotent. The effect-leg twin of catalog MergeBranch/CommitTable idempotency.
+   *
+   * @generated from field: string idempotency_key = 4;
+   */
+  idempotencyKey: string;
 };
 
 /**
@@ -151,6 +161,14 @@ export type MergeRequest = Message<"rat.format.v1.MergeRequest"> & {
    * @generated from field: repeated string merge_keys = 4;
    */
   mergeKeys: string[];
+
+  /**
+   * Idempotent-write key — see AppendRequest.idempotency_key (C1, ADR-012). Empty ==
+   * not idempotent.
+   *
+   * @generated from field: string idempotency_key = 5;
+   */
+  idempotencyKey: string;
 };
 
 /**
@@ -190,6 +208,14 @@ export type OverwriteRequest = Message<"rat.format.v1.OverwriteRequest"> & {
    * @generated from field: rat.common.v1.ArrowStream source = 3;
    */
   source?: ArrowStream | undefined;
+
+  /**
+   * Idempotent-write key — see AppendRequest.idempotency_key (C1, ADR-012). Empty ==
+   * not idempotent.
+   *
+   * @generated from field: string idempotency_key = 4;
+   */
+  idempotencyKey: string;
 };
 
 /**

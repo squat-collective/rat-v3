@@ -80,6 +80,11 @@ message AppendRequest {
   rat.common.v1.TableRef table = 2;
   // Source Arrow stream the format pulls rows from.
   rat.common.v1.ArrowStream source = 3;
+  // Stable id for THIS logical write (e.g. the run id). Makes the write idempotent
+  // under an at-least-once retry (C1, ADR-012): a repeated key that already committed
+  // is a no-op returning the original WriteResult with already_applied=true. Empty ==
+  // not idempotent. The effect-leg twin of catalog MergeBranch/CommitTable idempotency.
+  string idempotency_key = 4;
 }
 
 message AppendResponse {
@@ -92,6 +97,9 @@ message MergeRequest {
   rat.common.v1.ArrowStream source = 3;
   // The key columns to match existing rows on.
   repeated string merge_keys = 4;
+  // Idempotent-write key — see AppendRequest.idempotency_key (C1, ADR-012). Empty ==
+  // not idempotent.
+  string idempotency_key = 5;
 }
 
 message MergeResponse {
@@ -102,6 +110,9 @@ message OverwriteRequest {
   reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
   rat.common.v1.TableRef table = 2;
   rat.common.v1.ArrowStream source = 3;
+  // Idempotent-write key — see AppendRequest.idempotency_key (C1, ADR-012). Empty ==
+  // not idempotent.
+  string idempotency_key = 4;
 }
 
 message OverwriteResponse {

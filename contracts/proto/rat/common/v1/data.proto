@@ -68,6 +68,18 @@ message ArrowStream {
   ArrowTransport transport = 4;
   // Which party hosts `endpoint`. MUST be set so the holder knows host-vs-dial.
   ArrowStreamRole role = 5;
+  // COMPLETENESS (C2, reviews/08 — ADR-012): the total row count the producer
+  // intends to send. proto3 `optional` for presence: ABSENT == the producer cannot
+  // pre-declare (a streaming transform) — the consumer falls back to the transport's
+  // own clean end-of-stream; PRESENT == a hard count the consumer MUST verify before
+  // treating the transfer as complete. A stream that ends early (fewer rows than
+  // declared) signals a TRUNCATED transfer (producer died mid-send): the consumer
+  // MUST fail the write, never commit a partial dataset. Closes the silent-partial-
+  // commit corruption path (a truncated scan looks identical to a clean finish).
+  optional int64 expected_rows = 6;
+  // Companion to expected_rows at Arrow record-batch granularity (same MUST-verify
+  // semantics). A consumer may check either or both; absent == not declared.
+  optional int64 expected_batches = 7;
 }
 
 // Outcome envelope reused by data-plane mutating RPCs.
@@ -83,4 +95,10 @@ message WriteResult {
   // present-nonempty == the version id. Set by a versioned format/table (a snapshot
   // id) or by an engine whose write produced a new table version.
   optional string snapshot_id = 2;
+  // Idempotent-retry signal (C1, reviews/08 — ADR-012): true when this response
+  // reflects a previously-committed write with the same `idempotency_key` (the retry
+  // was a no-op returning the original result), rather than a write applied now.
+  // Mirrors catalog MergeBranchResponse/CommitTableResponse.already_applied — the data
+  // plane has ONE idempotency model across the commit leg and the write leg.
+  bool already_applied = 3;
 }

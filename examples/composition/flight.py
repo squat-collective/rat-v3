@@ -28,16 +28,20 @@ class FlightHost(fl.FlightServerBase):
         self._thread = threading.Thread(target=self.serve, daemon=True)
         self._thread.start()
 
-    def put(self, table: pa.Table) -> data_pb2.ArrowStream:
+    def put(self, table: pa.Table, declare_rows=None) -> data_pb2.ArrowStream:
         ticket = os.urandom(16)
         with self._lock:
             self._tables[ticket] = table
+        # C2 (ADR-012): the producer DECLARES expected_rows so a truncated transfer is
+        # detectable. `declare_rows` overrides the true count only for the truncation
+        # negative test; production always declares the real count.
         return data_pb2.ArrowStream(
             endpoint=self._location,
             ticket=ticket,
             transport=data_pb2.ArrowTransport.ARROW_TRANSPORT_FLIGHT,
             role=data_pb2.ArrowStreamRole.ARROW_STREAM_ROLE_PRODUCER_HOSTED,
             ipc_schema=table.schema.serialize().to_pybytes(),
+            expected_rows=(table.num_rows if declare_rows is None else declare_rows),
         )
 
     def do_get(self, context, ticket):
@@ -56,6 +60,16 @@ def flight_pull(stream: data_pb2.ArrowStream) -> pa.Table:
         return None
     client = fl.connect(stream.endpoint)
     try:
-        return client.do_get(fl.Ticket(stream.ticket)).read_all()
+        table = client.do_get(fl.Ticket(stream.ticket)).read_all()
     finally:
         client.close()
+    # C2 (ADR-012): if the producer declared expected_rows, the consumer MUST verify it
+    # received exactly that many before treating the transfer as complete. A shortfall
+    # means a TRUNCATED stream (producer died mid-send) — fail the write, never commit a
+    # partial dataset (the silent SCD2-history-corruption path the board found).
+    if stream.HasField("expected_rows") and table.num_rows != stream.expected_rows:
+        raise ValueError(
+            f"ArrowStream truncated: received {table.num_rows} rows, producer declared "
+            f"{stream.expected_rows} (C2 — consumer MUST fail the write)"
+        )
+    return table

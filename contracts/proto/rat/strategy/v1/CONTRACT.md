@@ -31,7 +31,7 @@ The strategy never holds a stub, port, or class of any peer plugin.
 
 ## The RPCs
 
-- **`Apply(source, target, options)` → `{result: WriteResult}`** — orchestrate one pipeline run.
+- **`Apply(source, target, options, idempotency_key)` → `{result: WriteResult}`** — orchestrate one pipeline run.
   The strategy resolves `source` (a `TableRef`) and `target` (a `TableRef`) via its required
   capabilities, executes its transform/load logic, and returns a `WriteResult` describing the
   outcome. `options` carries strategy-specific per-run parameters (see CONFORMANCE below).
@@ -88,6 +88,16 @@ calling `rat://catalog/v1/commit-table` after `format.Write`, passing the `Write
 the write returned and a stable `idempotency_key` for the run. This records which snapshot the
 write produced in the catalog (the commit-linkage). A strategy that writes an unversioned format
 (where `WriteResult.snapshot_id` is absent) simply does not commit-link.
+
+### Idempotent runs ([ADR-012](../../../../../docs/architecture/adrs/012-crash-safety-additive-fields-v1.1.md))
+
+`ApplyRequest.idempotency_key` is the run id under an **at-least-once** scheduler. A strategy
+MUST thread it down to its `format.Write` calls (`format.*Request.idempotency_key`) **and** its
+`catalog.commit-table` call, so a re-applied run is a **no-op end-to-end** — the format returns
+`WriteResult.already_applied=true` and the catalog returns `already_applied=true`, and no effect
+leg writes twice. When the strategy consumes a bulk `ArrowStream` (a producer/consumer strategy
+like SCD2), it MUST honor the stream's `expected_rows`/`expected_batches` and fail the run on a
+truncated transfer rather than write a partial result (C2).
 
 ## Cross-cutting (every axis)
 

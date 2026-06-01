@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — Phase 0 close-out (4/4): **`rat/1.1` cut — 🎉 PHASE 0 SEALED** (C1/C2 crash-safety folded in, [ADR-012](../docs/architecture/adrs/012-crash-safety-additive-fields-v1.1.md))
+
+The final close-out item. Folded the two cheap additive crash-safety fields into the seal (while the surface is local/unpublished), then cut `rat/1.1` over the complete Phase-0 contract surface.
+
+- **[ADR-012](../docs/architecture/adrs/012-crash-safety-additive-fields-v1.1.md) — additive crash-safety fields.** **C1** (write-leg idempotency): `idempotency_key` on `format` Append/Overwrite/Merge + `strategy.ApplyRequest`, `already_applied` on `WriteResult` — the data plane now has **one** idempotency model across the commit leg (ADR-010) and the write leg. **C2** (stream completeness): `optional expected_rows`/`expected_batches` on `ArrowStream` — a truncated transfer is detectable; the consumer MUST fail the write, closing the silent SCD2-history-corruption path. Additive (`buf breaking` FILE clean); SDKs regenerated.
+- **Demonstrated end-to-end** in [examples/composition](../examples/composition): the full-refresh strategy threads `idempotency_key` → a reconciler **retry** of every combo is a no-op (`already_applied=true`, no double-write — verified across all 4 combos, incl. the datafusion engine whose bind was made idempotent); producers declare `expected_rows` + consumers verify; a truncation negative (declare 9, deliver 4) fails the write. **`make composition` ✅.** Obligations documented in `format` + `strategy` CONTRACT.md. Per-axis conformance vectors deferred to Phase 1 (the enforcement bucket).
+- **`rat/1.1` cut** over the sealed surface: 18 axis protos + cross-cutting types frozen, catalog commit-linkage (ADR-010), manifest envelope + 18 per-kind schemas (ADR-011), all 18 `CONTRACT.md`, C1/C2 crash-safety (ADR-012). **`make conformance` 32/32 · `make composition` ✅ · `make validate-manifests` 32/32.**
+- **🎉 PHASE 0 COMPLETE.** Next: **Phase 1 (the core)** — the registry + reconciler + event bus + identity/state/API gateways — with the board's remaining crash-safety + enforcement findings (reviews/08 **C3–C5, D1–D5**) as its acceptance criteria.
+
+---
+
 ## 2026-06-01 — Phase 0 close-out (3/4): **the doc tail** (reviews/08 E1/E3/E4/E7)
 
 Cleared the four documentation findings from the board review; the contract surface is now fully documented + internally consistent.

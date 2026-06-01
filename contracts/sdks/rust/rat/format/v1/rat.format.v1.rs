@@ -23,6 +23,12 @@ pub struct AppendRequest {
     /// Source Arrow stream the format pulls rows from.
     #[prost(message, optional, tag="3")]
     pub source: ::core::option::Option<super::super::common::v1::ArrowStream>,
+    /// Stable id for THIS logical write (e.g. the run id). Makes the write idempotent
+    /// under an at-least-once retry (C1, ADR-012): a repeated key that already committed
+    /// is a no-op returning the original WriteResult with already_applied=true. Empty ==
+    /// not idempotent. The effect-leg twin of catalog MergeBranch/CommitTable idempotency.
+    #[prost(string, tag="4")]
+    pub idempotency_key: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AppendResponse {
@@ -38,6 +44,10 @@ pub struct MergeRequest {
     /// The key columns to match existing rows on.
     #[prost(string, repeated, tag="4")]
     pub merge_keys: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Idempotent-write key — see AppendRequest.idempotency_key (C1, ADR-012). Empty ==
+    /// not idempotent.
+    #[prost(string, tag="5")]
+    pub idempotency_key: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MergeResponse {
@@ -50,6 +60,10 @@ pub struct OverwriteRequest {
     pub table: ::core::option::Option<super::super::common::v1::TableRef>,
     #[prost(message, optional, tag="3")]
     pub source: ::core::option::Option<super::super::common::v1::ArrowStream>,
+    /// Idempotent-write key — see AppendRequest.idempotency_key (C1, ADR-012). Empty ==
+    /// not idempotent.
+    #[prost(string, tag="4")]
+    pub idempotency_key: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct OverwriteResponse {

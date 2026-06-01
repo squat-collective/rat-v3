@@ -224,9 +224,21 @@ type ArrowStream struct {
 	// The wire protocol of this stream. MUST be set (UNSPECIFIED is rejected).
 	Transport ArrowTransport `protobuf:"varint,4,opt,name=transport,proto3,enum=rat.common.v1.ArrowTransport" json:"transport,omitempty"`
 	// Which party hosts `endpoint`. MUST be set so the holder knows host-vs-dial.
-	Role          ArrowStreamRole `protobuf:"varint,5,opt,name=role,proto3,enum=rat.common.v1.ArrowStreamRole" json:"role,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Role ArrowStreamRole `protobuf:"varint,5,opt,name=role,proto3,enum=rat.common.v1.ArrowStreamRole" json:"role,omitempty"`
+	// COMPLETENESS (C2, reviews/08 — ADR-012): the total row count the producer
+	// intends to send. proto3 `optional` for presence: ABSENT == the producer cannot
+	// pre-declare (a streaming transform) — the consumer falls back to the transport's
+	// own clean end-of-stream; PRESENT == a hard count the consumer MUST verify before
+	// treating the transfer as complete. A stream that ends early (fewer rows than
+	// declared) signals a TRUNCATED transfer (producer died mid-send): the consumer
+	// MUST fail the write, never commit a partial dataset. Closes the silent-partial-
+	// commit corruption path (a truncated scan looks identical to a clean finish).
+	ExpectedRows *int64 `protobuf:"varint,6,opt,name=expected_rows,json=expectedRows,proto3,oneof" json:"expected_rows,omitempty"`
+	// Companion to expected_rows at Arrow record-batch granularity (same MUST-verify
+	// semantics). A consumer may check either or both; absent == not declared.
+	ExpectedBatches *int64 `protobuf:"varint,7,opt,name=expected_batches,json=expectedBatches,proto3,oneof" json:"expected_batches,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ArrowStream) Reset() {
@@ -294,6 +306,20 @@ func (x *ArrowStream) GetRole() ArrowStreamRole {
 	return ArrowStreamRole_ARROW_STREAM_ROLE_UNSPECIFIED
 }
 
+func (x *ArrowStream) GetExpectedRows() int64 {
+	if x != nil && x.ExpectedRows != nil {
+		return *x.ExpectedRows
+	}
+	return 0
+}
+
+func (x *ArrowStream) GetExpectedBatches() int64 {
+	if x != nil && x.ExpectedBatches != nil {
+		return *x.ExpectedBatches
+	}
+	return 0
+}
+
 // Outcome envelope reused by data-plane mutating RPCs.
 type WriteResult struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -307,9 +333,15 @@ type WriteResult struct {
 	// version; present-empty == the write produced no version (unversioned format);
 	// present-nonempty == the version id. Set by a versioned format/table (a snapshot
 	// id) or by an engine whose write produced a new table version.
-	SnapshotId    *string `protobuf:"bytes,2,opt,name=snapshot_id,json=snapshotId,proto3,oneof" json:"snapshot_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	SnapshotId *string `protobuf:"bytes,2,opt,name=snapshot_id,json=snapshotId,proto3,oneof" json:"snapshot_id,omitempty"`
+	// Idempotent-retry signal (C1, reviews/08 — ADR-012): true when this response
+	// reflects a previously-committed write with the same `idempotency_key` (the retry
+	// was a no-op returning the original result), rather than a write applied now.
+	// Mirrors catalog MergeBranchResponse/CommitTableResponse.already_applied — the data
+	// plane has ONE idempotency model across the commit leg and the write leg.
+	AlreadyApplied bool `protobuf:"varint,3,opt,name=already_applied,json=alreadyApplied,proto3" json:"already_applied,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *WriteResult) Reset() {
@@ -356,6 +388,13 @@ func (x *WriteResult) GetSnapshotId() string {
 	return ""
 }
 
+func (x *WriteResult) GetAlreadyApplied() bool {
+	if x != nil {
+		return x.AlreadyApplied
+	}
+	return false
+}
+
 var File_rat_common_v1_data_proto protoreflect.FileDescriptor
 
 const file_rat_common_v1_data_proto_rawDesc = "" +
@@ -366,18 +405,23 @@ const file_rat_common_v1_data_proto_rawDesc = "" +
 	"identifier\x18\x01 \x01(\tR\n" +
 	"identifier\x12\x10\n" +
 	"\x03uri\x18\x02 \x01(\tR\x03uri\x12\x16\n" +
-	"\x06branch\x18\x03 \x01(\tR\x06branch\"\xd6\x01\n" +
+	"\x06branch\x18\x03 \x01(\tR\x06branch\"\xd7\x02\n" +
 	"\vArrowStream\x12\x1a\n" +
 	"\bendpoint\x18\x01 \x01(\tR\bendpoint\x12\x1b\n" +
 	"\x06ticket\x18\x02 \x01(\fB\x03\x80\x01\x01R\x06ticket\x12\x1d\n" +
 	"\n" +
 	"ipc_schema\x18\x03 \x01(\fR\tipcSchema\x12;\n" +
 	"\ttransport\x18\x04 \x01(\x0e2\x1d.rat.common.v1.ArrowTransportR\ttransport\x122\n" +
-	"\x04role\x18\x05 \x01(\x0e2\x1e.rat.common.v1.ArrowStreamRoleR\x04role\"\x7f\n" +
+	"\x04role\x18\x05 \x01(\x0e2\x1e.rat.common.v1.ArrowStreamRoleR\x04role\x12(\n" +
+	"\rexpected_rows\x18\x06 \x01(\x03H\x00R\fexpectedRows\x88\x01\x01\x12.\n" +
+	"\x10expected_batches\x18\a \x01(\x03H\x01R\x0fexpectedBatches\x88\x01\x01B\x10\n" +
+	"\x0e_expected_rowsB\x13\n" +
+	"\x11_expected_batches\"\xa8\x01\n" +
 	"\vWriteResult\x12(\n" +
 	"\rrows_affected\x18\x01 \x01(\x03H\x00R\frowsAffected\x88\x01\x01\x12$\n" +
 	"\vsnapshot_id\x18\x02 \x01(\tH\x01R\n" +
-	"snapshotId\x88\x01\x01B\x10\n" +
+	"snapshotId\x88\x01\x01\x12'\n" +
+	"\x0falready_applied\x18\x03 \x01(\bR\x0ealreadyAppliedB\x10\n" +
 	"\x0e_rows_affectedB\x0e\n" +
 	"\f_snapshot_id*M\n" +
 	"\x0eArrowTransport\x12\x1f\n" +
@@ -424,6 +468,7 @@ func file_rat_common_v1_data_proto_init() {
 	if File_rat_common_v1_data_proto != nil {
 		return
 	}
+	file_rat_common_v1_data_proto_msgTypes[1].OneofWrappers = []any{}
 	file_rat_common_v1_data_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

@@ -128,6 +128,20 @@ pub struct ArrowStream {
     /// Which party hosts `endpoint`. MUST be set so the holder knows host-vs-dial.
     #[prost(enumeration="ArrowStreamRole", tag="5")]
     pub role: i32,
+    /// COMPLETENESS (C2, reviews/08 — ADR-012): the total row count the producer
+    /// intends to send. proto3 `optional` for presence: ABSENT == the producer cannot
+    /// pre-declare (a streaming transform) — the consumer falls back to the transport's
+    /// own clean end-of-stream; PRESENT == a hard count the consumer MUST verify before
+    /// treating the transfer as complete. A stream that ends early (fewer rows than
+    /// declared) signals a TRUNCATED transfer (producer died mid-send): the consumer
+    /// MUST fail the write, never commit a partial dataset. Closes the silent-partial-
+    /// commit corruption path (a truncated scan looks identical to a clean finish).
+    #[prost(int64, optional, tag="6")]
+    pub expected_rows: ::core::option::Option<i64>,
+    /// Companion to expected_rows at Arrow record-batch granularity (same MUST-verify
+    /// semantics). A consumer may check either or both; absent == not declared.
+    #[prost(int64, optional, tag="7")]
+    pub expected_batches: ::core::option::Option<i64>,
 }
 /// Outcome envelope reused by data-plane mutating RPCs.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -145,6 +159,13 @@ pub struct WriteResult {
     /// id) or by an engine whose write produced a new table version.
     #[prost(string, optional, tag="2")]
     pub snapshot_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Idempotent-retry signal (C1, reviews/08 — ADR-012): true when this response
+    /// reflects a previously-committed write with the same `idempotency_key` (the retry
+    /// was a no-op returning the original result), rather than a write applied now.
+    /// Mirrors catalog MergeBranchResponse/CommitTableResponse.already_applied — the data
+    /// plane has ONE idempotency model across the commit leg and the write leg.
+    #[prost(bool, tag="3")]
+    pub already_applied: bool,
 }
 /// The wire protocol of an out-of-band data stream. PINNED at freeze
 /// (reviews/06 AUTH-3): "gRPC/Flight-style" was not a spec — two authors would

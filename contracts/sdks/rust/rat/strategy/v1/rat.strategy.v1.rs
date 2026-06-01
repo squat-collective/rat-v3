@@ -14,6 +14,12 @@ pub struct ApplyRequest {
     /// declared schema. Pinned at freeze so the bytes field's meaning can't shift.
     #[prost(bytes="vec", tag="4")]
     pub options: ::prost::alloc::vec::Vec<u8>,
+    /// Stable id for THIS logical run (e.g. the run id). The strategy threads it down to
+    /// its format writes (format.*Request.idempotency_key) so a re-applied run is
+    /// idempotent END-TO-END under an at-least-once scheduler (C1, ADR-012). Empty == not
+    /// idempotent.
+    #[prost(string, tag="5")]
+    pub idempotency_key: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ApplyResponse {

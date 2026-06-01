@@ -15,11 +15,11 @@ The 5-agent post-freeze review. Grouped by when to act.
 **NOW — the freeze is still local/unpushed (closing window):**
 - ~~**A1 [V2-REGRET]** — `WriteResult.snapshot_id` `optional` + re-cut `rat/1`.~~ **✅ DONE 2026-06-01** (commit `0e81314`; `rat/1` re-cut from `b9dbe2d`). The one V2-regret is resolved, not carried to a v2.
 - ~~**D5/E4 honesty banner** on `plugin.v1.json` + `CONTRACT.md`.~~ **✅ DONE 2026-06-01** (`0e81314`). *Residual:* the `overview.md` drift (`plane-manager-plugin`→`deployment-runtime`; tier-0 callout; "core never commands") is still TODO — tracked as E4 in the process list below.
-- *(Not absorbed — moved to `v1.1`:)* the additive crash-safety fields **C1** (`idempotency_key`/`run_id`) + **C2** (`ArrowStream` terminator) are additive (safe post-freeze), so they didn't block the re-cut; pull them forward only if you'd rather lock the shape now.
+- ~~*(Not absorbed — moved to `v1.1`:)* the additive crash-safety fields **C1** + **C2**~~ **✅ DONE 2026-06-01 (folded into the `rat/1.1` cut, [ADR-012](../docs/architecture/adrs/012-crash-safety-additive-fields-v1.1.md))** — `idempotency_key` + `already_applied` on the write path, `expected_rows`/`expected_batches` on `ArrowStream`; demonstrated in the composition. Per-axis conformance vectors → Phase 1.
 
 **`v1.1` additive (no break; prioritized):**
 - ~~**B1** — catalog `RegisterTable` + commit-linkage RPC.~~ **✅ DONE 2026-06-01 ([ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md))** — additive `RegisterTable` + `CommitTable` on `catalog/v1`; the create→write→register→merge loop now closes on-wire (composition no longer seeds tables out-of-band). 32/32 + composition green. Resolves R3.
-- **C1/C2/C4** — effect-leg idempotency key · `ArrowStream` completeness/terminator · terminal audit record (`outcome` at stream close; `AUDIT_OUTCOME_ERROR` already exists).
+- ~~**C1/C2**~~ **✅ DONE 2026-06-01 (ADR-012)** — effect-leg idempotency key + `ArrowStream` completeness, folded into `rat/1.1`. **C4** terminal audit record (`outcome` at stream close; `AUDIT_OUTCOME_ERROR` already exists) — remains for Phase 1.
 - Enrichments: structured `IsolationAttestation` (D1), signed **conformance attestation** message so `conformed_capabilities` is derived not self-asserted (D4), `health/v1` liveness/readiness probe the reconciler drives (sre#4), `WriteResult` insert/update/delete breakdown + `TableRef` snapshot_id/as_of (F2), `bound_capability` on `SubjectAssertion` (F1).
 
 **Enforcement-layer / conformance (some need the core — specify now):**

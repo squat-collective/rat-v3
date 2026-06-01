@@ -44,9 +44,14 @@ type ApplyRequest struct {
 	// are UTF-8 JSON, validated against the plugin's own metadata_schema (manifest).
 	// Opaque to the core (it does not parse them); the strategy decodes per its
 	// declared schema. Pinned at freeze so the bytes field's meaning can't shift.
-	Options       []byte `protobuf:"bytes,4,opt,name=options,proto3" json:"options,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Options []byte `protobuf:"bytes,4,opt,name=options,proto3" json:"options,omitempty"`
+	// Stable id for THIS logical run (e.g. the run id). The strategy threads it down to
+	// its format writes (format.*Request.idempotency_key) so a re-applied run is
+	// idempotent END-TO-END under an at-least-once scheduler (C1, ADR-012). Empty == not
+	// idempotent.
+	IdempotencyKey string `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ApplyRequest) Reset() {
@@ -100,6 +105,13 @@ func (x *ApplyRequest) GetOptions() []byte {
 	return nil
 }
 
+func (x *ApplyRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
 type ApplyResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Result        *v1.WriteResult        `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
@@ -148,11 +160,12 @@ var File_rat_strategy_v1_strategy_proto protoreflect.FileDescriptor
 
 const file_rat_strategy_v1_strategy_proto_rawDesc = "" +
 	"\n" +
-	"\x1erat/strategy/v1/strategy.proto\x12\x0frat.strategy.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"\x90\x01\n" +
+	"\x1erat/strategy/v1/strategy.proto\x12\x0frat.strategy.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"\xb9\x01\n" +
 	"\fApplyRequest\x12/\n" +
 	"\x06source\x18\x02 \x01(\v2\x17.rat.common.v1.TableRefR\x06source\x12/\n" +
 	"\x06target\x18\x03 \x01(\v2\x17.rat.common.v1.TableRefR\x06target\x12\x18\n" +
-	"\aoptions\x18\x04 \x01(\fR\aoptionsJ\x04\b\x01\x10\x02\"C\n" +
+	"\aoptions\x18\x04 \x01(\fR\aoptions\x12'\n" +
+	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKeyJ\x04\b\x01\x10\x02\"C\n" +
 	"\rApplyResponse\x122\n" +
 	"\x06result\x18\x01 \x01(\v2\x1a.rat.common.v1.WriteResultR\x06result2v\n" +
 	"\x0fStrategyService\x12c\n" +

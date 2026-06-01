@@ -18,7 +18,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/common/v1/data.proto.
  */
 export const file_rat_common_v1_data: GenFile = /*@__PURE__*/
-  fileDesc("ChhyYXQvY29tbW9uL3YxL2RhdGEucHJvdG8SDXJhdC5jb21tb24udjEiOwoIVGFibGVSZWYSEgoKaWRlbnRpZmllchgBIAEoCRILCgN1cmkYAiABKAkSDgoGYnJhbmNoGAMgASgJIqgBCgtBcnJvd1N0cmVhbRIQCghlbmRwb2ludBgBIAEoCRITCgZ0aWNrZXQYAiABKAxCA4ABARISCgppcGNfc2NoZW1hGAMgASgMEjAKCXRyYW5zcG9ydBgEIAEoDjIdLnJhdC5jb21tb24udjEuQXJyb3dUcmFuc3BvcnQSLAoEcm9sZRgFIAEoDjIeLnJhdC5jb21tb24udjEuQXJyb3dTdHJlYW1Sb2xlImUKC1dyaXRlUmVzdWx0EhoKDXJvd3NfYWZmZWN0ZWQYASABKANIAIgBARIYCgtzbmFwc2hvdF9pZBgCIAEoCUgBiAEBQhAKDl9yb3dzX2FmZmVjdGVkQg4KDF9zbmFwc2hvdF9pZCpNCg5BcnJvd1RyYW5zcG9ydBIfChtBUlJPV19UUkFOU1BPUlRfVU5TUEVDSUZJRUQQABIaChZBUlJPV19UUkFOU1BPUlRfRkxJR0hUEAEqggEKD0Fycm93U3RyZWFtUm9sZRIhCh1BUlJPV19TVFJFQU1fUk9MRV9VTlNQRUNJRklFRBAAEiUKIUFSUk9XX1NUUkVBTV9ST0xFX1BST0RVQ0VSX0hPU1RFRBABEiUKIUFSUk9XX1NUUkVBTV9ST0xFX0NPTlNVTUVSX0hPU1RFRBACQjNaMWdpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9jb21tb24vdjE7Y29tbW9udjFiBnByb3RvMw");
+  fileDesc("ChhyYXQvY29tbW9uL3YxL2RhdGEucHJvdG8SDXJhdC5jb21tb24udjEiOwoIVGFibGVSZWYSEgoKaWRlbnRpZmllchgBIAEoCRILCgN1cmkYAiABKAkSDgoGYnJhbmNoGAMgASgJIooCCgtBcnJvd1N0cmVhbRIQCghlbmRwb2ludBgBIAEoCRITCgZ0aWNrZXQYAiABKAxCA4ABARISCgppcGNfc2NoZW1hGAMgASgMEjAKCXRyYW5zcG9ydBgEIAEoDjIdLnJhdC5jb21tb24udjEuQXJyb3dUcmFuc3BvcnQSLAoEcm9sZRgFIAEoDjIeLnJhdC5jb21tb24udjEuQXJyb3dTdHJlYW1Sb2xlEhoKDWV4cGVjdGVkX3Jvd3MYBiABKANIAIgBARIdChBleHBlY3RlZF9iYXRjaGVzGAcgASgDSAGIAQFCEAoOX2V4cGVjdGVkX3Jvd3NCEwoRX2V4cGVjdGVkX2JhdGNoZXMifgoLV3JpdGVSZXN1bHQSGgoNcm93c19hZmZlY3RlZBgBIAEoA0gAiAEBEhgKC3NuYXBzaG90X2lkGAIgASgJSAGIAQESFwoPYWxyZWFkeV9hcHBsaWVkGAMgASgIQhAKDl9yb3dzX2FmZmVjdGVkQg4KDF9zbmFwc2hvdF9pZCpNCg5BcnJvd1RyYW5zcG9ydBIfChtBUlJPV19UUkFOU1BPUlRfVU5TUEVDSUZJRUQQABIaChZBUlJPV19UUkFOU1BPUlRfRkxJR0hUEAEqggEKD0Fycm93U3RyZWFtUm9sZRIhCh1BUlJPV19TVFJFQU1fUk9MRV9VTlNQRUNJRklFRBAAEiUKIUFSUk9XX1NUUkVBTV9ST0xFX1BST0RVQ0VSX0hPU1RFRBABEiUKIUFSUk9XX1NUUkVBTV9ST0xFX0NPTlNVTUVSX0hPU1RFRBACQjNaMWdpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9jb21tb24vdjE7Y29tbW9udjFiBnByb3RvMw");
 
 /**
  * A reference to a table/dataset, resolvable by a format/catalog plugin.
@@ -106,6 +106,28 @@ export type ArrowStream = Message<"rat.common.v1.ArrowStream"> & {
    * @generated from field: rat.common.v1.ArrowStreamRole role = 5;
    */
   role: ArrowStreamRole;
+
+  /**
+   * COMPLETENESS (C2, reviews/08 — ADR-012): the total row count the producer
+   * intends to send. proto3 `optional` for presence: ABSENT == the producer cannot
+   * pre-declare (a streaming transform) — the consumer falls back to the transport's
+   * own clean end-of-stream; PRESENT == a hard count the consumer MUST verify before
+   * treating the transfer as complete. A stream that ends early (fewer rows than
+   * declared) signals a TRUNCATED transfer (producer died mid-send): the consumer
+   * MUST fail the write, never commit a partial dataset. Closes the silent-partial-
+   * commit corruption path (a truncated scan looks identical to a clean finish).
+   *
+   * @generated from field: optional int64 expected_rows = 6;
+   */
+  expectedRows?: bigint | undefined;
+
+  /**
+   * Companion to expected_rows at Arrow record-batch granularity (same MUST-verify
+   * semantics). A consumer may check either or both; absent == not declared.
+   *
+   * @generated from field: optional int64 expected_batches = 7;
+   */
+  expectedBatches?: bigint | undefined;
 };
 
 /**
@@ -141,6 +163,17 @@ export type WriteResult = Message<"rat.common.v1.WriteResult"> & {
    * @generated from field: optional string snapshot_id = 2;
    */
   snapshotId?: string | undefined;
+
+  /**
+   * Idempotent-retry signal (C1, reviews/08 — ADR-012): true when this response
+   * reflects a previously-committed write with the same `idempotency_key` (the retry
+   * was a no-op returning the original result), rather than a write applied now.
+   * Mirrors catalog MergeBranchResponse/CommitTableResponse.already_applied — the data
+   * plane has ONE idempotency model across the commit leg and the write leg.
+   *
+   * @generated from field: bool already_applied = 3;
+   */
+  alreadyApplied: boolean;
 };
 
 /**

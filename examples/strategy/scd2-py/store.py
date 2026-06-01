@@ -100,16 +100,18 @@ class SCD2Strategy:
             return data_pb2.WriteResult(rows_affected=0)
 
         # Merge on the VERSION identity (natural key + effective_from): closures match
-        # the existing open version and replace it; new versions are inserts.
+        # the existing open version and replace it; new versions are inserts. The run
+        # timestamp keys this load's idempotent write + commit (C1, ADR-012 + ADR-010).
+        idem = f"{target_id}@{ts}"
         stream = self._host_rows(delta)
         resp = self._invoke(CAP_MERGE, format_pb2.MergeRequest(
-            table=target_ref, source=stream, merge_keys=nk + [COL_FROM]))
+            table=target_ref, source=stream, merge_keys=nk + [COL_FROM], idempotency_key=idem))
 
-        # Commit-linkage (ADR-010): record the snapshot this temporal load produced.
-        # The run timestamp keys the idempotent commit (one logical commit per run).
+        # Commit-linkage (ADR-010): record the snapshot this temporal load produced,
+        # under the same idempotency key.
         self._invoke(CAP_COMMIT, catalog_pb2.CommitTableRequest(
             identifier=target_id, branch=target_ref.branch,
-            snapshot_id=resp.result.snapshot_id, idempotency_key=f"{target_id}@{ts}"))
+            snapshot_id=resp.result.snapshot_id, idempotency_key=idem))
         return resp.result
 
 
