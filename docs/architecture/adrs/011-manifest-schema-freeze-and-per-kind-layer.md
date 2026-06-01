@@ -174,7 +174,7 @@ URIs*, the mapping is baked in correctly.
 
 ## Migration
 
-This is the design from `rat/1.1` onward. Landing sequence: (1) annotation roll across the
+This is the design from `rat/1.5` onward. Landing sequence: (1) annotation roll across the
 12 axes + `make gen-sdks`; (2) flip `plugin.v1.json` + `schema/README.md` to frozen; (3)
 author `contracts/schema/kinds/<kind>.v1.json` × 18; (4) validate the two example manifests
 against envelope + per-kind, and a new wrong-capability-for-kind INVALID vector against the

@@ -89,7 +89,7 @@ the write returned and a stable `idempotency_key` for the run. This records whic
 write produced in the catalog (the commit-linkage). A strategy that writes an unversioned format
 (where `WriteResult.snapshot_id` is absent) simply does not commit-link.
 
-### Idempotent runs ([ADR-012](../../../../../docs/architecture/adrs/012-crash-safety-additive-fields-v1.1.md))
+### Idempotent runs ([ADR-012](../../../../../docs/architecture/adrs/012-crash-safety-additive-fields.md))
 
 `ApplyRequest.idempotency_key` is the run id under an **at-least-once** scheduler. A strategy
 MUST thread it down to its `format.Write` calls (`format.*Request.idempotency_key`) **and** its

@@ -72,7 +72,7 @@ the kind↔capability-axis-segment mapping.
 
 ## Changing this schema
 
-**FROZEN at `v1` ([ADR-011](../../docs/architecture/adrs/011-manifest-schema-freeze-and-per-kind-layer.md), `rat/1.1`).**
+**FROZEN at `v1` ([ADR-011](../../docs/architecture/adrs/011-manifest-schema-freeze-and-per-kind-layer.md), `rat/1.5`).**
 Additive, backward-compatible changes only within `rat/1`; anything breaking ships as
 `plugin.v2.json` under a new `api_version: rat/2` (mirrors capability major-versioning,
 ADR-002 D4). The 18 per-kind schemas in [`kinds/`](kinds/) layer on top (see below) and

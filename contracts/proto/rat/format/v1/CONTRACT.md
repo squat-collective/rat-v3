@@ -59,9 +59,9 @@ OUT (Resolve). Both are out-of-band `ArrowStream`s, never through the control pl
 - C6: every capability has a golden-data vector; "capability declared" is meaningless
   without "capability conformed" (reviews/02 Stage5).
 
-## Conformance obligations — Crash-safety ([ADR-012](../../../../../docs/architecture/adrs/012-crash-safety-additive-fields-v1.1.md), `rat/1.1`)
+## Conformance obligations — Crash-safety ([ADR-012](../../../../../docs/architecture/adrs/012-crash-safety-additive-fields.md), `rat/1.5`)
 
-The at-least-once write path gets two additive guards (field shapes pinned at `rat/1.1`;
+The at-least-once write path gets two additive guards (field shapes pinned at `rat/1.5`;
 full per-axis vectors land in Phase 1 — demonstrated end-to-end now in
 [examples/composition](../../../../../examples/composition)):
 

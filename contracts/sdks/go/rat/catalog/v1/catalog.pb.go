@@ -1,5 +1,5 @@
 // Catalog axis service contract. Status: v1 (frozen — rat/1, ADR-009;
-// RegisterTable + CommitTable added additively at rat/1.1, ADR-010).
+// RegisterTable + CommitTable added additively at rat/1.5, ADR-010).
 //
 // A `kind: catalog` plugin (Nessie, Unity, Lakekeeper, Glue, Polaris) owns
 // table metadata + branch/version semantics. It is what makes "branch-isolated
@@ -29,7 +29,7 @@
 //     reconciler retry can't double-apply.
 // NOTE: this is the branch-MERGE linkage. The separate gap — how the catalog
 // learns what format.Write put on a branch — is closed by the additive
-// commit-linkage RPCs below (RegisterTable + CommitTable), added at rat/1.1 per
+// commit-linkage RPCs below (RegisterTable + CommitTable), added at rat/1.5 per
 // ADR-010 (resolving ADR-009 residual R3 / reviews/08 B1). They are additive: the
 // frozen GetTable/CreateBranch/MergeBranch shapes are unchanged.
 

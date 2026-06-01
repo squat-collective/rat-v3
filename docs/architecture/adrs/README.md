@@ -17,7 +17,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [009](009-data-plane-contract-freeze-v1.md) | Freeze the data-plane axis contracts at `v1` (`rat/1`) | Accepted | 2026-05-31 |
 | [010](010-catalog-commit-linkage.md) | Catalog commit-linkage — additive `RegisterTable` + `CommitTable` RPCs | Accepted | 2026-06-01 |
 | [011](011-manifest-schema-freeze-and-per-kind-layer.md) | Freeze the plugin manifest schema at `v1` + add the per-kind schema layer | Accepted | 2026-06-01 |
-| [012](012-crash-safety-additive-fields-v1.1.md) | Additive crash-safety fields for the data-plane write path (`v1.1`) | Accepted | 2026-06-01 |
+| [012](012-crash-safety-additive-fields.md) | Additive crash-safety fields for the data-plane write path (`rat/1.5`) | Accepted | 2026-06-01 |
 
 ## Template
 

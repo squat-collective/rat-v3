@@ -46,7 +46,7 @@ rather than forcing a `v2`.
 
 ## Decision
 
-**Add two RPCs to `CatalogService`, additively (`rat/1.1`): `RegisterTable` and `CommitTable`.**
+**Add two RPCs to `CatalogService`, additively (`rat/1.5`): `RegisterTable` and `CommitTable`.**
 They are distinct capabilities, distinct methods, distinct privileges.
 
 ```proto
@@ -159,7 +159,7 @@ so both independent references (Go in-memory, Python in-memory, sqlite) must con
 
 **Neutral.**
 
-- `catalog.proto`'s `Status:` stays `v1` (the wire major); the additive lands at the `rat/1.1`
+- `catalog.proto`'s `Status:` stays `v1` (the wire major); the additive lands at the `rat/1.5`
   minor tag, exactly as `strategy/v1` froze at `rat/1.1`. The proto header NOTE that called
   commit-linkage "GA-deferred" is updated to point here.
 
@@ -202,7 +202,7 @@ so both independent references (Go in-memory, Python in-memory, sqlite) must con
 
 ## Migration
 
-This is the design from `rat/1.1` onward; there is no in-place data migration (no running
+This is the design from `rat/1.5` onward; there is no in-place data migration (no running
 core). The landing sequence:
 
 1. Add the 2 RPCs + 4 messages to `catalog.proto` (additive; `buf breaking` FILE clean).
@@ -215,7 +215,7 @@ core). The landing sequence:
    target seeding); have the composition format servicer return a real `snapshot_id`.
 6. `make conformance` (still 32/32) + `make composition` (loop now closed) green.
 
-The `rat/1.1` re-cut folds this in (alongside the other close-out items) before the surface is
+The `rat/1.5` re-cut folds this in (alongside the other close-out items) before the surface is
 published; until then the tag is local and movable.
 
 ## Related

@@ -1,4 +1,4 @@
-# ADR-012: Additive crash-safety fields for the data-plane write path (`v1.1`)
+# ADR-012: Additive crash-safety fields for the data-plane write path (`rat/1.5`)
 
 ## Status: Accepted (2026-06-01)
 
@@ -7,7 +7,7 @@
 The post-freeze board review ([reviews/08](../../../reviews/08-post-freeze-board-review.md))
 found the run-lifecycle is **not crash-safe** (cluster C, `sre`'s spine). Two of its
 findings are pure `[ADDITIVE]` wire gaps that the board recommended absorbing **while the
-freeze is still local** (before publication), and they are being folded into the `rat/1.1`
+freeze is still local** (before publication), and they are being folded into the `rat/1.5`
 seal that closes Phase 0:
 
 - **C1 — at-least-once scheduler + no effect-leg idempotency key = silent double-apply.**
@@ -26,7 +26,7 @@ seal that closes Phase 0:
   should stay open → silent history corruption**, with no wire signal to detect it.
 
 Both are additive (new fields/values), so they are non-breaking; locking their **shapes**
-into `v1.1` now — while the data plane is fresh in mind and unpublished — is cheaper than a
+into `rat/1.5` now — while the data plane is fresh in mind and unpublished — is cheaper than a
 post-publication `v1.2`. This ADR follows the established precedent for security/safety
 fields whose *enforcement* lands later: the `ArrowStream.ticket` field was frozen at `rat/1`
 with its detailed spec marked "enforcement-layer (GA); the field is here so it's in the
@@ -90,11 +90,11 @@ to be meaningful, and the board explicitly bucketed the enforcement layer there.
   format-write — a reconciler retry of a whole run is a no-op at every effect leg.
 - A truncated bulk transfer is **detectable** instead of silently committing partial data —
   closing the concrete SCD2 history-corruption path the board found.
-- The shapes are locked into `v1.1` while unpublished — no future `v1.2`/regret for these.
+- The shapes are locked into `rat/1.5` while unpublished — no future `v1.2`/regret for these.
 
 **Negative — accepted.**
 
-1. **Enforcement is deferred to Phase 1**, so at `v1.1` a non-conformant plugin can still
+1. **Enforcement is deferred to Phase 1**, so at `rat/1.5` a non-conformant plugin can still
    ignore `idempotency_key` or skip the `expected_rows` check — the fields are present and
    the obligation is written, but the *enforcer* (the core + per-axis vectors) is not built.
    This is the same honest split as `ArrowStream.ticket`; the honesty banners already say the
@@ -105,11 +105,11 @@ to be meaningful, and the board explicitly bucketed the enforcement layer there.
    write path crash-safe, and it mirrors an existing model so there is nothing new to learn.
 
 **Neutral.** `data.proto`/`format.proto`/`strategy.proto` `Status:` stay `v1`; the additions
-land at the `rat/1.1` minor, like the catalog commit-linkage RPCs (ADR-010).
+land at the `rat/1.5` minor, like the catalog commit-linkage RPCs (ADR-010).
 
 ## Alternatives considered
 
-1. **Defer C1/C2 entirely to Phase 1 (tag `v1.1` without them).** The board's "optional"
+1. **Defer C1/C2 entirely to Phase 1 (tag `rat/1.5` without them).** The board's "optional"
    path. **Rejected here by explicit choice** — locking the field shapes while the surface is
    local/unpublished is free now and avoids a `v1.2`; the shapes are better fixed while the
    data plane is fresh than reverse-engineered later.
@@ -122,17 +122,25 @@ land at the `rat/1.1` minor, like the catalog commit-linkage RPCs (ADR-010).
    lets a producer decline to declare and the consumer fall back to transport completeness —
    the A1 presence lesson applied.
 4. **A terminal "end-of-stream" control message on the Flight channel instead of a count.**
-   **Rejected for v1.1** — it changes the bytes-leg protocol (more than a descriptor field),
+   **Rejected for rat/1.5** — it changes the bytes-leg protocol (more than a descriptor field),
    and Arrow Flight already signals clean completion; the gap is distinguishing *clean* from
    *truncated*, which a declared count solves additively without touching the transport.
 
 ## Migration
 
-Design from `rat/1.1` onward; no running core, no data migration. Sequence: add the fields
+Design from `rat/1.5` onward; no running core, no data migration. Sequence: add the fields
 (additive, `buf breaking` FILE clean) → `make gen-sdks` → document the obligations in proto
 comments + `format`/`strategy` `CONTRACT.md` → thread + honor them in `examples/composition`
 → `make conformance` (still 32/32 — per-axis vectors unchanged) + `make composition` green →
-fold into the `rat/1.1` tag. The per-axis idempotency + truncation vectors land in Phase 1.
+fold into the `rat/1.5` tag. The per-axis idempotency + truncation vectors land in Phase 1.
+
+**Tag-scheme note.** The board/roadmap called the Phase-0 close-out target "`v1.1`" as
+shorthand for "the first sealed minor after the `rat/1` freeze." But the git tags
+`rat/1.1`–`rat/1.4` were already used for the *incremental per-axis freeze checkpoints*
+(strategy `rat/1.1`, control-plane `rat/1.2`, deployment-runtime `rat/1.3`, experience
+`rat/1.4`). So the sealed surface — this ADR + ADR-010 + ADR-011 + the doc tail — is tagged
+**`rat/1.5`** (the next checkpoint in the same series), not `rat/1.1`. There is one version
+*series* (`rat/1.N`), not two; "v1.1" was loose shorthand for the seal, which is `rat/1.5`.
 
 ## Related
 
