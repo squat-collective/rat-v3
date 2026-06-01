@@ -38,6 +38,16 @@ These aren't in tension — they're different layers. **The wire is right. The s
 it is paper.** That's expected (the core is Phase 1) — the problem is that the frozen
 artifacts and the conformance badge don't *say* so.
 
+**The crispest articulation** (from `contracts`, after cross-consulting `security` +
+`ecosystem`): **the freeze locked the wire *shapes*, but not the *obligations* those shapes
+are supposed to carry.** Five of `contracts`' ten findings are `[PROCESS]`, and they share one
+root — the guarantees (ArrowStream-ticket isolation, `options` validation, `branch` precedence,
+stream completeness, I9 enforcement) are **prose MUSTs with no conformance vector**, so two
+impls can be 32/32-conformant while violating every one of them. The recurring "opaque bytes
+bag" pattern (`Invoke.payload`, `ArrowStream.ticket`, strategy `options`) is what buys the
+six-thing core its simplicity — but each instance *exports* typing, validation, and trust to
+the impls, and at v1 none of it is enforced, because the core that would enforce it isn't built.
+
 ## The window: the freeze is still local
 
 The `rat/1`→`rat/1.4` tags are **local and unpushed** — no external consumer has pinned to
@@ -75,7 +85,7 @@ All additive-to-fix, but every `v1` consumer frozen *now* is written against con
 can't express recovery:
 
 - **C1. At-least-once scheduler + no effect-leg idempotency key = silent double-apply.** `[ADDITIVE]` · **HIGH** · `sre` #1, evidence `scheduler.proto:29-36` vs `data.proto:74` / `harness.py:197`. Dedup exists at the reconciler, never at the write. A duplicate fire → an `append` strategy writes twice. **Fix:** add `idempotency_key`/`run_id` to the strategy invoke + `WriteResult`; make "writes MUST be idempotent under a repeated key" a conformance obligation.
-- **C2. `ArrowStream` has no termination/completeness signal.** `[ADDITIVE]` · MED-HIGH · `sre` #2 + `contracts` #5 (independent), evidence `data.proto:53-71` (R3). A producer that dies mid-transfer closes the stream the same way a clean finish does → `format.Append` commits a **partial** dataset and returns a complete-looking `rows_affected`. Silent truncation — "no error, wrong data." **Fix:** additive `expected_rows`/`expected_batches` (+ a "broken stream → consumer MUST fail the write" vector).
+- **C2. `ArrowStream` has no termination/completeness signal.** `[ADDITIVE]` · MED-HIGH · `sre` #2 + `contracts` #5 (independent), evidence `data.proto:53-71` (R3). A producer that dies mid-transfer closes the stream the same way a clean finish does → `format.Append` commits a **partial** dataset and returns a complete-looking `rows_affected`. **Concrete corruption path** (`contracts`, on `ecosystem`'s evidence — this upgraded the finding to MED-HIGH): our own **SCD2 reference** is producer *and* consumer — it pulls `target_rows` (`scd2-py/store.py:69-70`) then treats any current key **not** present in the pulled source as DELETED and closes its version (`store.py:90-92`). A truncated scan therefore delivers fewer rows → SCD2 **closes versions that should stay open → silent history corruption**, with no wire signal to detect the truncation. Every incremental/diffing consumer is one network blip from wrong data. **Fix:** additive `expected_rows`/`expected_batches` (+ a "broken stream → consumer MUST fail the write" vector), priority second only to B1.
 - **C3. The core-mediated hop enforces no deadline on the provider call.** `[PROCESS]` · **HIGH** · `sre` #3, evidence `context.proto:62-64` (`deadline_unix_ms` is a soft hint) + `gateway.go:124-151` (`InvokeServerStream` sets no inner-stream deadline). A hung provider blocks `RecvMsg` forever and, at scale, exhausts the single mediation point. **Fix (enforcement-layer, no wire change):** spec "core MUST apply `min(channel, deadline_unix_ms)` and abort `DEADLINE_EXCEEDED`" + a streaming idle-timeout.
 - **C4. No terminal audit record.** `[ADDITIVE]` · MED · `security` #8 — **raised by `sre`'s audit-on-crash consult**. Streams audit "at open" (invoke.proto:53-55); a stream that dies mid-relay leaves only a "started/allowed" record, no terminal outcome — incident reconstruction is impossible. `AUDIT_OUTCOME_ERROR` already exists, so it's additive. **Fix:** pin "streams additionally emit a terminal close record with `outcome ∈ {SUCCESS,ERROR,DENIED}`."
 - **C5. The composition proves only the happy path.** `[PROCESS]` · MED-HIGH · `sre` #5. `harness.py:193-204` is a bare sequential chain with no recovery; nothing exercises mid-run death. **Fix:** add a crash-mid-strategy case (kill a provider between stages; assert the target is fully-old or fully-new, never partial) — if the contract can't guarantee that, the strategy axis needs a commit/abort shape, which is *harder* to add post-freeze than a field.
@@ -101,6 +111,8 @@ The badge says "conformant"; these three trust boundaries are honor-system and u
 - **E7.** The mandated **temptation counter** (CLAUDE.md #2) is not actually kept — discipline is observed ad hoc, not measured. `architect` #6. Add the ledger even at count 0.
 - **E8.** mTLS trust-root is prose-only and **structurally inexpressible in proto3** — make C2 a named *deployment-conformance* item ("multi-tenant requires mutual auth; core refuses multi-tenant on an unauthenticated transport"). `security` #3 (sharpened with `architect`). Also: the audit **keyring trust-root / distribution / revocation** is unspecified though the entire audit + assertion trust collapses to it (`security` #4); and the audit chain stops forge/reorder but **tail-drop** detection depends on the core-local copy + watermark, not the sink (state it).
 
+**E9. The strategy `options` bytes-bag is stringly-typed — typing/validation/discoverability all live in an opaque blob the author hand-parses.** `[ADDITIVE]`/`[PROCESS]` · `contracts` #10 + `ecosystem` #8 (who tag it more severely). `scd2-py/store.py:62-65` does `json.loads(...)` then raw `spec["natural_key"]` indexing — a missing/misspelled key throws a **language exception, not the `INVALID_ARGUMENT` the error model mandates**. The `metadata_schema` that would describe the blob is a manifest path (`plugin.v1.json:135`), never enforced at the wire. *(Severity split: `contracts` rates it LOW-MED/process — the opaque-bytes shape is fine to freeze; `ecosystem` rates it higher as a real author footgun. Both agree the fix is additive.)* **Fix:** make "strategies MUST validate `options` against their declared `metadata_schema` and map failures to `INVALID_ARGUMENT`" a conformance obligation in a (still-missing) strategy `CONTRACT.md`.
+
 ### F. Accept as documented v1 residual
 
 - **F1.** `SubjectAssertion` confused-deputy (R1) — bounded by C5 `requires`; tightening needs an additive `bound_capability` field; safe to defer. `security` #6 — which also **confirmed the M4 tenant cross-check is genuinely fixed** (the "tenant unsigned" framing from earlier passes is closed).
@@ -119,7 +131,9 @@ The agents genuinely changed each other's findings via direct messages:
 - **`ecosystem` → `contracts`** surfaced the untyped `options` bytes-bag (D-adjacent, `ecosystem` #8) as "the wart not visible in the proto text."
 - **The headline convergence** — `architect`, `contracts`, and `sre` independently nominated the **catalog commit-linkage** (B1) as their biggest or near-biggest concern, from three different lenses (coherence, wire, atomicity). When three specialists who didn't coordinate their *conclusions* land on the same seam, that's the strongest signal in the review.
 
-The one real **disagreement** — `architect`'s "regret-light, discipline held" vs `ecosystem`/`security`'s "the badge over-promises" — resolves cleanly: they're grading **different layers**. The contracts are clean (architect/contracts); the trust + enforcement + crash-safety layer wrapped around them is unbuilt (ecosystem/security/sre). Both are true, and stating both is the honest picture.
+The one real **disagreement** — `architect`'s "regret-light, discipline held" vs `ecosystem`/`security`'s "the badge over-promises" — resolves cleanly: they're grading **different layers**. The contracts are clean (architect/contracts); the trust + enforcement + crash-safety layer wrapped around them is unbuilt (ecosystem/security/sre). Both are true, and stating both is the honest picture. (A smaller, unresolved split: `contracts` rates the `options` bytes-bag a low-severity process item, `ecosystem` an author footgun — both agree the fix is additive; E9.)
+
+**The board kept refining after the first synthesis.** Post-consult, `sre` revised to 9 findings (corrected the health-contract claim, reframed its biggest concern around branch-isolation-by-convention) and `contracts` to 10 (the SCD2 corruption path in C2, the "shapes-not-obligations" meta-pattern in the Verdict, and the `options` finding E9 all came from that second round). The cross-talk measurably improved the output — the strongest endorsement of running this as a communicating team rather than five isolated passes.
 
 ---
 
