@@ -26,7 +26,7 @@ from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotatio
 from rat.common.v1 import data_pb2 as rat_dot_common_dot_v1_dot_data__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1crat/catalog/v1/catalog.proto\x12\x0erat.catalog.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"O\n\x0fGetTableRequest\x12\x1e\n\nidentifier\x18\x02 \x01(\tR\nidentifier\x12\x16\n\x06\x62ranch\x18\x03 \x01(\tR\x06\x62ranchJ\x04\x08\x01\x10\x02\"A\n\x10GetTableResponse\x12-\n\x05table\x18\x01 \x01(\x0b\x32\x17.rat.common.v1.TableRefR\x05table\"T\n\x13\x43reateBranchRequest\x12\x16\n\x06\x62ranch\x18\x02 \x01(\tR\x06\x62ranch\x12\x1f\n\x0b\x66rom_branch\x18\x03 \x01(\tR\nfromBranchJ\x04\x08\x01\x10\x02\".\n\x14\x43reateBranchResponse\x12\x16\n\x06\x62ranch\x18\x01 \x01(\tR\x06\x62ranch\"\xb2\x01\n\x12MergeBranchRequest\x12\x16\n\x06\x62ranch\x18\x02 \x01(\tR\x06\x62ranch\x12\x1f\n\x0binto_branch\x18\x03 \x01(\tR\nintoBranch\x12\x34\n\x16\x65xpected_into_snapshot\x18\x04 \x01(\tR\x14\x65xpectedIntoSnapshot\x12\'\n\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKeyJ\x04\x08\x01\x10\x02\"_\n\x13MergeBranchResponse\x12\x1f\n\x0bsnapshot_id\x18\x01 \x01(\tR\nsnapshotId\x12\'\n\x0f\x61lready_applied\x18\x02 \x01(\x08R\x0e\x61lreadyApplied2\xf9\x02\n\x0e\x43\x61talogService\x12m\n\x08GetTable\x12\x1f.rat.catalog.v1.GetTableRequest\x1a .rat.catalog.v1.GetTableResponse\"\x1e\x8a\x97\"\x1arat://catalog/v1/get-table\x12}\n\x0c\x43reateBranch\x12#.rat.catalog.v1.CreateBranchRequest\x1a$.rat.catalog.v1.CreateBranchResponse\"\"\x8a\x97\"\x1erat://catalog/v1/create-branch\x12y\n\x0bMergeBranch\x12\".rat.catalog.v1.MergeBranchRequest\x1a#.rat.catalog.v1.MergeBranchResponse\"!\x8a\x97\"\x1drat://catalog/v1/merge-branchB5Z3github.com/rat-dev/rat/gen/rat/catalog/v1;catalogv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1crat/catalog/v1/catalog.proto\x12\x0erat.catalog.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"O\n\x0fGetTableRequest\x12\x1e\n\nidentifier\x18\x02 \x01(\tR\nidentifier\x12\x16\n\x06\x62ranch\x18\x03 \x01(\tR\x06\x62ranchJ\x04\x08\x01\x10\x02\"A\n\x10GetTableResponse\x12-\n\x05table\x18\x01 \x01(\x0b\x32\x17.rat.common.v1.TableRefR\x05table\"T\n\x13\x43reateBranchRequest\x12\x16\n\x06\x62ranch\x18\x02 \x01(\tR\x06\x62ranch\x12\x1f\n\x0b\x66rom_branch\x18\x03 \x01(\tR\nfromBranchJ\x04\x08\x01\x10\x02\".\n\x14\x43reateBranchResponse\x12\x16\n\x06\x62ranch\x18\x01 \x01(\tR\x06\x62ranch\"\xb2\x01\n\x12MergeBranchRequest\x12\x16\n\x06\x62ranch\x18\x02 \x01(\tR\x06\x62ranch\x12\x1f\n\x0binto_branch\x18\x03 \x01(\tR\nintoBranch\x12\x34\n\x16\x65xpected_into_snapshot\x18\x04 \x01(\tR\x14\x65xpectedIntoSnapshot\x12\'\n\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKeyJ\x04\x08\x01\x10\x02\"_\n\x13MergeBranchResponse\x12\x1f\n\x0bsnapshot_id\x18\x01 \x01(\tR\nsnapshotId\x12\'\n\x0f\x61lready_applied\x18\x02 \x01(\x08R\x0e\x61lreadyApplied\"f\n\x14RegisterTableRequest\x12\x1e\n\nidentifier\x18\x02 \x01(\tR\nidentifier\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\x12\x16\n\x06\x62ranch\x18\x04 \x01(\tR\x06\x62ranchJ\x04\x08\x01\x10\x02\"F\n\x15RegisterTableResponse\x12-\n\x05table\x18\x01 \x01(\x0b\x32\x17.rat.common.v1.TableRefR\x05table\"\xc9\x01\n\x12\x43ommitTableRequest\x12\x1e\n\nidentifier\x18\x02 \x01(\tR\nidentifier\x12\x16\n\x06\x62ranch\x18\x03 \x01(\tR\x06\x62ranch\x12\x1f\n\x0bsnapshot_id\x18\x04 \x01(\tR\nsnapshotId\x12+\n\x11\x65xpected_snapshot\x18\x05 \x01(\tR\x10\x65xpectedSnapshot\x12\'\n\x0fidempotency_key\x18\x06 \x01(\tR\x0eidempotencyKeyJ\x04\x08\x01\x10\x02\"_\n\x13\x43ommitTableResponse\x12\x1f\n\x0bsnapshot_id\x18\x01 \x01(\tR\nsnapshotId\x12\'\n\x0f\x61lready_applied\x18\x02 \x01(\x08R\x0e\x61lreadyApplied2\xf8\x04\n\x0e\x43\x61talogService\x12m\n\x08GetTable\x12\x1f.rat.catalog.v1.GetTableRequest\x1a .rat.catalog.v1.GetTableResponse\"\x1e\x8a\x97\"\x1arat://catalog/v1/get-table\x12}\n\x0c\x43reateBranch\x12#.rat.catalog.v1.CreateBranchRequest\x1a$.rat.catalog.v1.CreateBranchResponse\"\"\x8a\x97\"\x1erat://catalog/v1/create-branch\x12y\n\x0bMergeBranch\x12\".rat.catalog.v1.MergeBranchRequest\x1a#.rat.catalog.v1.MergeBranchResponse\"!\x8a\x97\"\x1drat://catalog/v1/merge-branch\x12\x81\x01\n\rRegisterTable\x12$.rat.catalog.v1.RegisterTableRequest\x1a%.rat.catalog.v1.RegisterTableResponse\"#\x8a\x97\"\x1frat://catalog/v1/register-table\x12y\n\x0b\x43ommitTable\x12\".rat.catalog.v1.CommitTableRequest\x1a#.rat.catalog.v1.CommitTableResponse\"!\x8a\x97\"\x1drat://catalog/v1/commit-tableB5Z3github.com/rat-dev/rat/gen/rat/catalog/v1;catalogv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -40,6 +40,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_CATALOGSERVICE'].methods_by_name['CreateBranch']._serialized_options = b'\212\227\"\036rat://catalog/v1/create-branch'
   _globals['_CATALOGSERVICE'].methods_by_name['MergeBranch']._loaded_options = None
   _globals['_CATALOGSERVICE'].methods_by_name['MergeBranch']._serialized_options = b'\212\227\"\035rat://catalog/v1/merge-branch'
+  _globals['_CATALOGSERVICE'].methods_by_name['RegisterTable']._loaded_options = None
+  _globals['_CATALOGSERVICE'].methods_by_name['RegisterTable']._serialized_options = b'\212\227\"\037rat://catalog/v1/register-table'
+  _globals['_CATALOGSERVICE'].methods_by_name['CommitTable']._loaded_options = None
+  _globals['_CATALOGSERVICE'].methods_by_name['CommitTable']._serialized_options = b'\212\227\"\035rat://catalog/v1/commit-table'
   _globals['_GETTABLEREQUEST']._serialized_start=107
   _globals['_GETTABLEREQUEST']._serialized_end=186
   _globals['_GETTABLERESPONSE']._serialized_start=188
@@ -52,6 +56,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_MERGEBRANCHREQUEST']._serialized_end=568
   _globals['_MERGEBRANCHRESPONSE']._serialized_start=570
   _globals['_MERGEBRANCHRESPONSE']._serialized_end=665
-  _globals['_CATALOGSERVICE']._serialized_start=668
-  _globals['_CATALOGSERVICE']._serialized_end=1045
+  _globals['_REGISTERTABLEREQUEST']._serialized_start=667
+  _globals['_REGISTERTABLEREQUEST']._serialized_end=769
+  _globals['_REGISTERTABLERESPONSE']._serialized_start=771
+  _globals['_REGISTERTABLERESPONSE']._serialized_end=841
+  _globals['_COMMITTABLEREQUEST']._serialized_start=844
+  _globals['_COMMITTABLEREQUEST']._serialized_end=1045
+  _globals['_COMMITTABLERESPONSE']._serialized_start=1047
+  _globals['_COMMITTABLERESPONSE']._serialized_end=1142
+  _globals['_CATALOGSERVICE']._serialized_start=1145
+  _globals['_CATALOGSERVICE']._serialized_end=1777
 # @@protoc_insertion_point(module_scope)

@@ -41,3 +41,22 @@ class CatalogServicer(catalog_pb2_grpc.CatalogServiceServicer):
         except CatalogError as e:
             context.abort(e.code, e.message)
         return catalog_pb2.MergeBranchResponse(snapshot_id=snap, already_applied=already)
+
+    def RegisterTable(self, request, context):
+        try:
+            branch, uri = self.cat.register_table(request.identifier, request.uri, request.branch)
+        except CatalogError as e:
+            context.abort(e.code, e.message)
+        return catalog_pb2.RegisterTableResponse(
+            table=data_pb2.TableRef(identifier=request.identifier, uri=uri, branch=branch)
+        )
+
+    def CommitTable(self, request, context):
+        try:
+            snap, already = self.cat.commit_table(
+                request.identifier, request.branch, request.snapshot_id,
+                request.expected_snapshot, request.idempotency_key
+            )
+        except CatalogError as e:
+            context.abort(e.code, e.message)
+        return catalog_pb2.CommitTableResponse(snapshot_id=snap, already_applied=already)

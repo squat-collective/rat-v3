@@ -19,10 +19,12 @@ import grpc
 SEED_TABLE = "warehouse.sales.orders"
 
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS branches (name TEXT PRIMARY KEY, snapshot TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS tables   (identifier TEXT PRIMARY KEY);
-CREATE TABLE IF NOT EXISTS merges   (idempotency_key TEXT PRIMARY KEY, snapshot TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS meta     (id INTEGER PRIMARY KEY CHECK(id=0), counter INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS branches    (name TEXT PRIMARY KEY, snapshot TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS tables      (identifier TEXT PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS merges      (idempotency_key TEXT PRIMARY KEY, snapshot TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS commits     (identifier TEXT, branch TEXT, snapshot TEXT NOT NULL, PRIMARY KEY(identifier, branch));
+CREATE TABLE IF NOT EXISTS commit_keys (idempotency_key TEXT PRIMARY KEY, snapshot TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS meta        (id INTEGER PRIMARY KEY CHECK(id=0), counter INTEGER NOT NULL);
 INSERT OR IGNORE INTO branches(name, snapshot) VALUES ('main', 'snap-0');
 INSERT OR IGNORE INTO tables(identifier)       VALUES ('warehouse.sales.orders');
 INSERT OR IGNORE INTO meta(id, counter)        VALUES (0, 0);
@@ -103,6 +105,58 @@ class Catalog:
                 c.execute("INSERT INTO merges(idempotency_key, snapshot) VALUES (?, ?)", (key, snap))
             c.execute("COMMIT")
             return snap, False
+        except BaseException:
+            c.execute("ROLLBACK")
+            raise
+
+    def register_table(self, identifier: str, uri: str, branch: str):
+        """Register a NEW table so a pipeline can create its own output (ADR-010).
+        Idempotent (INSERT OR IGNORE): re-registering returns the existing ref.
+        Durable — the registration survives a reopen. Returns (branch, uri)."""
+        if not identifier:
+            raise CatalogError(grpc.StatusCode.INVALID_ARGUMENT, "identifier is required")
+        branch = branch or "main"
+        c = self._conn()
+        if c.execute("SELECT 1 FROM branches WHERE name=?", (branch,)).fetchone() is None:
+            raise CatalogError(grpc.StatusCode.NOT_FOUND, f"unknown branch {branch!r}")
+        c.execute("INSERT OR IGNORE INTO tables(identifier) VALUES (?)", (identifier,))
+        return branch, uri or f"catalog://{identifier}@{branch}"
+
+    def commit_table(self, identifier: str, branch: str, snapshot: str, expected: str, key: str):
+        """Record the snapshot a format.Write produced for a table on a branch — the
+        commit-LINKAGE (ADR-010), in a BEGIN IMMEDIATE transaction so concurrent
+        commits to the same (table, branch) serialize and can't lost-update. Same
+        safety model as merge_branch (optimistic concurrency + idempotency); the
+        commit + its ledger are durable. Returns (snapshot, already_applied)."""
+        if not identifier:
+            raise CatalogError(grpc.StatusCode.INVALID_ARGUMENT, "identifier is required")
+        if not snapshot:
+            raise CatalogError(grpc.StatusCode.INVALID_ARGUMENT, "snapshot_id is required")
+        branch = branch or "main"
+        c = self._conn()
+        c.execute("BEGIN IMMEDIATE")
+        try:
+            if key:
+                row = c.execute("SELECT snapshot FROM commit_keys WHERE idempotency_key=?", (key,)).fetchone()
+                if row is not None:
+                    c.execute("COMMIT")
+                    return row[0], True
+            if c.execute("SELECT 1 FROM tables WHERE identifier=?", (identifier,)).fetchone() is None:
+                raise CatalogError(grpc.StatusCode.NOT_FOUND, f"unknown table {identifier!r}")
+            if c.execute("SELECT 1 FROM branches WHERE name=?", (branch,)).fetchone() is None:
+                raise CatalogError(grpc.StatusCode.NOT_FOUND, f"unknown branch {branch!r}")
+            row = c.execute("SELECT snapshot FROM commits WHERE identifier=? AND branch=?", (identifier, branch)).fetchone()
+            cur = row[0] if row is not None else ""
+            if expected and expected != cur:
+                raise CatalogError(
+                    grpc.StatusCode.FAILED_PRECONDITION,
+                    f"table {identifier!r} on branch {branch!r} is at {cur!r}, not the expected {expected!r} (concurrent commit?)",
+                )
+            c.execute("INSERT OR REPLACE INTO commits(identifier, branch, snapshot) VALUES (?, ?, ?)", (identifier, branch, snapshot))
+            if key:
+                c.execute("INSERT INTO commit_keys(idempotency_key, snapshot) VALUES (?, ?)", (key, snapshot))
+            c.execute("COMMIT")
+            return snapshot, False
         except BaseException:
             c.execute("ROLLBACK")
             raise

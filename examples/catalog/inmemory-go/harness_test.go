@@ -39,6 +39,7 @@ type expectation struct {
 	Branch         string       `json:"branch"`
 	AlreadyApplied *bool        `json:"already_applied"`
 	SnapshotIDSet  bool         `json:"snapshot_id_set"`
+	SnapshotID     string       `json:"snapshot_id"` // exact committed value (commit-linkage, ADR-010)
 	Code           string       `json:"code"`
 }
 
@@ -46,10 +47,13 @@ type vstep struct {
 	Step                 string      `json:"step"`
 	Op                   string      `json:"op"`
 	Identifier           string      `json:"identifier"`
+	URI                  string      `json:"uri"`
 	Branch               string      `json:"branch"`
 	FromBranch           string      `json:"from_branch"`
 	IntoBranch           string      `json:"into_branch"`
 	ExpectedIntoSnapshot string      `json:"expected_into_snapshot"`
+	SnapshotID           string      `json:"snapshot_id"`        // CommitTable: writer-supplied snapshot
+	ExpectedSnapshot     string      `json:"expected_snapshot"`  // CommitTable: CAS guard
 	IdempotencyKey       string      `json:"idempotency_key"`
 	Expect               expectation `json:"expect"`
 }
@@ -114,6 +118,8 @@ func newRig(t *testing.T) *rig {
 		"rat://catalog/v1/get-table",
 		"rat://catalog/v1/create-branch",
 		"rat://catalog/v1/merge-branch",
+		"rat://catalog/v1/register-table",
+		"rat://catalog/v1/commit-table",
 	})
 
 	glis := bufconn.Listen(1 << 20)
@@ -187,6 +193,24 @@ func runStep(t *testing.T, r *rig, ctx context.Context, s vstep) {
 			return
 		}
 		assertMerge(t, s, &resp)
+	case "register_table":
+		var resp catalogv1.RegisterTableResponse
+		err := r.invoke(ctx, "rat://catalog/v1/register-table",
+			&catalogv1.RegisterTableRequest{Identifier: s.Identifier, Uri: s.URI, Branch: s.Branch}, &resp)
+		if expectedError(t, s, err) {
+			return
+		}
+		assertTable(t, resp.GetTable(), s.Expect.Table)
+	case "commit_table":
+		var resp catalogv1.CommitTableResponse
+		err := r.invoke(ctx, "rat://catalog/v1/commit-table", &catalogv1.CommitTableRequest{
+			Identifier: s.Identifier, Branch: s.Branch, SnapshotId: s.SnapshotID,
+			ExpectedSnapshot: s.ExpectedSnapshot, IdempotencyKey: s.IdempotencyKey,
+		}, &resp)
+		if expectedError(t, s, err) {
+			return
+		}
+		assertCommit(t, s, &resp)
 	default:
 		t.Fatalf("%s: unknown op %q", s.Step, s.Op)
 	}
@@ -258,6 +282,22 @@ func assertMerge(t *testing.T, s vstep, resp *catalogv1.MergeBranchResponse) {
 	t.Helper()
 	if s.Expect.AlreadyApplied != nil && resp.GetAlreadyApplied() != *s.Expect.AlreadyApplied {
 		t.Fatalf("%s: already_applied = %v, want %v", s.Step, resp.GetAlreadyApplied(), *s.Expect.AlreadyApplied)
+	}
+	if s.Expect.SnapshotIDSet && resp.GetSnapshotId() == "" {
+		t.Fatalf("%s: snapshot_id empty, want set", s.Step)
+	}
+}
+
+// assertCommit checks a CommitTable response: idempotent-retry flag, the exact
+// committed snapshot (the linkage — writer-supplied value echoed back), and/or that
+// it is merely non-empty.
+func assertCommit(t *testing.T, s vstep, resp *catalogv1.CommitTableResponse) {
+	t.Helper()
+	if s.Expect.AlreadyApplied != nil && resp.GetAlreadyApplied() != *s.Expect.AlreadyApplied {
+		t.Fatalf("%s: already_applied = %v, want %v", s.Step, resp.GetAlreadyApplied(), *s.Expect.AlreadyApplied)
+	}
+	if s.Expect.SnapshotID != "" && resp.GetSnapshotId() != s.Expect.SnapshotID {
+		t.Fatalf("%s: snapshot_id = %q, want %q", s.Step, resp.GetSnapshotId(), s.Expect.SnapshotID)
 	}
 	if s.Expect.SnapshotIDSet && resp.GetSnapshotId() == "" {
 		t.Fatalf("%s: snapshot_id empty, want set", s.Step)

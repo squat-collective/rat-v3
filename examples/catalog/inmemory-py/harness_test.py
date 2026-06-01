@@ -79,6 +79,18 @@ class Rig:
                     expected_into_snapshot=s.get("expected_into_snapshot", ""),
                     idempotency_key=s.get("idempotency_key", "")),
                 metadata=_callmeta())
+        if op == "register_table":
+            return self.stub.RegisterTable(
+                catalog_pb2.RegisterTableRequest(
+                    identifier=s.get("identifier", ""), uri=s.get("uri", ""), branch=s.get("branch", "")),
+                metadata=_callmeta())
+        if op == "commit_table":
+            return self.stub.CommitTable(
+                catalog_pb2.CommitTableRequest(
+                    identifier=s.get("identifier", ""), branch=s.get("branch", ""),
+                    snapshot_id=s.get("snapshot_id", ""), expected_snapshot=s.get("expected_snapshot", ""),
+                    idempotency_key=s.get("idempotency_key", "")),
+                metadata=_callmeta())
         raise AssertionError(f'unknown op {op!r}')
 
 
@@ -95,6 +107,20 @@ def _assert_success(s, resp):
         if "already_applied" in e:
             assert resp.already_applied == e["already_applied"], (
                 f'already_applied = {resp.already_applied}, want {e["already_applied"]}')
+        if e.get("snapshot_id_set"):
+            assert resp.snapshot_id != "", "snapshot_id empty, want set"
+    elif op == "register_table" and "table" in e:
+        assert resp.table.identifier == e["table"]["identifier"], (
+            f'table.identifier = {resp.table.identifier!r}, want {e["table"]["identifier"]!r}')
+        assert resp.table.branch == e["table"]["branch"], (
+            f'table.branch = {resp.table.branch!r}, want {e["table"]["branch"]!r}')
+    elif op == "commit_table":
+        if "already_applied" in e:
+            assert resp.already_applied == e["already_applied"], (
+                f'already_applied = {resp.already_applied}, want {e["already_applied"]}')
+        if "snapshot_id" in e:
+            assert resp.snapshot_id == e["snapshot_id"], (
+                f'snapshot_id = {resp.snapshot_id!r}, want {e["snapshot_id"]!r}')
         if e.get("snapshot_id_set"):
             assert resp.snapshot_id != "", "snapshot_id empty, want set"
 

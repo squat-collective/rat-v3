@@ -25,12 +25,15 @@ nothing by name — only by capability URI, through a mediating gateway:
 
 ```
 strategy.Apply
-  ├─ rat://catalog/v1/get-table   resolve source + target logical names → TableRefs
-  ├─ rat://engine/v1/query        run the transform SQL, binding the source ref…
-  │     └─ rat://format/v1/scan   …which the engine resolves via the format, pulling
-  │                                the source as REAL Arrow over Flight, then streams
-  │                                its transformed result back over Flight
-  └─ rat://format/v1/overwrite    write the result stream into the target
+  ├─ rat://catalog/v1/get-table       resolve the source logical name → TableRef
+  ├─ rat://catalog/v1/register-table  create the pipeline's OWN output table (ADR-010)
+  ├─ rat://engine/v1/query            run the transform SQL, binding the source ref…
+  │     └─ rat://format/v1/scan       …which the engine resolves via the format, pulling
+  │                                    the source as REAL Arrow over Flight, then streams
+  │                                    its transformed result back over Flight
+  ├─ rat://format/v1/overwrite        write the result stream into the target
+  └─ rat://catalog/v1/commit-table    record WHICH snapshot the write produced (commit-
+                                       linkage) — the create→write→register loop closed
 ```
 
 Every combination must produce the **identical** target
@@ -82,15 +85,21 @@ Composition surfaced real cross-axis assumptions the per-axis suites could not:
    on an in-process stand-in incompatible with the format's real Flight. Composition
    forced the intended behavior ([`comp_engine.py`](comp_engine.py)): resolve each
    source ref via `format.scan`, bind it, stream results over real Flight.
-3. **The catalog has no create-table RPC.** `GetTable` only resolves *pre-existing*
-   tables, so the harness registers the source+target out-of-band (modeling admin
-   registration / the GA-deferred commit-linkage gap noted in
-   [catalog.proto](../../contracts/proto/rat/catalog/v1/catalog.proto)). Recorded as
-   residual **R3** in the freeze review; additive post-freeze.
+3. **The catalog had no create-table / commit-linkage RPC — now CLOSED on-wire
+   ([ADR-010](../../docs/architecture/adrs/010-catalog-commit-linkage.md)).** Originally
+   `GetTable` resolved only *pre-existing* tables, so the harness seeded the source +
+   target by poking the catalog's private store — the freeze review's residual **R3** /
+   [reviews/08](../../reviews/08-post-freeze-board-review.md) **B1**. With the additive
+   `RegisterTable` + `CommitTable` RPCs, the strategy now **creates its own output table
+   and records the snapshot it wrote through the gateway**: only the pre-existing *source*
+   is admin-registered (via the catalog's public api), and the harness asserts
+   `GetTable(target)` succeeds *after* the run — proving the catalog learned the
+   pipeline's output on the wire, not from out-of-band poking. The create→write→register
+   loop closes on the frozen surface.
 
-None of these is a wire-breaking flaw — they are usage/conformance lessons and a
-known GA gap. With them documented, the four combinations pass, and the ADR-003
-cross-combination gate is **met**.
+None of the first two is a wire-breaking flaw — they are usage/conformance lessons; the
+third was the one real functional hole and is now resolved additively. The four
+combinations pass, and the ADR-003 cross-combination gate is **met**.
 
 ## Run it
 

@@ -164,6 +164,56 @@ pub mod catalog_service_client {
                 .insert(GrpcMethod::new("rat.catalog.v1.CatalogService", "MergeBranch"));
             self.inner.unary(req, path, codec).await
         }
+        pub async fn register_table(
+            &mut self,
+            request: impl tonic::IntoRequest<super::RegisterTableRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::RegisterTableResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/rat.catalog.v1.CatalogService/RegisterTable",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("rat.catalog.v1.CatalogService", "RegisterTable"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn commit_table(
+            &mut self,
+            request: impl tonic::IntoRequest<super::CommitTableRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::CommitTableResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/rat.catalog.v1.CatalogService/CommitTable",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("rat.catalog.v1.CatalogService", "CommitTable"));
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -198,6 +248,20 @@ pub mod catalog_service_server {
             request: tonic::Request<super::MergeBranchRequest>,
         ) -> std::result::Result<
             tonic::Response<super::MergeBranchResponse>,
+            tonic::Status,
+        >;
+        async fn register_table(
+            &self,
+            request: tonic::Request<super::RegisterTableRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::RegisterTableResponse>,
+            tonic::Status,
+        >;
+        async fn commit_table(
+            &self,
+            request: tonic::Request<super::CommitTableRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::CommitTableResponse>,
             tonic::Status,
         >;
     }
@@ -397,6 +461,96 @@ pub mod catalog_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = MergeBranchSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rat.catalog.v1.CatalogService/RegisterTable" => {
+                    #[allow(non_camel_case_types)]
+                    struct RegisterTableSvc<T: CatalogService>(pub Arc<T>);
+                    impl<
+                        T: CatalogService,
+                    > tonic::server::UnaryService<super::RegisterTableRequest>
+                    for RegisterTableSvc<T> {
+                        type Response = super::RegisterTableResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::RegisterTableRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as CatalogService>::register_table(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = RegisterTableSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rat.catalog.v1.CatalogService/CommitTable" => {
+                    #[allow(non_camel_case_types)]
+                    struct CommitTableSvc<T: CatalogService>(pub Arc<T>);
+                    impl<
+                        T: CatalogService,
+                    > tonic::server::UnaryService<super::CommitTableRequest>
+                    for CommitTableSvc<T> {
+                        type Response = super::CommitTableResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::CommitTableRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as CatalogService>::commit_table(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = CommitTableSvc(inner);
                         let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

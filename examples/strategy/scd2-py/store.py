@@ -12,8 +12,8 @@ SAME `strategy/v1` contract.
 It exercises a DIFFERENT capability mix than full-refresh — which is the whole point,
 the contract must serve both:
 
-  full-refresh : catalog.get-table → engine.query    → format.overwrite
-  SCD2         : catalog.get-table → format.scan (×2) → format.merge
+  full-refresh : …register-table → engine.query    → format.overwrite → commit-table
+  SCD2         : …register-table → format.scan (×2) → format.merge     → commit-table
 
 Three contract observations this reference surfaced (the ADR-003 payoff):
   1. A strategy that READS existing target state composes by calling `format.scan` on
@@ -36,10 +36,12 @@ from rat.common.v1 import data_pb2
 from rat.format.v1 import format_pb2
 
 CAP_GET_TABLE = "rat://catalog/v1/get-table"
+CAP_REGISTER = "rat://catalog/v1/register-table"
+CAP_COMMIT = "rat://catalog/v1/commit-table"
 CAP_SCAN = "rat://format/v1/scan"
 CAP_MERGE = "rat://format/v1/merge"
 
-REQUIRES = (CAP_GET_TABLE, CAP_SCAN, CAP_MERGE)
+REQUIRES = (CAP_GET_TABLE, CAP_REGISTER, CAP_COMMIT, CAP_SCAN, CAP_MERGE)
 
 # Standard SCD2 metadata columns the strategy maintains on the target.
 COL_FROM, COL_TO, COL_CURRENT = "effective_from", "effective_to", "is_current"
@@ -65,7 +67,10 @@ class SCD2Strategy:
         ts = spec["effective_from"]         # this run's effective timestamp
 
         source_ref = self._get_table(source_id)
-        target_ref = self._get_table(target_id)
+        # Register the SCD2 history table the pipeline owns (idempotent — run 2 of a
+        # temporal load re-registers the same target and gets the existing ref back).
+        target_ref = self._invoke(
+            CAP_REGISTER, catalog_pb2.RegisterTableRequest(identifier=target_id)).table
         source_rows = self._scan_rows(source_ref)
         target_rows = self._scan_rows(target_ref)
 
@@ -99,6 +104,12 @@ class SCD2Strategy:
         stream = self._host_rows(delta)
         resp = self._invoke(CAP_MERGE, format_pb2.MergeRequest(
             table=target_ref, source=stream, merge_keys=nk + [COL_FROM]))
+
+        # Commit-linkage (ADR-010): record the snapshot this temporal load produced.
+        # The run timestamp keys the idempotent commit (one logical commit per run).
+        self._invoke(CAP_COMMIT, catalog_pb2.CommitTableRequest(
+            identifier=target_id, branch=target_ref.branch,
+            snapshot_id=resp.result.snapshot_id, idempotency_key=f"{target_id}@{ts}"))
         return resp.result
 
 

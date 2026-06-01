@@ -10,7 +10,7 @@ When an item moves to active work, promote it: cut it from here, add it to [curr
 
 The 5-agent post-freeze review. Grouped by when to act.
 
-> **⏩ Now ACTIVE (Phase 0 close-out, chosen 2026-06-01 — see [current.md](current.md)):** **B1** catalog commit-linkage (first), the **manifest freeze + per-kind schemas** (E2), and the **doc tail** (E4 `overview.md` drift + E1 the 12 missing CONTRACT.md + E3/E7) — all four feed the **`v1.1` cut**. The items below stay queued: the rest of the `v1.1` additives land opportunistically with that cut, and the **enforcement-layer findings are Phase 1 acceptance criteria** (see phases.md Phase 1).
+> **⏩ Now ACTIVE (Phase 0 close-out, chosen 2026-06-01 — see [current.md](current.md)):** ~~**B1** catalog commit-linkage (first)~~ **✅ DONE 2026-06-01 ([ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md))**; **NEXT** is the **manifest freeze + per-kind schemas** (E2), then the **doc tail** (E4 `overview.md` drift + E1 the 12 missing CONTRACT.md + E3/E7) — all feed the **`v1.1` cut**. The items below stay queued: the rest of the `v1.1` additives land opportunistically with that cut, and the **enforcement-layer findings are Phase 1 acceptance criteria** (see phases.md Phase 1).
 
 **NOW — the freeze is still local/unpushed (closing window):**
 - ~~**A1 [V2-REGRET]** — `WriteResult.snapshot_id` `optional` + re-cut `rat/1`.~~ **✅ DONE 2026-06-01** (commit `0e81314`; `rat/1` re-cut from `b9dbe2d`). The one V2-regret is resolved, not carried to a v2.
@@ -18,7 +18,7 @@ The 5-agent post-freeze review. Grouped by when to act.
 - *(Not absorbed — moved to `v1.1`:)* the additive crash-safety fields **C1** (`idempotency_key`/`run_id`) + **C2** (`ArrowStream` terminator) are additive (safe post-freeze), so they didn't block the re-cut; pull them forward only if you'd rather lock the shape now.
 
 **`v1.1` additive (no break; prioritized):**
-- **B1** — catalog `RegisterTable` + commit-linkage RPC (catalog.proto:27-30). **FIRST** post-freeze additive — the branch-pipeline headline feature can't close its loop without it (3 agents' top concern).
+- ~~**B1** — catalog `RegisterTable` + commit-linkage RPC.~~ **✅ DONE 2026-06-01 ([ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md))** — additive `RegisterTable` + `CommitTable` on `catalog/v1`; the create→write→register→merge loop now closes on-wire (composition no longer seeds tables out-of-band). 32/32 + composition green. Resolves R3.
 - **C1/C2/C4** — effect-leg idempotency key · `ArrowStream` completeness/terminator · terminal audit record (`outcome` at stream close; `AUDIT_OUTCOME_ERROR` already exists).
 - Enrichments: structured `IsolationAttestation` (D1), signed **conformance attestation** message so `conformed_capabilities` is derived not self-asserted (D4), `health/v1` liveness/readiness probe the reconciler drives (sre#4), `WriteResult` insert/update/delete breakdown + `TableRef` snapshot_id/as_of (F2), `bound_capability` on `SubjectAssertion` (F1).
 
@@ -48,7 +48,7 @@ From the freeze review ([reviews/07](../reviews/07-freeze-review.md)); all addit
 
 - **R1** — `SubjectAssertion` bound to the operation (`correlation_id`), not hop/capability: bounded confused-deputy (blast radius = the operation's C5-declared capability set). Revisit if finer user-presence proof is needed.
 - **R2** — storage `VendCredentials` tenant-scoping is a per-impl property (ADR-005 bearer exception; core can't inspect an STS blob).
-- **R3** — additive niceties: catalog create-table / commit-linkage RPC (the composition surfaced this — harness seeds tables out-of-band), watch `caught-up` bookmark, `Event.schema_version`, `ArrowStream` termination signal, `MergeBranchResponse` no-op-vs-replay disambiguation, `TableRef.branch` vs per-RPC `branch` precedence. All additive post-freeze (new RPC/fields/enum values).
+- **R3** — additive niceties: ~~catalog create-table / commit-linkage RPC (the composition surfaced this — harness seeds tables out-of-band)~~ **✅ catalog commit-linkage RESOLVED 2026-06-01 ([ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md))**; remaining: watch `caught-up` bookmark, `Event.schema_version`, `ArrowStream` termination signal, `MergeBranchResponse` no-op-vs-replay disambiguation, `TableRef.branch` vs per-RPC `branch` precedence. All additive post-freeze (new RPC/fields/enum values).
 
 ---
 
@@ -79,6 +79,8 @@ This also naturally subsumes the **typed-Arrow conformance pass** (a real format
 ## ADRs to write (from synthesis — 23 of 26 not yet written)
 
 Numbered as proposed in [reviews/00-synthesis.md](../reviews/00-synthesis.md). Most are Phase 0 wire-breaking concerns that land *during* Phase 0 as the contracts get drafted, NOT before. They're listed here so they're not lost.
+
+> **⚠️ These are *prospective* synthesis numbers — they do NOT match the real ADR sequence.** Real ADR numbers are assigned at write-time ([adrs/README.md](../docs/architecture/adrs/README.md)); the real ADR-005/006/007 already diverged from this table, and the real **[ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md) is catalog commit-linkage** (not "Tenancy"). Treat the IDs below as topic placeholders, not reservations.
 
 ### Phase 0-blocking (must land during Phase 0)
 

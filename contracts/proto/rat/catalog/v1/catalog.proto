@@ -1,13 +1,16 @@
-// Catalog axis service contract. Status: v1 (frozen — rat/1, ADR-009).
+// Catalog axis service contract. Status: v1 (frozen — rat/1, ADR-009;
+// RegisterTable + CommitTable added additively at rat/1.1, ADR-010).
 //
 // A `kind: catalog` plugin (Nessie, Unity, Lakekeeper, Glue, Polaris) owns
 // table metadata + branch/version semantics. It is what makes "branch-isolated
 // pipeline runs" (the v2 pipeline model we keep — overview.md) possible.
 //
 // Capability mapping:
-//   rat://catalog/v1/get-table    -> GetTable
-//   rat://catalog/v1/create-branch-> CreateBranch
-//   rat://catalog/v1/merge-branch -> MergeBranch
+//   rat://catalog/v1/get-table     -> GetTable
+//   rat://catalog/v1/create-branch -> CreateBranch
+//   rat://catalog/v1/merge-branch  -> MergeBranch
+//   rat://catalog/v1/register-table-> RegisterTable  (ADR-010, additive)
+//   rat://catalog/v1/commit-table  -> CommitTable    (ADR-010, additive)
 //
 // Not every catalog supports branching (Glue doesn't); those plugins simply do
 // not `provide` the branch capabilities, and the registry won't wire a
@@ -25,9 +28,10 @@
 //     the original result (MergeBranchResponse.already_applied = true), so a
 //     reconciler retry can't double-apply.
 // NOTE: this is the branch-MERGE linkage. The separate gap — how the catalog
-// learns what format.Write put on a branch — is the additive commit-linkage RPC
-// (reviews/06 I-18), GA-deferred; only the request-shape change here is
-// freeze-gated.
+// learns what format.Write put on a branch — is closed by the additive
+// commit-linkage RPCs below (RegisterTable + CommitTable), added at rat/1.1 per
+// ADR-010 (resolving ADR-009 residual R3 / reviews/08 B1). They are additive: the
+// frozen GetTable/CreateBranch/MergeBranch shapes are unchanged.
 syntax = "proto3";
 
 package rat.catalog.v1;
@@ -53,6 +57,26 @@ service CatalogService {
   // after quality tests pass (the pre-merge gate of the v2 pipeline model).
   rpc MergeBranch(MergeBranchRequest) returns (MergeBranchResponse) {
     option (rat.common.v1.capability) = "rat://catalog/v1/merge-branch";
+  }
+
+  // rat://catalog/v1/register-table — register a NEW table so a pipeline can
+  // create its own output (not only read pre-existing tables). Idempotent:
+  // re-registering an existing identifier returns the existing ref (reconcile-safe,
+  // no ALREADY_EXISTS). The "register" half of the create→write→register→merge loop
+  // (ADR-010 / reviews/08 B1). Distinct capability from commit-table so creating a
+  // new catalog entry is a separately-grantable privilege (C5 method-level authz).
+  rpc RegisterTable(RegisterTableRequest) returns (RegisterTableResponse) {
+    option (rat.common.v1.capability) = "rat://catalog/v1/register-table";
+  }
+
+  // rat://catalog/v1/commit-table — record the snapshot a format.Write produced
+  // for a table on a branch (the value returned in WriteResult.snapshot_id). This
+  // is the commit-LINKAGE: the catalog learns exactly what landed. Safe under
+  // retry + concurrency via the SAME model as MergeBranch — `expected_snapshot`
+  // optimistic-concurrency guard + `idempotency_key` (the write-leg idempotency the
+  // reviews/08 B1 architect→sre cross-consult flagged). ADR-010.
+  rpc CommitTable(CommitTableRequest) returns (CommitTableResponse) {
+    option (rat.common.v1.capability) = "rat://catalog/v1/commit-table";
   }
 }
 
@@ -105,5 +129,55 @@ message MergeBranchResponse {
   string snapshot_id = 1;
   // True if this response reflects a previously-committed merge with the same
   // idempotency_key (the retry was a no-op), rather than a merge applied now.
+  bool already_applied = 2;
+}
+
+message RegisterTableRequest {
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
+  // Identifier of the table to register, e.g. "warehouse.sales.summary".
+  string identifier = 2;
+  // Optional storage/format URI hint for the new table (empty == the catalog
+  // synthesizes one). Mirrors TableRef.uri.
+  string uri = 3;
+  // Optional branch the table is registered on (empty == main).
+  string branch = 4;
+}
+
+message RegisterTableResponse {
+  // The registered table. Re-registering an existing identifier is idempotent and
+  // returns the existing ref (no ALREADY_EXISTS — registration is reconcile-safe).
+  rat.common.v1.TableRef table = 1;
+}
+
+message CommitTableRequest {
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
+  // Table whose written snapshot is being recorded. MUST already be registered
+  // (unknown table → NOT_FOUND).
+  string identifier = 2;
+  // Branch the commit lands on (empty == main).
+  string branch = 3;
+  // The snapshot id the write produced — the value the format returned in
+  // WriteResult.snapshot_id. This is the commit-LINKAGE: the catalog records
+  // exactly what format.Write landed. REQUIRED (empty == INVALID_ARGUMENT); an
+  // unversioned format that cannot report a snapshot simply does not commit-link.
+  string snapshot_id = 4;
+  // Optimistic-concurrency guard: the snapshot the table is expected to be at on
+  // `branch` for this commit to apply. Empty == unconditional (only safe when the
+  // caller knows it's the sole writer). Mismatch → FAILED_PRECONDITION. The twin of
+  // MergeBranch.expected_into_snapshot.
+  string expected_snapshot = 5;
+  // Stable id for THIS logical commit (e.g. the pipeline run id). Makes CommitTable
+  // idempotent under at-least-once/reconciler retry: re-submitting a key that
+  // already committed is a no-op returning the original result. Empty == not
+  // idempotent. The twin of MergeBranch.idempotency_key — the write-leg idempotency
+  // the reviews/08 B1 architect→sre cross-consult flagged as missing.
+  string idempotency_key = 6;
+}
+
+message CommitTableResponse {
+  // The snapshot now recorded for the table on the branch (the committed value).
+  string snapshot_id = 1;
+  // True if this response reflects a previously-committed CommitTable with the same
+  // idempotency_key (the retry was a no-op), rather than a commit applied now.
   bool already_applied = 2;
 }

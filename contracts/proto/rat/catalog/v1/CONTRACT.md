@@ -27,6 +27,8 @@ feature flags.
 | `rat://catalog/v1/get-table` | `GetTable` | resolve an identifier (+ branch) → a `TableRef` |
 | `rat://catalog/v1/create-branch` | `CreateBranch` | open an isolated branch for a pipeline run |
 | `rat://catalog/v1/merge-branch` | `MergeBranch` | merge a completed run's branch back to main |
+| `rat://catalog/v1/register-table` | `RegisterTable` | register a NEW output table (idempotent) — ADR-010 |
+| `rat://catalog/v1/commit-table` | `CommitTable` | record the snapshot a `format.Write` produced (commit-linkage) — ADR-010 |
 
 ## The RPCs
 
@@ -37,6 +39,15 @@ feature flags.
 - **`MergeBranch(branch, into_branch, expected_into_snapshot, idempotency_key)` →
   `{snapshot_id, already_applied}`** — the publish gate of the pipeline model. See
   MERGE SAFETY below.
+- **`RegisterTable(identifier, uri, branch)` → `{table: TableRef}`** — create a new
+  output table so a pipeline can write its own target (not only read pre-existing
+  tables). **Idempotent**: re-registering an existing identifier returns the existing
+  ref (no `ALREADY_EXISTS` — reconcile-safe). Empty `identifier` → `INVALID_ARGUMENT`;
+  unknown `branch` → `NOT_FOUND`; empty `branch` == main. (ADR-010.)
+- **`CommitTable(identifier, branch, snapshot_id, expected_snapshot, idempotency_key)` →
+  `{snapshot_id, already_applied}`** — record the snapshot a `format.Write` produced
+  (the value it returned in `WriteResult.snapshot_id`) for the table on the branch:
+  the **commit-linkage**. See COMMIT-LINKAGE SAFETY below. (ADR-010.)
 
 ## Conformance obligations — MERGE SAFETY (reviews/06 #8)
 
@@ -51,10 +62,33 @@ fields make it so, and the vectors gate on both:
   with a key that already committed is a no-op returning the original result
   (`already_applied=true`), so a reconciler retry can't double-apply.
 
+## Conformance obligations — COMMIT-LINKAGE SAFETY (ADR-010 / reviews/08 B1)
+
+`CommitTable` is the create→write→**register**→merge loop's link: the catalog learns
+exactly what `format.Write` landed. It carries the SAME safety model as `MergeBranch`
+(the write/publish leg that previously had none — the B1 `architect`→`sre` cross-consult),
+and the vectors gate on it:
+
+- **`snapshot_id` is writer-supplied + REQUIRED.** It is the value `format.Write`
+  returned in `WriteResult.snapshot_id`; the catalog records it verbatim and echoes it
+  back (the linkage). Empty → `INVALID_ARGUMENT`. An unversioned format that cannot
+  report a snapshot simply does not commit-link.
+- **`expected_snapshot`** — optimistic concurrency on the table's current snapshot on
+  that branch; mismatch → `FAILED_PRECONDITION`. The twin of
+  `MergeBranch.expected_into_snapshot`.
+- **`idempotency_key`** — a retry with a key that already committed is a no-op returning
+  the original (`already_applied=true`). The twin of `MergeBranch.idempotency_key`.
+- The committed table MUST already be registered (`RegisterTable`) — unknown → `NOT_FOUND`.
+
+`RegisterTable` MUST be idempotent (re-registering an identifier returns the existing
+ref, no error) so a repeatedly-run pipeline declaring its output every run is safe.
+
 Pass [`catalog-v1.json`](../../../../conformance/catalog-v1.json): the stateful
 get → create-branch → branch-isolated read → merge(accept) → idempotent-retry →
-merge(reject, `FAILED_PRECONDITION`) lifecycle + the `NOT_FOUND`/`INVALID_ARGUMENT`
-errors.
+merge(reject, `FAILED_PRECONDITION`) → register(new) → register(idempotent) →
+commit(new) → commit(idempotent-retry) → commit(CAS-reject, `FAILED_PRECONDITION`) →
+commit(CAS-ok) lifecycle + the `NOT_FOUND`/`INVALID_ARGUMENT` errors (incl. commit of an
+unregistered table + empty `snapshot_id`).
 
 ## Cross-cutting (every axis)
 
@@ -68,10 +102,12 @@ errors.
 
 ## Writing a plugin
 
-1. Implement `CatalogService` (GetTable/CreateBranch/MergeBranch) over your catalog.
-2. Implement `MergeBranch` with the optimistic-concurrency guard (`expected_into_snapshot`
-   → `FAILED_PRECONDITION` on mismatch) + the idempotency ledger (`idempotency_key` →
-   `already_applied`). These MUST be safe under concurrency.
+1. Implement `CatalogService` (GetTable/CreateBranch/MergeBranch/RegisterTable/CommitTable)
+   over your catalog.
+2. Implement `MergeBranch` **and** `CommitTable` with the optimistic-concurrency guard
+   (`expected_*` → `FAILED_PRECONDITION` on mismatch) + the idempotency ledger
+   (`idempotency_key` → `already_applied`). These MUST be safe under concurrency. Make
+   `RegisterTable` idempotent.
 3. Pass [`catalog-v1.json`](../../../../conformance/catalog-v1.json) via `make conformance`.
 
 ## Reference implementations

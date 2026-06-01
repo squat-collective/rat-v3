@@ -29,6 +29,16 @@ class CatalogServiceStub(object):
                 request_serializer=rat_dot_catalog_dot_v1_dot_catalog__pb2.MergeBranchRequest.SerializeToString,
                 response_deserializer=rat_dot_catalog_dot_v1_dot_catalog__pb2.MergeBranchResponse.FromString,
                 _registered_method=True)
+        self.RegisterTable = channel.unary_unary(
+                '/rat.catalog.v1.CatalogService/RegisterTable',
+                request_serializer=rat_dot_catalog_dot_v1_dot_catalog__pb2.RegisterTableRequest.SerializeToString,
+                response_deserializer=rat_dot_catalog_dot_v1_dot_catalog__pb2.RegisterTableResponse.FromString,
+                _registered_method=True)
+        self.CommitTable = channel.unary_unary(
+                '/rat.catalog.v1.CatalogService/CommitTable',
+                request_serializer=rat_dot_catalog_dot_v1_dot_catalog__pb2.CommitTableRequest.SerializeToString,
+                response_deserializer=rat_dot_catalog_dot_v1_dot_catalog__pb2.CommitTableResponse.FromString,
+                _registered_method=True)
 
 
 class CatalogServiceServicer(object):
@@ -57,6 +67,30 @@ class CatalogServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RegisterTable(self, request, context):
+        """rat://catalog/v1/register-table — register a NEW table so a pipeline can
+        create its own output (not only read pre-existing tables). Idempotent:
+        re-registering an existing identifier returns the existing ref (reconcile-safe,
+        no ALREADY_EXISTS). The "register" half of the create→write→register→merge loop
+        (ADR-010 / reviews/08 B1). Distinct capability from commit-table so creating a
+        new catalog entry is a separately-grantable privilege (C5 method-level authz).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CommitTable(self, request, context):
+        """rat://catalog/v1/commit-table — record the snapshot a format.Write produced
+        for a table on a branch (the value returned in WriteResult.snapshot_id). This
+        is the commit-LINKAGE: the catalog learns exactly what landed. Safe under
+        retry + concurrency via the SAME model as MergeBranch — `expected_snapshot`
+        optimistic-concurrency guard + `idempotency_key` (the write-leg idempotency the
+        reviews/08 B1 architect→sre cross-consult flagged). ADR-010.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_CatalogServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -74,6 +108,16 @@ def add_CatalogServiceServicer_to_server(servicer, server):
                     servicer.MergeBranch,
                     request_deserializer=rat_dot_catalog_dot_v1_dot_catalog__pb2.MergeBranchRequest.FromString,
                     response_serializer=rat_dot_catalog_dot_v1_dot_catalog__pb2.MergeBranchResponse.SerializeToString,
+            ),
+            'RegisterTable': grpc.unary_unary_rpc_method_handler(
+                    servicer.RegisterTable,
+                    request_deserializer=rat_dot_catalog_dot_v1_dot_catalog__pb2.RegisterTableRequest.FromString,
+                    response_serializer=rat_dot_catalog_dot_v1_dot_catalog__pb2.RegisterTableResponse.SerializeToString,
+            ),
+            'CommitTable': grpc.unary_unary_rpc_method_handler(
+                    servicer.CommitTable,
+                    request_deserializer=rat_dot_catalog_dot_v1_dot_catalog__pb2.CommitTableRequest.FromString,
+                    response_serializer=rat_dot_catalog_dot_v1_dot_catalog__pb2.CommitTableResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -157,6 +201,60 @@ class CatalogService(object):
             '/rat.catalog.v1.CatalogService/MergeBranch',
             rat_dot_catalog_dot_v1_dot_catalog__pb2.MergeBranchRequest.SerializeToString,
             rat_dot_catalog_dot_v1_dot_catalog__pb2.MergeBranchResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RegisterTable(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/rat.catalog.v1.CatalogService/RegisterTable',
+            rat_dot_catalog_dot_v1_dot_catalog__pb2.RegisterTableRequest.SerializeToString,
+            rat_dot_catalog_dot_v1_dot_catalog__pb2.RegisterTableResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CommitTable(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/rat.catalog.v1.CatalogService/CommitTable',
+            rat_dot_catalog_dot_v1_dot_catalog__pb2.CommitTableRequest.SerializeToString,
+            rat_dot_catalog_dot_v1_dot_catalog__pb2.CommitTableResponse.FromString,
             options,
             channel_credentials,
             insecure,

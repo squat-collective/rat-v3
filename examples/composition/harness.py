@@ -88,9 +88,17 @@ class CompFormatServicer(format_pb2_grpc.FormatServiceServicer):
     def __init__(self, store):
         self.store = store
         self.flight = FlightHost()
+        self._versions = {}  # identifier -> write counter; mints a per-write snapshot id
 
     def close(self):
         self.flight.stop()
+
+    def _snapshot(self, identifier):
+        # A real versioned format returns the snapshot a write produced in
+        # WriteResult.snapshot_id; the strategy carries that value to
+        # catalog.CommitTable (the commit-linkage, ADR-010). Mint a deterministic one.
+        self._versions[identifier] = self._versions.get(identifier, 0) + 1
+        return f"{identifier}@v{self._versions[identifier]}"
 
     def Resolve(self, request, context):
         rows = self.store.scan(request.table.identifier)
@@ -100,18 +108,21 @@ class CompFormatServicer(format_pb2_grpc.FormatServiceServicer):
     def Append(self, request, context):
         t = flight_pull(request.source)
         n = self.store.append(request.table.identifier, t.to_pylist() if t else [])
-        return format_pb2.AppendResponse(result=data_pb2.WriteResult(rows_affected=n))
+        return format_pb2.AppendResponse(result=data_pb2.WriteResult(
+            rows_affected=n, snapshot_id=self._snapshot(request.table.identifier)))
 
     def Overwrite(self, request, context):
         t = flight_pull(request.source)
         n = self.store.overwrite(request.table.identifier, t.to_pylist() if t else [])
-        return format_pb2.OverwriteResponse(result=data_pb2.WriteResult(rows_affected=n))
+        return format_pb2.OverwriteResponse(result=data_pb2.WriteResult(
+            rows_affected=n, snapshot_id=self._snapshot(request.table.identifier)))
 
     def Merge(self, request, context):
         t = flight_pull(request.source)
         n = self.store.merge(request.table.identifier, list(request.merge_keys),
                              t.to_pylist() if t else [])
-        return format_pb2.MergeResponse(result=data_pb2.WriteResult(rows_affected=n))
+        return format_pb2.MergeResponse(result=data_pb2.WriteResult(
+            rows_affected=n, snapshot_id=self._snapshot(request.table.identifier)))
 
 
 class CompCatalogServicer(catalog_pb2_grpc.CatalogServiceServicer):
@@ -128,20 +139,41 @@ class CompCatalogServicer(catalog_pb2_grpc.CatalogServiceServicer):
             table=data_pb2.TableRef(identifier=request.identifier, uri=uri, branch=branch)
         )
 
+    def RegisterTable(self, request, context):
+        from grpc import StatusCode
+        try:
+            branch, uri = self.cat.register_table(request.identifier, request.uri, request.branch)
+        except Exception as e:
+            context.abort(getattr(e, "code", StatusCode.INTERNAL), str(e))
+        return catalog_pb2.RegisterTableResponse(
+            table=data_pb2.TableRef(identifier=request.identifier, uri=uri, branch=branch)
+        )
+
+    def CommitTable(self, request, context):
+        from grpc import StatusCode
+        try:
+            snap, already = self.cat.commit_table(
+                request.identifier, request.branch, request.snapshot_id,
+                request.expected_snapshot, request.idempotency_key)
+        except Exception as e:
+            context.abort(getattr(e, "code", StatusCode.INTERNAL), str(e))
+        return catalog_pb2.CommitTableResponse(snapshot_id=snap, already_applied=already)
+
 
 # ---- per-impl construction helpers ----------------------------------------------
 
-def build_catalog(impl, tmp, table_ids):
+def build_catalog(impl, tmp, admin_table_ids):
+    """Construct the catalog backend and ADMIN-register the pre-existing (ingested)
+    input tables via the catalog's PUBLIC api — no more private-store poking. The
+    pipeline's OWN output table is NOT seeded here; the strategy registers it through
+    the wire (catalog.RegisterTable) and records what it wrote (catalog.CommitTable),
+    closing the create→write→register→merge loop on the frozen surface
+    (ADR-010 / reviews/08 B1)."""
     Catalog = getattr(_load(BACKENDS["catalog"][impl][0], f"catalog_{impl.replace('-', '_')}"),
                       "Catalog")
-    if impl == "sqlite-py":
-        cat = Catalog(os.path.join(tmp, "catalog.db"))
-        for tid in table_ids:
-            cat._conn().execute("INSERT OR IGNORE INTO tables(identifier) VALUES (?)", (tid,))
-    else:  # inmemory-py
-        cat = Catalog()
-        for tid in table_ids:
-            cat._tables.add(tid)
+    cat = Catalog(os.path.join(tmp, "catalog.db")) if impl == "sqlite-py" else Catalog()
+    for tid in admin_table_ids:
+        cat.register_table(tid, "", "")  # admin/ingestion registration of pre-existing inputs
     return cat
 
 
@@ -169,7 +201,7 @@ def run_combo(combo, v, tmp):
     sql = v["transform_sql"]
 
     fmt = CompFormatServicer(build_format(combo["format"], tmp))
-    cat = CompCatalogServicer(build_catalog(combo["catalog"], tmp, [src_id, tgt_id]))
+    cat = CompCatalogServicer(build_catalog(combo["catalog"], tmp, [src_id]))  # only the source is admin-registered
     fmt_srv, fmt_ch = _serve(format_pb2_grpc.add_FormatServiceServicer_to_server, fmt)
     cat_srv, cat_ch = _serve(catalog_pb2_grpc.add_CatalogServiceServicer_to_server, cat)
 
@@ -190,11 +222,20 @@ def run_combo(combo, v, tmp):
         fmt_ch_stub.Overwrite(format_pb2.OverwriteRequest(
             table=data_pb2.TableRef(identifier=src_id), source=seed_stream))
 
-        # --- run the REAL strategy reference over the gateway ---
-        from strategy_store import FullRefreshStrategy
-        strat = FullRefreshStrategy(gw.invoker_for([
-            "rat://catalog/v1/get-table", "rat://engine/v1/query", "rat://format/v1/overwrite"]))
+        # --- run the REAL strategy reference over the gateway. It REGISTERS its own
+        #     output table + COMMITs the written snapshot through the wire (ADR-010) —
+        #     the target was NOT pre-seeded, so the create→write→register→merge loop
+        #     closes entirely on the frozen surface, no out-of-band poking. ---
+        from strategy_store import FullRefreshStrategy, REQUIRES as FR_REQUIRES
+        strat = FullRefreshStrategy(gw.invoker_for(list(FR_REQUIRES)))
         result = strat.apply(src_id, tgt_id, json.dumps({"sql": sql}).encode())
+
+        # --- prove the loop closed ON THE WIRE: the catalog now resolves the target
+        #     the strategy created (RegisterTable) — the harness never seeded it. ---
+        cat_stub = catalog_pb2_grpc.CatalogServiceStub(cat_ch)
+        tref = cat_stub.GetTable(catalog_pb2.GetTableRequest(identifier=tgt_id)).table
+        assert tref.identifier == tgt_id and tref.branch == "main", \
+            f"catalog did not learn the target on-wire: {tref}"
 
         # --- read the target back via the format ---
         resp = fmt_ch_stub.Resolve(format_pb2.ResolveRequest(
@@ -218,11 +259,12 @@ def run_scd2(sv, tmp):
     serves a second, semantically-different strategy (ADR-003). Uses baseline backends
     (parquet format + sqlite catalog); runs two temporal loads and asserts the SCD2
     history."""
-    SCD2 = getattr(_load("examples/strategy/scd2-py/store.py", "strategy_scd2_store"), "SCD2Strategy")
+    scd2_mod = _load("examples/strategy/scd2-py/store.py", "strategy_scd2_store")
+    SCD2 = getattr(scd2_mod, "SCD2Strategy")
     src_id, tgt_id = sv["source_table"], sv["target_table"]
 
     fmt = CompFormatServicer(build_format("parquet-py", tmp))
-    cat = CompCatalogServicer(build_catalog("sqlite-py", tmp, [src_id, tgt_id]))
+    cat = CompCatalogServicer(build_catalog("sqlite-py", tmp, [src_id]))  # only the source is admin-registered
     fmt_srv, fmt_ch = _serve(format_pb2_grpc.add_FormatServiceServicer_to_server, fmt)
     cat_srv, cat_ch = _serve(catalog_pb2_grpc.add_CatalogServiceServicer_to_server, cat)
     fmt_stub = format_pb2_grpc.FormatServiceStub(fmt_ch)
@@ -236,8 +278,7 @@ def run_scd2(sv, tmp):
     pull_rows = lambda s: (lambda t: t.to_pylist() if t is not None else [])(flight_pull(s))
     seed_host = FlightHost()
     try:
-        requires = ["rat://catalog/v1/get-table", "rat://format/v1/scan", "rat://format/v1/merge"]
-        scd2 = SCD2(gw.invoker_for(requires), host_rows, pull_rows)
+        scd2 = SCD2(gw.invoker_for(list(scd2_mod.REQUIRES)), host_rows, pull_rows)
         opts = {"natural_key": sv["natural_key"], "tracked": sv["tracked"]}
         for run in ("run1", "run2"):
             r = sv[run]

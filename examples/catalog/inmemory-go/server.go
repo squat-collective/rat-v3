@@ -47,3 +47,23 @@ func (s *catalogServer) MergeBranch(_ context.Context, req *catalogv1.MergeBranc
 	}
 	return &catalogv1.MergeBranchResponse{SnapshotId: snap, AlreadyApplied: already}, nil
 }
+
+func (s *catalogServer) RegisterTable(_ context.Context, req *catalogv1.RegisterTableRequest) (*catalogv1.RegisterTableResponse, error) {
+	branch, uri, err := s.cat.registerTable(req.GetIdentifier(), req.GetUri(), req.GetBranch())
+	if err != nil {
+		return nil, err
+	}
+	return &catalogv1.RegisterTableResponse{Table: &commonv1.TableRef{
+		Identifier: req.GetIdentifier(),
+		Uri:        uri,
+		Branch:     branch,
+	}}, nil
+}
+
+func (s *catalogServer) CommitTable(_ context.Context, req *catalogv1.CommitTableRequest) (*catalogv1.CommitTableResponse, error) {
+	snap, already, err := s.cat.commitTable(req.GetIdentifier(), req.GetBranch(), req.GetSnapshotId(), req.GetExpectedSnapshot(), req.GetIdempotencyKey())
+	if err != nil {
+		return nil, err
+	}
+	return &catalogv1.CommitTableResponse{SnapshotId: snap, AlreadyApplied: already}, nil
+}

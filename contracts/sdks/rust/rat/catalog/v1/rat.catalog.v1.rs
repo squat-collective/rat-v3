@@ -61,5 +61,64 @@ pub struct MergeBranchResponse {
     #[prost(bool, tag="2")]
     pub already_applied: bool,
 }
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RegisterTableRequest {
+    /// Identifier of the table to register, e.g. "warehouse.sales.summary".
+    #[prost(string, tag="2")]
+    pub identifier: ::prost::alloc::string::String,
+    /// Optional storage/format URI hint for the new table (empty == the catalog
+    /// synthesizes one). Mirrors TableRef.uri.
+    #[prost(string, tag="3")]
+    pub uri: ::prost::alloc::string::String,
+    /// Optional branch the table is registered on (empty == main).
+    #[prost(string, tag="4")]
+    pub branch: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RegisterTableResponse {
+    /// The registered table. Re-registering an existing identifier is idempotent and
+    /// returns the existing ref (no ALREADY_EXISTS — registration is reconcile-safe).
+    #[prost(message, optional, tag="1")]
+    pub table: ::core::option::Option<super::super::common::v1::TableRef>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CommitTableRequest {
+    /// Table whose written snapshot is being recorded. MUST already be registered
+    /// (unknown table → NOT_FOUND).
+    #[prost(string, tag="2")]
+    pub identifier: ::prost::alloc::string::String,
+    /// Branch the commit lands on (empty == main).
+    #[prost(string, tag="3")]
+    pub branch: ::prost::alloc::string::String,
+    /// The snapshot id the write produced — the value the format returned in
+    /// WriteResult.snapshot_id. This is the commit-LINKAGE: the catalog records
+    /// exactly what format.Write landed. REQUIRED (empty == INVALID_ARGUMENT); an
+    /// unversioned format that cannot report a snapshot simply does not commit-link.
+    #[prost(string, tag="4")]
+    pub snapshot_id: ::prost::alloc::string::String,
+    /// Optimistic-concurrency guard: the snapshot the table is expected to be at on
+    /// `branch` for this commit to apply. Empty == unconditional (only safe when the
+    /// caller knows it's the sole writer). Mismatch → FAILED_PRECONDITION. The twin of
+    /// MergeBranch.expected_into_snapshot.
+    #[prost(string, tag="5")]
+    pub expected_snapshot: ::prost::alloc::string::String,
+    /// Stable id for THIS logical commit (e.g. the pipeline run id). Makes CommitTable
+    /// idempotent under at-least-once/reconciler retry: re-submitting a key that
+    /// already committed is a no-op returning the original result. Empty == not
+    /// idempotent. The twin of MergeBranch.idempotency_key — the write-leg idempotency
+    /// the reviews/08 B1 architect→sre cross-consult flagged as missing.
+    #[prost(string, tag="6")]
+    pub idempotency_key: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CommitTableResponse {
+    /// The snapshot now recorded for the table on the branch (the committed value).
+    #[prost(string, tag="1")]
+    pub snapshot_id: ::prost::alloc::string::String,
+    /// True if this response reflects a previously-committed CommitTable with the same
+    /// idempotency_key (the retry was a no-op), rather than a commit applied now.
+    #[prost(bool, tag="2")]
+    pub already_applied: bool,
+}
 include!("rat.catalog.v1.tonic.rs");
 // @@protoc_insertion_point(module)

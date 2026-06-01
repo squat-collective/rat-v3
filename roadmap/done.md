@@ -4,6 +4,19 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — Phase 0 close-out (1/4): **catalog commit-linkage** — the headline-feature hole closed on-wire ([ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md))
+
+Closed reviews/08 **B1** (3 agents' top concern) — the first `v1.1` additive. The branch-pipeline headline feature now completes its **create → write → register → merge** loop entirely on the frozen wire; the composition no longer fakes table registration out-of-band.
+
+- **[ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md)** — two additive RPCs on the frozen `catalog/v1`: `RegisterTable` (`rat://catalog/v1/register-table`, idempotent create of a new output table) + `CommitTable` (`rat://catalog/v1/commit-table`, records the writer-supplied `WriteResult.snapshot_id` — the commit-linkage). `CommitTable` carries `MergeBranch`'s safety model (`expected_snapshot` CAS + `idempotency_key` → `already_applied`), giving the previously-unguarded **write/publish leg** the idempotency the B1 architect→sre cross-consult flagged. Two RPCs (not one) so create-vs-commit are method-level capabilities (the format `Write`-split precedent). **Resolves ADR-009 residual R3.**
+- **Wire:** `catalog.proto` +2 RPCs +4 messages — **additive** (`buf breaking` FILE clean vs HEAD; lint + build clean). All 4 SDKs regenerated (Go/Py/TS/Rust — only the 8 catalog files changed).
+- **References:** all 3 catalogs (`inmemory-go`, `inmemory-py`, `sqlite-py` — store + server) implement register/commit; sqlite uses `BEGIN IMMEDIATE` for the same durable + concurrent-safe semantics as merge.
+- **Golden vectors:** `catalog-v1.json` +6 lifecycle steps (register new/idempotent · commit new/idempotent-retry/CAS-reject/CAS-ok) +3 error steps; all 3 harnesses extended (+ the 2 caps in the Go stub gateway's C5 allowlist). **`make conformance` 32/32.**
+- **Composition:** `build_catalog` no longer pokes the catalog's private store — only the pre-existing source is admin-registered via the public api; the **full-refresh + SCD2 strategies register their output + commit the written snapshot through the gateway**, and the harness asserts `GetTable(target)` succeeds *after* the run (the catalog learned the output on-wire). `CompFormatServicer` now returns a real `snapshot_id`. **`make composition` ✅** (4/4 combos + both strategies).
+- **Status:** staged in the working tree, verified green; commit pending. *(gen-check freshness gate is BSR-rate-limited locally; SDK freshness confirmed by the successful `make gen-sdks` + catalog-only diff + the live SDK exercise in conformance/composition.)*
+
+---
+
 ## 2026-06-01 — Absorbed the board's two "NOW" items + **re-cut `rat/1`** (pre-publish correction)
 
 Actioned the two reviews/08 items that were only possible while the freeze is local/unpushed, and re-cut the `rat/1` tag.
