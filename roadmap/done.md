@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — D1 steps 3–4: composition through launched providers — the cross-axis pipeline over isolated processes
+
+`core/composition` + `core/testplugins` ([ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md)), on `phase-1-composition-launched`. The in-test `fakeCatalog`/`fakeFormat` are **promoted to standalone binaries**, and the full cross-axis pipeline is **re-run through the supervisor** — so catalog + format now serve from **launched, isolated child processes**, not in-process bufconn fakes.
+
+- **Promotion (one impl, two topologies):** `testplugins/catalogsvc` + `testplugins/formatsvc` hold the fakes as importable packages (frozen RPCs + C1 idempotency + ADR-010 commit-linkage). The SAME impl backs both the in-process composition test (bufconn) and the launched `catalogplugin`/`formatplugin` binaries — no in-process-vs-binary divergence. Each tags a free-form response field with `os.Getpid()` (catalog→`TableRef.uri`, format→`WriteResult.snapshot_id`), mirroring `stateplugin`, so work is attributable to a distinct OS process. `runPipeline` refactored to drive the gateway client + return a response-only `runResult`, shared by both topologies.
+- **Test:** `composition_launched_test.go` brings catalog+format up through the `local-process` runtime behind the gateway (`supervisor.BringUp`), then drives get-table → register → overwrite → commit-table through the LAUNCHED processes. **Distinct PIDs** (test/catalog/format all different, e.g. `4588/4689/4695`); **commit-linkage** holds across the boundary; **C5** still denies an undeclared `merge` (audited); **C1** crash-mid-strategy recovery is idempotent (replayed overwrite `already_applied`, written once, committed once). Commit `c37ce7b`; `make core-test` + `make breaking` green.
+- **Next:** the **podman** runtime for the full I9 profile (read-only-fs / metadata-egress / seccomp) = **D1 complete**.
+
+---
+
 ## 2026-06-01 — D1 step 2: the supervisor — the core brings plugins up as launched processes behind the gateway
 
 `core/supervisor` ([ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md)), on `phase-1-supervisor`. `BringUp(runtime, specs, …)` Launches each provider via the deployment-runtime → waits healthy → dials the endpoint → registers; caller/driver specs (no `Launch`) are registered for their `requires` only; it then builds the registry + gateway over the launched providers. `Plane.Shutdown` terminates every instance + closes conns; a failed launch tears down what already came up. **Replaces the spike's dial-pre-running** — provider conns now come from isolated processes the core launched.
