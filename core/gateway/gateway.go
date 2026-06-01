@@ -50,7 +50,7 @@ type AuditRecord struct {
 	// decision record is emitted there; this terminal record records how the stream
 	// ENDED. Set only on the record emitted when a server-stream closes.
 	Terminal bool   // true == the stream's terminal close record
-	Outcome  string // "success" | "error" | "canceled" (maps to AUDIT_OUTCOME_* at GA)
+	Outcome  string // "success" | "error" | "canceled" | "timeout" (→ AUDIT_OUTCOME_* at GA)
 	Frames   int    // response frames relayed before close
 	Error    string // transport/provider error when Outcome == "error"
 }
@@ -83,6 +83,14 @@ func (a *MemAuditor) Records() []AuditRecord {
 	return append([]AuditRecord(nil), a.records...)
 }
 
+// defaultStreamIdleTimeout backstops a server-stream that goes silent (C3): if no
+// frame arrives within this window the gateway cuts the stream, so a hung provider
+// can't pin it forever even when the call carries NO deadline (the deadline bound
+// covers the deadline-set case — reviews/10). It is generous because a legitimately
+// quiet long-lived stream (e.g. watch) is normal; such providers should emit periodic
+// keepalive frames, or a deployment tunes Gateway.StreamIdleTimeout.
+const defaultStreamIdleTimeout = 5 * time.Minute
+
 // Gateway implements core/v1 CapabilityInvokeService. It resolves a capability to
 // its provider via the registry, enforces C5 against declared manifests, audits
 // the decision, then relays opaque frames to the provider's gRPC connection.
@@ -92,6 +100,11 @@ type Gateway struct {
 	providers map[string]*grpc.ClientConn // plugin name -> live connection
 	routes    map[string]string           // capability URI -> "/<svc.Full>/<Method>"
 	auditor   Auditor
+
+	// StreamIdleTimeout is the C3 idle backstop for server-streams (see
+	// defaultStreamIdleTimeout). New sets it to the default; override it before the
+	// gateway starts serving. <= 0 falls back to the default.
+	StreamIdleTimeout time.Duration
 }
 
 // New builds a gateway. The route table (capability -> method) is derived from the
@@ -102,11 +115,20 @@ func New(reg *registry.Registry, providers map[string]*grpc.ClientConn, auditor 
 		auditor = noopAuditor{}
 	}
 	return &Gateway{
-		reg:       reg,
-		providers: providers,
-		routes:    buildRoutes(descriptors),
-		auditor:   auditor,
+		reg:               reg,
+		providers:         providers,
+		routes:            buildRoutes(descriptors),
+		auditor:           auditor,
+		StreamIdleTimeout: defaultStreamIdleTimeout,
 	}
+}
+
+// idleTimeout is the effective server-stream idle backstop (guards a zero value).
+func (g *Gateway) idleTimeout() time.Duration {
+	if g.StreamIdleTimeout > 0 {
+		return g.StreamIdleTimeout
+	}
+	return defaultStreamIdleTimeout
 }
 
 func buildRoutes(fds []protoreflect.FileDescriptor) map[string]string {
@@ -268,8 +290,17 @@ func (g *Gateway) InvokeServerStream(req *corev1.InvokeServerStreamRequest, up g
 // relayServerStream opens the downstream server-stream and relays opaque frames to
 // the upstream, returning the number relayed and the terminating error (nil on a
 // clean EOF). The count + error feed the terminal audit record.
+//
+// C3 idle backstop: a streamCtx (child of oc.ctx, so the deadline bound still
+// applies) is cut by a time.AfterFunc watchdog if no frame arrives within the idle
+// window — reset on each frame. A silent provider therefore can't pin the stream even
+// with no deadline set. On a RecvMsg failure the cause is attributed: the parent
+// deadline/cancel, our idle watchdog, or a genuine provider/transport error.
 func (g *Gateway) relayServerStream(oc *openedCall, payload []byte, up grpc.ServerStreamingServer[corev1.InvokeServerStreamResponse]) (int, error) {
-	ds, err := oc.conn.NewStream(oc.ctx, &grpc.StreamDesc{ServerStreams: true}, oc.method, grpc.ForceCodec(passthroughCodec{}))
+	idle := g.idleTimeout()
+	streamCtx, cancel := context.WithCancel(oc.ctx)
+	defer cancel()
+	ds, err := oc.conn.NewStream(streamCtx, &grpc.StreamDesc{ServerStreams: true}, oc.method, grpc.ForceCodec(passthroughCodec{}))
 	if err != nil {
 		return 0, err
 	}
@@ -279,32 +310,46 @@ func (g *Gateway) relayServerStream(oc *openedCall, payload []byte, up grpc.Serv
 	if err := ds.CloseSend(); err != nil {
 		return 0, err
 	}
+	watchdog := time.AfterFunc(idle, cancel) // fires → cancels streamCtx → RecvMsg returns
+	defer watchdog.Stop()
 	frames := 0
 	for {
 		var frame []byte
-		switch err := ds.RecvMsg(&frame); err {
-		case nil:
+		err := ds.RecvMsg(&frame)
+		if err == nil {
+			watchdog.Reset(idle) // a frame arrived; restart the idle window
 			if err := up.Send(&corev1.InvokeServerStreamResponse{Result: frame}); err != nil {
 				return frames, err
 			}
 			frames++
-		case io.EOF:
+			continue
+		}
+		if err == io.EOF {
 			return frames, nil
+		}
+		switch {
+		case oc.ctx.Err() != nil: // parent deadline (C3 bound) or upstream cancel
+			return frames, status.FromContextError(oc.ctx.Err()).Err()
+		case streamCtx.Err() != nil: // our idle watchdog cut a silent provider
+			return frames, status.Errorf(codes.DeadlineExceeded, "stream idle timeout: no frame within %s", idle)
 		default:
-			return frames, err
+			return frames, err // a genuine provider/transport error
 		}
 	}
 }
 
 // streamOutcome classifies a stream's terminating error into the terminal record's
-// outcome. nil == clean EOF (success); a cancellation == canceled; anything else
-// (incl. a soft-deadline cut — C3) == error, with the message preserved.
+// outcome. nil == clean EOF (success); cancellation == canceled; a deadline/idle cut
+// == timeout; anything else == error. (At GA these collapse to AUDIT_OUTCOME_SUCCESS
+// vs _ERROR; the spike keeps the finer label so an idle-cut is legible in the trail.)
 func streamOutcome(err error) (outcome, errMsg string) {
 	switch {
 	case err == nil:
 		return "success", ""
 	case errors.Is(err, context.Canceled) || status.Code(err) == codes.Canceled:
 		return "canceled", err.Error()
+	case errors.Is(err, context.DeadlineExceeded) || status.Code(err) == codes.DeadlineExceeded:
+		return "timeout", err.Error()
 	default:
 		return "error", err.Error()
 	}
