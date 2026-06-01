@@ -67,6 +67,10 @@ func (r *Podman) Launch(ctx context.Context, req *deploymentruntimev1.LaunchRequ
 		"--cap-drop=ALL",                   // drop_all_capabilities → CapEff == 0
 		"--security-opt=no-new-privileges", // no_new_privileges → NoNewPrivs == 1
 		"--read-only",                      // read_only_root_fs → writes to / fail (EROFS)
+		// read-only root + a writable /tmp tmpfs is the canonical hardened pattern: the
+		// root fs stays immutable, but a stateful plugin still gets ephemeral scratch
+		// (e.g. a SQLite WAL db at /tmp). nosuid,nodev keep the scratch unprivileged.
+		"--tmpfs", "/tmp:rw,nosuid,nodev",
 		// block_metadata_egress: force the container onto a PRIVATE bridge network with
 		// its OWN netns — explicitly, never inheriting a host-network default (some
 		// nested/CI environments default --network to host, which would both defeat
@@ -158,7 +162,9 @@ func (r *Podman) Terminate(ctx context.Context, req *deploymentruntimev1.Termina
 	if !ok {
 		return nil, status.Errorf(codes.NotFound, "unknown instance %q", req.GetInstanceId())
 	}
-	if out, err := r.podman(ctx, "rm", "-f", inst.containerID); err != nil {
+	// -t 0: terminate now (skip the SIGTERM grace before SIGKILL) — a slow-to-SIGTERM
+	// plugin (e.g. a Python gRPC server) must not make Terminate block for 10s.
+	if out, err := r.podman(ctx, "rm", "-f", "-t", "0", inst.containerID); err != nil {
 		return nil, status.Errorf(codes.Internal, "podman rm %s: %v: %s", inst.containerID, err, out)
 	}
 	return &deploymentruntimev1.TerminateResponse{Terminated: true}, nil

@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — C5 against REAL providers — enforcement holds beyond our fakes (Go refs + a SQLite container)
+
+`core/composition` + `core/deploymentruntime` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C5 exit), on `phase-1-c5-real-providers`. The spike enforced C5 against our in-repo fakes; this **extends the proof to genuine reference plugins** behind the supervisor + gateway. The manifest-derived authorization holds identically: declared caps route + return **real results**; a capability the real provider genuinely implements but the caller never declared is **denied + audited**.
+
+- **Proof 1 — Go refs via local-process** (`composition_realproviders_test.go`): the full get-table → register → overwrite → commit-table pipeline runs through the canonical ADR-003 refs `examples/{catalog,format}/inmemory-go` — built as **independent modules** (own `go.mod`), launched as isolated processes. Real results (the real catalog returns `catalog://warehouse.sales.orders@main`; the real format returns `snap-1`; commit-linkage holds). C5 then denies `format/merge` + `catalog/merge-branch` — caps the refs implement but the strategy never declared. 4 allow + 2 deny audited (C4).
+- **Proof 2 — SQLite catalog via podman** (`composition_realpodman_test.go`): C5 against a **real-backend plugin in a real container** — the SQLite catalog ref `examples/catalog/sqlite-py`, built into a `python:3.12-slim` image and launched by the **podman runtime under the full I9 profile**, behind the gateway. `get-table` + `commit-table` (declared) hit real SQLite and return real results; `merge-branch` (undeclared) is denied. Ties C5 + supervisor + the podman runtime together end-to-end. Gated by `RAT_PODMAN_TEST` → `make core-test-podman`.
+- **podman runtime hardening:** add a writable `/tmp` tmpfs (read-only root + tmpfs is the canonical hardened pattern — lets a stateful plugin keep scratch, e.g. SQLite's WAL db, without weakening the read-only root) + `rm -f -t 0` on Terminate (no 10s SIGTERM grace). `make core-test` + `make core-test-podman` + `make breaking` green. Commit `6e66a24`.
+- **Next:** remaining Phase-1 DoD — C4 terminal audit incl. denials, C3 idle-timeout backstop, D2 real bulk leg, D3 storage-cred isolation, D4 conformance-attestation enforced, C1 against real backends, sre#4.
+
+---
+
 ## 2026-06-01 — 🎉 D1 COMPLETE: the podman deployment-runtime — full I9 profile, kernel-enforced
 
 `core/deploymentruntime` + `core/testplugins/probeplugin` ([ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md) §4), on `phase-1-podman-runtime`. The second deployment-runtime reference and the one that **closes D1**: where `local-process` honors only the process-level I9 subset, **`Podman` ENFORCES the full profile at the kernel level** — closing the [reviews/08](../reviews/08-post-freeze-board-review.md) D1 honesty gap (the v1 refs *self-attest* `read_only_root_fs` while enforcing nothing). The board's literal exit criterion — "a real *enforcing* deployment-runtime (podman, not dry-run) passes a full-profile vector" — is met.
