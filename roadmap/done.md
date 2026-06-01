@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — 🎉 sre#4 — the reconciler (crash-loop backoff/jitter + leader election): PHASE-1 DoD COMPLETE (9/9)
+
+`core/reconciler` + `core/lease` ([reviews/03](../reviews/03-operations-sre.md) §incident-runbooks → [reviews/09](../reviews/09-phase-1-gate-review.md) exit gate), on `phase-1-sre4-reconciler`. The 5th of the six core things, built greenfield with the sre#4 robustness baked in: **don't re-make the K8s CrashLoopBackoff mistake.** Level-triggered convergence (events are hints; each pass re-observes), one active replica via a lease.
+
+- **`core/lease`:** a single-key linearizable CAS `Store` (models the state-backend's CAS, overview D5) + an `Elector` with the **lease-thrash guard** — a TTL margin keeps leadership across renewal-latency spikes (a delayed-but-in-margin renewal retains it), and a follower acquires only after genuine expiry (minimum-hold). Tests: two-contender mutual exclusion, thrash guard under a latency spike (no ping-pong), failover after a leader stops, continuous-term min-hold.
+- **`core/reconciler`:** converges a desired plugin set via the deployment-runtime; a crashed/unhealthy plugin is restarted with **exponential backoff** (base·2ⁿ, capped) + injectable **jitter** + a **crash-loop cap** (→ Degraded after N, so it stops hammering the runtime); success resets the counter; a launch error crash-loops through the same path. `Loop` ties Elector + Reconciler on a jittered tick (only the leader converges). `testplugins/crashplugin` exits immediately (the real crash target).
+- **Tests:** deterministic backoff schedule (1s,2s,4s,4s capped) + cap + no-hammer-after-Degraded + readiness + recovery-reset (fake runtime + injectable clock); a deterministic two-replica **leader + failover** (leader converges, follower idle, thrash guard, failover → new leader resumes); a **REAL end-to-end** (Loop + local-process): a healthy plugin converges while a genuinely crash-looping one is capped at Degraded. `go test -race` clean; `make core-test` + `make breaking` green (no wire change). Commit `5a350ce`.
+- **🎉 MILESTONE — all 9 Phase-1 exit criteria met** (C5, C4, C3, C1, D1, D2, D3, D4, sre#4). The Phase-1 definition-of-done ([reviews/10](../reviews/10-phase-1-spike-exit.md)) is complete → the `phase-1` → `main` **seal (`rat/2.0`)** is ready to cut ([git-branching.md](../.claude/rules/git-branching.md)). Still owed before/around the seal: **Q02** external peer review.
+
+---
+
 ## 2026-06-01 — C1 against real backends — idempotency survives a real backend crash
 
 `core/composition` + `core/deploymentruntime` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C1 exit), on `phase-1-c1-real-backends`. The crash-mid-strategy at-least-once idempotency was proven against the in-repo fakes (composition_test.go); C1-real re-proves it against the **real catalog refs**, whose commit-key ledgers are genuine (an in-memory map in inmemory-go; a **durable SQL table** in sqlite-py). The format leg can't be re-proven — the real inmemory-go format deliberately ignores `idempotency_key` — so C1-real rides on the catalog's `CommitTable`/`MergeBranch` (a documented gap: no real *idempotent format* ref exists yet).
