@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — D1 step 1: the `local-process` deployment-runtime — real child-process isolation, I9-enforced
+
+First code of the committed full build's D1 ([ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md)), on `phase-1-local-process-runtime`. `core/deploymentruntime.LocalProcess` implements the frozen `DeploymentRuntimeService`:
+
+- **Launch** execs `LaunchSpec.image` (a plugin binary) as a child OS process bound to a runtime-allocated loopback endpoint; **enforces the I9 minimum** — below `run_as_non_root + drop_all_capabilities + no_new_privileges` (or running as root, which can't honor non-root) → `FAILED_PRECONDITION`; empty image → `INVALID_ARGUMENT`.
+- **Healthcheck** = PID liveness + endpoint readiness (HEALTHY / UNKNOWN / UNHEALTHY); **Terminate** kills the child's process group + reaps it.
+- `core/testplugins/stateplugin` — a minimal standalone StateService binary the runtime launches (Get tags its own PID).
+- **Test** (`go test ./core/...`): build the plugin → Launch → Healthcheck-until-HEALTHY → dial + Get **ran in a distinct child PID** → Terminate (then NotFound); + the I9-refusal + empty-image gates. Commit `c638202`; `make core-test` green.
+- **Next:** the supervisor (manifests → Launch → dial → register) + composition-through-launched providers; then a podman runtime for the full profile = **D1 complete**.
+
+---
+
 ## 2026-06-01 — ADR-016: plugin provisioning via the deployment-runtime axis (D1 opened)
 
 First decision of the committed full build ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md)). [ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md): the core **launches** plugins through the frozen `deployment-runtime/v1` axis (`Launch` → `{instance_id, endpoint}` → `Healthcheck` → dial → register → `Terminate`) instead of the spike's dial-pre-running shortcut. The deployment-runtime is **tier-0** (bootstrapped in-core; everything else launched through it — no 7th core thing). The D1 increment = a Go `local-process` runtime enforcing the process-level I9 subset (refuse below non-root / cap-drop / no-new-privs) + the in-test fakes promoted to standalone binaries + composition re-run through launched (distinct-PID) providers; the **podman** runtime (full profile: read-only-fs / metadata-egress) is the follow-on that **completes D1**. Registry/gateway interfaces (ADR-014) unchanged; frozen contracts untouched. Next: build the `local-process` runtime + the supervisor.
