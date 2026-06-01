@@ -77,7 +77,7 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 **Phase 0 close-out (chosen 2026-06-01 — "complete & seal Phase 0"):** the contract surface is frozen + board-reviewed; four items remain before Phase 1, then cut contract **`v1.1`**:
 1. ✅ **Catalog commit-linkage** — **DONE 2026-06-01 ([ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md))**: additive `RegisterTable` + `CommitTable` RPCs so the branch-pipeline loop closes on the wire (reviews/08 B1 — the #1 functional gap). Proto + 4 SDKs + 3 refs + 6 golden steps + `examples/composition` rewired off out-of-band seeding; 32/32 + composition green. Resolves R3.
 2. ✅ **Manifest schema freeze + 18 per-kind schemas** — **DONE 2026-06-01 ([ADR-011](../docs/architecture/adrs/011-manifest-schema-freeze-and-per-kind-layer.md))**: `plugin.v1.json` frozen at `v1` (the last `v1-preview` artifact); `(rat.capability)` rolled across the 12 unannotated axes (additive); 18 per-kind schemas in `schema/kinds/` with minimal-mandatory-core `provides`; `make validate-manifests` gate (32/32).
-3. **Doc tail** — `overview.md` drift, the 12 missing control/experience `CONTRACT.md`, round-1-refs-are-not-templates labels, temptation ledger (reviews/08 E1/E3/E4/E7).
+3. ✅ **Doc tail** — **DONE 2026-06-01** (reviews/08 E1/E3/E4/E7): all 18 axes have a `CONTRACT.md` (12 authored via parallel subagents, caps verified vs the protos); `overview.md` drift fixed (declarative reconciler + tier-0 callout); temptation ledger started (count 0); 13 round-1 refs labeled `WIRE-CONTRACT REFERENCE`.
 4. **Cut `v1.1`** — tag the sealed surface.
 
 **Phase 0 detail:** lives in this file + ADR-001 + ADR-003 + the close-out in [current.md](current.md). (No separate `phase-0-detail.md` yet.)

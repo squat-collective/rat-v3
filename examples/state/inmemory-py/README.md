@@ -1,5 +1,7 @@
 # rat-state-inmemory-py — second `state-backend` reference (ADR-003)
 
+> ⚠️ **WIRE-CONTRACT REFERENCE ONLY — NOT A STARTER TEMPLATE.** This round-1 reference validates the `state-backend/v1` wire contract (proto shapes, error model, the cross-cutting `rat-callmeta-bin` envelope) with an **in-memory stand-in** — it deliberately fakes things a real plugin must not copy (in-process data stand-ins, ignored hints). For a production-shaped implementation, copy the **round-2 real backend** instead: [`sqlite-py`](../sqlite-py). See [reviews/08](../../../reviews/08-post-freeze-board-review.md) E3.
+
 The **second independent** `kind: state-backend` reference, and the one that
 **closes out 0d round 1**: with it, all six data-plane axes have two cross-checked
 references on shared golden vectors. A state-backend is a **tier-0** plugin — it

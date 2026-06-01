@@ -1,5 +1,7 @@
 # `rat-observability-inmemory-py` — the `observability` reference
 
+> ⚠️ **WIRE-CONTRACT REFERENCE — NOT PRODUCTION-HARDENED.** This validates the `observability/v1` wire contract (proto shapes, error model, the cross-cutting `rat-callmeta-bin` envelope) with an **in-memory store**. A production `observability` plugin adds a durable/real backend + the enforcement the core will demand (Phase 1) — it demonstrates the contract, not a deployment. See [reviews/08](../../../reviews/08-post-freeze-board-review.md) E3.
+
 The control-plane reference for the `observability/v1` axis: an **export sink**, not the
 source of truth for core health. The core's own observability (its `/metrics`, OTel
 spans, reconcile-loop SLIs) is **native** and does not depend on any observability plugin

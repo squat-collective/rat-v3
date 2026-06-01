@@ -1,5 +1,7 @@
 # rat-billing-inmemory-py — first `billing` reference
 
+> ⚠️ **WIRE-CONTRACT REFERENCE — NOT PRODUCTION-HARDENED.** This validates the `billing/v1` wire contract (proto shapes, error model, the cross-cutting `rat-callmeta-bin` envelope) with an **in-memory store**. A production `billing` plugin adds a durable/real backend + the enforcement the core will demand (Phase 1) — it demonstrates the contract, not a deployment. See [reviews/08](../../../reviews/08-post-freeze-board-review.md) E3.
+
 A `kind: billing` plugin is a **metering sink**: the core emits usage events at
 well-defined points (pipeline run, credential vend, storage bytes) and this plugin
 **records + aggregates** them so a deployment can be costed/charged. This in-memory

@@ -4,6 +4,30 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 📿 Six-thing-core temptation ledger (standing — not a chronological entry)
+
+> **CLAUDE.md #2** / [`.claude/rules/plugin-architecture.md`](../.claude/rules/plugin-architecture.md): every time we're tempted to add a **7th core responsibility**, log it here with the verdict. **Three in a quarter = an early warning** the premise needs revisiting. Started 2026-06-01 (reviews/08 **E7** — the discipline was held ad hoc but never *recorded*; the ledger now exists even at count 0).
+
+**Temptations logged since 2026-06-01: `0`.** The post-freeze board review ([reviews/08](../reviews/08-post-freeze-board-review.md) architect #1, #6) independently confirmed the six-thing discipline **held** through the entire Phase-0 contract surface. The recurring "cross-cutting concerns" (trace propagation, plugin↔core auth, state-gateway isolation, mandatory audit, native observability) were resolved as **correctness conditions of the existing six**, not as new core responsibilities (see plugin-architecture.md "Cross-plugin concerns" + reviews/00 C1–C10). Items 1–2 of the Phase-0 close-out (catalog commit-linkage, manifest freeze) added *plugin-axis* + *manifest* surface only — no core temptation.
+
+| date | the thing we wanted to put in core | chicken-and-egg proof attempted? | verdict |
+|---|---|---|---|
+| — | *(none logged yet — count 0)* | — | — |
+
+---
+
+## 2026-06-01 — Phase 0 close-out (3/4): **the doc tail** (reviews/08 E1/E3/E4/E7)
+
+Cleared the four documentation findings from the board review; the contract surface is now fully documented + internally consistent.
+
+- **E1 — all 18 axes now have a `CONTRACT.md`.** Authored the **12 missing** control/experience author guides (strategy, identity, tenancy, deployment-runtime, scheduler-backend, secret-backend, observability, audit-log, ui, notifications, marketplace, billing) via **12 parallel subagents** on the [`catalog/v1`](../contracts/proto/rat/catalog/v1/CONTRACT.md) template. Each: honesty banner · capabilities table · RPC semantics · conformance obligations · cross-cutting · writing guide · reference table. **Verified programmatically:** 18/18 exist, all required sections present, every documented capability URI matches the proto's `(rat.capability)` annotations exactly, all relative links resolve.
+- **E4 — `overview.md` drift fixed.** The reconciler pseudocode no longer commands a phantom `plane-manager-plugin`; reframed declaratively (the reconciler **records desired plane state**, the **deployment-runtime** plugin converges — the core never spawns a process), so the "core never tells anyone to do anything" thesis holds. Added a **tier-0 callout** (state-backend / deployment-runtime / event-bus are bootstrap-critical, selected at boot, not hot-swapped) to the front-door doc; noted the core language is locked to Go (ADR-004).
+- **E7 — the temptation ledger now exists** (CLAUDE.md #2), pinned at the top of this file. **Count: 0** — the board independently confirmed the six-thing discipline held; cross-cutting concerns were resolved as *correctness conditions of the existing six*, not new core responsibilities.
+- **E3 — round-1 reference toys labeled** `WIRE-CONTRACT REFERENCE` across **13** `inmemory-py` READMEs: the 6 data-plane ones point at their round-2 real backend ("NOT A STARTER TEMPLATE"); the 7 control/experience sole-refs note they are not production-hardened.
+- **Status:** staged, verified; commit pending.
+
+---
+
 ## 2026-06-01 — Phase 0 close-out (2/4): **manifest schema FROZEN `v1` + 18 per-kind schemas** ([ADR-011](../docs/architecture/adrs/011-manifest-schema-freeze-and-per-kind-layer.md))
 
 Closed reviews/08 **E2** + the **last `v1-preview` artifact**. The one author-hand-written contract is now frozen, and a per-kind layer catches the wrong/missing-required-capability mistake the envelope can't.

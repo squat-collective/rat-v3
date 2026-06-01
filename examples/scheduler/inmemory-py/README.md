@@ -1,5 +1,7 @@
 # `rat-scheduler-inmemory-py` — the `scheduler-backend` reference
 
+> ⚠️ **WIRE-CONTRACT REFERENCE — NOT PRODUCTION-HARDENED.** This validates the `scheduler-backend/v1` wire contract (proto shapes, error model, the cross-cutting `rat-callmeta-bin` envelope) with an **in-memory store**. A production `scheduler-backend` plugin adds a durable/real backend + the enforcement the core will demand (Phase 1) — it demonstrates the contract, not a deployment. See [reviews/08](../../../reviews/08-post-freeze-board-review.md) E3.
+
 The control-plane reference for the `scheduler/v1` axis: a **clock, not an
 orchestrator** ([scheduler.proto](../../../contracts/proto/rat/scheduler/v1/scheduler.proto)).
 It owns "fire this at this time / on this interval"; the reconciler asks it *when* and

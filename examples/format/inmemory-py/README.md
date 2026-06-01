@@ -1,5 +1,7 @@
 # rat-format-inmemory-py — second `format` reference (ADR-003)
 
+> ⚠️ **WIRE-CONTRACT REFERENCE ONLY — NOT A STARTER TEMPLATE.** This round-1 reference validates the `format/v1` wire contract (proto shapes, error model, the cross-cutting `rat-callmeta-bin` envelope) with an **in-memory stand-in** — it deliberately fakes things a real plugin must not copy (in-process data stand-ins, ignored hints). For a production-shaped implementation, copy the **round-2 real backend** instead: [`parquet-py`](../parquet-py) / [`delta-py`](../delta-py). See [reviews/08](../../../reviews/08-post-freeze-board-review.md) E3.
+
 The **second independent** `kind: format` reference implementation. Its sole job is
 to satisfy the [ADR-003](../../../docs/architecture/adrs/003-two-references-before-contract-freeze.md)
 gate for `format/v1`: a second, independently-written implementation (different

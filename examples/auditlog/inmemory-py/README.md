@@ -1,5 +1,7 @@
 # `rat-auditlog-inmemory-py` — the `audit-log` sink reference
 
+> ⚠️ **WIRE-CONTRACT REFERENCE — NOT PRODUCTION-HARDENED.** This validates the `audit-log/v1` wire contract (proto shapes, error model, the cross-cutting `rat-callmeta-bin` envelope) with an **in-memory store**. A production `audit-log` plugin adds a durable/real backend + the enforcement the core will demand (Phase 1) — it demonstrates the contract, not a deployment. See [reviews/08](../../../reviews/08-post-freeze-board-review.md) E3.
+
 The control-plane reference for the `auditlog/v1` axis. Unlike most axes, audit emission
 is **not optional**: the core always emits a tamper-evident, append-only chain of
 security-relevant events — even with no audit-log plugin installed (it falls back to a

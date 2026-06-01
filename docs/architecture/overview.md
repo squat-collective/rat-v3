@@ -56,7 +56,9 @@ Each is irreducible — i.e., it can't itself be a plugin because of chicken-and
 5. **Reconciler** — reads desired state (manifests, planes, pipelines), compares to actual, drives convergence. Kubernetes controller pattern.
 6. **API gateway** — gRPC + REST entry point. Authenticates via identity gateway; routes to internal handlers or proxies to plugins.
 
-Total LOC budget: **5-10k**. Probably Rust (for performance + memory safety) or Go (for ecosystem). Comparable in size to etcd, NATS, Temporal's core.
+Total LOC budget: **5-10k**. Probably Rust (for performance + memory safety) or Go (for ecosystem). Comparable in size to etcd, NATS, Temporal's core. (Core language locked to **Go** — [ADR-004](adrs/004-core-language-go.md).)
+
+> **Tier 0 — the bootstrap-critical plugins.** Three of the plugins the six things delegate to are load-bearing for the core to *start*, so they get a documented exception: the **state-backend** (the state gateway's implementation — the registry can't index without it), the **deployment-runtime** (which launches every *other* plugin process), and the **event-bus transport**. These are still plugins — different implementations are possible — but they are selected **at boot**, not hot-swapped at runtime like the rest, and they get extra rigor. Do not market them as "swap while running." This is named honestly in [`.claude/rules/plugin-architecture.md`](../../.claude/rules/plugin-architecture.md) ("the hidden tier 0") and [reviews/01](../../reviews/01-adversarial-architect.md) Finding 6 — and now here in the front-door doc too.
 
 ## The plugin axes
 
@@ -172,21 +174,25 @@ Operator declares (via UI or API):
 
 Reconciler loop (every N seconds):
   - For each declared pipeline:
-      - If scheduled to run now: check plane is healthy.
-        If not: ask plane-manager-plugin to spawn missing axes.
+      - If scheduled to run now: check the plane is healthy.
+        If not: record the missing axes as desired-running in plane state.
         Emit `pipeline_run_requested` event.
   - For each subscription:
-      - If triggering event happened: emit corresponding action event.
+      - If the triggering event happened: emit the corresponding action event.
   - For each plugin process:
-      - Verify healthcheck. If failed, request restart.
+      - Verify healthcheck. If failed, record it not-ready in desired state.
 
-Plugins react to events:
+Plugins react to desired state + events:
+  - deployment-runtime converges actual → desired plane: it launches the missing
+    axes and restarts the unhealthy ones (it owns process lifecycle via its
+    Launch/Terminate/Healthcheck capabilities — the core records what SHOULD run,
+    it never spawns a process itself).
   - Engine subscribes to `pipeline_run_requested` for its plane → runs work.
   - Observability subscribes to `*_completed` → pushes metrics.
   - Notifications subscribes to `*_failed` → alerts Slack.
 ```
 
-**The core never tells anyone to do anything.** It maintains the truth of "what should be true" and lets plugins react. This is profoundly more scalable than imperative orchestration because plugins can be added/removed/replaced without core changes.
+**The core never tells anyone to do anything.** It maintains the truth of "what should be true" and lets plugins react — even process lifecycle: the reconciler records the desired plane and the **deployment-runtime** plugin converges to it (the core never spawns a process itself). This is profoundly more scalable than imperative orchestration because plugins can be added/removed/replaced without core changes.
 
 ## Deployment topologies (same core, different plugin sets)
 

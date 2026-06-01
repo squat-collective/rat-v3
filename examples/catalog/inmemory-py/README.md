@@ -1,5 +1,7 @@
 # rat-catalog-inmemory-py — second `catalog` reference (ADR-003)
 
+> ⚠️ **WIRE-CONTRACT REFERENCE ONLY — NOT A STARTER TEMPLATE.** This round-1 reference validates the `catalog/v1` wire contract (proto shapes, error model, the cross-cutting `rat-callmeta-bin` envelope) with an **in-memory stand-in** — it deliberately fakes things a real plugin must not copy (in-process data stand-ins, ignored hints). For a production-shaped implementation, copy the **round-2 real backend** instead: [`sqlite-py`](../sqlite-py). See [reviews/08](../../../reviews/08-post-freeze-board-review.md) E3.
+
 The **second independent** `kind: catalog` reference. It satisfies the
 [ADR-003](../../../docs/architecture/adrs/003-two-references-before-contract-freeze.md)
 **wire-contract** gate for `catalog/v1`: an independently-written implementation
