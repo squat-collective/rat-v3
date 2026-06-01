@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — Spike core: cross-axis composition-on-Go — C5 + crash recovery validated; the frozen wire SUFFICES
+
+The spike's centerpiece, end-to-end ([ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md) §5), on `phase-1-composition`. `core/composition` drives the real pipeline (catalog `get-table` → format `overwrite` → catalog `commit-table`) through the Go enforcing gateway, a manifest per plugin, against Go providers honoring the frozen RPCs + idempotency contract.
+
+- **`TestCompositionPipeline`** — the multi-axis pipeline runs; the catalog records exactly the snapshot the format produced (commit-linkage, ADR-010); 4 hops authorized + audited (C4).
+- **`TestCrashMidStrategyRecovers`** (C1) — a strategy that crashes after the write but before `commit-table` recovers on an at-least-once re-run with the same run id: the replayed `overwrite` is a no-op (`already_applied`) → **no double-write**, exactly-once commit.
+- **`TestCompositionDeniesUndeclaredMidPipeline`** (C5) — `merge` (undeclared) is denied mid-pipeline though the format provides it. `go build` + `vet` + `test ./core/...` PASS (`golang:1.25`). Commit `dfd6587`.
+- **🔑 FINDING (de-risking — the spike's whole purpose):** the frozen wire **suffices** for crash-between-write-and-commit recovery via the existing `idempotency_key`/`already_applied` fields (ADR-012); the strategy axis did **not** need a commit/abort wire shape. **No freeze-reopen.** (Multi-output all-or-nothing atomicity stays the branch+merge primitive's job — a follow-on probe, not a strategy-level gap.)
+- **Next:** lighter spike probes (C3 deadline, D2 ticket) + CI (`make core-test`) + the spike exit report → the deferred commitment-gate decision (ADR-013).
+
+---
+
 ## 2026-06-01 — Spike core: the capability-invoke gateway — C5 enforced end-to-end at the wire
 
 Second spike increment ([ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md)), on `phase-1-invoke-gateway`. `core/gateway` implements the `core/v1` `CapabilityInvokeService` (`Invoke` + `InvokeServerStream`), seeded from the faithful non-test `examples/bench/latency-go/gateway.go` — but its **C5 decision is `registry.Authorize` (derived from declared manifests), audited per decision (C4)**, not the stubs' hardcoded allowlist. Routes `capability→method` from the `(rat.common.v1.capability)` annotation; relays opaque frames (passthrough codec); re-stamps identity + propagates traceparent (ADR-007); rejects a missing/ill-formed traceparent (C1).
