@@ -10,7 +10,7 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 |---|---|---|---|---|
 | **−1** | Architectural design + adversarial review | **done** (2026-05-30) | ~1 day | ADRs 001-003, vision, overview, 5-perspective review, synthesis |
 | **0** | Lock the contracts (with Critical concerns baked in) | ✅ **DONE — SEALED `rat/1.5`** (2026-06-01) | 4-6 months | All 18 axes frozen + board-reviewed ([reviews/08](../reviews/08-post-freeze-board-review.md)); the close-out is complete — catalog commit-linkage (ADR-010), manifest freeze + 18 per-kind schemas (ADR-011), all 18 `CONTRACT.md` + doc tail (E1/E3/E4/E7), C1/C2 crash-safety (ADR-012) — and `rat/1.5` is cut. Phase 1 acceptance criteria = the deferred C3–C5/D1–D5 findings. |
-| **1** | Build the core (~12-15k LOC) | not-started | 3 months | Six things + cross-cutting enforcement |
+| **1** | Build the core (~12-15k LOC) | **in-flight** (committed) | 3 months | Spike validated the contracts ([reviews/10](../reviews/10-phase-1-spike-exit.md), no freeze-reopen) → **gate CLEARED ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md))** → full core build committed. Six things + cross-cutting enforcement. |
 | **2** | Solo deployment reference plugins (production-grade) | not-started | 2 months | `chmod +x ./rat` works end-to-end |
 | **3** | Self-hosted team reference plugins | not-started | 2 months | Match v2's operational shape |
 | **4** | Hardening + GTM motion | not-started | 3 months | 4-of-5 non-engineering GTM gaps land here |
@@ -46,13 +46,13 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | — | **Experience FREEZE** | **🧊🎉 DONE (tag `rat/1.4`).** ui/notifications/marketplace — one ref each. **ALL 18 axis contracts now `v1`.** `make conformance` 32/32. Only `v1-preview` left: the manifest schema (`plugin/v1.json`). |
 
 **Deliverables:**
-- `plugin/v1.json` published at stable URL
-- 20 proto files + generated SDKs in Go, Python, Rust, TS, Java
-- 12 reference plugins in `examples/`
-- Conformance test harness (`rat-conformance test`)
-- 20 CONTRACT.md docs
+- `plugin/v1.json` published at stable URL — **frozen `v1`** (ADR-011); kept local/unpushed pending the Phase-1 spike (ADR-013)
+- **24** proto files + generated SDKs in Go, Python, Rust, TypeScript *(Java dropped)*
+- **32** conformance-passing reference implementations in `examples/`
+- Conformance test harness (`make conformance`)
+- **18** CONTRACT.md docs (one per axis)
 - Benchmark report
-- Peer review notes
+- Peer review notes — *adversarial only so far; external human review still owed (reviews/09 dissent, ADR-013 Q02)*
 
 **Done when:**
 - All critical axes have 2 reference implementations
@@ -86,6 +86,8 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 
 ## Phase 1 — Build the core (3 months)
 
+> **Spike COMPLETE → gate CLEARED (2026-06-01).** Entered as a time-boxed contract-de-risking spike ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md)); it stood up a real registry + capability enforcer and validated the frozen wire (C5/C1/C3/D2 green, no freeze-reopen — [reviews/10](../reviews/10-phase-1-spike-exit.md)). On that evidence the commitment gate is **CLEARED** ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md)) and the full ~3-month build below is **committed**. Next increment: **D1** (real process isolation).
+
 **Goal:** `rat` binary that boots, accepts manifest installs (rejecting unsatisfied requires), runs the reconciler loop on a leader-elected single replica, emits `/metrics` + OTel, and exercises every Phase 0 contract via mock plugins. No functional plugins yet — the substrate.
 
 **Six things implemented:**
@@ -109,12 +111,14 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 - All Phase 0 contracts exercised by real code paths
 
 **Acceptance criteria from the board review ([reviews/08](../reviews/08-post-freeze-board-review.md)) — the core isn't "done" until these *pass*** (the review converted "the core will enforce X" into testable exit conditions):
-- **C5** capability enforcement — a plugin invoking a capability not in its manifest `requires` is denied (`declared == provided` is *enforced*, not self-asserted — D4).
-- **C4** audit-on-every-decision — every enforcement decision (incl. DENIED) emits one signed record; streams emit a terminal close record.
-- **C3** provider-call deadline — the core bounds the provider call by `min(channel, deadline_unix_ms)` + a streaming idle-timeout (a hung provider can't pin the gateway).
-- **D1** isolation conformance — a real *enforcing* deployment-runtime (podman, not dry-run) passes a full-profile vector.
-- **D2/D3** bytes-plane isolation — ArrowStream-ticket (TTL/single-use/binding) + storage-cred scoping are vector-tested, not honor-system.
-- **C1** crash-safety — at-least-once re-runs don't double-apply (effect-leg idempotency key), and a broken stream fails the write rather than committing partial.
+- **✅ C5** capability enforcement — a plugin invoking a capability not in its manifest `requires` is denied (`declared == provided` is *enforced*, not self-asserted). **Proven against REAL providers (2026-06-01):** the Go refs `examples/{catalog,format}/inmemory-go` (independent modules, local-process) and the SQLite catalog ref in a container under the podman full-I9 profile — declared caps route + return real results, undeclared caps the providers genuinely implement (merge / merge-branch) are denied + audited. (The complementary `declared == conformed` half is **D4**, still open.)
+- **✅ C4** audit-on-every-decision — every enforcement decision (incl. DENIED) emits one record; streams emit a terminal close record. **DONE (2026-06-01):** the gateway records one decision record per call (allow/deny) and now a **terminal stream-close record** (Outcome success/error/canceled + frames + error, correlation-linked to the open); a denied stream gets only the deny record. The core **signature + hash chain** on the canonical `common/v1.AuditRecord` (the spike uses a simplified in-memory record) is the remaining GA item.
+- **✅ C3** provider-call deadline — the core bounds the provider call by `min(channel, deadline_unix_ms)` + a streaming idle-timeout (a hung provider can't pin the gateway). **DONE (2026-06-01):** the deadline bound was real in the spike (unary + streams); the streaming idle-timeout backstop now cuts a silent provider even with NO deadline set (`Gateway.StreamIdleTimeout`, default 5m, reset per frame → `DeadlineExceeded` + a terminal `{timeout}` audit record). With this the gateway **C-series is complete** (C5/C4/C3/C1).
+- **✅ D1** isolation conformance — a real *enforcing* deployment-runtime (podman, not dry-run) passes a full-profile vector. **MET (2026-06-01, [ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md)):** `core/deploymentruntime.Podman` enforces the full I9 profile at the kernel level (`--user`/`--cap-drop=ALL`/`--security-opt=no-new-privileges`/`--read-only`/seccomp + private netns); the live vector `make core-test-podman` proves it from inside the sandbox — uid≠0, CapEff=0, NoNewPrivs=1, read-only root (EROFS), metadata `169.254.169.254` unreachable — plus a structured isolation receipt. Closes the reviews/08 D1 honesty gap.
+- **✅ D2/✅ D3** bytes-plane isolation — ArrowStream-ticket (TTL/single-use/binding) + storage-cred scoping are vector-tested, not honor-system. **Both DONE (2026-06-01).** **D2:** the `ArrowStream.ticket` (HMAC-signed, TTL'd, single-use, `{stream,caller,tenant}`-bound) is enforced as the sole gate on a real out-of-band bulk transfer — replay / cross-binding / expiry / tamper all refused at the boundary, no bytes leak (`core/arrowticket`). **D3:** the real `localfs-go` storage ref, launched behind the gateway, vends creds scoped to (tenant, prefix, mode, short TTL) with per-tenant root isolation + path containment (escape → `PERMISSION_DENIED`); tenant is read only from the gateway-re-stamped envelope.
+- **✅ C1** crash-safety — the additive fields (`idempotency_key`, `already_applied`, `expected_rows/batches`) landed in `rat/1.5` (ADR-012); the Phase-1 AC is the *enforced* test: at-least-once re-runs don't double-apply. **DONE (2026-06-01):** proven against the fakes (composition) AND **against real backends** — a same-key retry against the real inmemory-go catalog is a no-op (original result returned even on payload drift), and a durable SQL ledger (sqlite-py under podman with a persistent volume) survives a real **backend crash+restart** (replay still `already_applied`). *Residual:* the write-leg idempotency is proven only against the fake (no real idempotent format ref exists yet) — a documented follow-on, not a freeze-reopen. (No strategy commit/abort wire shape was needed → no freeze-reopen, per [ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md).)
+- **✅ D4** conformance attestation — the core verifies `declared == conformed` (the marketplace/attestation is *derived*, not self-asserted). **DONE (2026-06-01):** `core/conformance` (ed25519-signed `Attestation` + an authority keyring) + `registry.NewVerified` trust a declared `provides` only when a signed attestation covers it — refusing missing / bad-signature / declared-but-not-conformed. The core's first real signature verification; the keyID model seeds the GA audit-signing (C4) + C8 supply-chain.
+- **✅ sre#4** reconciler robustness — crash-loop backoff + jitter + lease-thrash guard. **Promoted from the backlog to an explicit Phase-1 exit gate** by [reviews/09](../reviews/09-phase-1-gate-review.md) (don't re-make the K8s CrashLoopBackoff mistake). **DONE (2026-06-01):** `core/reconciler` (level-triggered convergence; failing plugins restart with exponential backoff + jitter, capped to Degraded — never hammering the runtime) + `core/lease` (single-key CAS + an Elector whose TTL-margin/min-hold thrash guard keeps leadership stable under renewal-latency spikes; failover only on genuine expiry). Proven deterministically + end-to-end (real crash-looping plugin → Degraded; two-replica leader+failover). **🎉 With this, ALL Phase-1 acceptance criteria (C1, C3, C4, C5, D1, D2, D3, D4, sre#4) are MET — ready for the `rat/2.0` seal.**
 
 ---
 
@@ -198,7 +202,7 @@ These gates exist because the synthesis flagged "shipping more architecture with
 
 Two decision gates the project must clear before phases proceed:
 
-- **Before Phase 0:** Tom commits to 12-18 months of focused runway + the GTM work (not just the architecture work). Without this, the project should freeze at "great public design corpus" and not enter Phase 0.
+- **Before Phase 0:** Tom commits to 12-18 months of focused runway + the GTM work (not just the architecture work). Without this, the project should freeze at "great public design corpus" and not enter Phase 0. **Status (2026-06-01):** acknowledged → spike-deferred ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md)) → **CLEARED ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md))**: the spike validated the contracts ([reviews/10](../reviews/10-phase-1-spike-exit.md)) and the full **core build** is committed (the Phase-0→1 gate). The GTM-specific commitment remains gated at Phase 4 + the user-pull Gates B/C/D below.
 - **Before Phase 4:** Tom commits to the non-engineering work (design partners, content, distribution). Without this, hardening produces a beautifully-architected platform with no users — the unflattering scenario.
 
 These aren't dates; they're commitments. The roadmap is honest about them because the synthesis was.

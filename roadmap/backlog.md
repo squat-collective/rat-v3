@@ -23,7 +23,7 @@ The 5-agent post-freeze review. Grouped by when to act.
 - Enrichments: structured `IsolationAttestation` (D1), signed **conformance attestation** message so `conformed_capabilities` is derived not self-asserted (D4), `health/v1` liveness/readiness probe the reconciler drives (sre#4), `WriteResult` insert/update/delete breakdown + `TableRef` snapshot_id/as_of (F2), `bound_capability` on `SubjectAssertion` (F1).
 
 **Enforcement-layer / conformance (some need the core — specify now):**
-- **C3** core MUST bound the provider call by `min(channel, deadline_unix_ms)` + streaming idle-timeout. **D1/D2/D3** full-isolation-profile vector + a *real* enforcing deployment-runtime (podman, not dry-run) · `ArrowStream`-ticket TTL/single-use/cross-tenant vector · real-scoped-cred storage integration vector. **D4** marketplace verifies the attestation. **sre#4** crash-loop backoff + jitter. **sre#8** pin a core SLI list + `/metrics` contract while the core is still paper.
+- **C3** core MUST bound the provider call by `min(channel, deadline_unix_ms)` + streaming idle-timeout. **~~D1~~ ✅ DONE 2026-06-01** — full-isolation-profile vector + a *real* enforcing deployment-runtime (podman, kernel-enforced; `make core-test-podman`) — see [done.md](done.md). **D2/D3** `ArrowStream`-ticket TTL/single-use/cross-tenant vector · real-scoped-cred storage integration vector. **D4** marketplace verifies the attestation. **sre#4** crash-loop backoff + jitter **(→ promoted to an explicit Phase-1 exit gate — [reviews/09](../reviews/09-phase-1-gate-review.md))**. **sre#8** pin a core SLI list + `/metrics` contract while the core is still paper.
 
 **Process / spec (cheap):**
 - ~~**E3** label round-1 refs~~ **✅ DONE 2026-06-01** (13 `inmemory-py` READMEs). **E5** `ERROR_MODEL.md`: add `CANCELLED`/`ABORTED` (streaming), pin `TableRef.branch` vs per-RPC `branch` precedence, pin BidiStream empty-first-frame abort. **E6** state engine output-type stability is the caller's responsibility (SUM→CAST). ~~**E7** add the temptation ledger~~ **✅ DONE 2026-06-01** (pinned in `done.md`, count 0). **E8** make C2/mTLS a deployment-conformance item + document the audit keyring trust-root/rotation + tail-drop detection. **F3** secret timing-equivalence note. *(E5/E6/E8/F3 remain — spec polish, fold into the `v1.1` cut or Phase 1.)*
@@ -80,7 +80,7 @@ This also naturally subsumes the **typed-Arrow conformance pass** (a real format
 
 Numbered as proposed in [reviews/00-synthesis.md](../reviews/00-synthesis.md). Most are Phase 0 wire-breaking concerns that land *during* Phase 0 as the contracts get drafted, NOT before. They're listed here so they're not lost.
 
-> **⚠️ These are *prospective* synthesis numbers — they do NOT match the real ADR sequence.** Real ADR numbers are assigned at write-time ([adrs/README.md](../docs/architecture/adrs/README.md)); the real ADR-005/006/007 already diverged from this table, and the real **[ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md) is catalog commit-linkage** (not "Tenancy"). Treat the IDs below as topic placeholders, not reservations.
+> **⚠️ These are *prospective* synthesis numbers — they do NOT match the real ADR sequence.** Real ADR numbers are assigned at write-time ([adrs/README.md](../docs/architecture/adrs/README.md)); the real ADR-005/006/007 already diverged from this table, and the real **[ADR-010](../docs/architecture/adrs/010-catalog-commit-linkage.md) is catalog commit-linkage** (not "Tenancy"), and the real **[ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) is the Phase-1 spike / commitment-gate decision** (not "API gateway hardening" — that topic gets a later number). Treat the IDs below as topic placeholders, not reservations.
 
 ### Phase 0-blocking (must land during Phase 0)
 
@@ -146,10 +146,12 @@ These came up during ADR-002's locking session and are tracked in [ideas/inbox.m
 - Build 12 reference implementations (sub-phases 0d + 0e)
 - Build `rat-conformance` test harness (sub-phase 0f)
 - Write 20 `CONTRACT.md` author-facing docs (sub-phase 0g)
-- Recruit external peer reviewers (OSGi / K8s / VSCode contributors)
+- Recruit external peer reviewers (OSGi / K8s / VSCode contributors) — *[reviews/09](../reviews/09-phase-1-gate-review.md) dissent + [ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) Q02: zero external human review so far; fold into the full-commitment gate, post-spike.*
 - Per-RPC latency benchmark (sub-phase 0f)
 
 ### Phase 1 work items
+- **🔭 ACTIVE: the contract-de-risking spike** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md)) — minimal real registry + capability enforcer; C5 enforcement; a crash-mid-strategy case; exercise C3 + D2. Goal: break a frozen contract while the freeze is still local. See [current.md](current.md).
+- **CI on `phase-1` from commit 1** ([reviews/09](../reviews/09-phase-1-gate-review.md) #7): `buf breaking` (no committed buf baseline exists today — the "additive-only" claim rests on source inspection) + `make {conformance,composition,validate-manifests}`. Keep the freeze **local/unpushed** (no remote/BSR) until C5 enforcement passes.
 - Implement the 6 core things in Go (~12-15k LOC)
 - Mock plugin set for integration tests
 - The 11 weekly milestones from ADR-001 Phase 1 description

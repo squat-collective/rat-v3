@@ -16,6 +16,235 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — 🎉🎉 PHASE 1 SEALED — `rat/2.0`
+
+`phase-1` → `main`, tagged `rat/2.0` (annotated). All 9 board exit criteria met (C1, C3, C4, C5, D1, D2, D3, D4, sre#4 — see the entries below), each proven **against real launched plugins**, with the frozen wire intact (`make breaking` green throughout). The spike core grew into a real control plane: registry (+ conformance-verified `NewVerified`) · capability-invoke gateway (C5 authz + C4 audit + C3 deadline/idle) · two deployment-runtimes (local-process + podman full-I9) · supervisor · reconciler + leader-election lease · arrow-ticket bulk-leg gate · storage-cred isolation.
+
+- **Seal mechanics:** `git merge --no-ff phase-1` into `main` + `git tag -a rat/2.0` (merge+tag, not commit — the `main`-guard hook permits it). Tags: `rat/1.5` = Phase 0, `rat/2.0` = Phase 1.
+- **Freeze stays LOCAL/unpushed.** Owed before broad commitment / a push: **Q02 external peer review** (only internal adversarial review so far). Phase 2+ are **user-pull-gated** (phases.md Gate B: ≥10 real solo users) — not started.
+- **Non-blocking residuals** (backlog): write-leg idempotency vs a real idempotent format ref (C1 residual); explicit cloud metadata-egress drop + structured `IsolationAttestation` (D-series GA); core audit signing + hash chain (C4/C8 GA, seeded by D4's ed25519).
+
+---
+
+## 2026-06-01 — 🎉 sre#4 — the reconciler (crash-loop backoff/jitter + leader election): PHASE-1 DoD COMPLETE (9/9)
+
+`core/reconciler` + `core/lease` ([reviews/03](../reviews/03-operations-sre.md) §incident-runbooks → [reviews/09](../reviews/09-phase-1-gate-review.md) exit gate), on `phase-1-sre4-reconciler`. The 5th of the six core things, built greenfield with the sre#4 robustness baked in: **don't re-make the K8s CrashLoopBackoff mistake.** Level-triggered convergence (events are hints; each pass re-observes), one active replica via a lease.
+
+- **`core/lease`:** a single-key linearizable CAS `Store` (models the state-backend's CAS, overview D5) + an `Elector` with the **lease-thrash guard** — a TTL margin keeps leadership across renewal-latency spikes (a delayed-but-in-margin renewal retains it), and a follower acquires only after genuine expiry (minimum-hold). Tests: two-contender mutual exclusion, thrash guard under a latency spike (no ping-pong), failover after a leader stops, continuous-term min-hold.
+- **`core/reconciler`:** converges a desired plugin set via the deployment-runtime; a crashed/unhealthy plugin is restarted with **exponential backoff** (base·2ⁿ, capped) + injectable **jitter** + a **crash-loop cap** (→ Degraded after N, so it stops hammering the runtime); success resets the counter; a launch error crash-loops through the same path. `Loop` ties Elector + Reconciler on a jittered tick (only the leader converges). `testplugins/crashplugin` exits immediately (the real crash target).
+- **Tests:** deterministic backoff schedule (1s,2s,4s,4s capped) + cap + no-hammer-after-Degraded + readiness + recovery-reset (fake runtime + injectable clock); a deterministic two-replica **leader + failover** (leader converges, follower idle, thrash guard, failover → new leader resumes); a **REAL end-to-end** (Loop + local-process): a healthy plugin converges while a genuinely crash-looping one is capped at Degraded. `go test -race` clean; `make core-test` + `make breaking` green (no wire change). Commit `5a350ce`.
+- **🎉 MILESTONE — all 9 Phase-1 exit criteria met** (C5, C4, C3, C1, D1, D2, D3, D4, sre#4). The Phase-1 definition-of-done ([reviews/10](../reviews/10-phase-1-spike-exit.md)) is complete → the `phase-1` → `main` **seal (`rat/2.0`)** is ready to cut ([git-branching.md](../.claude/rules/git-branching.md)). Still owed before/around the seal: **Q02** external peer review.
+
+---
+
+## 2026-06-01 — C1 against real backends — idempotency survives a real backend crash
+
+`core/composition` + `core/deploymentruntime` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C1 exit), on `phase-1-c1-real-backends`. The crash-mid-strategy at-least-once idempotency was proven against the in-repo fakes (composition_test.go); C1-real re-proves it against the **real catalog refs**, whose commit-key ledgers are genuine (an in-memory map in inmemory-go; a **durable SQL table** in sqlite-py). The format leg can't be re-proven — the real inmemory-go format deliberately ignores `idempotency_key` — so C1-real rides on the catalog's `CommitTable`/`MergeBranch` (a documented gap: no real *idempotent format* ref exists yet).
+
+- **Proof A** (`TestC1AgainstRealCatalogRetry`, core-test): the real inmemory-go catalog launched behind the gateway. A retry with the same `idempotency_key` is a no-op — `CommitTable` replay returns `already_applied` with the ORIGINAL snapshot **even when the retry's payload DRIFTED** (the key, not the payload, anchors the result); `MergeBranch` is idempotent under the same key too.
+- **Proof B** (`TestC1DurableLedgerSurvivesRestartViaPodman`, podman-gated): the **gold-standard crash-safety proof** — the ledger survives a real BACKEND crash. The sqlite catalog runs under the podman runtime with a **persistent data volume**; commit under key K, then tear the catalog container DOWN (`Shutdown`) and relaunch a fresh one on the SAME durable db — a replay still returns `already_applied=true` (`snap-durable`). The durable SQL ledger outlived the crash, which an in-memory backend / our fakes fundamentally cannot.
+- **Podman runtime:** added `Podman.DataRoot` — each launched plugin gets a persistent host dir (`<DataRoot>/<plugin_id>`) mounted at `/data` (`-v dir:/data:Z`, 0777 forced past umask so the non-root container uid can write), surviving `Terminate`+relaunch. Empty == ephemeral only (unchanged). The persistent peer to the `/tmp` tmpfs. (`go vet` caught a proto-by-value copy in a test helper → fixed to return pointers.) `make core-test` + `make core-test-podman` + `make breaking` green. Commit `583d799`.
+- **Milestone:** 8 of 9 Phase-1 exit criteria cleared (C5/C4/C3/C1/D1/D2/D3/D4). **Remaining:** **sre#4** — reconciler crash-loop backoff + jitter + lease-thrash guard. Then the Phase-1 acceptance criteria are met → the `phase-1` → `main` seal (`rat/2.0`).
+
+---
+
+## 2026-06-01 — D2 — the ArrowStream ticket is the only gate on a real bulk leg
+
+`core/arrowticket` ([reviews/10](../reviews/10-phase-1-spike-exit.md) D2 exit), on `phase-1-d2-bulk-leg`. The `Minter` (HMAC-signed, TTL'd, single-use, `{stream,caller,tenant}`-bound tickets) was proven at the unit level (reviews/10 "field sufficient"); D2's remaining half is **wiring it into a real out-of-band transfer**. The Arrow bytes leg **bypasses the core**, so unlike the control plane (gateway/C5) there is no mediator — the `ArrowStream.ticket` is the *sole* authorization.
+
+- **The proof** (`bulkleg_test.go`): a Flight-shaped (DoGet) stand-in — a real `httptest` endpoint that streams the payload ONLY when the presented `ArrowStream.ticket` validates (via the `Minter`) against the presenting identity (caller/tenant — the spike's stand-in for the authenticated Flight channel; C2 tightens the source at GA) + this endpoint's stream. The frozen `commonv1.ArrowStream` carries endpoint+ticket. Vectors, **through the real transfer**: happy (exact payload received) · replay (single-use → 403, no bytes) · cross-binding (a leaked ticket from another tenant → 403 and NOT consumed, so the rightful holder still succeeds) · expired (past-TTL → 403) · tamper (mutated ticket → 403). On every rejection, no bytes leak.
+- **Flake hunt:** the test failed once under concurrent `make core-test` load (HTTP keep-alive connection reuse — a classic `httptest`+`DefaultClient` flake class), so it now uses a dedicated keep-alives-disabled client (fresh connection per fetch, never the global client) — verified 5× under full concurrent load + 40× isolated + `-race`. `make core-test` + `make breaking` green (no wire change — exercises the frozen `ArrowStream` + the existing reference; `contracts/` untouched). Commit `af6e55c`.
+- **Milestone:** 7 of 9 Phase-1 exit criteria cleared (C5/C4/C3/D1/D2/D3/D4). **Remaining:** **C1** *against real backends* (the crash-mid-strategy idempotency re-proven against a real idempotent backend, e.g. the sqlite catalog — so far only proven against fakes) · **sre#4** (reconciler crash-loop backoff/jitter).
+
+---
+
+## 2026-06-01 — D4 conformance attestation — the core verifies `declared == conformed` (ed25519)
+
+`core/conformance` + `core/registry` ([reviews/10](../reviews/10-phase-1-spike-exit.md) D4 exit), on `phase-1-d4-conformance-attestation`. A plugin's manifest `provides` was **self-asserted** (plugin.v1.json: *"no enforcer exists yet"*). D4 makes it **derived**: the core trusts a declared capability only if a **signed conformance attestation** proves the plugin conformed it (marketplace.proto `conformed_capabilities`; format/v1 CONTRACT C6 — "capability declared is meaningless without capability conformed").
+
+- **`core/conformance`:** `Attestation{PluginName, Conformed[], KeyID, Signature}`, signed by a conformance authority over a canonical form (plugin + **sorted** conformed caps + keyID, so the signature commits to the key id — key-substitution defense). `Authority` is the core's keyring (key id → ed25519 public key); `Verify` rejects unknown key ids + bad signatures. **The core's first real signature verification** — the unsigned audit record (C4) + isolation receipt are the GA-signing seeds; the keyID model mirrors `common/v1.AuditRecord.key_id` (rotation/agility via new key ids).
+- **`registry.NewVerified(manifests, attestations, authority)`:** for every manifest that provides any capability, require an attestation that **verifies** AND **covers every provided capability**; refuse on missing / bad-signature / declared-but-not-conformed. A pure caller/driver (no `provides`) needs none. On success it delegates to `New`, so the gateway's C5 path is unchanged — it just can no longer be fed a self-asserted provider. (The full bring-up adopts D4 by building its registry via `NewVerified`.)
+- **Tests:** genuine verifies; wrong-key / tampered-set / unknown-key-id rejected; `NewVerified` accepts a fully-conformed provider (and the registry then authorizes the cap) and refuses declared-but-not-conformed / forged / missing. `make core-test` + `make breaking` green (no wire change — the attestation is a core type, `contracts/` untouched). Commit `9e7edca`.
+- **Milestone:** 6 of 9 Phase-1 exit criteria cleared (C5/C4/C3/D1/D3/D4). **Remaining:** D2 (real Arrow bulk leg — ticket TTL/single-use/binding) · C1 *against real backends* (so far only proven against fakes) · sre#4 (reconciler crash-loop backoff/jitter). *(Corrected count: C1-against-real-backends is still open — an earlier draft miscounted it as cleared.)*
+
+---
+
+## 2026-06-01 — D3 storage-cred isolation — scoped, tenant-isolated, contained (real local-fs ref)
+
+`core/composition` ([reviews/10](../reviews/10-phase-1-spike-exit.md) D3 exit), on `phase-1-d3-storage-creds`. The storage axis's C7 obligation — *vended creds are scoped to the caller's tenant + prefix + mode, short-TTL, and a prefix can't escape the tenant root* — is now **vector-tested through the real launched plugin behind the gateway**, not honor-system.
+
+- **The proof** (`composition_storagecreds_test.go`): the **round-2 real** `examples/storage/localfs-go` ref (independent module) is launched via local-process (`RAT_STORAGE_ROOT=tempdir`) behind the gateway; `vend-credentials` flows through the C5 gateway and returns the JSON scope receipt. Asserted: **(1) scoping** — bound to (tenant, prefix, mode) + a TTL; **(2) tenant isolation** — `acme` and `globex` vend the SAME logical prefix but resolve to DISTINCT per-tenant roots (`…/acme/warehouse/orders` vs `…/globex/warehouse/orders`); **(3) containment** — `../globex/secrets` from `acme` → `PERMISSION_DENIED`; **(4)** empty prefix → `INVALID_ARGUMENT`; **(5) C5** — an undeclared caller is denied. The tenant comes ONLY from the gateway-re-stamped metadata envelope (not a request field).
+- **Defense in depth, surfaced in the audit:** C5 authorizes the `vend-credentials` *capability*, then the storage plugin enforces tenancy *containment* — so the containment/validation refusals are the **provider's** (C5-allowed in the audit); only the undeclared caller is a C5 denial (the audit shows exactly 1). `make core-test` + `make breaking` green. Commit `7a8b386`.
+- **C2 caveat (deferred):** the spike trusts the tenant claimed in the inbound envelope; the full core re-derives it from the authenticated channel — the scoping mechanism proven here is unchanged, only the source of the trusted tenant tightens. **Next DoD:** D4 conformance-attestation enforced · D2 real bulk leg · C1 against real backends · sre#4.
+
+---
+
+## 2026-06-01 — C3 streaming idle-timeout backstop — a hung provider can't pin a stream (gateway C-series complete)
+
+`core/gateway` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C3 exit), on `phase-1-c3-idle-timeout`. The deadline bound `min(channel, deadline_unix_ms)` already covered the deadline-SET case (unary + streams). The deferred gap (reviews/10 line 37) was a server-stream with **no** deadline: a provider that sends no frame, no EOF, and no error blocks `RecvMsg` forever and pins the stream. C3 adds the **idle backstop**.
+
+- **The backstop:** `relayServerStream` runs the downstream stream under a cancelable `streamCtx` (child of `oc.ctx`, so the deadline bound still applies) with a `time.AfterFunc` idle watchdog reset on each frame. If no frame arrives within the idle window the watchdog cancels → `RecvMsg` returns → the cause is attributed: parent deadline/cancel (the C3 bound), the idle watchdog (→ `DeadlineExceeded` "stream idle timeout"), or a genuine provider error. `Gateway.StreamIdleTimeout` (default **5m**; generous because a legitimately quiet `watch` is normal — such providers should keepalive, or a deployment tunes it). `streamOutcome` gains a **"timeout"** label so an idle/deadline cut is legible in the audit trail (distinct from a provider error).
+- **Tests:** a hung provider (N frames then blocks on `srv.Context().Done()`) is cut **promptly** with `DeadlineExceeded` + a terminal `{timeout, Frames:N}` record — by the idle watchdog when no deadline is set, and by the soft deadline when one is (< idle). `go test -race` clean (watchdog concurrency). `make core-test` + `make breaking` green (no wire change — C3 is an implementation backstop, not a contract). Commit `b9f22f1`.
+- **Milestone:** with C3 done the **gateway C-series is complete** — C5 (capability enforcement, real providers) · C4 (audit every decision + terminal stream-close) · C3 (deadline bound + idle backstop) · C1 (crash-safety idempotency). **Next DoD:** D3 storage-cred isolation · D4 conformance-attestation enforced · D2 real bulk leg · C1 against real backends · sre#4.
+
+---
+
+## 2026-06-01 — C4 terminal stream-close audit record — the stream audit trail closes
+
+`core/gateway` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C4 exit), on `phase-1-c4-terminal-audit`. Per-decision audit + audit-on-deny were already real (the gateway records exactly one decision record per call, allow or deny). The missing half — the deferred C4 item — was the **terminal stream-close record**: ADR-008 enforces stream authz at OPEN, so a stream's *decision* is audited there, but nothing recorded how the stream **ended**. Now it does.
+
+- **The terminal record:** when a server-stream closes, the gateway emits one terminal `AuditRecord` — `Outcome` ∈ {success, error, canceled}, `Frames` relayed, and the `Error` if any — so a stream that errors or is cut mid-flight (incl. by the C3 soft deadline) is never a silent gap. A stream **denied at open never opens**, so it gets only the deny decision record (no terminal). `AuditRecord` gained `Correlation` (the envelope's correlation_id) so a stream's open + close records link; `Terminal`/`Outcome`/`Frames`/`Error` carry the close. `Outcome` maps to the frozen `common/v1.AuditOutcome` at GA.
+- **Refactor:** `openCall` now returns an `*openedCall` struct (ctx/method/conn/cancel + caller/provider/correlation) so the terminal record can correlate; `Invoke` is behaviour-unchanged; `InvokeServerStream` relays via `relayServerStream` (counts frames) then emits the terminal record.
+- **Tests:** a streaming Watch provider drives both outcomes — clean stream → `[open allow, terminal success Frames=3]` sharing a correlation id; erroring stream → `[open allow, terminal error Frames=1, Error set]`; the deny-at-open test now also asserts *no* terminal record. `make core-test` + `make breaking` green. Commit `1ba9f18`.
+- **Deferred (GA, not C4-blocking):** core signing + the hash chain on the canonical `common/v1.AuditRecord` (the spike uses a simplified in-memory record). **Next DoD:** C3 idle-timeout backstop · D3 storage-cred isolation · D4 conformance-attestation enforced · D2 real bulk leg · C1 real backends · sre#4.
+
+---
+
+## 2026-06-01 — C5 against REAL providers — enforcement holds beyond our fakes (Go refs + a SQLite container)
+
+`core/composition` + `core/deploymentruntime` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C5 exit), on `phase-1-c5-real-providers`. The spike enforced C5 against our in-repo fakes; this **extends the proof to genuine reference plugins** behind the supervisor + gateway. The manifest-derived authorization holds identically: declared caps route + return **real results**; a capability the real provider genuinely implements but the caller never declared is **denied + audited**.
+
+- **Proof 1 — Go refs via local-process** (`composition_realproviders_test.go`): the full get-table → register → overwrite → commit-table pipeline runs through the canonical ADR-003 refs `examples/{catalog,format}/inmemory-go` — built as **independent modules** (own `go.mod`), launched as isolated processes. Real results (the real catalog returns `catalog://warehouse.sales.orders@main`; the real format returns `snap-1`; commit-linkage holds). C5 then denies `format/merge` + `catalog/merge-branch` — caps the refs implement but the strategy never declared. 4 allow + 2 deny audited (C4).
+- **Proof 2 — SQLite catalog via podman** (`composition_realpodman_test.go`): C5 against a **real-backend plugin in a real container** — the SQLite catalog ref `examples/catalog/sqlite-py`, built into a `python:3.12-slim` image and launched by the **podman runtime under the full I9 profile**, behind the gateway. `get-table` + `commit-table` (declared) hit real SQLite and return real results; `merge-branch` (undeclared) is denied. Ties C5 + supervisor + the podman runtime together end-to-end. Gated by `RAT_PODMAN_TEST` → `make core-test-podman`.
+- **podman runtime hardening:** add a writable `/tmp` tmpfs (read-only root + tmpfs is the canonical hardened pattern — lets a stateful plugin keep scratch, e.g. SQLite's WAL db, without weakening the read-only root) + `rm -f -t 0` on Terminate (no 10s SIGTERM grace). `make core-test` + `make core-test-podman` + `make breaking` green. Commit `6e66a24`.
+- **Next:** remaining Phase-1 DoD — C4 terminal audit incl. denials, C3 idle-timeout backstop, D2 real bulk leg, D3 storage-cred isolation, D4 conformance-attestation enforced, C1 against real backends, sre#4.
+
+---
+
+## 2026-06-01 — 🎉 D1 COMPLETE: the podman deployment-runtime — full I9 profile, kernel-enforced
+
+`core/deploymentruntime` + `core/testplugins/probeplugin` ([ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md) §4), on `phase-1-podman-runtime`. The second deployment-runtime reference and the one that **closes D1**: where `local-process` honors only the process-level I9 subset, **`Podman` ENFORCES the full profile at the kernel level** — closing the [reviews/08](../reviews/08-post-freeze-board-review.md) D1 honesty gap (the v1 refs *self-attest* `read_only_root_fs` while enforcing nothing). The board's literal exit criterion — "a real *enforcing* deployment-runtime (podman, not dry-run) passes a full-profile vector" — is met.
+
+- **`podman.go`:** `Launch` maps the `IsolationProfile` 1:1 onto podman's real enforcement surface — `--user` (non-root), `--cap-drop=ALL`, `--security-opt=no-new-privileges`, `--read-only`, default/named seccomp, and `--network=bridge` to force a **private netns** (never inherit a host-network default — which would defeat metadata isolation *and* break port publishing; learned by dogfooding the nested env). Publishes the in-container port to an ephemeral host port; `Healthcheck` = running + endpoint-accepts + a **structured JSON isolation receipt** (CONTRACT.md shape — the receipt the honesty note wanted, not a free-form string); `Terminate` = `podman rm -f`.
+- **`isolation.go`:** extracted the shared I9 trust gate (`checkI9Minimum`, the Go twin of the Python refs' `check_spec`) + the receipt types; `localprocess.go` now calls it.
+- **`testplugins/probeplugin`:** an in-container prober that self-reports its sandbox (uid, CapEff, NoNewPrivs, root-writable, metadata-reachable), so the test proves the **kernel** enforced the profile — not merely that the runtime requested it. Static (CGO_ENABLED=0), runs `FROM scratch`.
+- **`testimage/Dockerfile` + `make core-test-podman`:** a privileged go+podman image driving a **real nested `podman run`** under the full profile. Kept OUT of `core-test` (no podman in the plain go image → the live test SKIPs there).
+- **Live proof** (`make core-test-podman` → `TestPodmanFullProfile` PASS): `uid=1000`, `CapEff=0000000000000000`, `NoNewPrivs=1`, root not writable (EROFS), `169.254.169.254` unreachable, `seccomp=RuntimeDefault`. `make core-test` green (live test skips; I9-gate + empty-image tests run); `make breaking` green (contracts/ untouched). Commit `4f3854e`.
+- **Next:** the real process boundary now unblocks **C5 against real providers** + **D3** storage-cred isolation; the structured receipt seeds **D4** (conformance attestation). Remaining Phase-1 DoD: C4 terminal audit, C3 idle-timeout, D2 real bulk leg, C1 real backends, sre#4.
+
+---
+
+## 2026-06-01 — D1 steps 3–4: composition through launched providers — the cross-axis pipeline over isolated processes
+
+`core/composition` + `core/testplugins` ([ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md)), on `phase-1-composition-launched`. The in-test `fakeCatalog`/`fakeFormat` are **promoted to standalone binaries**, and the full cross-axis pipeline is **re-run through the supervisor** — so catalog + format now serve from **launched, isolated child processes**, not in-process bufconn fakes.
+
+- **Promotion (one impl, two topologies):** `testplugins/catalogsvc` + `testplugins/formatsvc` hold the fakes as importable packages (frozen RPCs + C1 idempotency + ADR-010 commit-linkage). The SAME impl backs both the in-process composition test (bufconn) and the launched `catalogplugin`/`formatplugin` binaries — no in-process-vs-binary divergence. Each tags a free-form response field with `os.Getpid()` (catalog→`TableRef.uri`, format→`WriteResult.snapshot_id`), mirroring `stateplugin`, so work is attributable to a distinct OS process. `runPipeline` refactored to drive the gateway client + return a response-only `runResult`, shared by both topologies.
+- **Test:** `composition_launched_test.go` brings catalog+format up through the `local-process` runtime behind the gateway (`supervisor.BringUp`), then drives get-table → register → overwrite → commit-table through the LAUNCHED processes. **Distinct PIDs** (test/catalog/format all different, e.g. `4588/4689/4695`); **commit-linkage** holds across the boundary; **C5** still denies an undeclared `merge` (audited); **C1** crash-mid-strategy recovery is idempotent (replayed overwrite `already_applied`, written once, committed once). Commit `c37ce7b`; `make core-test` + `make breaking` green.
+- **Next:** the **podman** runtime for the full I9 profile (read-only-fs / metadata-egress / seccomp) = **D1 complete**.
+
+---
+
+## 2026-06-01 — D1 step 2: the supervisor — the core brings plugins up as launched processes behind the gateway
+
+`core/supervisor` ([ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md)), on `phase-1-supervisor`. `BringUp(runtime, specs, …)` Launches each provider via the deployment-runtime → waits healthy → dials the endpoint → registers; caller/driver specs (no `Launch`) are registered for their `requires` only; it then builds the registry + gateway over the launched providers. `Plane.Shutdown` terminates every instance + closes conns; a failed launch tears down what already came up. **Replaces the spike's dial-pre-running** — provider conns now come from isolated processes the core launched.
+
+- **Test:** `BringUp` launches a real `stateplugin` via the local-process runtime; the gateway routes a C5-authorized `Get` to the **launched child** (distinct PID); an undeclared `put` → `PERMISSION_DENIED`; a below-I9 plugin aborts `BringUp`. Commit `61be935`; `make core-test` green.
+- **Next:** promote the catalog/format fakes to standalone binaries → re-run composition-on-Go through launched providers; then a podman runtime for the full I9 profile = **D1 complete**.
+
+---
+
+## 2026-06-01 — D1 step 1: the `local-process` deployment-runtime — real child-process isolation, I9-enforced
+
+First code of the committed full build's D1 ([ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md)), on `phase-1-local-process-runtime`. `core/deploymentruntime.LocalProcess` implements the frozen `DeploymentRuntimeService`:
+
+- **Launch** execs `LaunchSpec.image` (a plugin binary) as a child OS process bound to a runtime-allocated loopback endpoint; **enforces the I9 minimum** — below `run_as_non_root + drop_all_capabilities + no_new_privileges` (or running as root, which can't honor non-root) → `FAILED_PRECONDITION`; empty image → `INVALID_ARGUMENT`.
+- **Healthcheck** = PID liveness + endpoint readiness (HEALTHY / UNKNOWN / UNHEALTHY); **Terminate** kills the child's process group + reaps it.
+- `core/testplugins/stateplugin` — a minimal standalone StateService binary the runtime launches (Get tags its own PID).
+- **Test** (`go test ./core/...`): build the plugin → Launch → Healthcheck-until-HEALTHY → dial + Get **ran in a distinct child PID** → Terminate (then NotFound); + the I9-refusal + empty-image gates. Commit `c638202`; `make core-test` green.
+- **Next:** the supervisor (manifests → Launch → dial → register) + composition-through-launched providers; then a podman runtime for the full profile = **D1 complete**.
+
+---
+
+## 2026-06-01 — ADR-016: plugin provisioning via the deployment-runtime axis (D1 opened)
+
+First decision of the committed full build ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md)). [ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md): the core **launches** plugins through the frozen `deployment-runtime/v1` axis (`Launch` → `{instance_id, endpoint}` → `Healthcheck` → dial → register → `Terminate`) instead of the spike's dial-pre-running shortcut. The deployment-runtime is **tier-0** (bootstrapped in-core; everything else launched through it — no 7th core thing). The D1 increment = a Go `local-process` runtime enforcing the process-level I9 subset (refuse below non-root / cap-drop / no-new-privs) + the in-test fakes promoted to standalone binaries + composition re-run through launched (distinct-PID) providers; the **podman** runtime (full profile: read-only-fs / metadata-egress) is the follow-on that **completes D1**. Registry/gateway interfaces (ADR-014) unchanged; frozen contracts untouched. Next: build the `local-process` runtime + the supervisor.
+
+---
+
+## 2026-06-01 — 🎯 Phase-1 commitment gate CLEARED — full core build committed ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md))
+
+The decision [ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) deferred to the spike's report. The spike validated the frozen contracts ([reviews/10](../reviews/10-phase-1-spike-exit.md)) — C5/C1/C3/D2 green via a real enforcer, `make breaking` clean, **no freeze-reopen** — and on that evidence Tom cleared the gate: **commit to the full Phase-1 core build.** The exploratory posture (held since pre-Phase-0) ends.
+
+- **Scope:** clears the **Phase-0 → Phase-1** gate (full core build). The later user-pull gates stay hard — phases.md **Gate B** (≥10 solo users), **Gate C/D** — and **Q02** (external peer review) is still owed (schedule *during* the build).
+- **Rationale (Q01):** the founding premise — v2's baked-in assumptions (postgres-mandatory, ratd-as-orchestrator, portal-as-only-UI) can't evolve into the everything-is-a-plugin thesis; v3 is the from-scratch design, now evidence-backed by the spike. Recorded in ADR-015.
+- **Definition of done = the full Phase-1 acceptance criteria:** C5 (real providers), C4-terminal, C3 (idle-timeout backstop), D1 real isolation, D2 (real bulk leg), D3, D4-enforced, C1 (real backends), sre#4.
+- **Next:** D1 — a real process-isolating deployment-runtime (the spike used in-process providers).
+
+---
+
+## 2026-06-01 — Spike CLOSED: C3 deadline + D2 ticket + CI + exit report — frozen wire HELD, no freeze-reopen
+
+Closed the Phase-1 contract-de-risking spike ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) / [ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md)), on `phase-1-spike-closeout`.
+
+- **C3 (provider deadline)** — `core/gateway` bounds the downstream call by `min(channel, deadline_unix_ms)`; a 2s-slow provider returns `DeadlineExceeded` in ~150ms (a hung provider can't pin the gateway). Test green.
+- **D2 (ArrowStream ticket)** — `core/arrowticket`: an HMAC-signed, TTL'd, single-use, `{stream,caller,tenant}`-bound credential carried in `bytes ticket`; replay / expiry / cross-binding / tamper all rejected. Proves the frozen field suffices (producer-side; an SDK helper eventually). Tests green.
+- **CI** — `make core-test` (build+vet+test `./core/...`, folded into `verify`) + `make breaking` (buf-breaking `contracts` vs `main`). Both run green; **`make breaking` confirms the spike touched no frozen contract.**
+- **Exit report** — [reviews/10](../reviews/10-phase-1-spike-exit.md): C5/C1/C3/D2 all validated by a real enforcer; **no freeze-reopen triggered**; the board's "shapes-not-obligations" risk is materially reduced. The recommendation feeds Tom's deferred commitment-gate decision (ADR-013): **commit** / **continue-exploratory** both well-supported; the strategic v2-vs-v3 call (Q01) + external review (Q02) remain his.
+- **NOT proven (= the full build, not freeze risks):** D1 real process isolation, D3 storage-cred, D4 attestation-enforcement, C4 terminal audit, sre#4 backoff.
+
+---
+
+## 2026-06-01 — Spike core: cross-axis composition-on-Go — C5 + crash recovery validated; the frozen wire SUFFICES
+
+The spike's centerpiece, end-to-end ([ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md) §5), on `phase-1-composition`. `core/composition` drives the real pipeline (catalog `get-table` → format `overwrite` → catalog `commit-table`) through the Go enforcing gateway, a manifest per plugin, against Go providers honoring the frozen RPCs + idempotency contract.
+
+- **`TestCompositionPipeline`** — the multi-axis pipeline runs; the catalog records exactly the snapshot the format produced (commit-linkage, ADR-010); 4 hops authorized + audited (C4).
+- **`TestCrashMidStrategyRecovers`** (C1) — a strategy that crashes after the write but before `commit-table` recovers on an at-least-once re-run with the same run id: the replayed `overwrite` is a no-op (`already_applied`) → **no double-write**, exactly-once commit.
+- **`TestCompositionDeniesUndeclaredMidPipeline`** (C5) — `merge` (undeclared) is denied mid-pipeline though the format provides it. `go build` + `vet` + `test ./core/...` PASS (`golang:1.25`). Commit `dfd6587`.
+- **🔑 FINDING (de-risking — the spike's whole purpose):** the frozen wire **suffices** for crash-between-write-and-commit recovery via the existing `idempotency_key`/`already_applied` fields (ADR-012); the strategy axis did **not** need a commit/abort wire shape. **No freeze-reopen.** (Multi-output all-or-nothing atomicity stays the branch+merge primitive's job — a follow-on probe, not a strategy-level gap.)
+- **Next:** lighter spike probes (C3 deadline, D2 ticket) + CI (`make core-test`) + the spike exit report → the deferred commitment-gate decision (ADR-013).
+
+---
+
+## 2026-06-01 — Spike core: the capability-invoke gateway — C5 enforced end-to-end at the wire
+
+Second spike increment ([ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md)), on `phase-1-invoke-gateway`. `core/gateway` implements the `core/v1` `CapabilityInvokeService` (`Invoke` + `InvokeServerStream`), seeded from the faithful non-test `examples/bench/latency-go/gateway.go` — but its **C5 decision is `registry.Authorize` (derived from declared manifests), audited per decision (C4)**, not the stubs' hardcoded allowlist. Routes `capability→method` from the `(rat.common.v1.capability)` annotation; relays opaque frames (passthrough codec); re-stamps identity + propagates traceparent (ADR-007); rejects a missing/ill-formed traceparent (C1).
+
+- **Real gRPC enforcement test** (state axis, bufconn): an allowed `Get` relayed intact; an undeclared `put` + an unknown caller → `PERMISSION_DENIED`; a server-stream `watch` denied at open (ADR-008 enforce-at-open); a missing envelope → `InvalidArgument` before the decision. `go vet` + `go test ./core/...` **PASS** (`golang:1.25`). Commit `de34989`.
+- **C5 is now real end-to-end** — the self-asserted stub is replaced by a decision derived from what plugins declare. Next: composition-on-Go (the full pipeline through this gateway) + the C1/C2 cases + CI.
+
+---
+
+## 2026-06-01 — Spike core: the registry foundation (C5 derived from real manifests) — `go test` green
+
+First real Phase-1 spike code (ADR-014), on `phase-1-registry-core`. New Go module `github.com/rat-dev/rat/core`:
+
+- **`core/manifest`** — loads the frozen `plugin.v1.json` manifest shape (the real `contracts/examples/*.plugin.yaml`) into Go structs + validates the `rat://<axis>/v<major>/<cap>` URI grammar.
+- **`core/registry`** — indexes manifests by name + provided capability; **`Authorize(caller, cap)` allows iff `caller.requires ∋ cap ∧ provider.provides ∋ cap`** — the C5 decision *derived from declared manifests*, replacing the throwaway stubs' hardcoded allowlist. Rejects duplicate providers (no selection policy yet).
+- **Tested green** (containerized `golang:1.25`, `go vet` + `go test ./...`, `GOSUMDB=off`): the allow path (`scd2→format/merge`) + 3 deny modes (undeclared-require / no-provider / unknown-caller) + duplicate-provider + malformed-URI, all against the 2 real manifests. Commit `fdcf780`.
+- **Next:** `core/gateway` (`CapabilityInvokeService` seeded from `examples/bench/latency-go/gateway.go`, C5 wired to `registry.Authorize` + an audit record per decision), then composition-on-Go + the C5-negative / C1 / C2 exit tests.
+
+---
+
+## 2026-06-01 — ADR-014: the spike-core shape pinned (registry + capability-invoke gateway)
+
+Contracts-before-code for the Phase-1 spike. [ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md) scopes the minimum real core that makes **C5 real**: a Go **registry** (loads the real `plugin.yaml` manifests → indexes `(kind,name,version)` + a capability map; builds the `capability→(service,method)` route table from the `(rat.common.v1.capability)` annotation) + a **capability-invoke gateway** (seeded from the faithful non-test `examples/bench/latency-go/gateway.go`) whose **C5 decision is *derived from the manifests*** — `X allowed iff X ∈ caller.requires ∧ X ∈ provider.provides` — not the test stubs' hardcoded allowlist. Reconciler/bus/identity/state-gateway/process-launch deferred; plugins run as local gRPC servers. Exit tests: composition-on-Go + C5-negative (`PERMISSION_DENIED` + audit) + C1 crash-mid-strategy + C2 truncation; a frozen-wire insufficiency = a freeze-reopen while still local. Lives in a new `core/` module (`replace` → the SDK). Next: build `phase-1-registry-core`.
+
+---
+
+## 2026-06-01 — Phase-1 commitment gate RE-CONFIRMED (13-agent board) → **time-boxed spike** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) · [reviews/09](../reviews/09-phase-1-gate-review.md))
+
+Before committing to the full Phase 1 core build, re-confirmed readiness + "did we miss anything?" via a 13-agent board workflow: an 8-area completeness audit → a 4-lens board → chair synthesis (audit on Sonnet, board+chair on Opus).
+
+- **Verdict: proceed-with-conditions (strong-majority).** Engineering readiness independently re-verified *this session* (not trusted from the roadmap): `rat/1.5` verified, `make conformance` 32/32 + `make composition` + `make validate-manifests` 32/32 ran live, ADR-003's two-reference bar genuinely met on all 6 data-plane axes over real Arrow Flight, the one true v2-regret (`snapshot_id`) found+fixed pre-publish, the biggest gap (B1) absorbed additively (ADR-010).
+- **"Did we miss anything?" — no.** All 8 audit areas `minor-gaps`; **nothing was dropped from [reviews/08](../reviews/08-post-freeze-board-review.md)**. Two items elevated: **sre#4** (reconciler crash-loop backoff) promoted backlog → explicit Phase-1 AC; the **commitment gate** (governance).
+- **Decision (Tom): a time-boxed 2–4 week contract-de-risking spike** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md)) — stand up a minimal real registry + capability enforcer and actively try to break a frozen contract (C5 + crash-mid-strategy + C3/D2), freeze kept local so any regret is cheap. The 12–18mo runway commitment is **deferred to the spike's exit report**.
+- **Dissent preserved** (business lens WAIT, high): 3-day/112-commit project, zero soak, self-asserted conformance, no external review — green certifies *shapes*, not *obligations*. The spike buys evidence before the bet.
+- **Roadmap reconciled** (board condition #8): C1 clarified (fields done `rat/1.5`; enforcement is Phase 1), "D1–D5"→"D1–D4" (D5 done), deliverable counts corrected (24 protos / 32 refs / 18 CONTRACT.md / SDKs Go·Py·Rust·TS, Java dropped), stale "(Staged; commit pending.)" notes cleared.
+
+---
+
+## 2026-06-01 — Branching discipline landed — `main` / `phase-N` / `phase-N-<slug>` + a `main`-guard hook
+
+As Phase 1 begins, codified "always work on a nice branch" (Tom's ask). Planned by the `claude-engineer` agent; built-in-first (a rule + a hook guard, no new agent/skill).
+
+- **[`.claude/rules/git-branching.md`](../.claude/rules/git-branching.md)** (always-load) — topology (`main` = sealed line tagged `rat/N.M`; `phase-N` = long-lived integration; `phase-N-<slug>` = short-lived topic branches merged back `--no-ff`), naming, merge rules, tag convention.
+- **`main`-guard** added to `.claude/hooks/contracts-check.sh` — blocks direct `git commit` on `main` (exit 2); the phase-seal `git merge`/`git tag` path is unaffected. **Verified both ways** (blocks on `main`, passes on a working branch).
+- **Mechanics:** renamed `master` → `main` (local-only; no remote configured); forked `phase-1` from the `rat/1.5` sealed commit.
+- **Two bugs caught by dogfooding the model on contact** (CLAUDE.md #8 — test the topology, not the feature): (1) the guard was first committed only on `phase-1`, so it was absent on `main` where it's needed → landed the infra on `main` as the baseline (FF); (2) git can't create `phase-1/<slug>` while a branch `phase-1` exists (ref directory/file conflict) → switched sub-branches to a **hyphen** (`phase-1-<slug>`). Both fixes documented in the rule.
+
+---
+
 ## 2026-06-01 — Phase 0 close-out (4/4): **`rat/1.5` cut — 🎉 PHASE 0 SEALED** (C1/C2 crash-safety folded in, [ADR-012](../docs/architecture/adrs/012-crash-safety-additive-fields.md))
 
 The final close-out item. Folded the two cheap additive crash-safety fields into the seal (while the surface is local/unpublished), then cut `rat/1.5` over the complete Phase-0 contract surface.
