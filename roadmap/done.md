@@ -4,6 +4,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — Absorbed the board's two "NOW" items + **re-cut `rat/1`** (pre-publish correction)
+
+Actioned the two reviews/08 items that were only possible while the freeze is local/unpushed, and re-cut the `rat/1` tag.
+
+- **A1 [V2-REGRET fixed]** — `WriteResult.snapshot_id` `string` → **`optional`** (`data.proto`). Kills the empty-sentinel that conflated "no version" vs "cannot report" — the API-13 bug fixed on the sibling `rows_affected` but left on this field. `string`→`optional` is breaking under `buf` FILE rules, so it was free now / impossible after publication. Go refs' `snapshotID()` → `*string` (reads via `GetSnapshotId()` unchanged; Python proto-optional transparent). All 4 SDKs regenerated; **`make conformance` 32/32**; buf clean.
+- **D5/E4 honesty banner** — added "the orchestrating core is NOT built yet (Phase 1); enforcement here is the contract it MUST implement, it does not run today; conformance tests references not a live deployment; `provides`/`conformed_capabilities` are self-asserted (no enforcer)" to `plugin.v1.json` (`$comment`) + the 6 `CONTRACT.md` author guides.
+- **`rat/1` re-cut** (commit `0e81314`, was `b9dbe2d`) — supersedes the original; the annotation records why. `rat/1.1`–`rat/1.4` remain valid and layer on top.
+- Commit `0e81314` (`fix(contract)!`). The single true V2-regret the board found is now **resolved**, not carried to a v2.
+
+---
+
 ## 2026-06-01 — 5-agent post-freeze board review (communicating team) → [reviews/08]
 
 Ran the first adversarial review *after* the freeze, as a **communicating agent team**: 5 specialists (`architect`, `security`, `ecosystem`, `sre`, `contracts`) reviewed the frozen surface (rat/1..rat/1.4 + 32 refs + composition) in parallel and **cross-consulted each other via direct messages** — several findings changed as a result (the terminal-audit finding came from `sre`→`security`; `architect` cross-corrected `sre` on the health contract; `security`↔`contracts` confirmed the ArrowStream-ticket gap).

@@ -1,7 +1,7 @@
 # Current — what's in flight right now
 
 > **Always read this first when opening a Claude session on this project.**
-> Updated: 2026-05-31 (🎉 **ALL 18 AXIS CONTRACTS FROZEN at `v1`** (`rat/1` → `rat/1.4`). 7 data-plane + deployment-runtime + 7 control-plane + 3 experience (ui/notifications/marketplace = `rat/1.4`), plus `common/v1/*` + `core/v1/invoke` + `ERROR_MODEL.md`. **`make conformance` 32/32**; `make composition` green. **The ONLY remaining `v1-preview` artifact is the manifest schema (`plugin/v1.json`).** **Next:** freeze the manifest schema to fully close Phase 0's contract surface — OR start **Phase 1 (the core)**; Gate A (`rat/1`) is long satisfied. USER'S CALL.)
+> Updated: 2026-06-01 (🎉 **ALL 18 AXIS CONTRACTS FROZEN at `v1`** (`rat/1`→`rat/1.4`) + a 5-agent board review ([reviews/08](../reviews/08-post-freeze-board-review.md)) + its two "NOW" fixes absorbed. **`rat/1` was RE-CUT** (`0e81314`, was `b9dbe2d`) to fix the one V2-regret the board found — `WriteResult.snapshot_id`→`optional` — and add a "core not built (Phase 1)" honesty banner to `plugin.v1.json` + the 6 `CONTRACT.md`, before publication. `make conformance` **32/32**; `make composition` green. **Only `v1-preview` left:** the manifest schema (and per-kind schemas don't exist). **Next:** freeze the manifest schema (+ ship per-kind schemas) to close Phase 0's contract surface — OR start **Phase 1 (the core)**, where the board's enforcement/crash-safety findings (C1–C5, D1–D5) become acceptance tests. Gate A long satisfied. USER'S CALL.)
 
 ## Status one-liner
 

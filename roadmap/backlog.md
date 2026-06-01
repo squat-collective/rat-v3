@@ -11,9 +11,9 @@ When an item moves to active work, promote it: cut it from here, add it to [curr
 The 5-agent post-freeze review. Grouped by when to act.
 
 **NOW — the freeze is still local/unpushed (closing window):**
-- **A1 [V2-REGRET]** — make `WriteResult.snapshot_id` `optional` (data.proto:83) + re-cut `rat/1`. The *only* fix that's free now and impossible after the first external pin. (Alt: accept the wart, add `optional string resulting_version = 3` later.)
-- **D5/E4 honesty pass** — add a "the core is not built (Phase 1); enforcement here is the contract the core MUST implement" banner to `plugin.v1.json` + every `CONTRACT.md`; fix `overview.md` drift (`plane-manager-plugin`→`deployment-runtime`; add a tier-0 callout; reconcile "core never commands"). Pure docs.
-- Optional while re-cutting: absorb additive crash-safety fields **C1** (`idempotency_key`/`run_id` on strategy invoke + `WriteResult`) + **C2** (`ArrowStream` `expected_rows`/terminator).
+- ~~**A1 [V2-REGRET]** — `WriteResult.snapshot_id` `optional` + re-cut `rat/1`.~~ **✅ DONE 2026-06-01** (commit `0e81314`; `rat/1` re-cut from `b9dbe2d`). The one V2-regret is resolved, not carried to a v2.
+- ~~**D5/E4 honesty banner** on `plugin.v1.json` + `CONTRACT.md`.~~ **✅ DONE 2026-06-01** (`0e81314`). *Residual:* the `overview.md` drift (`plane-manager-plugin`→`deployment-runtime`; tier-0 callout; "core never commands") is still TODO — tracked as E4 in the process list below.
+- *(Not absorbed — moved to `v1.1`:)* the additive crash-safety fields **C1** (`idempotency_key`/`run_id`) + **C2** (`ArrowStream` terminator) are additive (safe post-freeze), so they didn't block the re-cut; pull them forward only if you'd rather lock the shape now.
 
 **`v1.1` additive (no break; prioritized):**
 - **B1** — catalog `RegisterTable` + commit-linkage RPC (catalog.proto:27-30). **FIRST** post-freeze additive — the branch-pipeline headline feature can't close its loop without it (3 agents' top concern).
