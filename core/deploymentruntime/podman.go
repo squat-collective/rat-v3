@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -38,7 +40,14 @@ type podmanInstance struct {
 // D1 completes when this passes a full-profile isolation vector (ADR-016 §4).
 type Podman struct {
 	deploymentruntimev1.UnimplementedDeploymentRuntimeServiceServer
-	bin       string // the podman binary (default "podman"; overridable for tests)
+	bin string // the podman binary (default "podman"; overridable for tests)
+
+	// DataRoot, when set, gives each launched plugin a PERSISTENT host directory
+	// (<DataRoot>/<plugin_id>) mounted at /data — surviving Terminate+relaunch, so a
+	// stateful plugin's durable state (e.g. a SQLite ledger) outlives a backend crash
+	// (C1). Empty == ephemeral only (/tmp tmpfs). A persistent peer to the tmpfs scratch.
+	DataRoot string
+
 	mu        sync.Mutex
 	seq       int
 	instances map[string]*podmanInstance
@@ -81,6 +90,21 @@ func (r *Podman) Launch(ctx context.Context, req *deploymentruntimev1.LaunchRequ
 		"--network=bridge",
 		"-p", "127.0.0.1::" + podmanContainerPort, // publish to an ephemeral host port
 		"-e", "RAT_PLUGIN_ADDR=0.0.0.0:" + podmanContainerPort,
+	}
+	// Persistent state (C1): when DataRoot is set, mount a per-plugin host directory at
+	// /data — it survives Terminate+relaunch, so a stateful plugin's durable state (e.g.
+	// a SQLite ledger) outlives a backend crash. 0777 (forced past umask) so the non-root
+	// container uid can write it; :Z relabels for SELinux. A production runtime would map
+	// ownership to the plugin's uid instead of world-writable.
+	if r.DataRoot != "" {
+		dir := filepath.Join(r.DataRoot, req.GetPluginId())
+		if err := os.MkdirAll(dir, 0o777); err != nil {
+			return nil, status.Errorf(codes.Internal, "create data dir %s: %v", dir, err)
+		}
+		if err := os.Chmod(dir, 0o777); err != nil {
+			return nil, status.Errorf(codes.Internal, "chmod data dir %s: %v", dir, err)
+		}
+		args = append(args, "-v", dir+":/data:Z")
 	}
 	// seccomp: empty / "RuntimeDefault" → podman's default profile (RuntimeDefault-
 	// equivalent) already applies; a named profile is passed through.
