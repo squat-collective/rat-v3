@@ -14,46 +14,58 @@ there only as a phase-seal merge. For all active work, you are on a branch. A
 ## Branch topology
 
 ```
-main                        ← sealed phases only; tagged rat/N.M (rat/1.5 = Phase 0)
- └── phase-1                ← long-lived integration branch for the Phase 1 core build
-      ├── phase-1/<slug>    ← short-lived topic branches (days, not weeks)
-      └── phase-1/<slug>    ← merge back to phase-1 when done; never directly to main
+main                          ← sealed phases only; tagged rat/N.M (rat/1.5 = Phase 0)
+ └── phase-1                  ← long-lived integration branch for the Phase 1 core build
+      ├── phase-1-<slug>      ← short-lived topic branches forked off phase-1
+      └── phase-1-<slug>        merge back to phase-1 --no-ff; never directly to main
 ```
 
 - **`main` is the sealed-state line.** Phase-seal tags (`rat/1.5`, `rat/2.0`, …) point at
-  commits on `main`. Nothing lands on `main` except a phase-complete merge. Dormant between phases.
+  commits on `main`. It also carries foundational `.claude/` scaffolding (this rule + the
+  hook) as the phase baseline. Phase *content* lands on `main` only via a phase-seal merge.
 - **`phase-N` is the living integration branch.** All of a phase's work accumulates here.
   It stays open for the whole phase (months). When the phase's exit criteria pass, `phase-N`
   merges to `main` as one merge commit and the next `rat/` tag is cut.
-- **`phase-N/<slug>` sub-branches** are short-lived. They fork off `phase-N`, do one
+- **`phase-N-<slug>` sub-branches** are short-lived. They fork off `phase-N`, do one
   ADR / subsystem / contract iteration, and merge back into `phase-N` — never to `main`.
+
+## Why hyphens, not slashes (`phase-1-x`, not `phase-1/x`)
+
+Git stores refs as files under `.git/refs/heads/`, so a ref **cannot be both a file and a
+directory**. A branch literally named `phase-1` blocks creating `phase-1/anything` (the
+"directory/file conflict": `fatal: cannot lock ref … 'phase-1' exists`). Since we want
+`phase-1` to *be* the integration branch, sub-branches use a **hyphen** separator. Flat refs,
+no conflict, still visually grouped (`phase-1-*` sort together). *Learned by dogfooding —
+the first sub-branch creation failed; see ADR-013 / reviews/09.*
 
 ## Naming conventions
 
 | Branch | Pattern | Example |
 |--------|---------|---------|
 | Phase integration | `phase-N` | `phase-1` |
-| Topic / subsystem | `phase-N/<slug>` | `phase-1/registry-core` |
-| ADR-driven | `phase-N/adr-NNN-<short-title>` | `phase-1/adr-013-identity-gateway` |
-| Phase hotfix | `phase-N/hotfix-<slug>` | `phase-1/hotfix-reconciler-panic` |
+| Topic / subsystem | `phase-N-<slug>` | `phase-1-registry-core` |
+| ADR-driven | `phase-N-adr-NNN-<short-title>` | `phase-1-adr-013-commitment-gate` |
+| Phase hotfix | `phase-N-hotfix-<slug>` | `phase-1-hotfix-reconciler-panic` |
 
-Slug rules: lowercase, hyphens, no slashes beyond the `phase-N/` prefix. Prefer ADR-numbered
-branch names when the work is ADR-driven, so the branch is self-describing.
+Slug rules: lowercase, hyphens only (no slashes — see above). Prefer ADR-numbered branch
+names when the work is ADR-driven, so the branch is self-describing.
 
 ## Merge rules
 
-- `phase-N/<slug>` → `phase-N`: merge commit (no fast-forward — keeps topology readable).
+- `phase-N-<slug>` → `phase-N`: merge commit (no fast-forward — keeps topology readable).
   ```bash
   git checkout phase-N
-  git merge --no-ff phase-N/<slug>
+  git merge --no-ff phase-N-<slug>
   ```
-- `phase-N` → `main`: **only** when the phase's exit criteria pass (Phase 1: C3–C5, D1–D4).
-  Merge commit, then tag immediately.
+- `phase-N` → `main`: **only** when the phase's exit criteria pass (Phase 1: C3–C5, D1–D4 +
+  sre#4). Merge commit, then tag immediately.
   ```bash
   git checkout main
   git merge --no-ff phase-N
   git tag rat/2.0
   ```
+  The phase-seal uses `git merge` + `git tag` (not `git commit`), so the `main`-guard does
+  not block it — the guard blocks only direct `git commit` on `main`.
 - Never `git rebase` a sub-branch onto `main` directly. Rebase is fine *within* a sub-branch
   before merging it into `phase-N`.
 
@@ -85,3 +97,4 @@ git stash && git checkout phase-1 && git stash pop
 
 - [`.claude/rules/claude-environment.md`](claude-environment.md) — the built-in-first discipline this follows.
 - [`.claude/hooks/contracts-check.sh`](../hooks/contracts-check.sh) — hosts both the contract gate and the `main`-guard.
+- ADR-013 / reviews/09 — where this branching model was adopted (and the slash bug caught).

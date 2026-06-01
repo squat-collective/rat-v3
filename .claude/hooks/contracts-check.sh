@@ -23,7 +23,7 @@ if [[ "$CURRENT_BRANCH" == "main" ]]; then
   echo "ERROR: You are on 'main'. Direct commits to main are not allowed." >&2
   echo "  main only receives phase-seal merges. For active work, use a branch:" >&2
   echo "    git checkout phase-1                 # the integration branch, or" >&2
-  echo "    git checkout -b phase-1/<slug>       # a new topic branch" >&2
+  echo "    git checkout -b phase-1-<slug>       # a new topic branch (hyphen, not slash)" >&2
   echo "  See .claude/rules/git-branching.md" >&2
   exit 2
 fi
