@@ -265,8 +265,9 @@ func (s streamingState) Watch(_ *statev1.WatchRequest, srv statev1.StateService_
 }
 
 // newStreamingGateway wires a gateway whose caller DECLARES watch (so it is allowed
-// at open) in front of the given streaming provider.
-func newStreamingGateway(t *testing.T, prov statev1.StateServiceServer) (corev1.CapabilityInvokeServiceClient, *MemAuditor) {
+// at open) in front of the given streaming provider. idle>0 overrides the C3 stream
+// idle timeout (set before serving, so no race with the handler goroutine).
+func newStreamingGateway(t *testing.T, prov statev1.StateServiceServer, idle time.Duration) (corev1.CapabilityInvokeServiceClient, *MemAuditor) {
 	t.Helper()
 	caller := &manifest.Manifest{Kind: "strategy", Metadata: manifest.Metadata{Name: "rat-watch-caller"},
 		Requires: []manifest.CapabilityRef{{Capability: "rat://state/v1/watch"}}}
@@ -279,6 +280,9 @@ func newStreamingGateway(t *testing.T, prov statev1.StateServiceServer) (corev1.
 	providerConn := bufServer(t, func(s *grpc.Server) { statev1.RegisterStateServiceServer(s, prov) })
 	audit := &MemAuditor{}
 	gw := New(reg, map[string]*grpc.ClientConn{"rat-test-state": providerConn}, audit, statev1.File_rat_state_v1_state_proto)
+	if idle > 0 {
+		gw.StreamIdleTimeout = idle
+	}
 	gwConn := bufServer(t, func(s *grpc.Server) { corev1.RegisterCapabilityInvokeServiceServer(s, gw) })
 	return corev1.NewCapabilityInvokeServiceClient(gwConn), audit
 }
@@ -287,7 +291,7 @@ func newStreamingGateway(t *testing.T, prov statev1.StateServiceServer) (corev1.
 // produces TWO audit records — the open decision (allowed) and a terminal close
 // record (Outcome=success, Frames=N) that shares the open record's correlation id.
 func TestInvokeServerStreamTerminalAuditSuccess(t *testing.T) {
-	client, audit := newStreamingGateway(t, streamingState{frames: 3})
+	client, audit := newStreamingGateway(t, streamingState{frames: 3}, 0)
 	payload, _ := proto.Marshal(&statev1.WatchRequest{})
 	stream, err := client.InvokeServerStream(callerCtx("rat-watch-caller"), &corev1.InvokeServerStreamRequest{
 		Capability: "rat://state/v1/watch", Payload: payload,
@@ -329,7 +333,7 @@ func TestInvokeServerStreamTerminalAuditSuccess(t *testing.T) {
 // emits a terminal record — Outcome=error, the frames relayed before the failure, and
 // the error message — so a broken stream is never a silent gap in the audit trail.
 func TestInvokeServerStreamTerminalAuditError(t *testing.T) {
-	client, audit := newStreamingGateway(t, streamingState{frames: 1, failAfter: true})
+	client, audit := newStreamingGateway(t, streamingState{frames: 1, failAfter: true}, 0)
 	payload, _ := proto.Marshal(&statev1.WatchRequest{})
 	stream, err := client.InvokeServerStream(callerCtx("rat-watch-caller"), &corev1.InvokeServerStreamRequest{
 		Capability: "rat://state/v1/watch", Payload: payload,
@@ -353,5 +357,93 @@ func TestInvokeServerStreamTerminalAuditError(t *testing.T) {
 	term := recs[1]
 	if !term.Terminal || term.Outcome != "error" || term.Frames != 1 || term.Error == "" {
 		t.Errorf("record[1] = %+v, want terminal {error, Frames:1, Error set}", term)
+	}
+}
+
+// idleStreamingState sends `frames` Watch responses, then GOES SILENT (blocks until
+// its context is canceled) — a hung provider that sends no EOF and no error, used to
+// exercise the C3 idle backstop. It returns when the gateway cuts the stream.
+type idleStreamingState struct {
+	statev1.UnimplementedStateServiceServer
+	frames int
+}
+
+func (s idleStreamingState) Watch(_ *statev1.WatchRequest, srv statev1.StateService_WatchServer) error {
+	for i := 0; i < s.frames; i++ {
+		if err := srv.Send(&statev1.WatchResponse{}); err != nil {
+			return err
+		}
+	}
+	<-srv.Context().Done() // hang until the gateway's idle/deadline cut tears the stream down
+	return srv.Context().Err()
+}
+
+// TestInvokeServerStreamIdleTimeout (C3): with NO deadline set, a provider that sends
+// a few frames then goes silent is cut by the gateway's idle backstop — promptly, with
+// DeadlineExceeded and a terminal {timeout, Frames:N} record. A hung provider can't pin
+// the stream forever.
+func TestInvokeServerStreamIdleTimeout(t *testing.T) {
+	client, audit := newStreamingGateway(t, idleStreamingState{frames: 2}, 200*time.Millisecond)
+	payload, _ := proto.Marshal(&statev1.WatchRequest{})
+	stream, err := client.InvokeServerStream(callerCtx("rat-watch-caller"), &corev1.InvokeServerStreamRequest{
+		Capability: "rat://state/v1/watch", Payload: payload,
+	})
+	if err != nil {
+		t.Fatalf("open stream: %v", err)
+	}
+	start := time.Now()
+	n := 0
+	var recvErr error
+	for {
+		if _, recvErr = stream.Recv(); recvErr != nil {
+			break
+		}
+		n++
+	}
+	if status.Code(recvErr) != codes.DeadlineExceeded {
+		t.Fatalf("stream end err = %v, want DeadlineExceeded (idle cut)", status.Code(recvErr))
+	}
+	if n != 2 {
+		t.Errorf("relayed %d frames before the idle cut, want 2", n)
+	}
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Errorf("idle cut took %v — the backstop did not fire promptly", elapsed)
+	}
+	recs := audit.Records()
+	if len(recs) != 2 {
+		t.Fatalf("audit = %+v, want 2 (open + terminal)", recs)
+	}
+	if term := recs[1]; !term.Terminal || term.Outcome != "timeout" || term.Frames != 2 {
+		t.Errorf("record[1] = %+v, want terminal {timeout, Frames:2}", term)
+	}
+}
+
+// TestInvokeServerStreamRespectsSoftDeadline (C3): the deadline bound applies to
+// streams too — a soft deadline sooner than the (default) idle window cuts a silent
+// provider, recorded as a terminal {timeout} outcome.
+func TestInvokeServerStreamRespectsSoftDeadline(t *testing.T) {
+	client, audit := newStreamingGateway(t, idleStreamingState{frames: 1}, 0) // default 5m idle → the deadline fires first
+	payload, _ := proto.Marshal(&statev1.WatchRequest{})
+	stream, err := client.InvokeServerStream(callerCtxDeadline("rat-watch-caller", 200*time.Millisecond), &corev1.InvokeServerStreamRequest{
+		Capability: "rat://state/v1/watch", Payload: payload,
+	})
+	if err != nil {
+		t.Fatalf("open stream: %v", err)
+	}
+	start := time.Now()
+	var recvErr error
+	for {
+		if _, recvErr = stream.Recv(); recvErr != nil {
+			break
+		}
+	}
+	if status.Code(recvErr) != codes.DeadlineExceeded {
+		t.Fatalf("stream end err = %v, want DeadlineExceeded (soft deadline)", status.Code(recvErr))
+	}
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Errorf("deadline cut took %v — the stream was not bounded by the soft deadline", elapsed)
+	}
+	if term := audit.Records()[len(audit.Records())-1]; !term.Terminal || term.Outcome != "timeout" {
+		t.Errorf("terminal record = %+v, want {timeout}", term)
 	}
 }
