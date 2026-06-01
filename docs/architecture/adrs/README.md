@@ -15,6 +15,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [007](007-call-context-transport.md) | Call-context transport — cross-cutting context rides in transport metadata, not the payload | Accepted | 2026-05-31 |
 | [008](008-streaming-capability-invocation.md) | Streaming capability invocation — per-cardinality Invoke variants, enforce-at-open | Accepted | 2026-05-31 |
 | [009](009-data-plane-contract-freeze-v1.md) | Freeze the data-plane axis contracts at `v1` (`rat/1`) | Accepted | 2026-05-31 |
+| [010](010-catalog-commit-linkage.md) | Catalog commit-linkage — additive `RegisterTable` + `CommitTable` RPCs | Accepted | 2026-06-01 |
 
 ## Template
 
