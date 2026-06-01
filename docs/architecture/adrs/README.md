@@ -19,6 +19,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [011](011-manifest-schema-freeze-and-per-kind-layer.md) | Freeze the plugin manifest schema at `v1` + add the per-kind schema layer | Accepted | 2026-06-01 |
 | [012](012-crash-safety-additive-fields.md) | Additive crash-safety fields for the data-plane write path (`rat/1.5`) | Accepted | 2026-06-01 |
 | [013](013-phase-1-spike-and-commitment-gate.md) | Phase 1 entry — time-boxed contract-de-risking spike + commitment-gate posture | Accepted | 2026-06-01 |
+| [014](014-spike-core-registry-and-invoke-gateway.md) | The spike core — a manifest-driven registry + capability-invoke gateway (C5 made real) | Accepted | 2026-06-01 |
 
 ## Template
 
