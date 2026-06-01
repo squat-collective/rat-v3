@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — 🎉🎉 PHASE 1 SEALED — `rat/2.0`
+
+`phase-1` → `main`, tagged `rat/2.0` (annotated). All 9 board exit criteria met (C1, C3, C4, C5, D1, D2, D3, D4, sre#4 — see the entries below), each proven **against real launched plugins**, with the frozen wire intact (`make breaking` green throughout). The spike core grew into a real control plane: registry (+ conformance-verified `NewVerified`) · capability-invoke gateway (C5 authz + C4 audit + C3 deadline/idle) · two deployment-runtimes (local-process + podman full-I9) · supervisor · reconciler + leader-election lease · arrow-ticket bulk-leg gate · storage-cred isolation.
+
+- **Seal mechanics:** `git merge --no-ff phase-1` into `main` + `git tag -a rat/2.0` (merge+tag, not commit — the `main`-guard hook permits it). Tags: `rat/1.5` = Phase 0, `rat/2.0` = Phase 1.
+- **Freeze stays LOCAL/unpushed.** Owed before broad commitment / a push: **Q02 external peer review** (only internal adversarial review so far). Phase 2+ are **user-pull-gated** (phases.md Gate B: ≥10 real solo users) — not started.
+- **Non-blocking residuals** (backlog): write-leg idempotency vs a real idempotent format ref (C1 residual); explicit cloud metadata-egress drop + structured `IsolationAttestation` (D-series GA); core audit signing + hash chain (C4/C8 GA, seeded by D4's ed25519).
+
+---
+
 ## 2026-06-01 — 🎉 sre#4 — the reconciler (crash-loop backoff/jitter + leader election): PHASE-1 DoD COMPLETE (9/9)
 
 `core/reconciler` + `core/lease` ([reviews/03](../reviews/03-operations-sre.md) §incident-runbooks → [reviews/09](../reviews/09-phase-1-gate-review.md) exit gate), on `phase-1-sre4-reconciler`. The 5th of the six core things, built greenfield with the sre#4 robustness baked in: **don't re-make the K8s CrashLoopBackoff mistake.** Level-triggered convergence (events are hints; each pass re-observes), one active replica via a lease.
