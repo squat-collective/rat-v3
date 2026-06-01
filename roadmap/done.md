@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — Q02 external-review reviewer brief drafted
+
+[`reviews/Q02-external-review-brief.md`](../reviews/Q02-external-review-brief.md), on `phase-1-q02-brief`. The ask for the owed **Q02 external peer review** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) / [reviews/09](../reviews/09-phase-1-gate-review.md) dissent: zero external human review so far). It frames the premise, states what internal review already covered (so reviewers don't re-derive it), lists the load-bearing questions we most want challenged (premise / contracts-freeze / data-plane / operability / ecosystem / prior-art), the already-acknowledged residuals, a reading order, and a findings template + severity scale. **Next on Q02: recruit reviewers** (OSGi/K8s/VSCode/Temporal-class practitioners) and run it; freeze stays local/unpushed until then.
+
+---
+
 ## 2026-06-01 — 🎉🎉 PHASE 1 SEALED — `rat/2.0`
 
 `phase-1` → `main`, tagged `rat/2.0` (annotated). All 9 board exit criteria met (C1, C3, C4, C5, D1, D2, D3, D4, sre#4 — see the entries below), each proven **against real launched plugins**, with the frozen wire intact (`make breaking` green throughout). The spike core grew into a real control plane: registry (+ conformance-verified `NewVerified`) · capability-invoke gateway (C5 authz + C4 audit + C3 deadline/idle) · two deployment-runtimes (local-process + podman full-I9) · supervisor · reconciler + leader-election lease · arrow-ticket bulk-leg gate · storage-cred isolation.
