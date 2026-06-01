@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-01 — ADR-014: the spike-core shape pinned (registry + capability-invoke gateway)
+
+Contracts-before-code for the Phase-1 spike. [ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md) scopes the minimum real core that makes **C5 real**: a Go **registry** (loads the real `plugin.yaml` manifests → indexes `(kind,name,version)` + a capability map; builds the `capability→(service,method)` route table from the `(rat.common.v1.capability)` annotation) + a **capability-invoke gateway** (seeded from the faithful non-test `examples/bench/latency-go/gateway.go`) whose **C5 decision is *derived from the manifests*** — `X allowed iff X ∈ caller.requires ∧ X ∈ provider.provides` — not the test stubs' hardcoded allowlist. Reconciler/bus/identity/state-gateway/process-launch deferred; plugins run as local gRPC servers. Exit tests: composition-on-Go + C5-negative (`PERMISSION_DENIED` + audit) + C1 crash-mid-strategy + C2 truncation; a frozen-wire insufficiency = a freeze-reopen while still local. Lives in a new `core/` module (`replace` → the SDK). Next: build `phase-1-registry-core`.
+
+---
+
 ## 2026-06-01 — Phase-1 commitment gate RE-CONFIRMED (13-agent board) → **time-boxed spike** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) · [reviews/09](../reviews/09-phase-1-gate-review.md))
 
 Before committing to the full Phase 1 core build, re-confirmed readiness + "did we miss anything?" via a 13-agent board workflow: an 8-area completeness audit → a 4-lens board → chair synthesis (audit on Sonnet, board+chair on Opus).
