@@ -27,7 +27,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image platform-up platform-run platform-down core-test-podman breaking help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image platform-up platform-run platform-down core-test-podman breaking help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -129,6 +129,10 @@ rat-image: ## ADR-019: build the rat control-plane daemon image (run `rat serve`
 	@echo ">> building rat/serve:dev (core/Dockerfile)"
 	@$(RUNTIME) build -f core/Dockerfile -t rat/serve:dev .
 	@echo ">> built rat/serve:dev — run it with:  $(notdir $(RUNTIME)) run --rm -p 7777:7777 rat/serve:dev"
+
+stateplugin-image: ## ADR-022: build a launchable stateplugin image (rat `podman run`s it as a plugin container)
+	@echo ">> building rat/stateplugin:dev"
+	@$(RUNTIME) build -f core/testplugins/stateplugin/Dockerfile -t rat/stateplugin:dev .
 
 ## --- the data platform bundle (ADR-020) --------------------------------------
 platform-up: rat-image ## ADR-020 S1: bring up the always-on data platform stack (Postgres+MinIO+engine+catalog+rat serve)

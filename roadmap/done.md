@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — 2c (first step): rat launches a SEPARATE plugin container — the decoupled loop, proven 📦
+
+The reliable, decoupled-launch proof (the path chosen over a blind socket-mount): **rat launches a plugin as its own container** from a plane. `core/testplugins/stateplugin/Dockerfile` bakes a launchable `rat/stateplugin:dev` image (a static Go binary, alpine, runs under the podman runtime's I9 profile); `core/cmd/rat/plane.podman.yaml` is a `runtime: podman` plane that launches it. Proven live (rat on the host, the proven podman runtime — no socket-in-container yet): `rat serve --plane plane.podman.yaml` →
+- `launching 1 plugin(s) via the "podman" runtime` → `wired rat-state -> 127.0.0.1:45043` → `gateway serving`;
+- a **separate container** (`localhost/rat/stateplugin:dev`) is running, launched by rat;
+- `ratctl call rat://state/v1/get` → routes to it; the value decodes to `pid=1 key=k1` — **pid 1 proves it ran inside the container**, not as a host process;
+- `put` → `PermissionDenied` (C5); SIGTERM → drained → the container terminated.
+
+So **adding a plugin = one plane entry + an image; rat launches it as its own container; the infra carries no per-plugin service** — the ADR-022 model, decoupled + reconciler-driven (self-healing), reached *reliably* (uses the already-proven podman runtime; `make stateplugin-image`). `make breaking` clean; additive (no proto/axis). **Next:** bake the Python plugin images (engine/catalog/dbt-runner/…) + a slim `plugins.yaml`/compose so the *platform* stack drops to rat + Postgres + MinIO; then **socket-mount** (containerize rat: podman CLI + the host socket + the in-network endpoint tweak) as the focused final refinement.
+
+---
+
 ## 2026-06-02 — 2b: the launch-mode daemon — `rat serve` launches + supervises + self-heals 🚀
 
 `rat serve`'s launch path is now **reconciler-driven** (ADR-022): rat is the **sole launcher**, not a static one-shot. `core/cmd/rat`:
