@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-019 ACCEPTED: `rat serve` daemon + beginner compose stack (Phase 2 kickoff)
+
+[ADR-019](../docs/architecture/adrs/019-rat-serve-daemon.md) finalized **Accepted** and rewritten to be **executed cold by a fresh session** — Implementation map (exact APIs: `supervisor.BringUp`, `manifest.Load`, `gateway.Auditor`, the `File_rat_*` descriptors, `corev1.RegisterCapabilityInvokeServiceServer`), a per-phase runbook, and a kickoff checklist. Closes the gap the data-dev experiment surfaced (F9 / "why not the core gateway?"): the sealed core is a **library, not a server**. Resolves all 7 prior open questions into firm decisions (local→podman; containerize Python plugins **image-only, no proto change**; stdout auditor; binary at `core/cmd/rat/`; build now as **Phase 2 kickoff**, not Gate-B-blocked; attach-mode health-checks-not-restarts; compose stack at `deploy/data-dev-starter/`). Two runtime modes — **launch** (solo) vs **attach** (compose orchestrates → no docker-in-docker). Build order **A** (daemon vs Go test plugins — core first runs) → **B** (data-dev plugins via the real gateway) → **C** (`compose up` beginner stack). Roadmap threaded: phases.md (Phase 2 kickoff), current.md (active next = Phase A), backlog promoted. **Next: build Phase A.**
+
+---
+
 ## 2026-06-02 — vscode-rat v0.2.0: multi-environment RAT explorer (many connections)
 
 On `phase-1-data-dev-plane`. The VS Code extension now manages **many named RAT connections** (like a DB explorer manages many servers) — `{name, url, tenant?}` persisted in the `ratDataDev.connections` setting, the tree **connection-rooted** (connection → tables → snapshots; health → plugins), with per-connection Run Pipeline / Query / Search and Add/Edit/Remove. One editor, N planes (local / staging / prod / per-tenant / remote); unreachable planes degrade gracefully. Each connection is just a URL → point it at a **remote** gateway/core. The "one UI, many planes" scalability story made concrete. New `src/connections.ts`; compiles clean; repackaged → `vscode-rat-0.2.0.vsix` (`make data-dev-vsix`). Idea + follow-ons (gateway *remote mode* to target a real remote S3+Postgres plane; per-connection auth/tenant identity) captured in [`ideas/inbox.md`](../ideas/inbox.md).

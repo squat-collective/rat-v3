@@ -6,7 +6,9 @@ When an item moves to active work, promote it: cut it from here, add it to [curr
 
 ---
 
-## 🛰️ `rat serve` — make the sealed core runnable ([ADR-019](../docs/architecture/adrs/019-rat-serve-daemon.md), Proposed, 2026-06-02)
+## 🛰️ `rat serve` — make the sealed core runnable ([ADR-019](../docs/architecture/adrs/019-rat-serve-daemon.md), **Accepted** 2026-06-02 → now the active next build, see [current.md](current.md))
+
+> **Promoted to active.** ADR-019 is Accepted and written to be executed cold (Implementation map + runbook + kickoff checklist; all 7 decisions resolved). The detail below is retained as the at-a-glance summary; the authoritative spec is the ADR.
 
 **Surfaced by the data-dev-plane experiment** (finding F9 + the "why not use the core gateway?" thread): the Phase-1 core is built+tested but is a **library, not a server** — no entrypoint, the gateway is only served over `bufconn` in tests. So the experiment uses a BFF stand-in. `rat serve` assembles the sealed core into a daemon.
 
