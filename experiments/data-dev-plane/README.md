@@ -375,25 +375,57 @@ at a new CSV/Parquet on S3 is a config change, not a code change.
 
 ## 10. Open questions / things to revisit (this is exploratory)
 
-1. **Catalog/engine boundary in a DuckLake world** (§4 tension). DuckLake unifies write+commit
-   in one DuckDB transaction; RAT separates engine/catalog. Candidates: **(a)** a single plugin
-   providing both `engine` + `catalog` capabilities (if cross-axis `provides` is allowed);
-   **(b)** keep them separate, both attach the lake, and the engine's write IS the snapshot the
-   catalog records (catalog `CommitTable` = tag/record); **(c)** engine does all DuckLake ops,
-   catalog is a thin tracker for the RAT axis + the UI. Decide by building (b) first.
+### Findings from building step 2 (the DuckDB heart) — 2026-06-02
+
+The local end-to-end works; the build surfaced concrete frictions worth recording (this
+is exactly the "where they *don't* hold up" value §0 is after):
+
+- **F1 — DuckLake rejects DuckDB's fixed-size `ARRAY` (`FLOAT[N]`).** That is *the* type
+  `vss`'s HNSW index requires. So embeddings are stored as a **variable `LIST` (`FLOAT[]`)**
+  and cast to `FLOAT[N]` at query time for `array_cosine_distance`. Consequence: **you cannot
+  both lake-store an embedding column AND HNSW-index it in place.** Brute-force cosine works
+  directly on the lake (what `run-local.py` does); an HNSW *index* needs a **derived (non-lake)
+  fixed-array table** materialized from the lake — i.e. the ANN index is a derived structure,
+  not lake state. (Partly answers Q2/Q7 below; reframes "vector index" as a build-from-lake
+  artifact.)
+- **F2 — list-returning UDFs need `numpy`.** DuckDB marshals Python list results via numpy, so
+  the `embed()` UDF requires numpy even though the engine is otherwise Arrow-native. Added to
+  the engine's `requirements.txt` and the conformance dep union.
+- **F3 — DuckLake metadata sqlite is single-writer.** The engine *and* the catalog attach the
+  same DuckLake; a catalog connection held open **locks out the engine's write COMMIT**
+  ("database is locked"). Fix for the local sqlite demo: the catalog opens **short-lived**
+  read connections (the engine is idle at read time). The real multi-writer answer is a
+  **Postgres** metadata DB (already the §7 scale story) — this just makes the *why* concrete.
+- **F4 — DuckLake inlines small writes** into the metadata DB; Parquet files materialize only
+  on flush/checkpoint. Fine locally; relevant when we assert "data is on S3" (step 3) — we'll
+  need an explicit flush to force Parquet out.
+- **F5 — `snapshot_time` pulls a `pytz` dep.** Selecting the timestamp column from
+  `lake.snapshots()` triggers a timestamptz conversion needing pytz. The catalog only selects
+  `snapshot_id`, so it stays pytz-free.
+
+### Still open
+
+1. **Catalog/engine boundary in a DuckLake world** (§4 tension). ✅ **Resolved by building
+   (b):** engine + catalog stay separate, both attach the lake, the engine's write IS the
+   snapshot (returned in `WriteResult.snapshot_id`) and the catalog `CommitTable` records it;
+   `GetTable` resolves the real snapshot from `lake.snapshots()`. Works end-to-end. (a)/(c)
+   not needed. The only residual is F3's single-writer discipline (→ Postgres at scale).
 2. **Branch model** — map RAT branches onto DuckLake snapshots: branch-tag column vs separate
-   attached lake vs snapshot lineage. Needs a spike.
+   attached lake vs snapshot lineage. Still needs a spike — the catalog ships a **thin tracker**
+   (branch tips in its own sqlite) so the surface is complete while the model is decided. This
+   is why the catalog is on a `selftest.py`, not yet in the frozen `catalog-v1` golden suite.
 3. **`format` axis** — subsumed by DuckLake here. Keep it that way, or add an Iceberg/Delta
    format plugin to exercise the axis? (Lean: subsumed, simpler.)
 4. **ML granularity** — extensions vs a first-class `ml` axis (§3). Revisit if discovery/authz
    on `embed` specifically starts to matter.
 5. **Default embed backend** — `hash-256` everywhere, or wire straight to HAL-9000 Ollama for
    the real demo? (Lean: `hash-256` default for portability + golden vectors; `ollama:*` for
-   the real run. *Open per Tom.*)
+   the real run. *Open per Tom.*) The seam is built (`embed.py` dispatch); only config changes.
 6. **Where the strategy runs** — in-process vs a `subprocess`/`podman` unit; how the reconciler
    schedules pipeline runs.
-7. **Conformance** — do we add an engine golden-vector for `embed(hash-256, …)` so the ML UDF
-   is deterministically tested like the other capabilities? (Lean: yes.)
+7. **Conformance** — ✅ **Done for `embed`:** [`engine-embed-v1.json`](../../contracts/conformance/engine-embed-v1.json) freezes deterministic `embed(hash-256, …)` golden vectors; the engine
+   harness asserts them (dim + exact nonzero buckets + L2-norm). Vector-search/HNSW conformance
+   is gated on the F1 derived-index question.
 8. **UX scope** — how much of VS Code's API to lean on (tree views, webview grid, notebooks?).
 
 ---
@@ -401,9 +433,12 @@ at a new CSV/Parquet on S3 is a config change, not a code change.
 ## 11. Build order (for a fresh session)
 
 1. **This doc** ✅ — the agreed (changeable) shape.
-2. **`ducklake-py` catalog + `duckdb-ml-py` engine** — the DuckDB heart: attach a DuckLake,
-   the `embed()` UDF + `vss`, `engine.{execute,query,preview}`, `catalog.{register,commit,get}`.
-   Get a *local* (no S3) end-to-end transform→embed→search working first.
+2. **`ducklake-py` catalog + `duckdb-ml-py` engine** ✅ **DONE** — the DuckDB heart: attach a
+   DuckLake, the `embed()` UDF + `vss`, `engine.{execute,query,preview}`,
+   `catalog.{register,commit,get}`. A *local* (no S3) end-to-end transform→embed→search runs
+   green over real gRPC: [`run-local.py`](run-local.py) / `make data-dev-local`. The engine
+   joins the conformance suite (engine-real-v1 + a new embed golden, [`engine-embed-v1.json`](../../contracts/conformance/engine-embed-v1.json)); the catalog has a `selftest.py`
+   (frozen catalog-v1 parity deferred to the branch-model spike). Findings folded into §10.
 3. **`minio-s3` + S3 wiring** — vend scoped creds; point DuckDB at S3; move the data remote.
 4. **`incremental-embed-py` strategy** — the real ELT (§5.4); idempotent, branch-isolated.
 5. **The composition** — a runner + a `make data-dev-plane` target that boots the stack

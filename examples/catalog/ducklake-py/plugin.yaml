@@ -1,0 +1,27 @@
+# rat-catalog-ducklake-py — the data-dev plane catalog (DuckLake).
+# EXPLORATORY (experiments/data-dev-plane). Additive; the frozen catalog/v1 surface is
+# unchanged. DuckLake subsumes the format axis (metadata + Parquet in one transaction),
+# so this stack ships no separate format plugin (experiment README §4).
+# Validates against contracts/schema/{plugin.v1.json, kinds/catalog.v1.json}.
+api_version: rat/1
+kind: catalog
+metadata:
+  name: rat-catalog-ducklake
+  version: 0.1.0
+  authors: ["RAT data-dev plane"]
+  description: "DuckLake lakehouse catalog: SQL metadata + Parquet on S3"
+  license: Apache-2.0
+compatible_core: ["rat/1"]
+provides:
+  - capability: rat://catalog/v1/get-table
+  - capability: rat://catalog/v1/register-table
+  - capability: rat://catalog/v1/commit-table
+  - capability: rat://catalog/v1/create-branch
+  - capability: rat://catalog/v1/merge-branch
+requires:
+  # Parquet data + the (optionally remote) metadata DB live on object storage.
+  - capability: rat://storage/v1/vend-credentials
+resources:
+  requests:
+    cpu: "250m"
+    memory: "256Mi"

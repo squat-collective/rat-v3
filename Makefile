@@ -27,7 +27,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage validate-manifests bench core-test core-test-podman breaking help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local validate-manifests bench core-test core-test-podman breaking help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -77,6 +77,10 @@ composition: ## Boot catalog+engine+format together; run the strategy across 4 A
 ## --- keystone context-carriage conformance (PU-2, ADR-017) --------------------
 context-carriage: ## Cross-run the 2 context-carriage references (Go + Python) on shared vectors
 	@scripts/context-carriage.sh
+
+## --- data-dev plane local end-to-end (EXPLORATORY, experiments/data-dev-plane) ---
+data-dev-local: ## Boot DuckLake catalog + DuckDB-ML engine; run transform→embed→search locally
+	@scripts/data-dev-local.sh
 
 ## --- manifest validation (ADR-011 / the static half of `rat plugin validate`) -
 validate-manifests: ## Validate example manifests vs envelope + per-kind schemas; assert the INVALID corpus is rejected
