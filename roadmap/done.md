@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-017 (Proposed): pre-unfreeze contract-amendment gate
+
+[ADR-017](../docs/architecture/adrs/017-pre-unfreeze-contract-amendment-gate.md), on `phase-1-q02-dryrun` — operationalizes the Q02 dry-run synthesis into the explicit gate the freeze must pass **before it ever leaves local/unpushed**: publish only after **(a)** the punch-list resolves **AND (b)** the real Q02 external review runs. Punch-list: **PU-1** bytes-leg producer channel-auth MUST (+ vector), **PU-2** keystone context-envelope two-reference conformance (*qualifies ADR-015's "freeze validated" claim*), **PU-3** attestation expiry/revocation, **PU-4** tenancy isolation-only-vs-sharing (**a DECISION for Tom — Q01**), + 3 decide-now additive seams (semantic-skew negotiation, `Event` signing, vend read/write split). Status **Proposed** → Accepted once PU-4 is ratified + the real Q02 confirms/extends it. Explicitly scopes **OUT** the availability cluster (AV-*) + ecosystem (EC-*) — those gate multi-tenant-production / adoption, not freeze-publish.
+
+---
+
 ## 2026-06-02 — Q02 SIMULATED dry-run: 5-agent deliberating panel → synthesis + pre-publish punch-list
 
 Ran the Q02 review brief end-to-end as a **simulated** panel using the Claude Code agent-team feature (a `q02-panel` team of named teammates with `SendMessage` cross-talk) — 4 lens-reviewers (architect/security/sre/ecosystem) **+ a defending maintainer**; AI personas, *not* humans, on `phase-1`. Reviewers verified claims against the real `core/`+`contracts/` code (`file:line` cites), cross-examined each other and the maintainer live, then each filed `reviews/11-q02-<lens>.md`; the maintainer filed a defense log. Chaired the synthesis into [`reviews/Q02-tracker.md`](../reviews/Q02-tracker.md) (new "Synthesis — SIMULATED dry-run" section).

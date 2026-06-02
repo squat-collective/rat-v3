@@ -22,6 +22,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [014](014-spike-core-registry-and-invoke-gateway.md) | The spike core — a manifest-driven registry + capability-invoke gateway (C5 made real) | Accepted | 2026-06-01 |
 | [015](015-phase-1-commitment-gate-cleared.md) | Phase-1 commitment gate CLEARED — commit to the full core build | Accepted | 2026-06-01 |
 | [016](016-plugin-provisioning-via-deployment-runtime.md) | Plugin provisioning via the deployment-runtime axis — the core launches, it doesn't dial (D1) | Accepted | 2026-06-01 |
+| [017](017-pre-unfreeze-contract-amendment-gate.md) | Pre-unfreeze contract-amendment gate (the Q02 dry-run punch-list) | Proposed | 2026-06-02 |
 
 ## Template
 
