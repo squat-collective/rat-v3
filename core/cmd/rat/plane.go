@@ -134,10 +134,9 @@ func (pl *Plane) specFor(dir string, rpl rawPlugin) (supervisor.PluginSpec, erro
 
 	switch {
 	case rpl.Endpoint != "":
-		// Attach mode: the daemon dials an already-running plugin. The schema is
-		// accepted, but the attach assembly (supervisor.Attach) lands in Phase C —
-		// fail loudly here rather than silently ignore the entry.
-		return zero, fmt.Errorf("endpoint: (attach mode) is not wired in Phase A — arrives with the compose stack (ADR-019 Phase C)")
+		// Attach mode: the daemon dials an already-running plugin (the orchestrator —
+		// e.g. compose — started it). supervisor.Attach handles these; no launch.
+		return supervisor.PluginSpec{Manifest: m, Endpoint: rpl.Endpoint}, nil
 
 	case rpl.Launch != nil:
 		if rpl.Launch.Image == "" {

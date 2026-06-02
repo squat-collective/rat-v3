@@ -1,0 +1,19 @@
+# plane.yaml — the plugin set `rat serve` fronts in the always-on stack (ADR-020 S1).
+# ATTACH mode: compose starts every plugin as a sibling container; `rat serve` connects
+# to them by service name (no docker-in-docker). `runtime:` is ignored for attach.
+addr: 0.0.0.0:7777
+runtime: local
+health_timeout: 90s
+plugins:
+  - name: rat-engine
+    manifest: ./manifests/engine.plugin.yaml
+    endpoint: engine:50051          # the `engine` compose service
+
+  - name: rat-catalog
+    manifest: ./manifests/catalog.plugin.yaml
+    endpoint: catalog:50051         # the `catalog` compose service
+
+  - name: platform-runner
+    manifest: ./manifests/runner.plugin.yaml
+    # register-only driver — run.py connects as this identity; C5 authorizes its
+    # engine/catalog commands from this manifest's `requires`.

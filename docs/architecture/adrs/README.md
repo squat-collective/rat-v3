@@ -25,6 +25,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [017](017-pre-unfreeze-contract-amendment-gate.md) | Pre-unfreeze contract-amendment gate (the Q02 dry-run punch-list) | Proposed | 2026-06-02 |
 | [018](018-connectionless-codegen-local-plugins.md) | Connectionless codegen via local plugins | Accepted | 2026-06-02 |
 | [019](019-rat-serve-daemon.md) | `rat serve` — the runnable core daemon + the beginner compose stack | Accepted | 2026-06-02 |
+| [020](020-data-platform-bundle.md) | The data platform bundle — `platform/`, medallion conventions, VS Code + CLI (Phase 2) | Accepted | 2026-06-02 |
 
 ## Template
 

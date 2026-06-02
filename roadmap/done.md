@@ -16,6 +16,29 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-020 S1 DONE: the decoupled platform runs the medallion through rat serve 🥉🥈🥇
+
+The always-on stack runs **for real**. `make platform-up` brings up the data platform via `podman compose`: **Postgres** (DuckLake metadata) + **MinIO** (S3 data) + the **DuckDB engine** + the **DuckLake catalog** (each a sibling container) + **`rat serve`** — which runs in its own container and **attaches** to the plugins by service name (the S1a attach mode; **no docker-in-docker**). `make platform-run` then runs the medallion through the **real gateway**:
+- `bronze/orders.sql` (read_csv the landing zone) → 9 rows · `silver/orders.sql` (lowercase status, drop null-key rows, dedupe, completed-sales only) → 4 rows · `gold/daily_revenue.sql` → 2 rows (2026-05-01 = 59.98, 2026-05-03 = 179.49). All correct.
+- Every layer issued as `rat://engine/v1/execute` **through the gateway** (C5-authorized + audited); the gold snapshot committed to the **DuckLake catalog** via `rat://catalog/v1/{register,commit}-table` — **6 audited control hops** in `rat serve`'s log.
+- **Parquet for all three layers landed on MinIO/S3** (`/data/rat/platform/main/{bronze,silver,gold}_*`); metadata on Postgres. Verified by reading the gold mart back from the lake.
+
+This is **v2's pipeline, rebuilt on v3 plugins, with DuckLake as the catalog** — exactly the ADR-020 S1 proof. New: `platform/compose.yaml` (the always-on stack), the attach-mode `platform/plane.yaml`, env-driven `platform/run.py` (the medallion runner over the gateway), small additive entrypoint tweaks to the engine (S3 secret from `RAT_S3_*` env, before lake attach) + catalog (`RAT_DUCKLAKE_EXTENSIONS` for the remote httpfs/postgres/ducklake set), `make platform-{up,run,down}`. `make core-test` + `breaking` green; the proto/axis surface is untouched. **Next: S2 — the scheduler plugin (self-driving cron refresh).**
+
+---
+
+## 2026-06-02 — ADR-020 RE-AIMED: v2 rebuilt on v3 — always-on, scheduled, DuckLake catalog 🎯
+
+After studying `ratatouille-v2` carefully with Tom, ADR-020 was sharpened (same-day, pre-implementation) from the initial *local one-shot* framing to the correct one: **rebuild v2's data platform on the v3 plugin core** — same behavior (landing → medallion → quality-gated **scheduled** refreshes), every responsibility **decoupled into a v3 plugin** behind the gateway, **DuckLake as the catalog** (replacing v2's Nessie/Iceberg), **VS Code + `ratctl`** replacing the portal. **Always-on + self-driving:** `rat serve` 24/7 + a **scheduler plugin** firing hourly refreshes; state remote (DuckLake-on-Postgres + S3). The ADR now carries the **v2→v3 component mapping** as its spine (`ratd`→`rat serve`, scheduler→scheduler plugin, runner→engine+pipeline-strategy, ratq→engine query, portal→vscode-rat+ratctl, postgres→state-backend, minio→storage, **nessie→DuckLake**) and a re-aimed **S1–S4** build order (S1 decoupled remote stack via attach mode · S2 scheduler · S3 merge strategies + quality · S4 state-backend + VS Code). Q02 resolved (the runner becomes a **pipeline strategy plugin**, capability-invocable so the scheduler can fire it). Roadmap synced. **Next: S1a — attach mode** (`supervisor.Attach` + the `endpoint:` path), the keystone for the always-on stack.
+
+---
+
+## 2026-06-02 — ADR-020 ACCEPTED: the data platform bundle — Phase 2 starts 🎯
+
+[ADR-020](../docs/architecture/adrs/020-data-platform-bundle.md) (Accepted). Tom set the Phase-2 vision: a single `platform/` folder = a generic, batteries-included data platform — a **landing zone** (raw CSV) → **medallion** (bronze→silver→gold) of editable SQL/Python models → **data-quality tests**, run through `rat serve`, edited via `vscode-rat` + `ratctl`. The v2 product (`ratatouille-v2`: portal + landing-zones/merge-strategies/query-service) rebuilt on the v3 plugin core, **web portal replaced by VS Code + CLI**. Decision: the folder + conventions (medallion, models-as-files, gateway-executed pipelines, `project/tests` quality), built in four working slices — **M1** scaffold + local medallion demo → **M2** containerize (attach-mode `compose up` + Postgres/MinIO) → **M3** data-quality → **M4** VS Code. Core stays six things (all conventions are project/plugin-level — no temptation logged). Recorded the F9 (in-proc Arrow leg) + cross-container-sharing constraints that order the build, and Q01–Q03 (dbt timing, runner home, quality-as-axis-vs-convention). Branches: `phase-2` (integration, off `phase-1`) + `phase-2-platform-bundle` (topic). **Next: build M1.**
+
+---
+
 ## 2026-06-02 — `ratctl` — a client connects to the orchestrator (the kubectl to `rat serve`) 🐀🎛️
 
 On `phase-1-adr-019-phase-b` (off `phase-1`). A conversation with Tom reframed the goal: `rat` is an **orchestrator service** that many UIs (CLI, VS Code, webapp) connect to and drive — and a client connecting is **orthogonal** to how plugins got registered, so it needs no plugin-pipeline work. Built the first real client, as a **separate binary** (clients are not subcommands of `rat` — the orchestrator is one thing, clients another):

@@ -70,10 +70,9 @@ func serve(planePath string) error {
 	}
 	auditor := NewStdoutAuditor(os.Stdout)
 
-	log.Printf("bringing up %d plugin(s) via the %q runtime (health timeout %s)", len(pl.Specs), pl.Runtime, pl.HealthTimeout)
-	plane, err := supervisor.BringUp(context.Background(), rt, pl.Specs, auditor, pl.HealthTimeout, routableDescriptors()...)
+	plane, err := assemble(context.Background(), pl, rt, auditor)
 	if err != nil {
-		return fmt.Errorf("bring up plane: %w", err)
+		return err
 	}
 
 	srv := grpc.NewServer()
@@ -110,6 +109,40 @@ func drain(srv *grpc.Server, plane *supervisor.Plane) {
 	defer cancel()
 	plane.Shutdown(ctx)
 	log.Print("drained")
+}
+
+// assemble brings the plane up in the right mode: launch (the daemon launches +
+// supervises plugins) or attach (the daemon dials already-running plugins — the
+// orchestrator, e.g. compose, started them; no docker-in-docker). A v1 plane is
+// all-launch or all-attach; mixing is rejected.
+func assemble(ctx context.Context, pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServer, auditor *StdoutAuditor) (*supervisor.Plane, error) {
+	var hasLaunch, hasEndpoint bool
+	for _, s := range pl.Specs {
+		if s.Launch != nil {
+			hasLaunch = true
+		}
+		if s.Endpoint != "" {
+			hasEndpoint = true
+		}
+	}
+	switch {
+	case hasLaunch && hasEndpoint:
+		return nil, fmt.Errorf("plane mixes launch and attach plugins — not supported in v1 (use all-launch or all-attach)")
+	case hasEndpoint:
+		log.Printf("attaching to %d plugin(s) (health timeout %s)", len(pl.Specs), pl.HealthTimeout)
+		p, err := supervisor.Attach(ctx, pl.Specs, auditor, pl.HealthTimeout, routableDescriptors()...)
+		if err != nil {
+			return nil, fmt.Errorf("attach plane: %w", err)
+		}
+		return p, nil
+	default:
+		log.Printf("bringing up %d plugin(s) via the %q runtime (health timeout %s)", len(pl.Specs), pl.Runtime, pl.HealthTimeout)
+		p, err := supervisor.BringUp(ctx, rt, pl.Specs, auditor, pl.HealthTimeout, routableDescriptors()...)
+		if err != nil {
+			return nil, fmt.Errorf("bring up plane: %w", err)
+		}
+		return p, nil
+	}
 }
 
 // newRuntime selects the deployment-runtime axis plugin the plane asks for. Phase A

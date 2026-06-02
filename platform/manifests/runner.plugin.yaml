@@ -1,0 +1,13 @@
+# platform-runner — a register-only driver. run.py connects as this identity; the
+# gateway authorizes the medallion's commands against this `requires` set (C5).
+api_version: rat/1
+kind: strategy
+metadata:
+  name: platform-runner
+  version: 0.1.0
+compatible_core: ["rat/1"]
+requires:
+  - capability: rat://engine/v1/execute
+  - capability: rat://catalog/v1/get-table
+  - capability: rat://catalog/v1/register-table
+  - capability: rat://catalog/v1/commit-table
