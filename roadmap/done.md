@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-018 rollout: Rust connectionless + 5c closed; Python blocked on version-skew
+
+Continued the ADR-018 rollout on `phase-1-adr-018-rust-python`:
+- **Rust ✅** (`9eeb014`) — `contracts/codegen/Dockerfile.rust` (rust:1-bookworm + buf + cargo-built `protoc-gen-prost`/`protoc-gen-tonic`). The latest protoc-gen-prost defaults to the **nested layout** (matching the committed structure) and keeps the **selective `Eq,Hash` derives**, so the one-time migration churn is just cosmetic attribute formatting (`x="y"` → `x = "y"`) — and the regen **closes the pending ADR-017 5c rust-storage gap** (`VendReadCredentials`/`VendWriteCredentials` now present). Rust has no Cargo project / no reference plugins (an unused artifact), so zero-risk. Rust codegen is now BSR-free.
+- **Python ⏸️ BLOCKED (decision needed)** — the `grpc_tools.protoc` path (ADR-018 Alternative #3) works offline, BUT the latest **grpcio-tools 1.81.0 bundles protobuf 6.33.5**, while buf's `protocolbuffers/python` (the committed gencode), all **13 python refs** (`requirements.txt: protobuf==7.35.0`), and `scripts/conformance.sh` are pinned to **protobuf 7.35.0** — a *major*-version skew (6 vs 7). So `grpc_tools.protoc` produces a refs-INCOMPATIBLE SDK (a downgraded `ValidateProtobufRuntimeVersion(6,33,5)` guard). Connectionless python needs a **tradeoff**: (a) downgrade the whole pinned python stack (13 refs + conformance) to 6.33.5 + re-verify conformance, (b) a **protoc-35 + grpc-plugin hybrid** to match 7.35.0 connectionless, or (c) keep python on remote until grpcio-tools catches up to protoc 35. The attempt was reverted; python stays on **remote**.
+
+Net: **Go + TypeScript + Rust connectionless** (3/4, all BSR-free); python is the one remaining, blocked on a real grpcio-tools-vs-buf version skew that's a tradeoff call.
+
+---
+
 ## 2026-06-02 — ADR-018 connectionless codegen: Go + TypeScript landed (Rust/Python staged)
 
 [ADR-018](../docs/architecture/adrs/018-connectionless-codegen-local-plugins.md) on `phase-1-adr-018-connectionless-codegen` — switch SDK codegen from **remote BSR plugins** (the ADR-017 rate-limit friction) to **LOCAL plugins** in pinned per-language toolchain images. `scripts/gen-sdks.sh` now dispatches per language (a local `rat-codegen-<lang>` image if `contracts/codegen/Dockerfile.<lang>` exists, else the stock buf image + remote plugins); `make gen-images` pre-builds them.
