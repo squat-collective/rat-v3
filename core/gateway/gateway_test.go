@@ -32,6 +32,16 @@ func (fakeState) Get(_ context.Context, req *statev1.GetRequest) (*statev1.GetRe
 	return &statev1.GetResponse{Found: true, Value: []byte("v:" + req.GetKey()), Revision: 7}, nil
 }
 
+// fakeStateB is a SECOND, distinguishable state provider — a relaunched plugin's new
+// endpoint. Its Get returns a "REBOUND:" prefix so a routed call proves which conn served it.
+type fakeStateB struct {
+	statev1.UnimplementedStateServiceServer
+}
+
+func (fakeStateB) Get(_ context.Context, req *statev1.GetRequest) (*statev1.GetResponse, error) {
+	return &statev1.GetResponse{Found: true, Value: []byte("REBOUND:" + req.GetKey())}, nil
+}
+
 // bufServer boots an in-process gRPC server and returns a client conn to it.
 func bufServer(t *testing.T, register func(*grpc.Server)) *grpc.ClientConn {
 	t.Helper()
@@ -121,6 +131,50 @@ func TestInvokeAllowed(t *testing.T) {
 	recs := audit.Records()
 	if len(recs) != 1 || !recs[0].Allowed || recs[0].Caller != "rat-test-caller" || recs[0].Provider != "rat-test-state" {
 		t.Errorf("audit = %+v, want one allow record (caller rat-test-caller, provider rat-test-state)", recs)
+	}
+}
+
+// TestSetProviderRebind: the gateway re-binds a registered provider's live connection at
+// runtime (ADR-022) — the re-wire the reconciler needs when a relaunched plugin comes up
+// on a NEW endpoint. A call routes to conn A; after SetProvider swaps to conn B, the same
+// call routes to B; after RemoveProvider, it is Unavailable. Concurrency-safe by the RWMutex.
+func TestSetProviderRebind(t *testing.T) {
+	connA := bufServer(t, func(s *grpc.Server) { statev1.RegisterStateServiceServer(s, fakeState{}) })
+	gw := New(testRegistry(t), map[string]*grpc.ClientConn{"rat-test-state": connA}, &MemAuditor{},
+		statev1.File_rat_state_v1_state_proto)
+	client := corev1.NewCapabilityInvokeServiceClient(
+		bufServer(t, func(s *grpc.Server) { corev1.RegisterCapabilityInvokeServiceServer(s, gw) }))
+
+	get := func() (string, error) {
+		payload, _ := proto.Marshal(&statev1.GetRequest{Key: "k1"})
+		resp, err := client.Invoke(callerCtx("rat-test-caller"), &corev1.InvokeRequest{Capability: "rat://state/v1/get", Payload: payload})
+		if err != nil {
+			return "", err
+		}
+		var gr statev1.GetResponse
+		_ = proto.Unmarshal(resp.GetResult(), &gr)
+		return string(gr.GetValue()), nil
+	}
+
+	if v, err := get(); err != nil || v != "v:k1" {
+		t.Fatalf("before rebind = (%q, %v), want (v:k1, nil) — provider A", v, err)
+	}
+
+	// Re-bind the SAME registered provider to a NEW connection (B).
+	connB := bufServer(t, func(s *grpc.Server) { statev1.RegisterStateServiceServer(s, fakeStateB{}) })
+	if prev := gw.SetProvider("rat-test-state", connB); prev != connA {
+		t.Errorf("SetProvider returned prev != connA")
+	}
+	if v, err := get(); err != nil || v != "REBOUND:k1" {
+		t.Fatalf("after rebind = (%q, %v), want (REBOUND:k1, nil) — provider B", v, err)
+	}
+
+	// Remove the provider → routing fails Unavailable (unbound).
+	if prev := gw.RemoveProvider("rat-test-state"); prev != connB {
+		t.Errorf("RemoveProvider returned prev != connB")
+	}
+	if _, err := get(); status.Code(err) != codes.Unavailable {
+		t.Fatalf("after remove = %v, want Unavailable", status.Code(err))
 	}
 }
 
