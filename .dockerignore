@@ -1,0 +1,7 @@
+# The rat daemon image (core/Dockerfile) builds from the repo root because the core
+# module's replace target lives in contracts/sdks/go. Only those two trees are needed —
+# exclude everything else (examples/ alone is ~59M of node_modules/__pycache__) so the
+# build context stays small.
+*
+!core
+!contracts

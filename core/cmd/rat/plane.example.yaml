@@ -1,0 +1,24 @@
+# plane.example.yaml — the Phase-A demo plane for `rat serve` (ADR-019).
+#
+# Run it (from the repo root):
+#   go build -o core/cmd/rat/bin/stateplugin ./core/testplugins/stateplugin
+#   ( cd core/cmd/rat && go run . serve --plane plane.example.yaml )
+#
+# Then, in another shell, invoke the gateway as the rat-caller driver:
+#   rat://state/v1/get  → routes to the launched stateplugin (C5 allow + audit line)
+#   rat://state/v1/put  → PERMISSION_DENIED (rat-caller does not require it)
+# Ctrl-C drains: in-flight calls finish, the launched plugin is terminated.
+#
+# (`make core-serve-smoke` proves exactly this end-to-end in a container.)
+addr: 127.0.0.1:7777
+runtime: local
+health_timeout: 10s
+plugins:
+  - name: rat-state
+    manifest: ./manifests/state.plugin.yaml
+    launch:
+      image: ./bin/stateplugin     # built by the go build line above
+      isolation: i9
+  - name: rat-caller
+    manifest: ./manifests/caller.plugin.yaml
+    # register-only driver: neither launch: nor endpoint:

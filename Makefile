@@ -27,7 +27,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage validate-manifests bench core-test core-test-podman breaking help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke rat-image core-test-podman breaking help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -78,6 +78,25 @@ composition: ## Boot catalog+engine+format together; run the strategy across 4 A
 context-carriage: ## Cross-run the 2 context-carriage references (Go + Python) on shared vectors
 	@scripts/context-carriage.sh
 
+## --- data-dev plane local end-to-end (EXPLORATORY, experiments/data-dev-plane) ---
+data-dev-local: ## Boot DuckLake catalog + DuckDB-ML engine; run transform→embed→search locally
+	@scripts/data-dev-local.sh
+
+data-dev-remote: ## Boot MinIO+Postgres; run the pipeline remote (S3 data, Postgres metadata, vended creds)
+	@scripts/data-dev-remote.sh
+
+data-dev-remote-down: ## Tear down the MinIO+Postgres data-dev remote stack
+	@scripts/data-dev-remote.sh --down
+
+data-dev-strategy: ## Run the incremental-embed ELT strategy (2 runs + idempotent replay)
+	@scripts/data-dev-strategy.sh
+
+data-dev-gateway: ## Serve the data-dev gateway (the VS Code extension's backend) on :8787
+	@scripts/data-dev-gateway.sh
+
+data-dev-vsix: ## Package the vscode-rat extension into an installable .vsix
+	@scripts/data-dev-vsix.sh
+
 ## --- manifest validation (ADR-011 / the static half of `rat plugin validate`) -
 validate-manifests: ## Validate example manifests vs envelope + per-kind schemas; assert the INVALID corpus is rejected
 	@$(RUNTIME) run --rm -v "$(CURDIR)":/work:Z -v rat-pipcache:/root/.cache/pip -w /work \
@@ -93,6 +112,17 @@ core-test: ## Build + vet + test the spike core (core/) in a container
 	@$(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e GOTOOLCHAIN=local -e GOSUMDB=off -e GOFLAGS=-mod=mod \
 	  -v "$(CURDIR):/work:Z" -v rat-gocache:/go/pkg/mod -w /work/core \
 	  $(GO_IMAGE) sh -c 'go build ./... && go vet ./... && go test ./...'
+
+core-serve-smoke: ## ADR-019 Phase A: `rat serve` boots a plugin, routes (C5)+denies+drains (containerized)
+	@echo ">> rat serve: route + deny + SIGTERM-drain smoke (core/cmd/rat)"
+	@$(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e GOTOOLCHAIN=local -e GOSUMDB=off -e GOFLAGS=-mod=mod \
+	  -v "$(CURDIR):/work:Z" -v rat-gocache:/go/pkg/mod -w /work/core \
+	  $(GO_IMAGE) sh -c 'go test ./cmd/rat/ -run TestServe -v -count=1'
+
+rat-image: ## ADR-019: build the rat control-plane daemon image (run `rat serve` in a container)
+	@echo ">> building rat/serve:dev (core/Dockerfile)"
+	@$(RUNTIME) build -f core/Dockerfile -t rat/serve:dev .
+	@echo ">> built rat/serve:dev — run it with:  $(notdir $(RUNTIME)) run --rm -p 7777:7777 rat/serve:dev"
 
 ## --- podman deployment-runtime LIVE full-profile proof (D1 / ADR-016 §4) ------
 # Drives a REAL `podman run` (nested) under the full I9 profile and asserts the kernel

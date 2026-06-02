@@ -1,0 +1,5 @@
+# Runtime deps for rat-strategy-incremental-embed-py. The strategy is pure
+# orchestration over the invoke seam (capability calls) — no Arrow/Flight, no engine
+# of its own — so it only needs the gRPC runtime + the generated SDK (on PYTHONPATH).
+grpcio==1.80.0
+protobuf==7.35.0

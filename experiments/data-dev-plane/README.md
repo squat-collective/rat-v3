@@ -62,11 +62,11 @@ throughput bottleneck.
 
 | RAT axis | plugin | new? | role |
 |---|---|---|---|
-| **storage** | `minio-s3` | 🆕 | remote S3-compatible object store; vends short-TTL, prefix+tenant-scoped S3 creds |
+| **storage** | `minio-s3` | 🆕 ✅ | remote S3-compatible object store; vends short-TTL, prefix+tenant-scoped STS creds (built — first 5c read/write split impl) |
 | **catalog** (+format) | `ducklake-py` | 🆕 | [DuckLake](https://ducklake.select/docs/stable/) lakehouse: SQL metadata + Parquet/S3, snapshots, time-travel, ACID — **subsumes the `format` axis** |
 | **engine + ML** | `duckdb-ml-py` | 🆕 | DuckDB + extensions: `ducklake`, `httpfs`/S3, `vss` (vectors), and an `embed()` UDF → **compute *and* AI, no new axis** |
-| **strategy** | `incremental-embed-py` | 🆕 | a *real* ELT example: watermark-incremental load → transform → merge → embed → index → snapshot |
-| **ui** | `vscode-rat` | 🆕 | a VS Code extension (client of the core via the generated **TypeScript SDK** — the ADR-018 connectionless codegen payoff) |
+| **strategy** | `incremental-embed-py` | 🆕 ✅ | a *real* ELT (built): watermark-incremental load → merge → embed-only-new → flush → snapshot; idempotent (C1) |
+| **ui** | `vscode-rat` | 🆕 ✅ | a VS Code extension (built) — catalog tree, run-pipeline, query grid, 🔍 semantic search, health; via a gateway BFF (F9), the connectionless TS SDK being the production control-plane path |
 | deployment-runtime | `podman` | reuse | each plugin a container → horizontal scale |
 | runtime | `subprocess-py` | reuse (maybe) | exec units if the strategy needs them |
 
@@ -375,40 +375,134 @@ at a new CSV/Parquet on S3 is a config change, not a code change.
 
 ## 10. Open questions / things to revisit (this is exploratory)
 
-1. **Catalog/engine boundary in a DuckLake world** (§4 tension). DuckLake unifies write+commit
-   in one DuckDB transaction; RAT separates engine/catalog. Candidates: **(a)** a single plugin
-   providing both `engine` + `catalog` capabilities (if cross-axis `provides` is allowed);
-   **(b)** keep them separate, both attach the lake, and the engine's write IS the snapshot the
-   catalog records (catalog `CommitTable` = tag/record); **(c)** engine does all DuckLake ops,
-   catalog is a thin tracker for the RAT axis + the UI. Decide by building (b) first.
+### Findings from building step 2 (the DuckDB heart) — 2026-06-02
+
+The local end-to-end works; the build surfaced concrete frictions worth recording (this
+is exactly the "where they *don't* hold up" value §0 is after):
+
+- **F1 — DuckLake rejects DuckDB's fixed-size `ARRAY` (`FLOAT[N]`).** That is *the* type
+  `vss`'s HNSW index requires. So embeddings are stored as a **variable `LIST` (`FLOAT[]`)**
+  and cast to `FLOAT[N]` at query time for `array_cosine_distance`. Consequence: **you cannot
+  both lake-store an embedding column AND HNSW-index it in place.** Brute-force cosine works
+  directly on the lake (what `run-local.py` does); an HNSW *index* needs a **derived (non-lake)
+  fixed-array table** materialized from the lake — i.e. the ANN index is a derived structure,
+  not lake state. (Partly answers Q2/Q7 below; reframes "vector index" as a build-from-lake
+  artifact.)
+- **F2 — list-returning UDFs need `numpy`.** DuckDB marshals Python list results via numpy, so
+  the `embed()` UDF requires numpy even though the engine is otherwise Arrow-native. Added to
+  the engine's `requirements.txt` and the conformance dep union.
+- **F3 — DuckLake metadata sqlite is single-writer.** The engine *and* the catalog attach the
+  same DuckLake; a catalog connection held open **locks out the engine's write COMMIT**
+  ("database is locked"). Fix for the local sqlite demo: the catalog opens **short-lived**
+  read connections (the engine is idle at read time). ✅ **Resolved at remote scale by
+  Postgres metadata** (step 3): with `ducklake:postgres:…`, engine + catalog are genuine
+  concurrent writers, no lock. The catalog store now takes an `extensions` list so it loads
+  `httpfs`/`postgres` for the remote lake.
+- **F4 — DuckLake inlines small writes** into the metadata DB; Parquet materializes only on
+  flush. ✅ **Resolved:** the remote pipeline calls **`CALL ducklake_flush_inlined_data('lake')`**
+  to force the Parquet out to S3 (verified: files land under `s3://rat/<tenant>/lake/`).
+- **F6 — the catalog needs NO S3 credentials.** At remote scale the catalog resolves snapshots
+  + table existence from **Postgres metadata only** — it never touches bytes — so it attaches
+  the lake (with the `s3://` data path) without an S3 secret. This is the engine/catalog split
+  (bytes vs metadata) falling out *cleanly* in practice, and it sharpens least-privilege:
+  the catalog plugin never even holds storage creds.
+- **F7 — STS cred isolation is real, and least-privilege works.** MinIO `AssumeRole` with an
+  inline policy scoped to `s3://bucket/<tenant>/<prefix>/*` gives creds that physically cannot
+  cross the tenant boundary (read `acme/*` ok, `globex/*` denied) — and READ-vended creds are
+  denied writes. The 5c read/write split is enforced by real object-store policy, not just by
+  the RAT capability layer.
+- **F8 — a strategy in a DuckLake world writes through the ENGINE, not a format plugin, and
+  addresses tables by lake-qualified name.** Because DuckLake subsumes `format`, the
+  incremental-embed strategy `requires` no `format` capability — it composes `engine.execute`
+  (CTAS/stage/merge/embed/flush) + `catalog.commit-table`. It stays plugin-agnostic in
+  *binding* (capability URIs, no names) but is DuckLake-aware in *addressing* (`<alias>.<id>`
+  in SQL, since the engine attaches the lake) — vs the `format.scan` indirection the generic
+  full-refresh/scd2 strategies use. A clean illustration that the axes aren't dogma. Also:
+  the **watermark is computed server-side** (a subquery over the target's max), so the
+  strategy needs no Arrow round-trip to read it — pure `execute` calls + the final snapshot.
+- **F5 — `snapshot_time` pulls a `pytz` dep.** Selecting the timestamp column from
+  `lake.snapshots()` triggers a timestamptz conversion needing pytz. The catalog only selects
+  `snapshot_id`, so it stays pytz-free.
+
+### Still open
+
+1. **Catalog/engine boundary in a DuckLake world** (§4 tension). ✅ **Resolved by building
+   (b):** engine + catalog stay separate, both attach the lake, the engine's write IS the
+   snapshot (returned in `WriteResult.snapshot_id`) and the catalog `CommitTable` records it;
+   `GetTable` resolves the real snapshot from `lake.snapshots()`. Works end-to-end. (a)/(c)
+   not needed. The only residual is F3's single-writer discipline (→ Postgres at scale).
 2. **Branch model** — map RAT branches onto DuckLake snapshots: branch-tag column vs separate
-   attached lake vs snapshot lineage. Needs a spike.
+   attached lake vs snapshot lineage. Still needs a spike — the catalog ships a **thin tracker**
+   (branch tips in its own sqlite) so the surface is complete while the model is decided. This
+   is why the catalog is on a `selftest.py`, not yet in the frozen `catalog-v1` golden suite.
 3. **`format` axis** — subsumed by DuckLake here. Keep it that way, or add an Iceberg/Delta
    format plugin to exercise the axis? (Lean: subsumed, simpler.)
 4. **ML granularity** — extensions vs a first-class `ml` axis (§3). Revisit if discovery/authz
    on `embed` specifically starts to matter.
 5. **Default embed backend** — `hash-256` everywhere, or wire straight to HAL-9000 Ollama for
    the real demo? (Lean: `hash-256` default for portability + golden vectors; `ollama:*` for
-   the real run. *Open per Tom.*)
+   the real run. *Open per Tom.*) The seam is built (`embed.py` dispatch); only config changes.
 6. **Where the strategy runs** — in-process vs a `subprocess`/`podman` unit; how the reconciler
    schedules pipeline runs.
-7. **Conformance** — do we add an engine golden-vector for `embed(hash-256, …)` so the ML UDF
-   is deterministically tested like the other capabilities? (Lean: yes.)
-8. **UX scope** — how much of VS Code's API to lean on (tree views, webview grid, notebooks?).
+7. **Conformance** — ✅ **Done for `embed`:** [`engine-embed-v1.json`](../../contracts/conformance/engine-embed-v1.json) freezes deterministic `embed(hash-256, …)` golden vectors; the engine
+   harness asserts them (dim + exact nonzero buckets + L2-norm). Vector-search/HNSW conformance
+   is gated on the F1 derived-index question.
+8. **UX scope** — ✅ **first cut built:** tree views (catalog + health), an input-box query +
+   a webview results grid, semantic-search box, run-pipeline command. Notebooks / an inline
+   results editor are a possible next refinement.
+
+### Findings from building step 6 (the VS Code UI) — 2026-06-02
+
+- **F9 — the bytes/control split means a UI needs a data-leg helper.** The frozen contracts
+  keep bulk data off the control plane (`engine.Query` → an out-of-band `ArrowStream`). The
+  reference engine's Arrow leg is an **in-process** registry (a Flight stand-in), so an
+  external client (the editor) can't pull query rows over the wire. The VS Code extension
+  therefore talks to a small **gateway BFF** that owns the in-proc stack, pulls the Arrow, and
+  re-exposes results as JSON. The frozen **control** capabilities (catalog browse,
+  `strategy.Apply`, health) are exactly what the generated **Connect TS SDK** (ADR-018) calls
+  directly; a production engine with a real Flight endpoint would let the UI pull the data leg
+  too, retiring the BFF. This is the honest shape of "a UI is just a capability client" once
+  you respect that **the control plane never carries bytes** — the UX needs a data path, and
+  the reference's in-proc one isn't wire-reachable. Not a contract gap; a deployment reality.
 
 ---
 
 ## 11. Build order (for a fresh session)
 
 1. **This doc** ✅ — the agreed (changeable) shape.
-2. **`ducklake-py` catalog + `duckdb-ml-py` engine** — the DuckDB heart: attach a DuckLake,
-   the `embed()` UDF + `vss`, `engine.{execute,query,preview}`, `catalog.{register,commit,get}`.
-   Get a *local* (no S3) end-to-end transform→embed→search working first.
-3. **`minio-s3` + S3 wiring** — vend scoped creds; point DuckDB at S3; move the data remote.
-4. **`incremental-embed-py` strategy** — the real ELT (§5.4); idempotent, branch-isolated.
+2. **`ducklake-py` catalog + `duckdb-ml-py` engine** ✅ **DONE** — the DuckDB heart: attach a
+   DuckLake, the `embed()` UDF + `vss`, `engine.{execute,query,preview}`,
+   `catalog.{register,commit,get}`. A *local* (no S3) end-to-end transform→embed→search runs
+   green over real gRPC: [`run-local.py`](run-local.py) / `make data-dev-local`. The engine
+   joins the conformance suite (engine-real-v1 + a new embed golden, [`engine-embed-v1.json`](../../contracts/conformance/engine-embed-v1.json)); the catalog has a `selftest.py`
+   (frozen catalog-v1 parity deferred to the branch-model spike). Findings folded into §10.
+3. **`minio-s3` + S3 wiring** ✅ **DONE** — the [`minio-s3`](../../examples/storage/minio-s3/)
+   storage plugin vends short-TTL, tenant+prefix-scoped **STS** creds (first impl of the 5c
+   read/write split); the engine reads/writes Parquet on **S3/MinIO** with them while DuckLake
+   metadata moves to **Postgres**. [`run-remote.py`](run-remote.py) / `make data-dev-remote`
+   runs the SAME flow distributed — **search distances byte-identical to local** (the data
+   plane is unchanged when storage goes remote), Parquet lands on S3, D3 cross-tenant isolation
+   holds. Stack: [`compose/compose.yaml`](compose/compose.yaml) or the dependency-free
+   `scripts/data-dev-remote.sh`. Resolves findings F3 + F4 (see §10).
+4. **`incremental-embed-py` strategy** ✅ **DONE** — the real ELT (§5.4) as a `kind: strategy`
+   plugin ([`examples/strategy/incremental-embed-py`](../../examples/strategy/incremental-embed-py/))
+   composing capabilities through the invoke gateway (names no concrete plugin).
+   [`run-strategy.py`](run-strategy.py) / `make data-dev-strategy` proves it across 3 runs:
+   run 1 embeds the full corpus, run 2 embeds **only the newly-landed delta**
+   (incrementality), run 2 replay embeds **0** (idempotent, C1). Watermark is server-side,
+   merge is an upsert, embed touches only new rows. Notably requires **no `format`
+   capability** — the engine writes the lake directly (finding F8, §10).
 5. **The composition** — a runner + a `make data-dev-plane` target that boots the stack
    (podman) and runs the pipeline on a real dataset.
-6. **`vscode-rat`** — the VS Code extension on top, via the TS SDK.
+6. **`vscode-rat`** ✅ **DONE** — a VS Code extension ([`examples/ui/vscode-rat`](../../examples/ui/vscode-rat/))
+   that's a UI client of the data-dev plane: DuckLake catalog tree (tables → snapshots,
+   click-to-preview), **Run Pipeline** (the incremental-embed strategy), SQL query grid,
+   **🔍 semantic search**, plugin-health view. Compiles clean (`tsc`, strict). Talks to a
+   small Python **gateway BFF** ([`gateway/app.py`](../../examples/ui/vscode-rat/gateway/),
+   `make data-dev-gateway`) that owns the in-proc stack and re-exposes it as JSON — because
+   the reference engine's Arrow result leg is in-proc only (finding F9). Verified host-facing
+   over the published port. The frozen control capabilities are what the connectionless
+   Connect TS SDK (ADR-018) would call against a production core.
 
 Land each on a `phase-1-<slug>` sub-branch, `make breaking` clean (it will be — all additive),
 and keep this doc fresh as the shape changes.
