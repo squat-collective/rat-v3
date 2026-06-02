@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-022 PROPOSED: plugins are launched, not composed 🔌
+
+The second architectural trigger from Tom: *adding a plugin should be almost nothing* — no compose service per plugin. [ADR-022](../docs/architecture/adrs/022-plugins-are-launched-not-composed.md) (Proposed): the ADR-019/020 platform was built in **attach mode** (compose starts every plugin, rat connects), so the **infra grows one ~15-line compose service per plugin** — backwards. Fix: rat **launches** plugins (it already can — [ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md): "the core launches"). **Adding a plugin = one entry in `plugins.yaml`** (`name`, `image`, `needs`, `secrets`, `config`); rat does launch → inject config → fetch secrets (from a **secret plugin**) → wire deps → healthcheck → connect → register. The deployment-runtime is **socket-mount locally** (rat-in-a-container drives the host container socket — the docker/k8s-daemon model Tom pointed at) and **Kubernetes in prod** (rat → the API; no socket, no DinD). The infra shrinks to a fixed bootstrap (**rat + Postgres + MinIO + secret plugin**) that does *not* grow per plugin; secrets live in the secret plugin, never in the infra. **Surfaces a load-bearing dependency (Q5):** launch-with-lifecycle needs a concurrency-safe `gateway.SetProvider` re-bind (the Phase-A reconciler-rewire finding + the parked runtime self-registration idea). Design only. **Next: ratify ADR-022 (+021), then rebuild the platform to launch mode + the secret plugin + the gateway re-bind.**
+
+---
+
 ## 2026-06-02 — ADR-021 PROVEN (experiment): real dbt, orchestrated by rat 🧪✅
 
 First working slice of the [ADR-021](../docs/architecture/adrs/021-orchestrator-pipelines-as-code.md) vision — **rat orchestrates a real dbt project**, on `phase-2-dbt-runner`:

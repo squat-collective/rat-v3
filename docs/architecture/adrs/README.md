@@ -27,6 +27,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [019](019-rat-serve-daemon.md) | `rat serve` — the runnable core daemon + the beginner compose stack | Accepted | 2026-06-02 |
 | [020](020-data-platform-bundle.md) | The data platform bundle — `platform/`, medallion conventions, VS Code + CLI (Phase 2) | Accepted | 2026-06-02 |
 | [021](021-orchestrator-pipelines-as-code.md) | rat is a pure orchestrator — pipelines as code (dbt), the pipeline-runner axis, infra declares only plugins | Proposed | 2026-06-02 |
+| [022](022-plugins-are-launched-not-composed.md) | Plugins are launched, not composed — adding a plugin is one declaration (socket-mount local, k8s prod) | Proposed | 2026-06-02 |
 
 ## Template
 
