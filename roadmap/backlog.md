@@ -32,6 +32,44 @@ The 5-agent post-freeze review. Grouped by when to act.
 
 ---
 
+## Q02 simulated dry-run findings ([reviews/Q02-tracker.md](../reviews/Q02-tracker.md) synthesis, 2026-06-02)
+
+Deduped from the 5-agent simulated panel (`reviews/11-q02-*.md`). **Authoritative triage = the maintainer's net-new-vs-already-tracked split** in [11-q02-maintainer-defense-log.md](../reviews/11-q02-maintainer-defense-log.md). **⚠️ Simulated (AI personas) — a real external review is still owed; treat these as a pre-validated punch-list, not the last word.** None is a *hard* freeze-reopen; the wire held.
+
+**① Pre-unfreeze punch-list — resolve BEFORE the freeze is ever published (cheap now, expensive after):** *(→ a single "pre-unfreeze punch-list" ADR)*
+- **PU-1 (High; soft freeze-reopen; 2 lenses)** — add a normative conformance MUST to `data.proto` `ArrowStream`: a producer MUST verify the presenting channel's authenticated identity == the ticket-bound `{caller,tenant}` (transport/app headers insufficient) + a wrong-channel/right-header conformance vector. The bytes leg bypasses the core, so C2 can't reach it; the ref trusts `X-RAT-*` headers (`bulkleg_test.go:39`). *Starting it = write the MUST + vector; ship channel-auth as the SDK default.*
+- **PU-2 (High; conformance debt)** — give the keystone `common/v1/context.proto` + gateway-stamping contract its own context-carriage conformance suite + a 2nd independent gateway cross-run (ADR-003 rigor it skipped). Today: one impl, no portable vector (ADR-007 §Neutral). *Qualifies ADR-015's "freeze validated" → narrow it to "validated on the data axes the spike exercised."*
+- **PU-3 (Med; soft freeze-reopen)** — add `expires_at` + a revocation reference to the conformance attestation / marketplace shape; design revocation + scoped/threshold authorities (no single forge-oracle key). Today `Conforms` is static set-membership = "conformed forever."
+- **PU-4 (Med-High; soft freeze-reopen / decide-now)** — **decide:** v1 tenancy is **isolation-only** (mark `DECISION_KIND_SHARING` advisory-not-enforced — cheap) *or* **sharing-capable** (add a delegation/grant primitive to `state`/`storage` in `rat/1` before publish — retrofitting cross-tenant semantics later is the expensive v2). `DECISION_KIND_SHARING` is currently decidable-but-un-actionable on flat-string keys.
+- **Decide-the-additive-now seams** (the additive door closes at publish): semantic-field-skew negotiation — the ADR-012 crash-safety fields shipped as plain fields with no negotiation handle → silent double-apply on version skew; decide capability-URI-per-behavior *or* an additive `requires[].min_revision` (architect F2 / maintainer A1). · `Event` signing — mirror the signed `AuditRecord` on `Event` (unsigned identity in-body through a pluggable bus today) (architect F7). · split `vend-credentials` into read/write capability URIs (security F6).
+
+**② Multi-tenant availability cluster** — core-impl (no wire change); gates any real multi-tenant use:
+- **AV-1 (🔴 Critical; close FIRST — free now)** — `core/lease` `Store.Renew/Acquire` return `(ok, err)`; "renewal-error ≠ lease-lost" (hold leadership through transient backend errors until genuine local-TTL expiry; `state.PutOutcome.UNKNOWN` already models it on the wire). Add a test that injects an erroring `Renew`. A breaking refactor once a durable backend binds the `bool` interface.
+- **AV-2 (High)** — map the already-frozen `LaunchSpec` `limits` → `--memory`/`--cpus`/`--pids-limit` in `podman.go` *and* `localprocess.go` (both drop them today); reject limit-less launches in multi-tenant mode; add a "limit exceeded → contained" vector.
+- **AV-3 (High)** — bound the reconciler's runtime RPCs with per-call deadlines; give `Status()`/`Endpoint()` a read path that doesn't share the reconcile mutex (one hung `Healthcheck` pins all tenants + blinds Status today).
+- **AV-4 (High)** — `Degraded` → capped-infinite-retry (cap the *interval*, not attempts) + a `Reset/Resume` path; **emit an event/metric on every state-transition edge**. Today it's a silent terminal black-hole (`reconciler_test.go:118` codifies it).
+- **AV-5 (Med-High)** — add seccomp to `checkI9Minimum`: refuse `unconfined`/weaker-than-RuntimeDefault (the runtime should impose the max, not honor a caller-supplied weaker value).
+- **AV-6 (High)** — Arrow ticket: per-producer key + `key_id`/rotation (mirror the conformance keyring) + a shared/durable single-use store (the lease's state-backend CAS) so restart/replica doesn't reopen replay; or bind tickets to a channel/cert fingerprint.
+- **AV-7 (Low-Med)** — `noexec` on `/tmp`+`/data`; map `/data` to the plugin uid instead of `0o777`.
+
+**③ Tier-0 / observability / selection / discipline:**
+- **T-1 (High)** — design + document the state-backend **degraded mode** (serve last-known-good reads / refuse only writes when the backend is unreachable; pair with AV-1) and **build the real state-backend read path** (the spike reconciler reads a *fixed* slice → the "always re-read state" guarantee is unexercised); specify the bootstrap-seat **recovery** leg (seat crash/restart + re-attach to running plugins).
+- **O-1 (Med-High; sharpens sre#8)** — emit a counter/event on every reconcile state-transition edge **now** (it's what AV-4's alert keys off), and pin the `/metrics` golden-signal list + an SLO doc while the core is still paper.
+- **O-2 (Med; already-tracked, re-prioritized)** — pull **upgrade/version-skew** forward (partial upgrades are the *normal* case for a polyglot plugin mesh): a kubelet/apiserver-style N/N-1 policy + `rat preflight` orphan check + dual-advertise rollout; make desired-state git-first to bank half the DR win.
+- **P-1 (Med)** — name the **plane/pipeline/binding desired-state language** (where provider *selection* happens) as a first-class contract artifact; document that capability negotiation resolves *eligibility* while plane bindings resolve *selection* (today the selection layer is unspecified + outside the contract triple).
+- **K-2 (process)** — before each *real-backend* reference lands (Iceberg/Nessie/postgres), run an explicit **omission-audit** ("what loop can this backend complete that the in-memory refs faked?") — the freeze gate is structurally blind to omission (ADR-010/B1 is the existence proof, not the last case).
+- **D-1 (discipline)** — add an **enforcement-layer obligation count** to the temptation ledger (the gateway already performs 6–8 enforcement jobs on one hop while "the core stays six" stays literally true; the metric can't see enforcement-layer accretion — the K8s apiserver lesson).
+
+**④ Ecosystem on-ramp** — GTM/impl (no wire change); some are cold-start-critical and **cannot wait for Phase 4**:
+- **EC-1 (🔴 Critical-cold-start; P1)** — co-locate a real `plugin.yaml` in every `examples/<axis>/<impl>/`, ship the ADR-006-D2-promised **`examples/README.md`** (currently missing — a doc-drift regression), and pull a thin `rat plugin validate <dir>` forward (the JSON Schema already exists). Today there's no walkable `git clone → running plugin` path.
+- **EC-2 (High)** — document a `rat dev` localhost-attach inner loop; **decide whether launch metadata (`image`/`command`) is a manifest field** (additive — decide before authors hard-code the out-of-band convention) or operator-config; reconcile with ADR-016 ("builds a LaunchSpec from the manifest").
+- **EC-3 (High; P1)** — build the conformance **issuance pipeline** (runner → signer → publish; `conformance.Sign` is test-only today) + a marketplace install-time attestation check; until then render marketplace `conformed_capabilities` as *unverified/self-declared*, and fix the `plugin.v1.json:6` honesty-banner-vs-`verified.go` drift. *(Core-load D4 enforcement IS built — do not re-flag it.)*
+- **EC-4 (High-GTM)** — name **one wedge axis** (`format`/`catalog` on the Iceberg/Delta tailwind) and write the first 3 third-party plugins *with* design partners; treat that as the product, not the 19th axis.
+- **EC-5 (Med)** — publish a **governance commitment** before recruiting external authors: who may propose a `rat://` axis/capability, how a community plugin contests a first-party one, the trust-root model for conformance authorities (plural/federated?), and a contract + reference-marketplace relicense pledge.
+- **EC-6 (Low)** — a "versioning for authors" CONTRACT.md section (two version axes + `compatible_core`); consider a manifest sidecar resolvable without re-imaging (vs D6's integrity guarantee). Plus the architect F8 doc fix: regenerate `overview.md`'s manifest example from a real validating `contracts/examples/*.plugin.yaml`.
+
+---
+
 ## Remaining Phase 0 tail (post-`rat/1`)
 
 The data-plane is frozen ([ADR-009](../docs/architecture/adrs/009-data-plane-contract-freeze-v1.md)). What's left to fully close Phase 0 — all loosely-coupled, none blocking the frozen surface:
