@@ -27,7 +27,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-check compile-sdks conformance composition validate-manifests bench core-test core-test-podman breaking help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition validate-manifests bench core-test core-test-podman breaking help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -47,8 +47,15 @@ build: ## buf build (compile the proto module graph)
 	@echo ">> buf build"
 	@$(BUF) build
 
-gen-sdks: ## Regenerate contracts/sdks/<lang>/ from contracts/proto
+gen-sdks: ## Regenerate contracts/sdks/<lang>/ from contracts/proto (ADR-018: local plugins where available)
 	@scripts/gen-sdks.sh
+
+gen-images: ## Build the local connectionless codegen toolchain images (ADR-018)
+	@for df in $(CONTRACTS)/codegen/Dockerfile.*; do \
+	  lang=$${df##*.}; \
+	  echo ">> building rat-codegen-$$lang"; \
+	  $(RUNTIME) build -t rat-codegen-$$lang -f $$df $(CONTRACTS)/codegen; \
+	done
 
 gen-check: ## Fail if committed SDKs are stale vs contracts/proto
 	@scripts/gen-sdks.sh --check

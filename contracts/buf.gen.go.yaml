@@ -1,10 +1,11 @@
-# Go SDK codegen (ADR-006 D1/D3). Generated into sdks/go/, committed, regenerated
-# via scripts/gen-sdks.sh — never hand-edited. Uses remote buf.build plugins.
+# Go SDK codegen (ADR-006 D1/D3; ADR-018 connectionless). LOCAL plugins — buf runs
+# protoc-gen-go + protoc-gen-go-grpc from PATH (no BSR call), pinned in
+# contracts/codegen/Dockerfile.go. Generated into sdks/go/, committed, never hand-edited.
 version: v2
 plugins:
-  - remote: buf.build/protocolbuffers/go
+  - local: protoc-gen-go
     out: sdks/go
     opt: paths=source_relative
-  - remote: buf.build/grpc/go
+  - local: protoc-gen-go-grpc
     out: sdks/go
     opt: paths=source_relative
