@@ -25,6 +25,14 @@ that *plays* the front-door role and hosts the plugins in-process. Asked "why no
 the core API gateway?", the honest answer is: **there is nothing running to point at.**
 `rat serve` closes that gap.
 
+**Onboarding goal (added 2026-06-02).** The daemon must itself be **containerizable** so we
+can later ship a **beginner compose stack** — a `docker compose up` / `podman compose up`
+that brings up the core daemon **+ a base set of plugins + the infra they need**, giving a
+newcomer a working data-dev plane in one command. This is the on-ramp end of the vision's
+range ("scales from `chmod +x ./rat` to multi-tenant cloud — same binary, different plugin
+sets"): `./rat serve` for the solo hacker, `compose up` for the batteries-included starter,
+the same daemon either way.
+
 ### What already exists (the assembly is mostly built)
 
 | capability | where | note |
@@ -51,9 +59,28 @@ over the sealed assembly. The core was built to be assembled; this assembles it.
 
 ## Decision
 
-Build `rat serve` as a **thin daemon over the sealed core**, in two phases. Phase A proves
-the daemon against the core's *existing Go test plugins* (no new plugin work). Phase B
-fronts the data-dev (Python) plane with it.
+Build `rat serve` as a **thin daemon over the sealed core**, in three phases: **A** proves
+the daemon against the core's *existing Go test plugins* (no new plugin work); **B** fronts
+the data-dev (Python) plane with it; **C** ships the beginner compose stack. The daemon is
+distributed as both a static binary (`./rat`) and a container image (`rat serve` in compose).
+
+### Two runtime modes — launch vs attach (the key to compose-without-DinD)
+
+The daemon supports two ways to get its providers, because "the core runs in a container
+that orchestrates plugin containers" would otherwise mean docker-in-docker:
+
+- **launch mode** (`--runtime local|podman`): the daemon **launches** plugins itself via the
+  deployment-runtime (`supervisor.BringUp`) and supervises them (`reconciler.Loop`). This is
+  the `./rat serve` solo path and what Phase A/B prove.
+- **attach mode** (`--plane` entries carry an `endpoint:` instead of a `launch:`): the daemon
+  **dials already-running** plugins and just registers + fronts them — it does **not** launch
+  them. This is what the **compose stack** uses: **compose is the orchestrator** (it starts
+  every plugin container), and `rat serve` connects to them by service name. No socket-mount,
+  no DinD. This mode is already half-built — `gateway.New(reg, providers, …)` takes externally
+  dialed connections, exactly as `core/composition/composition_realproviders_test.go` does;
+  attach mode is "build the `providers` map from `endpoint:`s" instead of from `BringUp`.
+
+The two modes are the same daemon + gateway; only *where providers come from* differs.
 
 ### Phase A — the daemon MVP (`core/cmd/rat serve`)
 
@@ -81,6 +108,15 @@ plugins:
   - name: rat-engine
     manifest: ./manifests/engine.plugin.yaml
     launch: { image: ./bin/engineplugin, isolation: i9 }
+```
+
+An **attach-mode** entry swaps `launch:` for `endpoint:` — the daemon dials it instead of
+launching it (what the compose stack uses; compose started the container):
+
+```yaml
+  - name: rat-engine
+    manifest: ./manifests/engine.plugin.yaml
+    endpoint: rat-engine:7001        # a compose service the daemon connects to
 ```
 
 **Phase-A exit criteria:** `rat serve --plane plane.yaml` boots the core's Go test
@@ -113,6 +149,31 @@ Make the experiment's plugins real plugins the daemon manages:
 the plugins **launched and mediated by `rat serve`**, search works end-to-end, and the
 control hops are visible in the core's audit log.
 
+### Phase C — the beginner compose stack (batteries-included on-ramp)
+
+`docker compose up` → a working data-dev plane, no Go/Python toolchain on the host:
+
+1. **A daemon image** — a `Dockerfile` building the `rat` static Go binary into a minimal
+   image (`distroless`/`alpine`), entrypoint `rat serve --plane /etc/rat/plane.yaml --attach`.
+2. **A compose file** (`deploy/data-dev-starter/compose.yaml`) that brings up, on one network:
+   - the **rat-serve** daemon (in **attach mode**),
+   - the **base plugins** as their own containers (the Phase-B images): `duckdb-ml` (engine),
+     `ducklake` (catalog), `minio-s3` (storage), `incremental-embed` (strategy),
+   - the **infra** those need: **MinIO** (S3) + **Postgres** (DuckLake metadata),
+   - *(optional)* the **BFF + nothing else UI-side**, so the VS Code extension connects to one
+     URL and the data-leg works out of the box.
+   Compose is the orchestrator; the daemon **attaches** to the plugin services by name — so
+   there is **no docker-in-docker, no socket mount**. A beginner runs one command and has a
+   lakehouse + ML + a UI endpoint.
+3. **"Base plugins"** = the minimal set that makes data-dev work end-to-end: one engine, one
+   catalog, one storage, one strategy, + MinIO + Postgres. Swapping/adding plugins is editing
+   the compose file + the plane file — the "different plugin sets, same daemon" promise.
+
+**Phase-C exit criteria:** a fresh machine with only podman/docker runs
+`compose up` in `deploy/data-dev-starter/` and, within a minute, the VS Code extension (or
+`grpcurl`) drives the pipeline + semantic search against the **compose-managed plane fronted
+by the real core gateway**. The README's "getting started" is two lines.
+
 ## Explicitly OUT of scope (v1)
 
 - Multi-node / cross-host leader election (the `lease` primitive exists; v1 is single-node).
@@ -141,6 +202,13 @@ control hops are visible in the core's audit log.
    (running the platform), which is **user-pull-gated** (Gate B, ≥10 users). Is `rat serve`
    in-gate (it's make-it-real, not GTM) or does it wait? (Recommend: in-gate — it validates
    the deployment topology, principle #8, and unblocks the "use the real gateway" story.)
+6. **Attach-mode supervision** — in attach mode the daemon doesn't launch plugins, so the
+   reconciler can't restart them; compose owns lifecycle/restart. Does the daemon still
+   *health-check* attached providers (report Degraded, drop from routing) or stay dumb and
+   trust compose? (Lean: health-check + report, don't restart.)
+7. **The beginner "base plugin" set + where the compose stack lives** — `deploy/data-dev-starter/`?
+   Is the starter stack part of this ADR's deliverable or its own follow-on once A/B land?
+   (Lean: scope it here, build it in Phase C after B proves the images.)
 
 ## Consequences
 
@@ -153,9 +221,14 @@ control hops are visible in the core's audit log.
 - **Validates the deployment topology for real** (CLAUDE.md principle #8): plugins launched
   by the deployment-runtime, mediated by the enforcing gateway, kept alive by the
   reconciler — the architecture proving itself as a process, not a test.
+- **Delivers the on-ramp** the vision promises: `./rat serve` for the solo hacker and a
+  one-command `compose up` starter for beginners — *the same daemon*, launch mode vs attach
+  mode. The two-mode design gets compose orchestration **without docker-in-docker**, and
+  makes "different plugin sets, same binary" a config edit. This is the first concrete piece
+  of the ecosystem on-ramp (backlog EC-1).
 - **Cost:** containerizing the Python plugins (Phase B), a possible additive `LaunchSpec`
-  field (frozen-wire check), and the daemon lifecycle code. All additive; no change to the
-  sealed tested packages.
+  field (frozen-wire check), the daemon lifecycle + attach-mode code, a daemon image, and a
+  compose file to maintain (Phase C). All additive; no change to the sealed tested packages.
 
 ## Alternatives considered
 

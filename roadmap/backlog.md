@@ -12,10 +12,13 @@ When an item moves to active work, promote it: cut it from here, add it to [curr
 
 The assembly already exists (`supervisor.BringUp → Plane{Gateway,Registry}`, `reconciler.Loop`, `deploymentruntime`, `Plane.Shutdown`); what's missing is **glue**: a `core/cmd/rat` entrypoint, a `plane.yaml` config loader, a **TCP listener** for the gateway (`RegisterCapabilityInvokeServiceServer` + `net.Listen`), signal-driven lifecycle, and wiring the reconcile loop.
 
+Two runtime modes (same daemon): **launch** (the daemon launches+supervises plugins via the deployment-runtime — the `./rat serve` solo path) and **attach** (the daemon dials already-running plugins by `endpoint:` — what the compose stack uses, so **no docker-in-docker**; `gateway.New` already takes external providers).
+
 - **Phase A (MVP):** `rat serve --plane plane.yaml` boots the core's **Go test plugins** via the deployment-runtime, serves the gateway on TCP; a client invokes a capability through it (C5 + audit); SIGTERM drains. *First time the core runs.*
 - **Phase B:** **containerize the Python data-dev plugins** (the launch contract execs `image` directly, no args) → a `data-dev-plane.yaml` → `rat serve --runtime podman` runs the real ML lakehouse under the **actual core gateway**; the UI's control path becomes the real gateway (TS SDK), the BFF shrinks to the F9 data-leg only.
+- **Phase C (beginner compose stack):** a **daemon container image** + `deploy/data-dev-starter/compose.yaml` bringing up rat-serve (attach mode) + **base plugins** (engine/catalog/storage/strategy) + **MinIO + Postgres** → `compose up` gives a newcomer a working data-dev plane in one command. The on-ramp end of "same binary, solo → cloud" (ties to EC-1).
 
-**Starting it = ratify ADR-019** (decide the 5 open questions: default runtime; Python-plugin launch incl. a possible additive `LaunchSpec.args` — frozen-wire check; auditor sink; binary location vs the `rat/2.0` seal; phase placement vs the user-pull gate). Then build Phase A against the existing test plugins.
+**Starting it = ratify ADR-019** (7 open questions: default runtime; Python-plugin launch incl. a possible additive `LaunchSpec.args` — frozen-wire check; auditor sink; binary location vs the `rat/2.0` seal; phase placement vs the user-pull gate; attach-mode supervision; the base-plugin set + compose-stack location). Then build Phase A against the existing test plugins.
 
 ---
 
