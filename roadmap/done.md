@@ -16,6 +16,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — Q02 SIMULATED dry-run: 5-agent deliberating panel → synthesis + pre-publish punch-list
+
+Ran the Q02 review brief end-to-end as a **simulated** panel using the Claude Code agent-team feature (a `q02-panel` team of named teammates with `SendMessage` cross-talk) — 4 lens-reviewers (architect/security/sre/ecosystem) **+ a defending maintainer**; AI personas, *not* humans, on `phase-1`. Reviewers verified claims against the real `core/`+`contracts/` code (`file:line` cites), cross-examined each other and the maintainer live, then each filed `reviews/11-q02-<lens>.md`; the maintainer filed a defense log. Chaired the synthesis into [`reviews/Q02-tracker.md`](../reviews/Q02-tracker.md) (new "Synthesis — SIMULATED dry-run" section).
+
+- **30 raw findings → ~26 deduped.** Tallies: architect 9, security 7, sre 7, ecosystem 7; maintainer **12/13 conceded, 1 mixed, 0 bluffs** ([defense log](../reviews/11-q02-maintainer-defense-log.md) — incl. an explicit net-new-vs-already-tracked triage).
+- **Freeze-reopen verdict: 0 hard · 3 soft** (all additive, all fixable in the still-local window) — **PU-1** bytes-leg producer-channel-auth MUST (filed by security **and** architect, 2 lenses), **PU-3** attestation expiry/revocation, **PU-4** tenancy sharing scope-or-delegate. Plus **PU-2** (the keystone context-envelope has the *weakest* conformance of the frozen surface → qualifies ADR-015's "freeze validated" claim) + 3 decide-the-additive-now seams (semantic-skew negotiation, Event signing, vend read/write split).
+- **Strongest positives:** the **security** lens *validated the sealed enforcement spine* (C5/C4/D4/D1 "real, not theater"); the **ecosystem** lens retired reviews/02's core fear ("the contracts don't exist") — "most author-respectful surface in the space." The **SRE** headline — *"the wire is right; the run-lifecycle code around it is where the 3am risk lives"* — re-confirms the reviews/09 dissent ("green certifies shapes, not obligations") with line-level evidence (incl. a 🔴 Critical: `core/lease` has no error channel → backend-blip step-down storm; free to fix now).
+- **Net read (feeds Q01): GO / adjust-before-unfreeze** — no reviewer demanded a hard wire break or a reconsider-the-bet.
+- **HONESTY:** every artifact carries a `SIMULATED` banner. This does **NOT** discharge Q02 — real external humans are still owed before the freeze leaves local/unpushed; the dry-run is a *baseline for them to falsify* + a *pre-publish punch-list*, weighted like reviews/00–08. The recruitment table in the tracker stays "not started."
+
+Findings grouped into the backlog ([backlog.md](backlog.md) → "Q02 simulated dry-run findings"); the maintainer's net-new list is the authoritative triage. Next concrete artifact: a **pre-unfreeze punch-list ADR** (PU-1..4 + the decide-now seams).
+
+---
+
 ## 2026-06-02 — front-door refresh: README + CLAUDE.md now reflect the sealed core
 
 `README.md` + `CLAUDE.md`, on `phase-1-frontdoor-refresh`. Both still said *"architecture-only / not yet any product code"* — false since the Phase-1 seal. The entry point now states the real status (Phase 0 + 1 sealed, `rat/1.5` / `rat/2.0`; what the core enforces; Q02 the next gate), adds a "what's here" map (core/contracts/examples/…), and puts [`roadmap/current.md`](current.md) first in the reading order. A project is only as well-structured as its front door is accurate; the internals were already disciplined (ADRs, fresh roadmap, sealed+tagged git) — this fixes the one piece that lied. (No new structure added — the standing risk is meta-process accumulation, not under-structure.)
