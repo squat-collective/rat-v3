@@ -4,15 +4,27 @@
 > Additive: no proto/axis change. Build-order step 6.
 
 The cleanest demonstration of the multi-UI vision (CLI / web-portal / **VS Code**): the
-editor is a **UI client of the platform**. Every action maps to a data-dev capability.
+editor is a **UI client of the platform** — and it manages **many RAT connections** (like
+a database explorer manages many servers). One editor, N planes: `local`, `staging`,
+`prod`, per-tenant, per-region. Every action maps to a data-dev capability.
 
 | surface | what it does |
 |---|---|
-| **DuckLake Catalog** tree | browse tables → their snapshots (click a table to **preview** it) |
-| **Run Pipeline** (▶ in the view title) | runs the incremental-embed strategy; shows `embedded N → total` (incremental) |
-| **Run SQL Query** | run SQL against the engine; results in a grid |
-| **🔍 Semantic Search** | a box → `embed()` the query → `vss` cosine rank → ranked rows |
-| **Plugin Health** tree | engine / catalog / strategy — Healthy/Degraded + loaded extensions |
+| **Connections** | add many named RAT connections (▶ *Add Connection*); each points at a RAT gateway/core endpoint — local or **remote** |
+| **DuckLake Catalog** tree | per connection → tables → snapshots (click a table to **preview** it) |
+| **Run Pipeline** (on a connection) | runs the incremental-embed strategy on that plane; shows `embedded N → total` |
+| **Run SQL Query** / **🔍 Semantic Search** | run against a chosen connection; results in a grid (titled with the connection) |
+| **Plugin Health** tree | per connection → engine / catalog / strategy, Healthy/Degraded + loaded extensions |
+
+### Connections (many environments)
+
+Each connection is `{ name, url, tenant? }`, stored in the `ratDataDev.connections`
+setting (so it's editable as JSON and rides Settings Sync). Add one from the catalog
+view's **＋ Add Connection** button (name → URL → optional tenant), or right-click a
+connection to **Run Pipeline / Query / Search / Edit / Remove** it. A connection's URL is
+all the extension needs — point it at `http://localhost:8787` for a local gateway, or at
+a **remote** environment running its own gateway/core. Connections that can't be reached
+degrade gracefully (the tree shows *⚠ unreachable*), so a down plane never breaks the rest.
 
 ## Architecture — why a gateway (finding F9)
 
@@ -51,9 +63,10 @@ Then **start the backend** and reload:
 make data-dev-gateway          # serves http://localhost:8787 (Ctrl-C to stop)
 ```
 
-Click the **RAT Data-Dev** icon in the activity bar → browse the catalog, hit
-**Run Pipeline**, run a query, or **🔍 Semantic Search** for `how is the battery life`.
-The gateway URL is the `ratDataDev.gatewayUrl` setting (default `http://localhost:8787`).
+Click the **RAT Data-Dev** icon in the activity bar. The default `local` connection
+points at `http://localhost:8787`; expand it to browse the catalog, then right-click it
+to **Run Pipeline / Query / 🔍 Semantic Search**. Use **＋ Add Connection** to point at
+more environments (remote gateways included) — each appears as its own root in the tree.
 
 ## Develop it (F5 debug)
 

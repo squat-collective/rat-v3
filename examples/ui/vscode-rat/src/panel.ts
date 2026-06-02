@@ -38,17 +38,19 @@ function page(title: string, headerHtml: string, columns: string[], rows: unknow
   </body></html>`;
 }
 
-export function showQuery(sql: string, result: QueryResult): void {
+export function showQuery(connection: string, sql: string, result: QueryResult): void {
   const p = ensurePanel();
-  p.title = "RAT Query";
-  p.webview.html = page("SQL result", `<code>${esc(sql)}</code> — ${result.rows.length} row(s)`,
+  p.title = `RAT Query · ${connection}`;
+  p.webview.html = page("SQL result",
+    `<b>${esc(connection)}</b> · <code>${esc(sql)}</code> — ${result.rows.length} row(s)`,
     result.columns, result.rows);
 }
 
-export function showSearch(query: string, hits: SearchHit[]): void {
+export function showSearch(connection: string, query: string, hits: SearchHit[]): void {
   const p = ensurePanel();
-  p.title = "RAT Search";
+  p.title = `RAT Search · ${connection}`;
   const cols = ["rank", "id", "dist", "★", "text"];
   const rows = hits.map((h, i) => [i + 1, h.id, h.dist.toFixed(3), h.rating ?? "", h.text]);
-  p.webview.html = page("🔍 semantic search", `query: <code>${esc(query)}</code> · ${hits.length} hit(s)`, cols, rows);
+  p.webview.html = page("🔍 semantic search",
+    `<b>${esc(connection)}</b> · query: <code>${esc(query)}</code> · ${hits.length} hit(s)`, cols, rows);
 }

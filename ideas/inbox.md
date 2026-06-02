@@ -170,3 +170,28 @@ Leaning **(a)** — it preserves the central-enforcement property ADR-005 is bui
 
 Open question: pick (a)/(b)/(c) before `runtime/v1` (or any streaming axis) routes through the gateway — and before `invoke.proto` freezes.
 Related: [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md), [ADR-007](../docs/architecture/adrs/007-call-context-transport.md) (same "0d reveals the gap" pattern), `contracts/proto/rat/core/v1/invoke.proto`, `contracts/proto/rat/runtime/v1/runtime.proto`, `examples/runtime/inmemory-go/harness_test.go` (the direct-dial workaround + its header note).
+
+## 2026-06-02 — [experiment, ui] vscode-rat as a multi-environment RAT explorer (many connections)
+
+**Surfaced while building the data-dev plane VS Code UI (step 6).** The extension should
+manage **many named RAT connections** — like DBeaver/DataGrip for data planes — each
+pointing at a RAT platform endpoint (a gateway today; a real core API gateway later).
+One editor, N planes: `local`, `staging`, `prod`, per-tenant, per-region. This is the
+"one UI, many planes" scalability story made concrete, and it's the natural shape once a
+connection is just a URL.
+
+- **Connection model:** `{ name, url }` (forward-room for `tenant`, `token`/auth, TLS).
+  Persisted in the `ratDataDev.connections` setting (discoverable, Settings-Sync-able).
+- **Tree:** connection-rooted (multi-root explorer) — connection → tables → snapshots;
+  health view connection → plugins. Per-connection actions (run pipeline / query / search)
+  via the connection's context menu; unreachable connections degrade gracefully.
+- **Remote envs:** each remote RAT env runs its own gateway (or core); the extension just
+  needs the URL. Follow-on: a **gateway "remote mode"** (point app.py at a remote
+  S3+Postgres stack instead of the local in-proc DuckLake — the run-remote.py plumbing
+  already exists) so a connection can target a genuinely remote plane, not just localhost.
+- **Auth/tenant (next):** connections carry a tenant + token; the extension stamps them
+  (the gateway/core honors identity per ADR-007). Ties into C5/C7 once the real core
+  fronts the UI.
+
+Status: **multi-connection model being built now** (connection store + add/remove/edit +
+connection-rooted trees). Auth/tenant + gateway-remote-mode are the queued follow-ons.

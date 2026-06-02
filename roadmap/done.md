@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — vscode-rat v0.2.0: multi-environment RAT explorer (many connections)
+
+On `phase-1-data-dev-plane`. The VS Code extension now manages **many named RAT connections** (like a DB explorer manages many servers) — `{name, url, tenant?}` persisted in the `ratDataDev.connections` setting, the tree **connection-rooted** (connection → tables → snapshots; health → plugins), with per-connection Run Pipeline / Query / Search and Add/Edit/Remove. One editor, N planes (local / staging / prod / per-tenant / remote); unreachable planes degrade gracefully. Each connection is just a URL → point it at a **remote** gateway/core. The "one UI, many planes" scalability story made concrete. New `src/connections.ts`; compiles clean; repackaged → `vscode-rat-0.2.0.vsix` (`make data-dev-vsix`). Idea + follow-ons (gateway *remote mode* to target a real remote S3+Postgres plane; per-connection auth/tenant identity) captured in [`ideas/inbox.md`](../ideas/inbox.md).
+
+---
+
 ## 2026-06-02 — Data-dev plane build step 6 DONE: the VS Code UI — the experiment is END-TO-END
 
 On `phase-1-data-dev-plane`. Build-order §11 step 6 — a VS Code extension as a UI client of the data-dev plane, closing the multi-UI vision (CLI / web-portal / **VS Code**). With this the experiment spans **storage → catalog → engine+ML → strategy → UI**, local AND remote. EXPLORATORY + **ADDITIVE**: `make breaking` clean, conformance unchanged (34/34), sealed `rat/2.0` surface untouched.

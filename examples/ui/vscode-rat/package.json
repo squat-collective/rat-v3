@@ -1,8 +1,8 @@
 {
   "name": "vscode-rat",
   "displayName": "RAT Data-Dev",
-  "description": "A VS Code window into the RAT v3 data-dev plane — browse the DuckLake catalog, run the incremental-embed pipeline, query, and 🔍 semantic-search. EXPLORATORY (experiments/data-dev-plane).",
-  "version": "0.1.0",
+  "description": "A VS Code window into RAT v3 data-dev planes — manage many RAT connections, browse the DuckLake catalog, run the incremental-embed pipeline, query, and 🔍 semantic-search. EXPLORATORY (experiments/data-dev-plane).",
+  "version": "0.2.0",
   "publisher": "rat-data-dev",
   "license": "Apache-2.0",
   "engines": { "vscode": "^1.85.0" },
@@ -28,6 +28,9 @@
     },
     "commands": [
       { "command": "ratDataDev.refresh", "title": "RAT: Refresh", "icon": "$(refresh)" },
+      { "command": "ratDataDev.addConnection", "title": "RAT: Add Connection…", "icon": "$(add)" },
+      { "command": "ratDataDev.editConnection", "title": "RAT: Edit Connection…", "icon": "$(edit)" },
+      { "command": "ratDataDev.removeConnection", "title": "RAT: Remove Connection", "icon": "$(trash)" },
       { "command": "ratDataDev.runPipeline", "title": "RAT: Run Pipeline", "icon": "$(play)" },
       { "command": "ratDataDev.query", "title": "RAT: Run SQL Query", "icon": "$(database)" },
       { "command": "ratDataDev.search", "title": "RAT: Semantic Search", "icon": "$(search)" },
@@ -35,22 +38,43 @@
     ],
     "menus": {
       "view/title": [
-        { "command": "ratDataDev.runPipeline", "when": "view == ratDataDev.catalog", "group": "navigation@1" },
-        { "command": "ratDataDev.search", "when": "view == ratDataDev.catalog", "group": "navigation@2" },
-        { "command": "ratDataDev.query", "when": "view == ratDataDev.catalog", "group": "navigation@3" },
-        { "command": "ratDataDev.refresh", "when": "view == ratDataDev.catalog", "group": "navigation@4" }
+        { "command": "ratDataDev.addConnection", "when": "view == ratDataDev.catalog", "group": "navigation@1" },
+        { "command": "ratDataDev.refresh", "when": "view == ratDataDev.catalog", "group": "navigation@9" },
+        { "command": "ratDataDev.refresh", "when": "view == ratDataDev.health", "group": "navigation@9" }
       ],
       "view/item/context": [
-        { "command": "ratDataDev.previewTable", "when": "view == ratDataDev.catalog && viewItem == table" }
+        { "command": "ratDataDev.runPipeline", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "inline@1" },
+        { "command": "ratDataDev.search", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "inline@2" },
+        { "command": "ratDataDev.runPipeline", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "1_actions@1" },
+        { "command": "ratDataDev.query", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "1_actions@2" },
+        { "command": "ratDataDev.search", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "1_actions@3" },
+        { "command": "ratDataDev.editConnection", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "2_manage@1" },
+        { "command": "ratDataDev.removeConnection", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "2_manage@2" },
+        { "command": "ratDataDev.previewTable", "when": "view == ratDataDev.catalog && viewItem == table", "group": "1_actions@1" }
       ]
     },
     "configuration": {
       "title": "RAT Data-Dev",
       "properties": {
+        "ratDataDev.connections": {
+          "type": "array",
+          "default": [{ "name": "local", "url": "http://localhost:8787" }],
+          "markdownDescription": "RAT connections — one per environment/plane (local, staging, prod, per-tenant). Each points at a RAT gateway/core endpoint. Manage them from the **RAT Data-Dev** view's *Add Connection* button, or edit here directly.",
+          "items": {
+            "type": "object",
+            "required": ["name", "url"],
+            "properties": {
+              "name": { "type": "string", "description": "Display name (e.g. local, staging, prod)" },
+              "url": { "type": "string", "description": "RAT gateway URL (e.g. http://localhost:8787)" },
+              "tenant": { "type": "string", "description": "Optional tenant identity (forward-room for core-fronted auth)" }
+            }
+          }
+        },
         "ratDataDev.gatewayUrl": {
           "type": "string",
           "default": "http://localhost:8787",
-          "description": "URL of the data-dev gateway (run `make data-dev-gateway`)."
+          "markdownDeprecationMessage": "Deprecated: use `ratDataDev.connections` instead. Used only to seed the default `local` connection when no connections are configured.",
+          "description": "Legacy single-gateway URL (seeds the default connection)."
         }
       }
     }
