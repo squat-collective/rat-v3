@@ -16,6 +16,19 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — Additive pre-publish cut LANDED (ADR-017 §Migration step 2)
+
+Executed the ADR-017 additive cut on `phase-1-q02-additive-cut` (3 commits), **all verified additive** (`make breaking` clean vs sealed `main`; `make lint` / `compile-sdks` / `validate-manifests` 32/32; `make core-test` green for the demos; generation deterministic):
+- **Cut 1 (`51234e6`)** — PU-1 (`ArrowStream.ticket` producer-channel-auth MUST), PU-4 (tenancy ISOLATION-ONLY; `DECISION_KIND_SHARING` advisory-not-enforced), 5b (`Event.signature`+`key_id`), PU-3 (`Listing.conformance_expires_unix_ms`+`revoked_capabilities`), 5a (`capabilityRef.revision`/`min_revision`). All SDKs regenerated.
+- **Enforcement demos (`360cef1`, `make core-test` green, no ripple)** — PU-3 core: `Attestation.ExpiresAtUnixMs` (signed/tamper-evident) + `Authority.Revoke/IsRevoked` + `NewVerified` refuses revoked/expired conformance without rotating the key. PU-1 core: an **mTLS channel-auth conformance vector** proving a leaked ticket presented over the wrong authenticated channel with spoofed `X-RAT-*` headers is REFUSED (403, no bytes), + a contrast test characterizing the header-trusting stand-in being fooled.
+- **5c (`a764155`)** — storage `VendReadCredentials`/`VendWriteCredentials` (mode-scoped capability URIs `…/vend-credentials-read|write`) so C5 authorizes read-vs-write; refs auto-compile via the `Unimplemented` embed. Additive.
+
+**Known transient gap: the RUST storage SDK regen for 5c is PENDING** — buf.build's anonymous BSR rate-limit (the toolchain runs *remote* codegen plugins → 8 BSR calls per `gen-sdks` run) is exhausted, and the rust community plugins are remote-only. Go/Python/TypeScript regenerated; **rust has no reference plugins (an unused artifact)**. Complete with one `make gen-sdks` (or a `buf login`) when the window resets — also fixes the pre-existing python `class X(object)`→`class X` cosmetic drift Cut 1 folded in.
+
+**Remaining for the pre-unfreeze gate:** finish the rust regen · **PU-2** (keystone context-envelope two-reference conformance — the separate larger piece) · then the **real Q02** external review → re-seal `rat/2.x`. (`ADR-017` stays Proposed until the real Q02.)
+
+---
+
 ## 2026-06-02 — PU-4 ratified: v1 tenancy is isolation-only (ADR-017 Q01 resolved)
 
 Tom's call on the one open fork in [ADR-017](../docs/architecture/adrs/017-pre-unfreeze-contract-amendment-gate.md): **v1 tenancy = isolation-only.** `DECISION_KIND_SHARING` becomes *advisory-not-enforced* in v1 (the axis stops advertising an un-actionable verb); actioned cross-tenant sharing + hierarchical tenancy defer to a future `v2` delegation primitive (its own ADR, only if a user pulls for it). The sharing-capable alternative (a pre-publish delegation primitive in `rat/1`) was rejected for v1 — Gate B unmet, no user pulling. **With Q01 resolved, the punch-list has no open forks left — only an all-additive pre-publish cut + the real Q02.** ADR-017 stays **Proposed** (its one remaining condition for Accepted = the real Q02 external review confirms/extends the gate).
