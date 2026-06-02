@@ -24,6 +24,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [016](016-plugin-provisioning-via-deployment-runtime.md) | Plugin provisioning via the deployment-runtime axis — the core launches, it doesn't dial (D1) | Accepted | 2026-06-01 |
 | [017](017-pre-unfreeze-contract-amendment-gate.md) | Pre-unfreeze contract-amendment gate (the Q02 dry-run punch-list) | Proposed | 2026-06-02 |
 | [018](018-connectionless-codegen-local-plugins.md) | Connectionless codegen via local plugins | Accepted | 2026-06-02 |
+| [019](019-rat-serve-daemon.md) | `rat serve` — assembling the sealed core into a runnable daemon | Proposed | 2026-06-02 |
 
 ## Template
 

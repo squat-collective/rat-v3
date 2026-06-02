@@ -6,6 +6,19 @@ When an item moves to active work, promote it: cut it from here, add it to [curr
 
 ---
 
+## 🛰️ `rat serve` — make the sealed core runnable ([ADR-019](../docs/architecture/adrs/019-rat-serve-daemon.md), Proposed, 2026-06-02)
+
+**Surfaced by the data-dev-plane experiment** (finding F9 + the "why not use the core gateway?" thread): the Phase-1 core is built+tested but is a **library, not a server** — no entrypoint, the gateway is only served over `bufconn` in tests. So the experiment uses a BFF stand-in. `rat serve` assembles the sealed core into a daemon.
+
+The assembly already exists (`supervisor.BringUp → Plane{Gateway,Registry}`, `reconciler.Loop`, `deploymentruntime`, `Plane.Shutdown`); what's missing is **glue**: a `core/cmd/rat` entrypoint, a `plane.yaml` config loader, a **TCP listener** for the gateway (`RegisterCapabilityInvokeServiceServer` + `net.Listen`), signal-driven lifecycle, and wiring the reconcile loop.
+
+- **Phase A (MVP):** `rat serve --plane plane.yaml` boots the core's **Go test plugins** via the deployment-runtime, serves the gateway on TCP; a client invokes a capability through it (C5 + audit); SIGTERM drains. *First time the core runs.*
+- **Phase B:** **containerize the Python data-dev plugins** (the launch contract execs `image` directly, no args) → a `data-dev-plane.yaml` → `rat serve --runtime podman` runs the real ML lakehouse under the **actual core gateway**; the UI's control path becomes the real gateway (TS SDK), the BFF shrinks to the F9 data-leg only.
+
+**Starting it = ratify ADR-019** (decide the 5 open questions: default runtime; Python-plugin launch incl. a possible additive `LaunchSpec.args` — frozen-wire check; auditor sink; binary location vs the `rat/2.0` seal; phase placement vs the user-pull gate). Then build Phase A against the existing test plugins.
+
+---
+
 ## Board-review findings ([reviews/08](../reviews/08-post-freeze-board-review.md), 2026-06-01)
 
 The 5-agent post-freeze review. Grouped by when to act.
