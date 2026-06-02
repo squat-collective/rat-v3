@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-020 S4b (UI control-path) DONE: the UI's backend routes through the real gateway 🖥️
+
+The portal-replacement's backend is now the **real orchestrator**. New [`platform/bff.py`](../platform/bff.py): a thin JSON-over-HTTP backend (a `kind: ui` driver, `platform-bff`) that a VS Code / web UI talks to, and that issues every **control** call to `rat serve` as a capability invocation (C5 + audit) — the honest minimum of the F9 split (control through the gateway; the bulk data-leg/row-preview would attach its own engine, out of scope here):
+- `GET /api/health` → `{ ok, gateway }` · `GET /api/runs` → the run history (`rat://state/v1/list` + `get`) · `POST /api/run` → trigger a refresh (`rat://strategy/v1/apply`).
+- Wired into the compose stack (`bff` service on host `:8088`). **Proven live via curl:** `/api/runs` returned `runs/000001/2` and `/api/run` triggered a refresh (`snap-12`) — every hop audited as caller `platform-bff` (`→ state/get`, `→ state/list`, `→ strategy/apply`).
+
+`make breaking` clean; no Go/proto change. **What this IS:** the UI's control path now flows through the real gateway (the ADR-019 Phase-B-step-4 / ADR-020 S4 intent), proven without the VS Code UI (which can't run headlessly). **What remains (follow-on):** the **VS Code extension UI itself** — the existing `examples/ui/vscode-rat` is experiment-shaped (semantic search over reviews), so a platform UX (medallion layers + run history) pointed at this BFF, run interactively, is the next step; the bulk data-leg (table/row preview) is the F9 follow-on.
+
+**🎉 ADR-020 S1–S4 complete (core + backends):** v2's platform, rebuilt on the v3 plugin core with DuckLake as catalog — **decoupled stack · self-driving scheduled refresh · quality-gated commits · run history · a UI control-path through the gateway** — every hop authorized + audited, CLI/BFF not a portal. From a sealed library to a running, self-driving, quality-gated data platform.
+
+---
+
 ## 2026-06-02 — ADR-020 S4 (state-backend) DONE: the platform has run history 📋
 
 The platform now records + serves its own metadata — v2's `runs` table, as a **state-backend plugin** behind the gateway (on `phase-2-state`). New [`examples/state/postgres-py`](../examples/state/postgres-py/): a Postgres-backed `kind: state-backend` plugin implementing the frozen state/v1 **Get/Put/List** (monotonic revisions + single-key CAS via `if_revision`), reusing the stack's Postgres (a `rat_state` KV table). Wired into the platform:

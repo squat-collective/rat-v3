@@ -29,3 +29,7 @@ plugins:
   - name: rat-scheduler
     manifest: ./manifests/scheduler.plugin.yaml
     # register-only driver — the self-driving clock; fires strategy/apply on an interval.
+
+  - name: platform-bff
+    manifest: ./manifests/bff.plugin.yaml
+    # register-only driver — the UI backend; issues the UI's control calls to the gateway.

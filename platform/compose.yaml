@@ -186,6 +186,27 @@ services:
     depends_on:
       rat-serve: {condition: service_started}
 
+  bff:
+    image: docker.io/library/python:3.12
+    working_dir: /work/platform
+    command:
+      - bash
+      - -lc
+      - "pip install -q --root-user-action=ignore grpcio==1.80.0 protobuf==7.35.0 && exec python bff.py"
+    environment:
+      PYTHONPATH: /work/contracts/sdks/python
+      RAT_PLUGIN_NAME: "platform-bff"
+      RAT_GATEWAY: "rat-serve:7777"     # the UI's control calls go through the REAL gateway
+      RAT_PIPELINE_TARGET: "gold_daily_revenue"
+      BFF_ADDR: "0.0.0.0:8080"
+    ports:
+      - "8088:8080"                     # the VS Code / web UI talks JSON here (host :8088)
+    volumes:
+      - ../:/work:z
+      - pipcache:/root/.cache/pip
+    depends_on:
+      rat-serve: {condition: service_started}
+
   runner:
     image: docker.io/library/python:3.12
     profiles: ["run"]             # not started by `up`; run with `docker compose run --rm runner`
