@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — PU-2 DONE: keystone context-carriage two-reference conformance → punch-list COMPLETE
+
+`c0508a6` on `phase-1-pu2-keystone-conformance` — the last pre-unfreeze gate item (ADR-017 PU-2). The keystone context-carriage contract (`common/v1/context.proto` + ADR-007 gateway stamping — the carrier for C1/C2/C3/C5/C7/C8, the most-irreversible frozen surface) had the **weakest** conformance of the freeze: one impl (the spike Go gateway); the ADR-003 two-reference rule never reached it (architect F1, maintainer-conceded). PU-2 applies that forcing function:
+- **[`contracts/conformance/context-carriage/context-carriage-v1.json`](../contracts/conformance/context-carriage/context-carriage-v1.json)** — 12 portable golden vectors: C1 (missing/ill-formed traceparent, missing correlation → reject); `caller_plugin` **re-derived** not propagated (the C3 namespace guarantee); trace **verbatim**; `SubjectAssertion` verification (bad signature / unknown key_id / wrong `bound_correlation_id` / expired); and the **M4 bare-mirror cross-check** (tenant + principal mismatch → reject, by reconstructing the signed bytes from the bare mirrors).
+- **`go/` + `py/`** — two clean-room, technologically-divergent reference impls (no shared code; neither shares code with `core/gateway`). **`make context-carriage`** cross-runs both → **12/12 each, identical accept/reject + reason on every vector.** The keystone is now two-impl-conformed; the contract is implementable from the prose alone, in two languages.
+
+🎉 **With PU-2, the ENTIRE ADR-017 pre-unfreeze punch-list is COMPLETE** (PU-1 + PU-2 + PU-3 + PU-4 + the 5a/5b/5c seams — all landed + verified, `make breaking` clean throughout). The **sole remaining condition** before the freeze can leave local/unpushed is the **real Q02 external human review** (ADR-013 Q02). ADR-017 stays Proposed pending that.
+
+---
+
 ## 2026-06-02 — ADR-018 COMPLETE: Python connectionless (protoc-35 hybrid) — all 4 SDKs BSR-free
 
 Resolved the python blocker (Tom chose the protoc-35 hybrid) — `2ee749e` on `phase-1-adr-018-python`. `contracts/codegen/Dockerfile.python` pairs **standalone protoc v35.0** (the MESSAGES → `ValidateProtobufRuntimeVersion(7,35,0)`, matching buf's `protocolbuffers/python` and the refs' `protobuf==7.35.0` — **no downgrade**) with **grpcio-tools 1.80.0** (the gRPC stubs → `GRPC_GENERATED_VERSION 1.80.0`, matching the refs' `grpcio==1.80.0`). `gen-python.sh` runs both; `gen-sdks.sh` special-cases python (no standalone `protoc-gen-python` — messages are a protoc builtin).
