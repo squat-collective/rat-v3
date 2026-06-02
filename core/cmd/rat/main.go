@@ -22,6 +22,11 @@ import (
 	"time"
 
 	"github.com/rat-dev/rat/core/deploymentruntime"
+	"github.com/rat-dev/rat/core/gateway"
+	"github.com/rat-dev/rat/core/lease"
+	"github.com/rat-dev/rat/core/manifest"
+	"github.com/rat-dev/rat/core/reconciler"
+	"github.com/rat-dev/rat/core/registry"
 	"github.com/rat-dev/rat/core/supervisor"
 	corev1 "github.com/rat-dev/rat/gen/rat/core/v1"
 	deploymentruntimev1 "github.com/rat-dev/rat/gen/rat/deploymentruntime/v1"
@@ -70,7 +75,7 @@ func serve(planePath string) error {
 	}
 	auditor := NewStdoutAuditor(os.Stdout)
 
-	plane, err := assemble(context.Background(), pl, rt, auditor)
+	plane, err := assemble(pl, rt, auditor)
 	if err != nil {
 		return err
 	}
@@ -101,9 +106,19 @@ func serve(planePath string) error {
 	}
 }
 
+// runningPlane is the gateway the daemon serves + a teardown func. Both modes — launch
+// (reconciler-driven) and attach (dial pre-running) — produce one, so serve()/drain() are
+// mode-agnostic.
+type runningPlane struct {
+	Gateway  *gateway.Gateway
+	shutdown func(context.Context)
+}
+
+func (rp *runningPlane) Shutdown(ctx context.Context) { rp.shutdown(ctx) }
+
 // drain stops the gateway gracefully (in-flight calls finish, no new ones accepted),
-// then tears the plane down (close provider conns + terminate launched instances).
-func drain(srv *grpc.Server, plane *supervisor.Plane) {
+// then tears the plane down (stop the loop, terminate instances, close provider conns).
+func drain(srv *grpc.Server, plane *runningPlane) {
 	srv.GracefulStop()
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
 	defer cancel()
@@ -111,11 +126,11 @@ func drain(srv *grpc.Server, plane *supervisor.Plane) {
 	log.Print("drained")
 }
 
-// assemble brings the plane up in the right mode: launch (the daemon launches +
-// supervises plugins) or attach (the daemon dials already-running plugins — the
-// orchestrator, e.g. compose, started them; no docker-in-docker). A v1 plane is
-// all-launch or all-attach; mixing is rejected.
-func assemble(ctx context.Context, pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServer, auditor *StdoutAuditor) (*supervisor.Plane, error) {
+// assemble brings the plane up in the right mode: launch (rat is the SOLE launcher —
+// the reconciler launches + supervises + re-wires plugins, ADR-022) or attach (rat dials
+// already-running plugins; compose orchestrates them — no docker-in-docker). A v1 plane
+// is all-launch or all-attach; mixing is rejected.
+func assemble(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServer, auditor *StdoutAuditor) (*runningPlane, error) {
 	var hasLaunch, hasEndpoint bool
 	for _, s := range pl.Specs {
 		if s.Launch != nil {
@@ -130,19 +145,76 @@ func assemble(ctx context.Context, pl *Plane, rt deploymentruntimev1.DeploymentR
 		return nil, fmt.Errorf("plane mixes launch and attach plugins — not supported in v1 (use all-launch or all-attach)")
 	case hasEndpoint:
 		log.Printf("attaching to %d plugin(s) (health timeout %s)", len(pl.Specs), pl.HealthTimeout)
-		p, err := supervisor.Attach(ctx, pl.Specs, auditor, pl.HealthTimeout, routableDescriptors()...)
+		p, err := supervisor.Attach(context.Background(), pl.Specs, auditor, pl.HealthTimeout, routableDescriptors()...)
 		if err != nil {
 			return nil, fmt.Errorf("attach plane: %w", err)
 		}
-		return p, nil
+		return &runningPlane{Gateway: p.Gateway, shutdown: p.Shutdown}, nil
 	default:
-		log.Printf("bringing up %d plugin(s) via the %q runtime (health timeout %s)", len(pl.Specs), pl.Runtime, pl.HealthTimeout)
-		p, err := supervisor.BringUp(ctx, rt, pl.Specs, auditor, pl.HealthTimeout, routableDescriptors()...)
-		if err != nil {
-			return nil, fmt.Errorf("bring up plane: %w", err)
-		}
-		return p, nil
+		return launchPlane(pl, rt, auditor)
 	}
+}
+
+// launchPlane is the launch-mode assembly (ADR-022): rat is the sole launcher. It builds
+// the registry + an EMPTY gateway, then runs the reconciler over the desired set with a
+// gatewayRewire — the reconciler launches each plugin and, on Healthy, dials it and
+// SetProvider's it on the gateway; on crash it relaunches + re-wires (self-healing). It
+// waits for the initial set to come up so the gateway is wired before we serve.
+func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServer, auditor *StdoutAuditor) (*runningPlane, error) {
+	manifests := make([]*manifest.Manifest, 0, len(pl.Specs))
+	desired := make([]reconciler.Desired, 0, len(pl.Specs))
+	for _, s := range pl.Specs {
+		manifests = append(manifests, s.Manifest)
+		if s.Launch != nil {
+			desired = append(desired, reconciler.Desired{Name: s.Manifest.Metadata.Name, Launch: s.Launch})
+		}
+	}
+	reg, err := registry.New(manifests)
+	if err != nil {
+		return nil, fmt.Errorf("registry: %w", err)
+	}
+	gw := gateway.New(reg, nil, auditor, routableDescriptors()...)
+	rewire := newGatewayRewire(gw)
+	rec := reconciler.New(rt, desired, reconciler.Config{
+		BaseBackoff:      500 * time.Millisecond,
+		MaxBackoff:       10 * time.Second,
+		CrashLoopCap:     6,
+		ReadinessTimeout: pl.HealthTimeout,
+		Rewire:           rewire,
+	})
+	loopCtx, cancelLoop := context.WithCancel(context.Background())
+	loop := &reconciler.Loop{
+		Elector:    lease.NewElector("rat-serve", lease.NewStore(), 10*time.Second),
+		Reconciler: rec,
+		Tick:       200 * time.Millisecond,
+	}
+	go loop.Run(loopCtx)
+	log.Printf("launching %d plugin(s) via the %q runtime (reconciler-driven; self-heals on crash)", len(desired), pl.Runtime)
+
+	// Wait for the initial desired set to be Healthy (Bound) so the gateway is wired before
+	// we serve — the same "ready when serving" semantics as the old static bring-up.
+	deadline := time.Now().Add(pl.HealthTimeout + 5*time.Second)
+	for _, d := range desired {
+		for {
+			if st, _, _ := rec.Status(d.Name); st == reconciler.Healthy {
+				break
+			}
+			if time.Now().After(deadline) {
+				cancelLoop()
+				rec.Shutdown(context.Background())
+				rewire.Close()
+				return nil, fmt.Errorf("plugin %q never became healthy within %s", d.Name, pl.HealthTimeout)
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+
+	shutdown := func(ctx context.Context) {
+		cancelLoop()      // stop the reconcile loop (so no pass races the teardown)
+		rec.Shutdown(ctx) // terminate launched instances
+		rewire.Close()    // close the gateway provider conns
+	}
+	return &runningPlane{Gateway: gw, shutdown: shutdown}, nil
 }
 
 // newRuntime selects the deployment-runtime axis plugin the plane asks for. Phase A
