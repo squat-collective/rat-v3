@@ -28,5 +28,21 @@ Tom
 ### Personalize before sending
 - `[Name]` and the **personal hook** — make it specific and true; this is why they'll say yes.
 - `[OSGi / Kubernetes / Temporal]` — name the system *they* actually built/operated.
-- If they'd rather size it up first, attach / link the [reviewer brief](Q02-external-review-brief.md).
-- Optional: front-load the question area that matches them (a security person → the data-plane/credential questions; an SRE → the operability ones).
+- If they'd rather size it up first, attach / link the matching brief (below).
+- Pick the right lens from [Q02-reviewer-shortlist.md](Q02-reviewer-shortlist.md) and use its variant line.
+
+### Per-lens variants (swap the third paragraph: "Before I commit … I want someone who's lived this to **try to break the premise** …")
+
+Keep the rest of the note; replace just that "try to break" paragraph + send the matching brief.
+
+- **Architect / contracts** → [`Q02-brief-architect.md`](Q02-brief-architect.md)
+  > Two things are now hard to undo: the premise is committed and the wire is **frozen** (a contract mistake found later is a v2 break). Before I build a year on it, I want someone who's designed an extension contract that had to survive third parties to tell me where the premise is wrong or which frozen shape I'll regret.
+
+- **Security** → [`Q02-brief-security.md`](Q02-brief-security.md)
+  > The whole bet is "install many third-party plugins," so the security is in the boundaries, not any one plugin. I want you to be the adversary — a malicious plugin / tenant / leaked ticket — and tell me where a boundary breaks. (One gap I'll flag up front: identity is currently envelope-derived, not yet channel-authenticated — I want your read on the planned fix.)
+
+- **SRE / operability** → [`Q02-brief-sre.md`](Q02-brief-sre.md)
+  > Plainly: **would you carry the pager for this?** It's a control plane over N polyglot plugin processes; my own SRE review was the harshest of the lot and most of it is still open. Tell me what wedges at 3am and what must be true before it runs in production.
+
+- **Ecosystem / plugin-author** → [`Q02-brief-ecosystem.md`](Q02-brief-ecosystem.md)
+  > It only works if third parties actually build plugins. There are ~30 first-party references and **zero** third-party ones. You've watched ecosystems reach critical mass or die — tell me whether this crosses cold-start, and whether you'd build a plugin (or bet a tool's distribution) on it.
