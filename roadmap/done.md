@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-020 ACCEPTED: the data platform bundle — Phase 2 starts 🎯
+
+[ADR-020](../docs/architecture/adrs/020-data-platform-bundle.md) (Accepted). Tom set the Phase-2 vision: a single `platform/` folder = a generic, batteries-included data platform — a **landing zone** (raw CSV) → **medallion** (bronze→silver→gold) of editable SQL/Python models → **data-quality tests**, run through `rat serve`, edited via `vscode-rat` + `ratctl`. The v2 product (`ratatouille-v2`: portal + landing-zones/merge-strategies/query-service) rebuilt on the v3 plugin core, **web portal replaced by VS Code + CLI**. Decision: the folder + conventions (medallion, models-as-files, gateway-executed pipelines, `project/tests` quality), built in four working slices — **M1** scaffold + local medallion demo → **M2** containerize (attach-mode `compose up` + Postgres/MinIO) → **M3** data-quality → **M4** VS Code. Core stays six things (all conventions are project/plugin-level — no temptation logged). Recorded the F9 (in-proc Arrow leg) + cross-container-sharing constraints that order the build, and Q01–Q03 (dbt timing, runner home, quality-as-axis-vs-convention). Branches: `phase-2` (integration, off `phase-1`) + `phase-2-platform-bundle` (topic). **Next: build M1.**
+
+---
+
 ## 2026-06-02 — `ratctl` — a client connects to the orchestrator (the kubectl to `rat serve`) 🐀🎛️
 
 On `phase-1-adr-019-phase-b` (off `phase-1`). A conversation with Tom reframed the goal: `rat` is an **orchestrator service** that many UIs (CLI, VS Code, webapp) connect to and drive — and a client connecting is **orthogonal** to how plugins got registered, so it needs no plugin-pipeline work. Built the first real client, as a **separate binary** (clients are not subcommands of `rat` — the orchestrator is one thing, clients another):
