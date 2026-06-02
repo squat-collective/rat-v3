@@ -6,7 +6,9 @@
 // the engine/format then talk to object storage directly.
 //
 // Capability mapping:
-//   rat://storage/v1/vend-credentials -> VendCredentials
+//   rat://storage/v1/vend-credentials       -> VendCredentials       (mode in request; broad grant)
+//   rat://storage/v1/vend-credentials-read  -> VendReadCredentials   (Q02 5c; READ-only, C5-authorizable)
+//   rat://storage/v1/vend-credentials-write -> VendWriteCredentials  (Q02 5c; WRITE, C5-authorizable)
 //   rat://storage/v1/read  -> (declared capability; satisfied by vended creds)
 //   rat://storage/v1/write -> (declared capability; satisfied by vended creds)
 //
@@ -15,6 +17,16 @@
 // MUST be scoped to the RequestContext.identity.tenant + the requested prefix, and
 // short-TTL. This is a C7 (tenancy-structural) enforcement point — the proto
 // carries tenant via context so the storage plugin cannot vend cross-tenant.
+//
+// LEAST-PRIVILEGE VENDING (Q02 5c, ADR-017 — security F6): VendCredentials takes the
+// access mode as a REQUEST field, but C5 authorizes the CAPABILITY, not request
+// contents — so it cannot distinguish vend-for-read from vend-for-write, and a
+// read-only-intended grant of `vend-credentials` can still request WRITE creds. The two
+// mode-scoped RPCs below make the mode C5-authorizable: a plugin that only reads
+// `requires` rat://storage/v1/vend-credentials-read, and the gateway denies any attempt
+// to obtain write creds. VendReadCredentials MUST vend READ-only creds and
+// VendWriteCredentials write-capable creds regardless of any mode in the request;
+// VendCredentials remains for the broad / back-compatible grant.
 syntax = "proto3";
 
 package rat.storage.v1;
@@ -26,8 +38,22 @@ option go_package = "github.com/rat-dev/rat/gen/rat/storage/v1;storagev1";
 service StorageService {
   // rat://storage/v1/vend-credentials — issue short-TTL, prefix-scoped,
   // tenant-scoped credentials the data plane uses to read/write bytes directly.
+  // The mode is taken from the request; broad / back-compatible grant.
   rpc VendCredentials(VendCredentialsRequest) returns (VendCredentialsResponse) {
     option (rat.common.v1.capability) = "rat://storage/v1/vend-credentials";
+  }
+
+  // rat://storage/v1/vend-credentials-read — vend READ-only creds (Q02 5c). The mode is
+  // FIXED by the method (not the request), so C5 authorizes read-vending distinctly and
+  // a least-privilege grant can give read without write.
+  rpc VendReadCredentials(VendReadCredentialsRequest) returns (VendReadCredentialsResponse) {
+    option (rat.common.v1.capability) = "rat://storage/v1/vend-credentials-read";
+  }
+
+  // rat://storage/v1/vend-credentials-write — vend WRITE-capable creds (Q02 5c). The
+  // mode is FIXED by the method so a read-only grant can withhold write-vending.
+  rpc VendWriteCredentials(VendWriteCredentialsRequest) returns (VendWriteCredentialsResponse) {
+    option (rat.common.v1.capability) = "rat://storage/v1/vend-credentials-write";
   }
 }
 
@@ -51,5 +77,34 @@ message VendCredentialsResponse {
   // `debug_redact` makes that structural (reviews/06 SEC-8).
   bytes credentials = 1 [debug_redact = true];
   // Expiry (unix epoch millis). Callers must re-vend after this.
+  int64 expires_unix_ms = 2;
+}
+
+// Q02 5c — request for the READ-scoped vend. No `mode` field: the method fixes the
+// mode to READ so it is authorized at the capability level (C5), not chosen by the
+// caller. Same prefix/tenant scoping rules as VendCredentials.
+message VendReadCredentialsRequest {
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
+  // Storage prefix the creds are scoped to. The plugin MUST further constrain by
+  // context.identity.tenant.
+  string prefix = 2;
+}
+
+message VendReadCredentialsResponse {
+  bytes credentials = 1 [debug_redact = true];
+  int64 expires_unix_ms = 2;
+}
+
+// Q02 5c — request for the WRITE-scoped vend. No `mode` field: the method fixes the
+// mode to write-capable so it is authorized at the capability level (C5).
+message VendWriteCredentialsRequest {
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
+  // Storage prefix the creds are scoped to. The plugin MUST further constrain by
+  // context.identity.tenant.
+  string prefix = 2;
+}
+
+message VendWriteCredentialsResponse {
+  bytes credentials = 1 [debug_redact = true];
   int64 expires_unix_ms = 2;
 }
