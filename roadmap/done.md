@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — Data-dev plane build step 4 DONE: a real incremental-embed ELT strategy
+
+On `phase-1-data-dev-plane`. Build-order §11 step 4 — a genuine incremental ELT as a `kind: strategy` plugin, composing capabilities through the invoke gateway (names no concrete plugin). EXPLORATORY + **ADDITIVE**: `make breaking` clean, conformance unchanged (34/34 — the strategy, like fullrefresh/scd2, has no `harness_test.py`; it's exercised by its runner), sealed `rat/2.0` surface untouched.
+
+- **[`examples/strategy/incremental-embed-py`](../examples/strategy/incremental-embed-py/)** — the §5.4 pattern: register/own target → CTAS schema-from-source → **server-side watermark** stage (only-new rows, no Arrow round-trip) → **MERGE** upsert → **embed only `embedding IS NULL`** → `ducklake_flush_inlined_data` → `commit-table` (idempotency_key = run id). `REQUIRES = (get-table, register-table, engine.execute, commit-table)` — **no `format` capability** (the engine writes the lake directly).
+- **[`run-strategy.py`](../experiments/data-dev-plane/run-strategy.py)** + **`make data-dev-strategy`** ([`scripts/data-dev-strategy.sh`](../scripts/data-dev-strategy.sh)) — strategy→gateway→engine+catalog over gRPC, 3 runs: **run 1 embeds 12** (full load), **run 2 embeds 3** (only the newly-landed delta — incrementality), **run 2 replay embeds 0 / already_applied** (C1 idempotency). New batch-2 rows rank top in search (#15 "weekend trip", #13 "fingerprint sensor"), confirming the incremental embed landed. Assertion-bearing.
+- **Finding F8 (README §10):** a strategy in a DuckLake world writes through the **engine** (not a format plugin) and addresses tables by lake-qualified name — plugin-agnostic in *binding*, DuckLake-aware in *addressing*. The watermark is server-side, so the strategy is pure `execute` + a final snapshot. **Next: §11 step 6 — `vscode-rat` (the VS Code UI via the connectionless TS SDK).** (Step 5, the full compose/`make data-dev-plane`, is largely covered by the local/remote/strategy runners + their make targets.)
+
+---
+
 ## 2026-06-02 — Data-dev plane build step 3 DONE: the pipeline goes REMOTE (S3 + Postgres)
 
 On `phase-1-data-dev-plane`. Build-order §11 step 3 — data moves to **S3/MinIO**, DuckLake metadata to **Postgres**, and the engine's S3 creds are **vended by a storage plugin**. The same pipeline runs distributed with **search distances byte-identical to local** — the data plane is unchanged when storage goes remote (the "swap a plugin, the rest holds" thesis). EXPLORATORY + **ADDITIVE**: conformance **34/34** (minio-s3 joined), `make breaking` clean, sealed `rat/2.0` surface untouched.

@@ -65,7 +65,7 @@ throughput bottleneck.
 | **storage** | `minio-s3` | 🆕 ✅ | remote S3-compatible object store; vends short-TTL, prefix+tenant-scoped STS creds (built — first 5c read/write split impl) |
 | **catalog** (+format) | `ducklake-py` | 🆕 | [DuckLake](https://ducklake.select/docs/stable/) lakehouse: SQL metadata + Parquet/S3, snapshots, time-travel, ACID — **subsumes the `format` axis** |
 | **engine + ML** | `duckdb-ml-py` | 🆕 | DuckDB + extensions: `ducklake`, `httpfs`/S3, `vss` (vectors), and an `embed()` UDF → **compute *and* AI, no new axis** |
-| **strategy** | `incremental-embed-py` | 🆕 | a *real* ELT example: watermark-incremental load → transform → merge → embed → index → snapshot |
+| **strategy** | `incremental-embed-py` | 🆕 ✅ | a *real* ELT (built): watermark-incremental load → merge → embed-only-new → flush → snapshot; idempotent (C1) |
 | **ui** | `vscode-rat` | 🆕 | a VS Code extension (client of the core via the generated **TypeScript SDK** — the ADR-018 connectionless codegen payoff) |
 | deployment-runtime | `podman` | reuse | each plugin a container → horizontal scale |
 | runtime | `subprocess-py` | reuse (maybe) | exec units if the strategy needs them |
@@ -411,6 +411,15 @@ is exactly the "where they *don't* hold up" value §0 is after):
   cross the tenant boundary (read `acme/*` ok, `globex/*` denied) — and READ-vended creds are
   denied writes. The 5c read/write split is enforced by real object-store policy, not just by
   the RAT capability layer.
+- **F8 — a strategy in a DuckLake world writes through the ENGINE, not a format plugin, and
+  addresses tables by lake-qualified name.** Because DuckLake subsumes `format`, the
+  incremental-embed strategy `requires` no `format` capability — it composes `engine.execute`
+  (CTAS/stage/merge/embed/flush) + `catalog.commit-table`. It stays plugin-agnostic in
+  *binding* (capability URIs, no names) but is DuckLake-aware in *addressing* (`<alias>.<id>`
+  in SQL, since the engine attaches the lake) — vs the `format.scan` indirection the generic
+  full-refresh/scd2 strategies use. A clean illustration that the axes aren't dogma. Also:
+  the **watermark is computed server-side** (a subquery over the target's max), so the
+  strategy needs no Arrow round-trip to read it — pure `execute` calls + the final snapshot.
 - **F5 — `snapshot_time` pulls a `pytz` dep.** Selecting the timestamp column from
   `lake.snapshots()` triggers a timestamptz conversion needing pytz. The catalog only selects
   `snapshot_id`, so it stays pytz-free.
@@ -459,7 +468,14 @@ is exactly the "where they *don't* hold up" value §0 is after):
    plane is unchanged when storage goes remote), Parquet lands on S3, D3 cross-tenant isolation
    holds. Stack: [`compose/compose.yaml`](compose/compose.yaml) or the dependency-free
    `scripts/data-dev-remote.sh`. Resolves findings F3 + F4 (see §10).
-4. **`incremental-embed-py` strategy** — the real ELT (§5.4); idempotent, branch-isolated.
+4. **`incremental-embed-py` strategy** ✅ **DONE** — the real ELT (§5.4) as a `kind: strategy`
+   plugin ([`examples/strategy/incremental-embed-py`](../../examples/strategy/incremental-embed-py/))
+   composing capabilities through the invoke gateway (names no concrete plugin).
+   [`run-strategy.py`](run-strategy.py) / `make data-dev-strategy` proves it across 3 runs:
+   run 1 embeds the full corpus, run 2 embeds **only the newly-landed delta**
+   (incrementality), run 2 replay embeds **0** (idempotent, C1). Watermark is server-side,
+   merge is an upsert, embed touches only new rows. Notably requires **no `format`
+   capability** — the engine writes the lake directly (finding F8, §10).
 5. **The composition** — a runner + a `make data-dev-plane` target that boots the stack
    (podman) and runs the pipeline on a real dataset.
 6. **`vscode-rat`** — the VS Code extension on top, via the TS SDK.
