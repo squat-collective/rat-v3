@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — `ratctl` — a client connects to the orchestrator (the kubectl to `rat serve`) 🐀🎛️
+
+On `phase-1-adr-019-phase-b` (off `phase-1`). A conversation with Tom reframed the goal: `rat` is an **orchestrator service** that many UIs (CLI, VS Code, webapp) connect to and drive — and a client connecting is **orthogonal** to how plugins got registered, so it needs no plugin-pipeline work. Built the first real client, as a **separate binary** (clients are not subcommands of `rat` — the orchestrator is one thing, clients another):
+- **`core/cmd/ratctl/main.go`** — `ratctl call <capability> --as <caller> [--data '<protojson>'] [--addr host:port]`. Fully generic: resolves capability→method+request/response types from the linked axis descriptors (`protoregistry.GlobalFiles`), builds the request from protojson, dials the gateway and issues the command with the call-context envelope (traceparent C1 + caller identity C5), prints the response as protojson. Surfaces a C5 deny as a `PermissionDenied` status.
+- **`core/cmd/ratctl/ratctl_test.go`** (`make ratctl-smoke`) — brings up a state plane in-process, serves the gateway over TCP, drives it with `ratctl`'s `run()`: authorized `get` routes to the launched plugin (response decodes, value pid-tagged); undeclared `put` → `PermissionDenied`. The **client→orchestrator** path proven end to end.
+
+`make core-test` + `core-serve-smoke` + `ratctl-smoke` + `breaking` green; gofmt clean; additive, no proto/axis. **Decision recorded:** kept the declarative `rat serve --plane` model (not the runtime self-register model Tom floated) — parked self-registration in [`ideas/inbox.md`](../ideas/inbox.md) (needs an ADR + the same mutable-provider core change as the Phase-A reconciler-rewire gap; a scale feature, premature pre–Gate-B).
+
+---
+
 ## 2026-06-02 — ADR-019: `rat` runs in a container — the control-plane daemon image 🐀📦
 
 On `phase-1-adr-019-rat-serve`. Tom's steer: the control plane should run **in a containerized environment** (the same `rat` binary runs bare-metal *or* in a container — the k8s/docker-daemon shape). So the ADR-019 **Phase-C daemon-image** piece was pulled forward (architecture unchanged — just packaging):

@@ -1,0 +1,185 @@
+// Command ratctl is a standalone client for a running `rat serve` orchestrator —
+// the kubectl to rat serve's apiserver. It is NOT part of the `rat` binary: clients
+// are separate programs that connect to the gateway over gRPC and issue commands
+// (ADR-019 — the orchestrator is one thing, clients another).
+//
+//	ratctl call <capability> --as <caller> [--data '<protojson>'] [--addr host:port]
+//
+// It is fully generic: it resolves the capability to its method (+ request/response
+// message types) from the linked axis descriptors, builds the request from protojson,
+// invokes it through the gateway carrying the caller identity C5 authorizes against,
+// and prints the response as protojson. Example, against the Phase-A demo plane:
+//
+//	ratctl call rat://state/v1/get --as rat-caller --data '{"key":"k1"}'
+//	ratctl call rat://state/v1/put --as rat-caller --data '{"key":"k1"}'   # PERMISSION_DENIED
+package main
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"flag"
+	"fmt"
+	"io"
+	"os"
+	"time"
+
+	commonv1 "github.com/rat-dev/rat/gen/rat/common/v1"
+	corev1 "github.com/rat-dev/rat/gen/rat/core/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
+
+	// Blank imports register each axis's file descriptors + message types in
+	// protoregistry.Global* — that is how ratctl resolves any of their capabilities
+	// (capability → method → request/response type) without a hand-kept table.
+	_ "github.com/rat-dev/rat/gen/rat/catalog/v1"
+	_ "github.com/rat-dev/rat/gen/rat/engine/v1"
+	_ "github.com/rat-dev/rat/gen/rat/format/v1"
+	_ "github.com/rat-dev/rat/gen/rat/state/v1"
+	_ "github.com/rat-dev/rat/gen/rat/storage/v1"
+	_ "github.com/rat-dev/rat/gen/rat/strategy/v1"
+)
+
+const callMetaHeader = "rat-callmeta-bin"
+
+func main() {
+	if err := run(os.Args[1:], os.Stdout); err != nil {
+		fmt.Fprintln(os.Stderr, "ratctl:", err)
+		os.Exit(1)
+	}
+}
+
+// run parses argv, issues one capability command against the gateway, and writes the
+// response (as protojson) to out. It returns the raw invocation error on failure so a
+// caller can inspect the gRPC status code (e.g. PermissionDenied for a C5 deny).
+func run(argv []string, out io.Writer) error {
+	if len(argv) < 2 || argv[0] != "call" {
+		return fmt.Errorf("usage: ratctl call <capability> --as <caller> [--data '<protojson>'] [--addr host:port]")
+	}
+	capURI := argv[1]
+
+	fs := flag.NewFlagSet("ratctl call", flag.ContinueOnError)
+	addr := fs.String("addr", "127.0.0.1:7777", "rat serve gateway address")
+	caller := fs.String("as", "", "caller plugin identity (must `requires` the capability — C5)")
+	tenant := fs.String("tenant", "", "optional tenant identity")
+	data := fs.String("data", "{}", "request body as protojson")
+	timeout := fs.Duration("timeout", 10*time.Second, "call timeout")
+	if err := fs.Parse(argv[2:]); err != nil {
+		return err
+	}
+	if *caller == "" {
+		return fmt.Errorf("--as <caller> is required (the gateway authorizes the command against the caller's declared `requires`)")
+	}
+
+	// 1. capability → request/response message types (from the linked descriptors).
+	inName, outName, err := resolveCapability(capURI)
+	if err != nil {
+		return err
+	}
+
+	// 2. build the request message from the protojson body.
+	reqMsg, err := newMessage(inName)
+	if err != nil {
+		return err
+	}
+	if err := protojson.Unmarshal([]byte(*data), reqMsg); err != nil {
+		return fmt.Errorf("--data is not valid protojson for %s: %w", inName, err)
+	}
+	payload, err := proto.Marshal(reqMsg)
+	if err != nil {
+		return fmt.Errorf("marshal request: %w", err)
+	}
+
+	// 3. dial the gateway + issue the command, carrying the call-context envelope the
+	//    gateway reads (traceparent for C1, caller identity for C5).
+	conn, err := grpc.NewClient(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return fmt.Errorf("dial %s: %w", *addr, err)
+	}
+	defer conn.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	defer cancel()
+	ctx = metadata.AppendToOutgoingContext(ctx, callMetaHeader, callMeta(*caller, *tenant))
+
+	resp, err := corev1.NewCapabilityInvokeServiceClient(conn).Invoke(ctx, &corev1.InvokeRequest{Capability: capURI, Payload: payload})
+	if err != nil {
+		return err // raw status (e.g. PermissionDenied) — let the caller read the code
+	}
+
+	// 4. decode + print the response as protojson.
+	respMsg, err := newMessage(outName)
+	if err != nil {
+		return err
+	}
+	if err := proto.Unmarshal(resp.GetResult(), respMsg); err != nil {
+		return fmt.Errorf("unmarshal response into %s: %w", outName, err)
+	}
+	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(respMsg)
+	if err != nil {
+		return fmt.Errorf("render response: %w", err)
+	}
+	fmt.Fprintln(out, string(b))
+	return nil
+}
+
+// resolveCapability scans every registered axis service for the method carrying the
+// (rat.common.v1.capability) annotation == capURI, and returns its input/output
+// message full names. Mirrors the gateway's route derivation, client-side.
+func resolveCapability(capURI string) (in, out protoreflect.FullName, err error) {
+	var found bool
+	protoregistry.GlobalFiles.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
+		svcs := fd.Services()
+		for i := 0; i < svcs.Len(); i++ {
+			ms := svcs.Get(i).Methods()
+			for j := 0; j < ms.Len(); j++ {
+				m := ms.Get(j)
+				if c, _ := proto.GetExtension(m.Options(), commonv1.E_Capability).(string); c == capURI {
+					in, out, found = m.Input().FullName(), m.Output().FullName(), true
+					return false
+				}
+			}
+		}
+		return true
+	})
+	if !found {
+		return "", "", fmt.Errorf("unknown capability %q (no linked axis method declares it)", capURI)
+	}
+	return in, out, nil
+}
+
+// newMessage instantiates a registered message type by full name.
+func newMessage(name protoreflect.FullName) (proto.Message, error) {
+	mt, err := protoregistry.GlobalTypes.FindMessageByName(name)
+	if err != nil {
+		return nil, fmt.Errorf("message type %s not registered: %w", name, err)
+	}
+	return mt.New().Interface(), nil
+}
+
+// callMeta is the serialized RequestContext envelope: a well-formed traceparent (C1)
+// + a correlation id + the caller identity (and optional tenant) C5 authorizes on.
+func callMeta(caller, tenant string) string {
+	rc := &commonv1.RequestContext{
+		Trace:    &commonv1.TraceContext{Traceparent: newTraceparent(), CorrelationId: "ratctl-" + randHex(4)},
+		Identity: &commonv1.Identity{CallerPlugin: caller, Tenant: tenant},
+	}
+	b, _ := proto.Marshal(rc)
+	return string(b)
+}
+
+// newTraceparent builds a W3C traceparent: 00-<32 hex trace-id>-<16 hex span-id>-01.
+func newTraceparent() string {
+	return fmt.Sprintf("00-%s-%s-01", randHex(16), randHex(8))
+}
+
+func randHex(n int) string {
+	b := make([]byte, n)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
