@@ -38,7 +38,9 @@ func (f *fakeRuntime) Launch(_ context.Context, req *deploymentruntimev1.LaunchR
 	}
 	f.launches++
 	f.seq++
-	return &deploymentruntimev1.LaunchResponse{InstanceId: fmt.Sprintf("inst-%d", f.seq), Endpoint: "127.0.0.1:9999"}, nil
+	// Seq-based endpoint so a relaunch yields a DISTINCT address — the case the gateway
+	// re-bind must follow (a crashed plugin comes back on a new endpoint).
+	return &deploymentruntimev1.LaunchResponse{InstanceId: fmt.Sprintf("inst-%d", f.seq), Endpoint: fmt.Sprintf("127.0.0.1:90%02d", f.seq)}, nil
 }
 
 func (f *fakeRuntime) Healthcheck(_ context.Context, _ *deploymentruntimev1.HealthcheckRequest) (*deploymentruntimev1.HealthcheckResponse, error) {
@@ -75,6 +77,64 @@ func desiredP() []Desired {
 }
 
 func sec(base time.Time, s int) time.Time { return base.Add(time.Duration(s) * time.Second) }
+
+// rewireSpy records the reconciler's Bind/Unbind calls (the seam the daemon wires to
+// gateway.SetProvider/RemoveProvider).
+type rewireSpy struct {
+	mu    sync.Mutex
+	calls []string
+}
+
+func (s *rewireSpy) Bind(name, endpoint string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls = append(s.calls, "bind:"+name+"@"+endpoint)
+}
+
+func (s *rewireSpy) Unbind(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls = append(s.calls, "unbind:"+name)
+}
+
+func (s *rewireSpy) seq() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]string(nil), s.calls...)
+}
+
+// TestRewireOnRelaunch: the reconciler drives the gateway re-wire across a crash (ADR-022).
+// A healthy plugin is Bound at its endpoint; on crash it is Unbound; on relaunch it is
+// Bound again at the NEW endpoint — so routing self-heals automatically.
+func TestRewireOnRelaunch(t *testing.T) {
+	fake := &fakeRuntime{status: healthy}
+	spy := &rewireSpy{}
+	cfg := testCfg()
+	cfg.Rewire = spy
+	r := New(fake, desiredP(), cfg)
+	ctx := context.Background()
+	t0 := time.Unix(0, 0)
+
+	r.Reconcile(ctx, t0) // launch (inst-1)
+	r.Reconcile(ctx, t0) // check → healthy → Bind
+	ep1 := r.Endpoint("P")
+
+	fake.set(unhealthy)  // the plugin crashes
+	r.Reconcile(ctx, t0) // Healthy → lost → Unbind + fail (terminate, backoff)
+	fake.set(healthy)    // it recovers
+
+	r.Reconcile(ctx, sec(t0, 2)) // past backoff → relaunch (inst-2, new endpoint)
+	r.Reconcile(ctx, sec(t0, 2)) // check → healthy → Bind (new endpoint)
+	ep2 := r.Endpoint("P")
+
+	got := spy.seq()
+	if len(got) != 3 || got[0] != "bind:P@"+ep1 || got[1] != "unbind:P" || got[2] != "bind:P@"+ep2 {
+		t.Fatalf("rewire calls = %v, want [bind:P@%s unbind:P bind:P@%s]", got, ep1, ep2)
+	}
+	if ep1 == "" || ep2 == "" || ep1 == ep2 {
+		t.Errorf("expected distinct non-empty endpoints across relaunch, got %q and %q", ep1, ep2)
+	}
+}
 
 // TestCrashLoopBackoffCapAndNoHammer (sre#4 core): a never-healthy plugin is retried on
 // an exponential, capped schedule (1s, 2s, 4s, 4s — base*2^n capped at MaxBackoff), hits

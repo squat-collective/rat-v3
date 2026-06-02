@@ -50,6 +50,16 @@ type Desired struct {
 	Launch *deploymentruntimev1.LaunchSpec
 }
 
+// Rewire is notified to (re)bind or drop a plugin's routable connection as its health
+// changes: Bind when it becomes Healthy at an endpoint (initial launch OR a crash-relaunch
+// on a NEW endpoint), Unbind when a Healthy plugin is lost. The daemon wires this to the
+// gateway (dial + gateway.SetProvider / RemoveProvider) — keeping the reconciler decoupled
+// from the gateway, the seam that makes a relaunched plugin self-heal routing (ADR-022).
+type Rewire interface {
+	Bind(name, endpoint string)
+	Unbind(name string)
+}
+
 // Config tunes the convergence + the sre#4 crash-loop discipline.
 type Config struct {
 	BaseBackoff      time.Duration                     // retry interval for the 1st failure
@@ -58,6 +68,7 @@ type Config struct {
 	ReadinessTimeout time.Duration                     // a launched-but-not-ready plugin fails after this
 	Jitter           func(time.Duration) time.Duration // extra wait added to each backoff (anti-lockstep); nil == none
 	Clock            func() time.Time                  // injectable; nil == time.Now
+	Rewire           Rewire                            // optional: (re)bind/unbind routable conns on health change
 }
 
 type pluginStatus struct {
@@ -114,6 +125,7 @@ func (r *Reconciler) reconcileOne(ctx context.Context, d Desired, now time.Time)
 
 	case Healthy:
 		if r.status(ctx, ps) != deploymentruntimev1.HealthStatus_HEALTH_STATUS_HEALTHY {
+			r.unbind(d.Name)     // lost → drop it from routing before relaunch (ADR-022)
 			r.fail(ctx, ps, now) // a plugin that was healthy then crashed → back off + restart
 		}
 		return
@@ -129,6 +141,7 @@ func (r *Reconciler) reconcileOne(ctx context.Context, d Desired, now time.Time)
 		switch r.status(ctx, ps) {
 		case deploymentruntimev1.HealthStatus_HEALTH_STATUS_HEALTHY:
 			ps.state, ps.attempts = Healthy, 0 // success resets the crash-loop counter
+			r.bind(d.Name, ps.endpoint)        // (re)wire it into routing — self-heals a relaunch (ADR-022)
 		case deploymentruntimev1.HealthStatus_HEALTH_STATUS_UNKNOWN:
 			if now.Sub(ps.launchedAt) > r.cfg.ReadinessTimeout {
 				r.fail(ctx, ps, now) // never became ready in time
@@ -186,6 +199,20 @@ func (r *Reconciler) backoffFor(attempt int) time.Duration {
 		d = r.cfg.MaxBackoff
 	}
 	return d + r.cfg.Jitter(d)
+}
+
+// bind/unbind notify the Rewire hook (if set) so the gateway can (re)bind or drop the
+// plugin's routable connection — the seam that self-heals routing across a relaunch.
+func (r *Reconciler) bind(name, endpoint string) {
+	if r.cfg.Rewire != nil {
+		r.cfg.Rewire.Bind(name, endpoint)
+	}
+}
+
+func (r *Reconciler) unbind(name string) {
+	if r.cfg.Rewire != nil {
+		r.cfg.Rewire.Unbind(name)
+	}
 }
 
 // ── observability (tests + the eventual /metrics) ────────────────────────────

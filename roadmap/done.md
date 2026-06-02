@@ -16,6 +16,14 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — reconciler re-wire hook — a relaunched plugin self-heals routing 🔁
+
+The launch-mode wiring's core mechanism: the reconciler now drives the gateway re-bind across a crash. `core/reconciler`: a `Rewire` interface (`Bind(name, endpoint)` / `Unbind(name)`) + an optional `Config.Rewire`; the reconciler calls **`Bind` when a plugin goes Healthy** (initial launch OR a crash-relaunch on a *new* endpoint) and **`Unbind` when a Healthy plugin is lost** — keeping the reconciler decoupled from the gateway (the daemon wires `Rewire` → `gateway.SetProvider`/`RemoveProvider`). Test `TestRewireOnRelaunch`: a healthy plugin is Bound at ep1 → crashes → Unbound → relaunches → Bound at ep2 (ep1 ≠ ep2) — routing self-heals automatically. `make core-test` (reconciler + gateway green; an unrelated `arrowticket` timing flake passes on re-run) + `breaking` clean; gofmt clean; additive (no proto/axis).
+
+With `gateway.SetProvider` (done) + this hook, the **self-healing re-wire path is complete + tested**. **Next (the launch-mode daemon assembly):** wire `cmd/rat` to run the reconciler with a `gatewayRewire` adapter (Bind = dial + `SetProvider`; Unbind = `RemoveProvider` + close) as the **sole launcher** (replacing `BringUp`'s static launch — avoiding the Phase-A double-launch), so `rat serve` launches plugins, keeps them healthy, and re-wires on crash — then a `plugins.yaml` + the socket-mount runtime ([ADR-022](../docs/architecture/adrs/022-plugins-are-launched-not-composed.md)).
+
+---
+
 ## 2026-06-02 — `gateway.SetProvider` re-bind DONE — the keystone three threads waited on 🔑
 
 The provider-connection gap I first flagged in Phase A (and parked twice) is closed. `core/gateway/gateway.go`: the `providers` map is now guarded by a `sync.RWMutex`; `New` **owns** (copies) the map; new **`SetProvider(name, conn)`** (bind/re-bind, returns the previous conn to close) + **`RemoveProvider(name)`**; `openCall` reads via a read-locked `provider()` accessor. So the gateway can **re-wire a provider's live connection at runtime** — concurrency-safe against in-flight Invoke/relay. Test `TestSetProviderRebind` (core/gateway): a call routes to conn A → `SetProvider` swaps to conn B → the same call routes to B → `RemoveProvider` → Unavailable. `make core-test` + **`go test -race ./gateway`** + `breaking` green; gofmt clean; additive (no proto/axis, `rat/2.0` untouched).
