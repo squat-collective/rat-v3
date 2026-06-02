@@ -1,0 +1,11 @@
+# rat-scheduler — the platform's self-driving clock: fires the pipeline on an interval.
+# EXPLORATORY (ADR-020 S2b). A register-only driver (it CALLS strategy/apply; it serves
+# nothing), so the gateway authorizes its fires from this `requires` set (C5).
+api_version: rat/1
+kind: scheduler-backend
+metadata:
+  name: rat-scheduler
+  version: 0.1.0
+compatible_core: ["rat/1"]
+requires:
+  - capability: rat://strategy/v1/apply

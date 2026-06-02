@@ -31,6 +31,18 @@ services:
       MINIO_ROOT_PASSWORD: minioadmin
     # No host ports — the plugins + runner reach MinIO by service name on the network.
 
+  # One-shot: create the lake bucket at stack-up (infra provisioning), so the pipeline
+  # can write whether it's triggered by the scheduler or the manual runner.
+  minio-setup:
+    image: quay.io/minio/mc
+    depends_on:
+      minio: {condition: service_started}
+    entrypoint:
+      - sh
+      - -lc
+      - "until mc alias set m http://minio:9000 minioadmin minioadmin; do sleep 1; done; mc mb --ignore-existing m/rat; echo bucket-ready"
+    restart: "no"
+
   engine:
     image: docker.io/library/python:3.12
     working_dir: /work/examples/engine/duckdb-ml-py
@@ -59,7 +71,7 @@ services:
       start_period: 60s
     depends_on:
       postgres: {condition: service_healthy}
-      minio: {condition: service_started}
+      minio-setup: {condition: service_completed_successfully}
 
   catalog:
     image: docker.io/library/python:3.12
@@ -87,7 +99,36 @@ services:
       start_period: 60s
     depends_on:
       postgres: {condition: service_healthy}
-      minio: {condition: service_started}
+      minio-setup: {condition: service_completed_successfully}
+
+  pipeline:
+    image: docker.io/library/python:3.12
+    working_dir: /work/examples/strategy/sql-pipeline-py
+    command:
+      - bash
+      - -lc
+      - "pip install -q --root-user-action=ignore grpcio==1.80.0 protobuf==7.35.0 && exec python main.py"
+    environment:
+      PYTHONPATH: /work/contracts/sdks/python
+      RAT_PLUGIN_ADDR: "0.0.0.0:50051"
+      RAT_PLUGIN_NAME: "rat-pipeline"
+      RAT_GATEWAY: "rat-serve:7777"     # the strategy calls engine/catalog BACK through the gateway
+      RAT_PROJECT: "/work/platform/project"
+      RAT_LANDING: "/work/platform/landing"
+      RAT_MODELS: "bronze/orders.sql,silver/orders.sql,gold/daily_revenue.sql"
+      RAT_PIPELINE_TARGET: "gold_daily_revenue"
+      RAT_DUCKLAKE_ALIAS: "lake"
+    volumes:
+      - ../:/work:z
+      - pipcache:/root/.cache/pip
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('localhost',50051),2)\""]
+      interval: 5s
+      timeout: 4s
+      retries: 40
+      start_period: 30s
+    # No depends_on rat-serve: it serves immediately and dials the gateway only at Apply
+    # time (by then rat-serve is up). rat-serve depends_on IT (to attach).
 
   rat-serve:
     image: rat/serve:dev          # built by `make rat-image`
@@ -100,6 +141,26 @@ services:
     depends_on:
       engine: {condition: service_healthy}
       catalog: {condition: service_healthy}
+      pipeline: {condition: service_healthy}
+
+  scheduler:
+    image: docker.io/library/python:3.12
+    working_dir: /work/examples/scheduler/cron-py
+    command:
+      - bash
+      - -lc
+      - "pip install -q --root-user-action=ignore grpcio==1.80.0 protobuf==7.35.0 && exec python main.py"
+    environment:
+      PYTHONPATH: /work/contracts/sdks/python
+      RAT_PLUGIN_NAME: "rat-scheduler"
+      RAT_GATEWAY: "rat-serve:7777"
+      RAT_SCHEDULE_INTERVAL: "20"     # the demo fires every 20s; a real plane would use hourly
+      RAT_PIPELINE_TARGET: "gold_daily_revenue"
+    volumes:
+      - ../:/work:z
+      - pipcache:/root/.cache/pip
+    depends_on:
+      rat-serve: {condition: service_started}
 
   runner:
     image: docker.io/library/python:3.12
