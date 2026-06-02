@@ -4,7 +4,7 @@
 pub struct ResolveRequest {
     /// Opaque secret reference, e.g. "ref://vault/prod/db-password". The plugin
     /// MUST scope resolution by context.identity.tenant (no cross-tenant secret reads).
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub secret_ref: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -16,16 +16,16 @@ pub struct ResolveResponse {
     /// is the anti-enumeration defense (a distinguishable "exists-but-forbidden"
     /// would leak which secret refs are real). Authorization failures therefore
     /// return found=false + empty value, NOT a PERMISSION_DENIED status.
-    #[prost(bool, tag="1")]
+    #[prost(bool, tag = "1")]
     pub found: bool,
     /// The secret value. NEVER logged, NEVER persisted by the caller. Redaction is
     /// a core obligation (reviews/04 I13); `debug_redact` makes it structural —
     /// reflection/text-marshal omit it (reviews/06 SEC-8).
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub value: ::prost::alloc::vec::Vec<u8>,
     /// Value validity (unix epoch millis); 0 == no expiry hint. Callers re-resolve
     /// rather than cache past this.
-    #[prost(int64, tag="3")]
+    #[prost(int64, tag = "3")]
     pub expires_unix_ms: i64,
 }
 include!("rat.secret.v1.tonic.rs");

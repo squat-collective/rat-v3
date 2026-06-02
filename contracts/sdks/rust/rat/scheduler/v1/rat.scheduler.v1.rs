@@ -3,27 +3,27 @@
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ScheduleRequest {
     /// Caller-chosen id, used to cancel + to correlate fired triggers.
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub trigger_id: ::prost::alloc::string::String,
     /// Cron expression; if empty, `at_unix_ms` is used for a one-shot.
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub cron: ::prost::alloc::string::String,
-    #[prost(int64, tag="4")]
+    #[prost(int64, tag = "4")]
     pub at_unix_ms: i64,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ScheduleResponse {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub trigger_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CancelRequest {
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub trigger_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CancelResponse {
-    #[prost(bool, tag="1")]
+    #[prost(bool, tag = "1")]
     pub cancelled: bool,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
@@ -32,9 +32,9 @@ pub struct WatchDueRequest {
 /// One fired trigger.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct WatchDueResponse {
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub trigger_id: ::prost::alloc::string::String,
-    #[prost(int64, tag="2")]
+    #[prost(int64, tag = "2")]
     pub fired_at_unix_ms: i64,
 }
 include!("rat.scheduler.v1.tonic.rs");

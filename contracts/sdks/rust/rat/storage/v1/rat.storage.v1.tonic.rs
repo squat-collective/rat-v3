@@ -116,6 +116,64 @@ pub mod storage_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn vend_read_credentials(
+            &mut self,
+            request: impl tonic::IntoRequest<super::VendReadCredentialsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::VendReadCredentialsResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/rat.storage.v1.StorageService/VendReadCredentials",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "rat.storage.v1.StorageService",
+                        "VendReadCredentials",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn vend_write_credentials(
+            &mut self,
+            request: impl tonic::IntoRequest<super::VendWriteCredentialsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::VendWriteCredentialsResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/rat.storage.v1.StorageService/VendWriteCredentials",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "rat.storage.v1.StorageService",
+                        "VendWriteCredentials",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -136,6 +194,20 @@ pub mod storage_service_server {
             request: tonic::Request<super::VendCredentialsRequest>,
         ) -> std::result::Result<
             tonic::Response<super::VendCredentialsResponse>,
+            tonic::Status,
+        >;
+        async fn vend_read_credentials(
+            &self,
+            request: tonic::Request<super::VendReadCredentialsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::VendReadCredentialsResponse>,
+            tonic::Status,
+        >;
+        async fn vend_write_credentials(
+            &self,
+            request: tonic::Request<super::VendWriteCredentialsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::VendWriteCredentialsResponse>,
             tonic::Status,
         >;
     }
@@ -246,6 +318,104 @@ pub mod storage_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = VendCredentialsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rat.storage.v1.StorageService/VendReadCredentials" => {
+                    #[allow(non_camel_case_types)]
+                    struct VendReadCredentialsSvc<T: StorageService>(pub Arc<T>);
+                    impl<
+                        T: StorageService,
+                    > tonic::server::UnaryService<super::VendReadCredentialsRequest>
+                    for VendReadCredentialsSvc<T> {
+                        type Response = super::VendReadCredentialsResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::VendReadCredentialsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as StorageService>::vend_read_credentials(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = VendReadCredentialsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/rat.storage.v1.StorageService/VendWriteCredentials" => {
+                    #[allow(non_camel_case_types)]
+                    struct VendWriteCredentialsSvc<T: StorageService>(pub Arc<T>);
+                    impl<
+                        T: StorageService,
+                    > tonic::server::UnaryService<super::VendWriteCredentialsRequest>
+                    for VendWriteCredentialsSvc<T> {
+                        type Response = super::VendWriteCredentialsResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::VendWriteCredentialsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as StorageService>::vend_write_credentials(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = VendWriteCredentialsSvc(inner);
                         let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
