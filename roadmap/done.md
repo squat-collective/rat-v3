@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-020 S4 (state-backend) DONE: the platform has run history 📋
+
+The platform now records + serves its own metadata — v2's `runs` table, as a **state-backend plugin** behind the gateway (on `phase-2-state`). New [`examples/state/postgres-py`](../examples/state/postgres-py/): a Postgres-backed `kind: state-backend` plugin implementing the frozen state/v1 **Get/Put/List** (monotonic revisions + single-key CAS via `if_revision`), reusing the stack's Postgres (a `rat_state` KV table). Wired into the platform:
+- the **scheduler** records a run record per fire — `rat://state/v1/put` `runs/<tick>` = `{tick, status, snapshot, error}` (Q04 resolved: reuse the stack's Postgres);
+- the **runner** reads the history back through the gateway — `rat://state/v1/list` (prefix `runs/`) + `get`.
+- **Proven live:** `make platform-up` → the scheduler self-drives and records runs; `make platform-run` lists them: `3 run(s) recorded; runs/000001 {"status":"success","snapshot":"snap-4"} …`. Every state hop audited (`rat-scheduler → state/put`, `platform-runner → state/list/get → rat-state`).
+
+`make breaking` clean; no Go/proto change (S4 is a plugin + wiring). **Remaining in S4 (S4b):** repoint **`vscode-rat`** at the live `rat serve` gateway (browse the medallion layers + run history, edit models, run/observe) — the bigger TS effort (the control path via the gateway's Connect SDK; the F9 data-leg/row-preview stays on the BFF). With S1–S4 the platform is **v2's core, on v3 plugins, DuckLake catalog**: decoupled stack · self-driving scheduled refresh · quality-gated commits · run history — all through the gateway, audited.
+
+---
+
 ## 2026-06-02 — ADR-020 S3 (quality gates) DONE: tests block the commit ✅🚦
 
 The pipeline strategy now runs **data-quality tests** that gate the catalog commit — v2's "tests block the merge", on DuckLake (on `phase-2-quality`). After building the layers + flushing, [`sql-pipeline-py`](../examples/strategy/sql-pipeline-py/) runs each `project/tests/*.sql`; a test that returns rows is a violation, and **any violation blocks the commit** (the strategy raises `FAILED_PRECONDITION` *before* `catalog.commit-table`, so the published snapshot pointer stays at the last good one).

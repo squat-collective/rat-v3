@@ -1,0 +1,5 @@
+# Runtime deps for rat-state-postgres-py. psycopg2 drives Postgres (the platform's
+# metadata store: runs, schedules, …).
+grpcio==1.80.0
+protobuf==7.35.0
+psycopg2-binary==2.9.9

@@ -75,4 +75,6 @@ This bundle is built in slices ([ADR-020](../docs/architecture/adrs/020-data-pla
 - 🟡 **S3 — quality gates** ← *done*: `project/tests/*.sql` run after the layers build; a violation
   raises `FAILED_PRECONDITION` and **blocks the commit** (the catalog doesn't advance). Merge
   strategies (incremental) + read-isolation (DuckLake branching) remain.
-- **S4 — state-backend + VS Code** — pipelines/runs/schedules metadata; `vscode-rat` on the stack.
+- 🟡 **S4 — state-backend** ← *done*: a Postgres-backed `state-backend` plugin records **run history**
+  (the scheduler writes a run per fire; `make platform-run` lists them through the gateway). Repointing
+  `vscode-rat` at the live stack (S4b) remains.

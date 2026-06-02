@@ -17,6 +17,10 @@ plugins:
     manifest: ./manifests/pipeline.plugin.yaml
     endpoint: pipeline:50051        # the `pipeline` compose service (the medallion strategy)
 
+  - name: rat-state
+    manifest: ./manifests/state.plugin.yaml
+    endpoint: state:50051           # the `state` compose service (run/pipeline metadata)
+
   - name: platform-runner
     manifest: ./manifests/runner.plugin.yaml
     # register-only driver — run.py connects as this identity to invoke

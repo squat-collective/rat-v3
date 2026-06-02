@@ -21,6 +21,7 @@ import grpc
 
 from rat.common.v1 import context_pb2, data_pb2
 from rat.core.v1 import invoke_pb2, invoke_pb2_grpc
+from rat.state.v1 import state_pb2
 from rat.strategy.v1 import strategy_pb2
 
 
@@ -52,6 +53,19 @@ def main():
 
     print("\n🔍 gold.daily_revenue (read from the lake):")
     _verify(alias)
+
+    # run history — recorded by the scheduler in the state-backend, read through the gateway.
+    print("\n📋 run history (from the state-backend, via the gateway):")
+    lr = state_pb2.ListResponse()
+    lr.ParseFromString(stub.Invoke(invoke_pb2.InvokeRequest(capability="rat://state/v1/list",
+                       payload=state_pb2.ListRequest(prefix="runs/").SerializeToString()), metadata=md).result)
+    print(f"   {len(lr.keys)} run(s) recorded; latest:")
+    for k in lr.keys[-3:]:
+        gr = state_pb2.GetResponse()
+        gr.ParseFromString(stub.Invoke(invoke_pb2.InvokeRequest(capability="rat://state/v1/get",
+                           payload=state_pb2.GetRequest(key=k).SerializeToString()), metadata=md).result)
+        print(f"     {k}  {gr.value.decode()}")
+
     print("\n✅ medallion triggered through the real rat serve gateway (orchestrator → strategy → engine + catalog)")
 
 
