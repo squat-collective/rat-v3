@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — PU-4 ratified: v1 tenancy is isolation-only (ADR-017 Q01 resolved)
+
+Tom's call on the one open fork in [ADR-017](../docs/architecture/adrs/017-pre-unfreeze-contract-amendment-gate.md): **v1 tenancy = isolation-only.** `DECISION_KIND_SHARING` becomes *advisory-not-enforced* in v1 (the axis stops advertising an un-actionable verb); actioned cross-tenant sharing + hierarchical tenancy defer to a future `v2` delegation primitive (its own ADR, only if a user pulls for it). The sharing-capable alternative (a pre-publish delegation primitive in `rat/1`) was rejected for v1 — Gate B unmet, no user pulling. **With Q01 resolved, the punch-list has no open forks left — only an all-additive pre-publish cut + the real Q02.** ADR-017 stays **Proposed** (its one remaining condition for Accepted = the real Q02 external review confirms/extends the gate).
+
+---
+
 ## 2026-06-02 — ADR-017 (Proposed): pre-unfreeze contract-amendment gate
 
 [ADR-017](../docs/architecture/adrs/017-pre-unfreeze-contract-amendment-gate.md), on `phase-1-q02-dryrun` — operationalizes the Q02 dry-run synthesis into the explicit gate the freeze must pass **before it ever leaves local/unpushed**: publish only after **(a)** the punch-list resolves **AND (b)** the real Q02 external review runs. Punch-list: **PU-1** bytes-leg producer channel-auth MUST (+ vector), **PU-2** keystone context-envelope two-reference conformance (*qualifies ADR-015's "freeze validated" claim*), **PU-3** attestation expiry/revocation, **PU-4** tenancy isolation-only-vs-sharing (**a DECISION for Tom — Q01**), + 3 decide-now additive seams (semantic-skew negotiation, `Event` signing, vend read/write split). Status **Proposed** → Accepted once PU-4 is ratified + the real Q02 confirms/extends it. Explicitly scopes **OUT** the availability cluster (AV-*) + ecosystem (EC-*) — those gate multi-tenant-production / adoption, not freeze-publish.
