@@ -1,0 +1,13 @@
+# rat-caller — a register-only driver (no launch:/endpoint:). It is registered so
+# the gateway knows what it `requires`, letting C5 authorize the calls it makes. It
+# requires get but NOT put — so an external client calling as rat-caller can route
+# rat://state/v1/get (authorized) but is PERMISSION_DENIED on rat://state/v1/put,
+# even though rat-state provides both (ADR-019 Phase A exit criteria).
+api_version: rat/1
+kind: strategy
+metadata:
+  name: rat-caller
+  version: 0.1.0
+compatible_core: ["rat/1"]
+requires:
+  - capability: rat://state/v1/get
