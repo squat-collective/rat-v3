@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — front-door refresh: README + CLAUDE.md now reflect the sealed core
+
+`README.md` + `CLAUDE.md`, on `phase-1-frontdoor-refresh`. Both still said *"architecture-only / not yet any product code"* — false since the Phase-1 seal. The entry point now states the real status (Phase 0 + 1 sealed, `rat/1.5` / `rat/2.0`; what the core enforces; Q02 the next gate), adds a "what's here" map (core/contracts/examples/…), and puts [`roadmap/current.md`](current.md) first in the reading order. A project is only as well-structured as its front door is accurate; the internals were already disciplined (ADRs, fresh roadmap, sealed+tagged git) — this fixes the one piece that lied. (No new structure added — the standing risk is meta-process accumulation, not under-structure.)
+
+---
+
 ## 2026-06-02 — Q02 recruiting prep — shortlist + cover-note variants + findings tracker
 
 Everything around running Q02 except the human step (recruiting), on `phase-1-q02-recruiting`:
