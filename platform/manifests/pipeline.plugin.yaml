@@ -1,0 +1,16 @@
+# rat-pipeline — the medallion pipeline as a capability (the v2 "runner" decoupled).
+# Provides strategy/apply; reaches engine + catalog only by capability through the
+# gateway (so it requires those — C5 enforces the whole chain).
+api_version: rat/1
+kind: strategy
+metadata:
+  name: rat-pipeline
+  version: 0.1.0
+compatible_core: ["rat/1"]
+provides:
+  - capability: rat://strategy/v1/apply
+requires:
+  - capability: rat://engine/v1/execute
+  - capability: rat://catalog/v1/get-table
+  - capability: rat://catalog/v1/register-table
+  - capability: rat://catalog/v1/commit-table

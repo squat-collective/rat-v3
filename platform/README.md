@@ -68,7 +68,9 @@ Add your own data: drop a CSV in `landing/`, add a `bronze/<name>.sql` that `rea
 This bundle is built in slices ([ADR-020](../docs/architecture/adrs/020-data-platform-bundle.md)):
 
 - ✅ **S1 — the decoupled stack runs the medallion through `rat serve`, remote** (DuckLake on
-  Postgres + data on MinIO; attach mode, no DinD). ← *done.* `make platform-up && make platform-run`.
-- **S2 — the scheduler plugin** — self-driving cron refresh (hourly), through rat.
+  Postgres + data on MinIO; attach mode, no DinD).
+- ✅ **S2 — self-driving** — the medallion is a `strategy.apply` capability, and a
+  `scheduler-backend` driver fires it on a cron (the demo: every 20s). `make platform-up` and it
+  refreshes on its own — nobody runs `platform-run`. Watch: `podman logs rat-platform-scheduler-1`.
 - **S3 — merge strategies + quality gates** — `project/tests/` + branch-on-failure-discard.
 - **S4 — state-backend + VS Code** — pipelines/runs/schedules metadata; `vscode-rat` on the stack.

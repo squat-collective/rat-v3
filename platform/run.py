@@ -1,84 +1,58 @@
 #!/usr/bin/env python3
-"""run.py — run the medallion pipeline through the rat serve gateway (ADR-020 S1).
+"""run.py — trigger the medallion pipeline ONCE, through the rat serve gateway (ADR-020 S2).
 
-Connects to a running `rat serve` as `platform-runner` and issues each medallion model
-as `rat://engine/v1/execute` through the gateway (C5-authorized + audited), building
-bronze → silver → gold in the shared DuckLake; flushes to Parquet; commits the gold
-snapshot to the DuckLake **catalog** (also through the gateway); then verifies by
-reading the gold mart back from the lake.
+Invokes `rat://strategy/v1/apply` on the sql-pipeline strategy plugin — which runs
+bronze → silver → gold through the gateway and commits the gold snapshot to the DuckLake
+catalog — then verifies by reading the gold mart from the lake. This is the *same*
+capability the scheduler invokes on a cron; `run.py` is just the manual trigger.
 
 Env-driven (the compose stack sets these; local-friendly defaults):
   RAT_GATEWAY            gateway addr               (default 127.0.0.1:7777)
   RAT_PLATFORM_CALLER    caller identity            (default platform-runner)
-  RAT_PLATFORM_LANDING   landing dir AS THE ENGINE SEES IT (default <here>/landing)
-  RAT_DUCKLAKE_META/DATA/ALIAS              the lake (engine writes it; runner reads it)
+  RAT_PIPELINE_TARGET    the table the pipeline commits (default gold_daily_revenue)
+  RAT_DUCKLAKE_META/DATA/ALIAS              the lake (the runner reads it back to verify)
   RAT_S3_ENDPOINT/KEY_ID/SECRET/USE_SSL/REGION   S3 creds for the lake data path
 """
 
 import os
-import pathlib
 import sys
 
 import grpc
 
-from rat.catalog.v1 import catalog_pb2
-from rat.common.v1 import context_pb2
+from rat.common.v1 import context_pb2, data_pb2
 from rat.core.v1 import invoke_pb2, invoke_pb2_grpc
-from rat.engine.v1 import engine_pb2
-
-HERE = pathlib.Path(__file__).resolve().parent
-PIPELINE = ["bronze/orders.sql", "silver/orders.sql", "gold/daily_revenue.sql"]
+from rat.strategy.v1 import strategy_pb2
 
 
 def env(k, d=""):
     return os.environ.get(k, d)
 
 
-def _callmeta(caller, tenant="acme"):
-    rc = context_pb2.RequestContext(
-        trace=context_pb2.TraceContext(traceparent="00-" + "a" * 32 + "-" + "b" * 16 + "-01", correlation_id="platform-run"),
-        identity=context_pb2.Identity(caller_plugin=caller, tenant=tenant))
-    return [("rat-callmeta-bin", rc.SerializeToString())]
-
-
 def main():
     gateway = env("RAT_GATEWAY", "127.0.0.1:7777")
     caller = env("RAT_PLATFORM_CALLER", "platform-runner")
-    landing = env("RAT_PLATFORM_LANDING", str(HERE / "landing"))
+    target = env("RAT_PIPELINE_TARGET", "gold_daily_revenue")
     alias = env("RAT_DUCKLAKE_ALIAS", "lake")
 
     _ensure_bucket()
 
+    rc = context_pb2.RequestContext(
+        trace=context_pb2.TraceContext(traceparent="00-" + "a" * 32 + "-" + "b" * 16 + "-01", correlation_id="platform-run"),
+        identity=context_pb2.Identity(caller_plugin=caller, tenant="acme"))
+    md = [("rat-callmeta-bin", rc.SerializeToString())]
     stub = invoke_pb2_grpc.CapabilityInvokeServiceStub(grpc.insecure_channel(gateway))
-    md = _callmeta(caller)
 
-    def invoke(cap, req, resp_cls):
-        r = stub.Invoke(invoke_pb2.InvokeRequest(capability=cap, payload=req.SerializeToString()), metadata=md)
-        out = resp_cls()
-        out.ParseFromString(r.result)
-        return out
-
-    def execute(sql):
-        return invoke("rat://engine/v1/execute", engine_pb2.ExecuteRequest(sql=sql), engine_pb2.ExecuteResponse).result
-
-    print(f"🥉🥈🥇 medallion → rat serve @ {gateway} (as {caller})\n")
-    for m in PIPELINE:
-        sql = (HERE / "project" / m).read_text().replace("${LANDING}", landing)
-        wr = execute(sql)
-        print(f"  ✔ {m:<24} rows_affected={wr.rows_affected}")
-
-    snap = execute(f"CALL ducklake_flush_inlined_data('{alias}')").snapshot_id
-
-    # commit the gold snapshot to the DuckLake catalog — also through the gateway.
-    invoke("rat://catalog/v1/register-table", catalog_pb2.RegisterTableRequest(identifier="gold_daily_revenue"), catalog_pb2.RegisterTableResponse)
-    commit = invoke("rat://catalog/v1/commit-table",
-                    catalog_pb2.CommitTableRequest(identifier="gold_daily_revenue", snapshot_id=snap, idempotency_key="platform-medallion-1"),
-                    catalog_pb2.CommitTableResponse)
-    print(f"\n  ✔ catalog.commit gold_daily_revenue  snapshot={snap!r}  already_applied={commit.already_applied}")
+    print(f"🥉🥈🥇 trigger medallion → rat serve @ {gateway}  (strategy.apply, as {caller})\n")
+    req = strategy_pb2.ApplyRequest(target=data_pb2.TableRef(identifier=target), idempotency_key="platform-medallion-1")
+    r = stub.Invoke(invoke_pb2.InvokeRequest(capability="rat://strategy/v1/apply", payload=req.SerializeToString()), metadata=md)
+    resp = strategy_pb2.ApplyResponse()
+    resp.ParseFromString(r.result)
+    wr = resp.result
+    print(f"  ✔ strategy.apply → rows_affected={wr.rows_affected}  snapshot={wr.snapshot_id!r}  already_applied={wr.already_applied}")
 
     print("\n🔍 gold.daily_revenue (read from the lake):")
     _verify(alias)
-    print("\n✅ medallion complete — every layer built + cataloged through the real rat serve gateway")
+    print("\n✅ medallion triggered through the real rat serve gateway (orchestrator → strategy → engine + catalog)")
 
 
 def _ensure_bucket():
@@ -118,8 +92,8 @@ def _verify(alias):
     cur = con.execute(f"SELECT * FROM {alias}.gold_daily_revenue ORDER BY order_date")
     cols = [d[0] for d in cur.description]
     print("   " + "  ".join(cols))
-    for r in cur.fetchall():
-        print("   " + "  ".join(str(x) for x in r))
+    for row in cur.fetchall():
+        print("   " + "  ".join(str(x) for x in row))
 
 
 if __name__ == "__main__":

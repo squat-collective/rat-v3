@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-020 S2 DONE: the platform is SELF-DRIVING — scheduled refresh through rat ⏰
+
+The always-on stack now refreshes **on its own**, no command needed — v2's `ratd` scheduler→runner, decoupled into v3 plugins behind the gateway. Two pieces (both proven live on `phase-2-scheduler`):
+- **S2a — the pipeline as a capability** ([`examples/strategy/sql-pipeline-py`](../examples/strategy/sql-pipeline-py/)): the medallion runner promoted to a `strategy` plugin (Q02). On `rat://strategy/v1/apply` it runs bronze→silver→gold via `rat://engine/v1/execute` and commits the gold snapshot via `rat://catalog/v1/{register,commit}-table` — **all back through the gateway** (it dials `RAT_GATEWAY`, names no concrete plugin). The audited chain: `platform-runner → strategy/apply → rat-pipeline → engine/catalog` — exactly v2's `ratd → runner → engine`, now per-hop C5-enforced. `run.py` is now just the manual trigger (one `strategy.apply`).
+- **S2b — the self-driving clock** ([`examples/scheduler/cron-py`](../examples/scheduler/cron-py/)): a `kind: scheduler-backend` driver that fires `rat://strategy/v1/apply` on an interval (demo: every 20s; a real plane: hourly). Proven: `make platform-up` → the scheduler fires on its own — tick 1 → snap-4, tick 2 → snap-8, tick 3 → snap-12 (a fresh DuckLake snapshot each refresh, 3 gold Parquet snapshots on S3), every fire audited as caller `rat-scheduler`. *(A minimal active trigger; the full scheduler-backend axis — `Schedule`/`Cancel`/`WatchDue`, a clock the orchestrator watches — is the richer form, noted as a follow-on.)*
+
+Plus a `minio-setup` one-shot in `compose.yaml` (provisions the lake bucket at stack-up, so the pipeline writes whether triggered by the scheduler or the manual runner). `make breaking` clean; no Go/proto change (S2 is all plugins + compose). **Next: S3 — merge strategies + quality gates (branch-on-failure-discard).**
+
+---
+
 ## 2026-06-02 — ADR-020 S1 DONE: the decoupled platform runs the medallion through rat serve 🥉🥈🥇
 
 The always-on stack runs **for real**. `make platform-up` brings up the data platform via `podman compose`: **Postgres** (DuckLake metadata) + **MinIO** (S3 data) + the **DuckDB engine** + the **DuckLake catalog** (each a sibling container) + **`rat serve`** — which runs in its own container and **attaches** to the plugins by service name (the S1a attach mode; **no docker-in-docker**). `make platform-run` then runs the medallion through the **real gateway**:

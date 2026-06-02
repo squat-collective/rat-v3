@@ -1,0 +1,4 @@
+# Runtime deps for rat-sql-pipeline-py. Pure orchestration over the invoke seam —
+# no engine/Arrow of its own — so just the gRPC runtime + the generated SDK (on PYTHONPATH).
+grpcio==1.80.0
+protobuf==7.35.0

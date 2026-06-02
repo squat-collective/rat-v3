@@ -13,7 +13,15 @@ plugins:
     manifest: ./manifests/catalog.plugin.yaml
     endpoint: catalog:50051         # the `catalog` compose service
 
+  - name: rat-pipeline
+    manifest: ./manifests/pipeline.plugin.yaml
+    endpoint: pipeline:50051        # the `pipeline` compose service (the medallion strategy)
+
   - name: platform-runner
     manifest: ./manifests/runner.plugin.yaml
-    # register-only driver — run.py connects as this identity; C5 authorizes its
-    # engine/catalog commands from this manifest's `requires`.
+    # register-only driver — run.py connects as this identity to invoke
+    # rat://strategy/v1/apply; C5 authorizes it from this manifest's `requires`.
+
+  - name: rat-scheduler
+    manifest: ./manifests/scheduler.plugin.yaml
+    # register-only driver — the self-driving clock; fires strategy/apply on an interval.
