@@ -30,7 +30,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/marketplace/v1/marketplace.proto.
  */
 export const file_rat_marketplace_v1_marketplace: GenFile = /*@__PURE__*/
-  fileDesc("CiRyYXQvbWFya2V0cGxhY2UvdjEvbWFya2V0cGxhY2UucHJvdG8SEnJhdC5tYXJrZXRwbGFjZS52MSLmAQoHTGlzdGluZxIRCglwbHVnaW5faWQYASABKAkSDAoEa2luZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEh0KFXByb3ZpZGVkX2NhcGFiaWxpdGllcxgFIAMoCRIdChVyZXF1aXJlZF9jYXBhYmlsaXRpZXMYBiADKAkSHgoWY29uZm9ybWVkX2NhcGFiaWxpdGllcxgHIAMoCRIOCgZzaWduZWQYCCABKAgSEQoJc2lnbmVkX2J5GAkgASgJEhMKC3N1cHBvcnRfdXJsGAogASgJIlMKDVNlYXJjaFJlcXVlc3QSDQoFcXVlcnkYAiABKAkSDAoEa2luZBgDIAEoCRIfChdkZXBsb3ltZW50X2NhcGFiaWxpdGllcxgEIAMoCUoECAEQAiI/Cg5TZWFyY2hSZXNwb25zZRItCghsaXN0aW5ncxgBIAMoCzIbLnJhdC5tYXJrZXRwbGFjZS52MS5MaXN0aW5nIiUKCkdldFJlcXVlc3QSEQoJcGx1Z2luX2lkGAIgASgJSgQIARACIjsKC0dldFJlc3BvbnNlEiwKB2xpc3RpbmcYASABKAsyGy5yYXQubWFya2V0cGxhY2UudjEuTGlzdGluZzLsAQoSTWFya2V0cGxhY2VTZXJ2aWNlEnAKBlNlYXJjaBIhLnJhdC5tYXJrZXRwbGFjZS52MS5TZWFyY2hSZXF1ZXN0GiIucmF0Lm1hcmtldHBsYWNlLnYxLlNlYXJjaFJlc3BvbnNlIh+KlyIbcmF0Oi8vbWFya2V0cGxhY2UvdjEvc2VhcmNoEmQKA0dldBIeLnJhdC5tYXJrZXRwbGFjZS52MS5HZXRSZXF1ZXN0Gh8ucmF0Lm1hcmtldHBsYWNlLnYxLkdldFJlc3BvbnNlIhyKlyIYcmF0Oi8vbWFya2V0cGxhY2UvdjEvZ2V0Qj1aO2dpdGh1Yi5jb20vcmF0LWRldi9yYXQvZ2VuL3JhdC9tYXJrZXRwbGFjZS92MTttYXJrZXRwbGFjZXYxYgZwcm90bzM", [file_rat_common_v1_annotations]);
+  fileDesc("CiRyYXQvbWFya2V0cGxhY2UvdjEvbWFya2V0cGxhY2UucHJvdG8SEnJhdC5tYXJrZXRwbGFjZS52MSKpAgoHTGlzdGluZxIRCglwbHVnaW5faWQYASABKAkSDAoEa2luZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEh0KFXByb3ZpZGVkX2NhcGFiaWxpdGllcxgFIAMoCRIdChVyZXF1aXJlZF9jYXBhYmlsaXRpZXMYBiADKAkSHgoWY29uZm9ybWVkX2NhcGFiaWxpdGllcxgHIAMoCRIOCgZzaWduZWQYCCABKAgSEQoJc2lnbmVkX2J5GAkgASgJEhMKC3N1cHBvcnRfdXJsGAogASgJEiMKG2NvbmZvcm1hbmNlX2V4cGlyZXNfdW5peF9tcxgLIAEoAxIcChRyZXZva2VkX2NhcGFiaWxpdGllcxgMIAMoCSJTCg1TZWFyY2hSZXF1ZXN0Eg0KBXF1ZXJ5GAIgASgJEgwKBGtpbmQYAyABKAkSHwoXZGVwbG95bWVudF9jYXBhYmlsaXRpZXMYBCADKAlKBAgBEAIiPwoOU2VhcmNoUmVzcG9uc2USLQoIbGlzdGluZ3MYASADKAsyGy5yYXQubWFya2V0cGxhY2UudjEuTGlzdGluZyIlCgpHZXRSZXF1ZXN0EhEKCXBsdWdpbl9pZBgCIAEoCUoECAEQAiI7CgtHZXRSZXNwb25zZRIsCgdsaXN0aW5nGAEgASgLMhsucmF0Lm1hcmtldHBsYWNlLnYxLkxpc3Rpbmcy7AEKEk1hcmtldHBsYWNlU2VydmljZRJwCgZTZWFyY2gSIS5yYXQubWFya2V0cGxhY2UudjEuU2VhcmNoUmVxdWVzdBoiLnJhdC5tYXJrZXRwbGFjZS52MS5TZWFyY2hSZXNwb25zZSIfipciG3JhdDovL21hcmtldHBsYWNlL3YxL3NlYXJjaBJkCgNHZXQSHi5yYXQubWFya2V0cGxhY2UudjEuR2V0UmVxdWVzdBofLnJhdC5tYXJrZXRwbGFjZS52MS5HZXRSZXNwb25zZSIcipciGHJhdDovL21hcmtldHBsYWNlL3YxL2dldEI9WjtnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvbWFya2V0cGxhY2UvdjE7bWFya2V0cGxhY2V2MWIGcHJvdG8z", [file_rat_common_v1_annotations]);
 
 /**
  * What a marketplace advertises about a plugin. Capability sets + conformance +
@@ -98,6 +98,33 @@ export type Listing = Message<"rat.marketplace.v1.Listing"> & {
    * @generated from field: string support_url = 10;
    */
   supportUrl: string;
+
+  /**
+   * CONFORMANCE LIFECYCLE (Q02 PU-3, ADR-017): a conformance attestation is not
+   * "conformed forever" — a plugin version conformed before a CVE is disclosed against
+   * it must be expire-able and revoke-able, or the trust signal rots silently
+   * (Sigstore/in-toto lesson). These additive fields put attestation lifecycle on the
+   * frozen surface so the marketplace + the core's D4 keyring can act on it.
+   *
+   * When the conformance attestation for `conformed_capabilities` expires (unix epoch
+   * millis). 0 == no expiry stated. A conformant marketplace MUST treat
+   * conformed_capabilities as STALE/unverified past this instant (re-conformance
+   * required), and the core's D4 verifier SHOULD refuse an expired attestation.
+   *
+   * @generated from field: int64 conformance_expires_unix_ms = 11;
+   */
+  conformanceExpiresUnixMs: bigint;
+
+  /**
+   * Capabilities whose conformance has been REVOKED (subset of, and overriding,
+   * conformed_capabilities). A capability present here MUST NOT be treated as
+   * conformed even if it also appears in conformed_capabilities — revocation wins. The
+   * out-of-band revocation channel (transparency log / CRL) that populates this is GA;
+   * the field is here so revocation is expressible in the frozen shape.
+   *
+   * @generated from field: repeated string revoked_capabilities = 12;
+   */
+  revokedCapabilities: string[];
 };
 
 /**

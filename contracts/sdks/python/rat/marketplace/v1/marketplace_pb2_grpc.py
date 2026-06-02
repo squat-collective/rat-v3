@@ -5,7 +5,7 @@ import grpc
 from rat.marketplace.v1 import marketplace_pb2 as rat_dot_marketplace_dot_v1_dot_marketplace__pb2
 
 
-class MarketplaceServiceStub(object):
+class MarketplaceServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -26,7 +26,7 @@ class MarketplaceServiceStub(object):
                 _registered_method=True)
 
 
-class MarketplaceServiceServicer(object):
+class MarketplaceServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Search(self, request, context):
@@ -65,7 +65,7 @@ def add_MarketplaceServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class MarketplaceService(object):
+class MarketplaceService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

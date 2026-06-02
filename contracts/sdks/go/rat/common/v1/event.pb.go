@@ -88,7 +88,35 @@ type Event struct {
 	// subscriber in emit order (e.g. all events for one pipeline run, keyed by its
 	// run id), where the transport supports partitioned/ordered delivery. Empty ==
 	// no ordering guarantee beyond the transport's default.
-	PartitionKey  string `protobuf:"bytes,7,opt,name=partition_key,json=partitionKey,proto3" json:"partition_key,omitempty"`
+	PartitionKey string `protobuf:"bytes,7,opt,name=partition_key,json=partitionKey,proto3" json:"partition_key,omitempty"`
+	// TAMPER-EVIDENCE (Q02 5b, ADR-017): `context.identity` is core-stamped at emit,
+	// but the bus TRANSPORT is a plugin (ADR-002 D2) — a third party — and an unsigned
+	// envelope means a compromised/buggy transport, or anyone able to publish to a
+	// subject, could inject an Event with a forged context.tenant that a fan-out
+	// subscriber has no way to detect (the async plane has no per-hop re-stamp, unlike
+	// the sync gateway). This mirrors the signed + hash-chained AuditRecord
+	// (audit.proto): the CORE signs the canonical Event bytes at emit; a subscriber
+	// verifies against the core's PUBLISHED keyring and rejects any Event whose
+	// signature does not verify BEFORE trusting context.identity / tenant for routing
+	// or logic. (SubjectAssertion in context already self-verifies; this adds the same
+	// integrity to the rest of the envelope.)
+	//
+	// CANONICAL SERIALIZATION (same rule as AuditRecord): the proto3 wire encoding of
+	// all fields EXCEPT `signature` (field 8), in ascending field-number order, each
+	// field present at most once, no unknown fields, varints minimal, default-valued
+	// fields omitted. `key_id` (field 9) IS included in these signed bytes, so the
+	// signature commits to which key it claims to be from (defeats key-substitution).
+	//
+	// Core signature over the canonical bytes above. Empty is permitted ONLY for a
+	// transport whose integrity is otherwise guaranteed (e.g. an in-process bus); on
+	// any pluggable/remote transport a conformant emitter sets it and subscribers
+	// verify before trust.
+	Signature []byte `protobuf:"bytes,8,opt,name=signature,proto3" json:"signature,omitempty"`
+	// Identifier of the core key that signed this Event — resolves in the core's
+	// published keyring to {public key, signature algorithm}, enabling key ROTATION and
+	// algorithm AGILITY on new key_ids exactly as AuditRecord.key_id (audit.proto).
+	// Empty only for a single-key deployment that never rotates.
+	KeyId         string `protobuf:"bytes,9,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -172,11 +200,25 @@ func (x *Event) GetPartitionKey() string {
 	return ""
 }
 
+func (x *Event) GetSignature() []byte {
+	if x != nil {
+		return x.Signature
+	}
+	return nil
+}
+
+func (x *Event) GetKeyId() string {
+	if x != nil {
+		return x.KeyId
+	}
+	return ""
+}
+
 var File_rat_common_v1_event_proto protoreflect.FileDescriptor
 
 const file_rat_common_v1_event_proto_rawDesc = "" +
 	"\n" +
-	"\x19rat/common/v1/event.proto\x12\rrat.common.v1\x1a\x1brat/common/v1/context.proto\"\xf2\x01\n" +
+	"\x19rat/common/v1/event.proto\x12\rrat.common.v1\x1a\x1brat/common/v1/context.proto\"\xa7\x02\n" +
 	"\x05Event\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.rat.common.v1.RequestContextR\acontext\x12\x19\n" +
 	"\bevent_id\x18\x02 \x01(\tR\aeventId\x12\x12\n" +
@@ -184,7 +226,9 @@ const file_rat_common_v1_event_proto_rawDesc = "" +
 	"\x11timestamp_unix_ms\x18\x04 \x01(\x03R\x0ftimestampUnixMs\x12\x16\n" +
 	"\x06source\x18\x05 \x01(\tR\x06source\x12\x18\n" +
 	"\apayload\x18\x06 \x01(\fR\apayload\x12#\n" +
-	"\rpartition_key\x18\a \x01(\tR\fpartitionKeyB3Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1b\x06proto3"
+	"\rpartition_key\x18\a \x01(\tR\fpartitionKey\x12\x1c\n" +
+	"\tsignature\x18\b \x01(\fR\tsignature\x12\x15\n" +
+	"\x06key_id\x18\t \x01(\tR\x05keyIdB3Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1b\x06proto3"
 
 var (
 	file_rat_common_v1_event_proto_rawDescOnce sync.Once

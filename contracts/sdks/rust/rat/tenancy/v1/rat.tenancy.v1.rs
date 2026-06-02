@@ -28,6 +28,9 @@ pub struct DecideResponse {
 pub enum DecisionKind {
     Unspecified = 0,
     Permission = 1,
+    /// v1: ADVISORY-NOT-ENFORCED — decidable but NOT actioned (no delegated-tenant grant
+    /// primitive in the v1 wire). See the "v1 SCOPE — ISOLATION-ONLY" note above
+    /// (Q02 PU-4 / ADR-017). Actioned sharing is a deferred v2.
     Sharing = 2,
     Quota = 3,
 }

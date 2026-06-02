@@ -5,7 +5,7 @@ import grpc
 from rat.strategy.v1 import strategy_pb2 as rat_dot_strategy_dot_v1_dot_strategy__pb2
 
 
-class StrategyServiceStub(object):
+class StrategyServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -21,7 +21,7 @@ class StrategyServiceStub(object):
                 _registered_method=True)
 
 
-class StrategyServiceServicer(object):
+class StrategyServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Apply(self, request, context):
@@ -53,7 +53,7 @@ def add_StrategyServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class StrategyService(object):
+class StrategyService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

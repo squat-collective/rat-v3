@@ -60,9 +60,26 @@ type Listing struct {
 	Signed   bool   `protobuf:"varint,8,opt,name=signed,proto3" json:"signed,omitempty"`
 	SignedBy string `protobuf:"bytes,9,opt,name=signed_by,json=signedBy,proto3" json:"signed_by,omitempty"`
 	// Where users file issues (reviews/02 Stage 8 support attribution).
-	SupportUrl    string `protobuf:"bytes,10,opt,name=support_url,json=supportUrl,proto3" json:"support_url,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	SupportUrl string `protobuf:"bytes,10,opt,name=support_url,json=supportUrl,proto3" json:"support_url,omitempty"`
+	// CONFORMANCE LIFECYCLE (Q02 PU-3, ADR-017): a conformance attestation is not
+	// "conformed forever" — a plugin version conformed before a CVE is disclosed against
+	// it must be expire-able and revoke-able, or the trust signal rots silently
+	// (Sigstore/in-toto lesson). These additive fields put attestation lifecycle on the
+	// frozen surface so the marketplace + the core's D4 keyring can act on it.
+	//
+	// When the conformance attestation for `conformed_capabilities` expires (unix epoch
+	// millis). 0 == no expiry stated. A conformant marketplace MUST treat
+	// conformed_capabilities as STALE/unverified past this instant (re-conformance
+	// required), and the core's D4 verifier SHOULD refuse an expired attestation.
+	ConformanceExpiresUnixMs int64 `protobuf:"varint,11,opt,name=conformance_expires_unix_ms,json=conformanceExpiresUnixMs,proto3" json:"conformance_expires_unix_ms,omitempty"`
+	// Capabilities whose conformance has been REVOKED (subset of, and overriding,
+	// conformed_capabilities). A capability present here MUST NOT be treated as
+	// conformed even if it also appears in conformed_capabilities — revocation wins. The
+	// out-of-band revocation channel (transparency log / CRL) that populates this is GA;
+	// the field is here so revocation is expressible in the frozen shape.
+	RevokedCapabilities []string `protobuf:"bytes,12,rep,name=revoked_capabilities,json=revokedCapabilities,proto3" json:"revoked_capabilities,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *Listing) Reset() {
@@ -163,6 +180,20 @@ func (x *Listing) GetSupportUrl() string {
 		return x.SupportUrl
 	}
 	return ""
+}
+
+func (x *Listing) GetConformanceExpiresUnixMs() int64 {
+	if x != nil {
+		return x.ConformanceExpiresUnixMs
+	}
+	return 0
+}
+
+func (x *Listing) GetRevokedCapabilities() []string {
+	if x != nil {
+		return x.RevokedCapabilities
+	}
+	return nil
 }
 
 type SearchRequest struct {
@@ -366,7 +397,7 @@ var File_rat_marketplace_v1_marketplace_proto protoreflect.FileDescriptor
 
 const file_rat_marketplace_v1_marketplace_proto_rawDesc = "" +
 	"\n" +
-	"$rat/marketplace/v1/marketplace.proto\x12\x12rat.marketplace.v1\x1a\x1frat/common/v1/annotations.proto\"\xed\x02\n" +
+	"$rat/marketplace/v1/marketplace.proto\x12\x12rat.marketplace.v1\x1a\x1frat/common/v1/annotations.proto\"\xdf\x03\n" +
 	"\aListing\x12\x1b\n" +
 	"\tplugin_id\x18\x01 \x01(\tR\bpluginId\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x18\n" +
@@ -379,7 +410,9 @@ const file_rat_marketplace_v1_marketplace_proto_rawDesc = "" +
 	"\tsigned_by\x18\t \x01(\tR\bsignedBy\x12\x1f\n" +
 	"\vsupport_url\x18\n" +
 	" \x01(\tR\n" +
-	"supportUrl\"x\n" +
+	"supportUrl\x12=\n" +
+	"\x1bconformance_expires_unix_ms\x18\v \x01(\x03R\x18conformanceExpiresUnixMs\x121\n" +
+	"\x14revoked_capabilities\x18\f \x03(\tR\x13revokedCapabilities\"x\n" +
 	"\rSearchRequest\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12\x12\n" +
 	"\x04kind\x18\x03 \x01(\tR\x04kind\x127\n" +

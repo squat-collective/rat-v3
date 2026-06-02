@@ -5,7 +5,7 @@ import grpc
 from rat.notifications.v1 import notifications_pb2 as rat_dot_notifications_dot_v1_dot_notifications__pb2
 
 
-class NotificationsServiceStub(object):
+class NotificationsServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -21,7 +21,7 @@ class NotificationsServiceStub(object):
                 _registered_method=True)
 
 
-class NotificationsServiceServicer(object):
+class NotificationsServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Send(self, request, context):
@@ -47,7 +47,7 @@ def add_NotificationsServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class NotificationsService(object):
+class NotificationsService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

@@ -5,7 +5,7 @@ import grpc
 from rat.ui.v1 import ui_pb2 as rat_dot_ui_dot_v1_dot_ui__pb2
 
 
-class UiServiceStub(object):
+class UiServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -26,7 +26,7 @@ class UiServiceStub(object):
                 _registered_method=True)
 
 
-class UiServiceServicer(object):
+class UiServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Describe(self, request, context):
@@ -66,7 +66,7 @@ def add_UiServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class UiService(object):
+class UiService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

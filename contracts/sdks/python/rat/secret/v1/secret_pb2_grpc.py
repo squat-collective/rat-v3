@@ -5,7 +5,7 @@ import grpc
 from rat.secret.v1 import secret_pb2 as rat_dot_secret_dot_v1_dot_secret__pb2
 
 
-class SecretServiceStub(object):
+class SecretServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -21,7 +21,7 @@ class SecretServiceStub(object):
                 _registered_method=True)
 
 
-class SecretServiceServicer(object):
+class SecretServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Resolve(self, request, context):
@@ -47,7 +47,7 @@ def add_SecretServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class SecretService(object):
+class SecretService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

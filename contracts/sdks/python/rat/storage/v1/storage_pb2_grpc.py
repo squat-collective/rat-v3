@@ -5,7 +5,7 @@ import grpc
 from rat.storage.v1 import storage_pb2 as rat_dot_storage_dot_v1_dot_storage__pb2
 
 
-class StorageServiceStub(object):
+class StorageServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -21,7 +21,7 @@ class StorageServiceStub(object):
                 _registered_method=True)
 
 
-class StorageServiceServicer(object):
+class StorageServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def VendCredentials(self, request, context):
@@ -48,7 +48,7 @@ def add_StorageServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class StorageService(object):
+class StorageService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

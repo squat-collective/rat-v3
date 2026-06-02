@@ -5,7 +5,7 @@ import grpc
 from rat.core.v1 import invoke_pb2 as rat_dot_core_dot_v1_dot_invoke__pb2
 
 
-class CapabilityInvokeServiceStub(object):
+class CapabilityInvokeServiceStub:
     """CapabilityInvokeService has one Invoke variant per RPC cardinality (ADR-008).
     All three are GENERIC byte-relays: the core enforces C2/C5/C7/C8 + traceparent
     and stamps the downstream rat-callmeta-bin envelope (ADR-007) ONCE at the call
@@ -38,7 +38,7 @@ class CapabilityInvokeServiceStub(object):
                 _registered_method=True)
 
 
-class CapabilityInvokeServiceServicer(object):
+class CapabilityInvokeServiceServicer:
     """CapabilityInvokeService has one Invoke variant per RPC cardinality (ADR-008).
     All three are GENERIC byte-relays: the core enforces C2/C5/C7/C8 + traceparent
     and stamps the downstream rat-callmeta-bin envelope (ADR-007) ONCE at the call
@@ -101,7 +101,7 @@ def add_CapabilityInvokeServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class CapabilityInvokeService(object):
+class CapabilityInvokeService:
     """CapabilityInvokeService has one Invoke variant per RPC cardinality (ADR-008).
     All three are GENERIC byte-relays: the core enforces C2/C5/C7/C8 + traceparent
     and stamps the downstream rat-callmeta-bin envelope (ADR-007) ONCE at the call

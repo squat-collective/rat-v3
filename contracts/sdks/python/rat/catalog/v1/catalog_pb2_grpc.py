@@ -5,7 +5,7 @@ import grpc
 from rat.catalog.v1 import catalog_pb2 as rat_dot_catalog_dot_v1_dot_catalog__pb2
 
 
-class CatalogServiceStub(object):
+class CatalogServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -41,7 +41,7 @@ class CatalogServiceStub(object):
                 _registered_method=True)
 
 
-class CatalogServiceServicer(object):
+class CatalogServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def GetTable(self, request, context):
@@ -127,7 +127,7 @@ def add_CatalogServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class CatalogService(object):
+class CatalogService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

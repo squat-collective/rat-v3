@@ -5,7 +5,7 @@ import grpc
 from rat.scheduler.v1 import scheduler_pb2 as rat_dot_scheduler_dot_v1_dot_scheduler__pb2
 
 
-class SchedulerServiceStub(object):
+class SchedulerServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -31,7 +31,7 @@ class SchedulerServiceStub(object):
                 _registered_method=True)
 
 
-class SchedulerServiceServicer(object):
+class SchedulerServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Schedule(self, request, context):
@@ -92,7 +92,7 @@ def add_SchedulerServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class SchedulerService(object):
+class SchedulerService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

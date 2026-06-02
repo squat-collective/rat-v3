@@ -181,7 +181,17 @@
       "required": ["capability"],
       "additionalProperties": false,
       "properties": {
-        "capability": { "$ref": "#/$defs/capabilityUri" }
+        "capability": { "$ref": "#/$defs/capabilityUri" },
+        "revision": {
+          "description": "Q02 5a / ADR-017 — PROVIDER-side within-major behavioral revision. A capability URI pins only the MAJOR (rat://axis/vN/cap); behavior added additively INSIDE an existing method (new response fields/semantics — e.g. honoring the ADR-012 crash-safety fields already_applied/expected_rows) carries a monotonic revision. Set on `provides` to advertise the highest behavioral revision this plugin IMPLEMENTS for the capability. Default (absent) == revision 1 (the frozen-at-v1 behavior).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "min_revision": {
+          "description": "Q02 5a / ADR-017 — REQUIRER-side floor. Set on `requires` to demand a provider that IMPLEMENTS at least this behavioral revision of the capability. The reconciler/gateway refuses a binding whose provider advertises a lower `revision` — graceful within-major negotiation without SemVer ranges, so a version-skewed pairing fails CLEANLY instead of silently (e.g. an idempotency-relying consumer never silently sees already_applied=false from an old provider). Absent == no floor (any revision of the major satisfies). The capability-URI-per-behavior convention remains the alternative for a hard behavioral split.",
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "resourceQuantities": {

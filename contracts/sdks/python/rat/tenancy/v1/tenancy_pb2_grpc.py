@@ -5,7 +5,7 @@ import grpc
 from rat.tenancy.v1 import tenancy_pb2 as rat_dot_tenancy_dot_v1_dot_tenancy__pb2
 
 
-class TenancyServiceStub(object):
+class TenancyServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -21,7 +21,7 @@ class TenancyServiceStub(object):
                 _registered_method=True)
 
 
-class TenancyServiceServicer(object):
+class TenancyServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Decide(self, request, context):
@@ -48,7 +48,7 @@ def add_TenancyServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class TenancyService(object):
+class TenancyService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
