@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-021 PROPOSED: rat as a pure orchestrator — pipelines as code (dbt) 🧭
+
+A fundamental rethink with Tom after the ADR-020 first build felt "shitty vs. v2." The diagnosis: ADR-020 S1–S4 proved the v3 *plumbing* (plugins through the gateway, self-driving, quality-gated, run history) but **baked the pipeline into the infra** (a hardcoded medallion, the model list in a compose env, one global interval) — not the *code-driven* platform v2 was (project-as-code: dbt-shaped models + config + tests + per-pipeline cron; you edit files, the platform runs them). [ADR-021](../docs/architecture/adrs/021-orchestrator-pipelines-as-code.md) (Proposed) redirects the pipeline/project model: **rat orchestrates *capabilities* and never knows what a "pipeline" is; your data work is a dbt project (code) you `rat apply`; the infra declares only plugins.** Key moves: the **pipeline *language* is a plugin** (a `pipeline-runner` axis — `dbt-runner` first, `python-runner` later — so rat reinvents no DAG/`ref()`/Jinja/tests; dbt does); **plugin deps = capability composition** (`requires`→`provides`, no new core magic); three KISS schemas (plane = plugins only · a project = standard dbt + one `rat.yaml` · the manifest's provides/requires). Keeps ADR-020's decoupled stack/scheduler/state/gateway; **replaces** its bespoke "model-list strategy" (Q02). Design only — no build yet; open questions Q1–Q5 (project delivery via `rat apply` vs git-watch; a lake-connection capability; the `pipeline/v1/run` contract; the python metadata SDK; project-as-desired-state). **Next: ratify ADR-021, then build the `dbt-runner` reference.**
+
+---
+
 ## 2026-06-02 — ADR-020 S4b (UI control-path) DONE: the UI's backend routes through the real gateway 🖥️
 
 The portal-replacement's backend is now the **real orchestrator**. New [`platform/bff.py`](../platform/bff.py): a thin JSON-over-HTTP backend (a `kind: ui` driver, `platform-bff`) that a VS Code / web UI talks to, and that issues every **control** call to `rat serve` as a capability invocation (C5 + audit) — the honest minimum of the F9 split (control through the gateway; the bulk data-leg/row-preview would attach its own engine, out of scope here):
