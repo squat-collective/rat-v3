@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-019: `rat` runs in a container — the control-plane daemon image 🐀📦
+
+On `phase-1-adr-019-rat-serve`. Tom's steer: the control plane should run **in a containerized environment** (the same `rat` binary runs bare-metal *or* in a container — the k8s/docker-daemon shape). So the ADR-019 **Phase-C daemon-image** piece was pulled forward (architecture unchanged — just packaging):
+- **`core/Dockerfile`** — multi-stage: a `golang:1.25` builder produces a **static, CGO-free** `rat` binary (+ the Phase-A `stateplugin`), copied into a minimal **non-root** `alpine:3.20` runtime (non-root is mandatory — the local-process runtime refuses root per I9). Builds from the repo root (the core module's `replace` target is `contracts/sdks/go`); `.dockerignore` scopes the context to `core` + `contracts` (excludes the ~59M `examples/`).
+- **`core/cmd/rat/plane.container.yaml`** — the Phase-A demo plane baked at `/etc/rat/plane.yaml`, so `podman run -p 7777:7777 rat/serve:dev` serves a working gateway out of the box; override by mounting your own plane.
+- **`make rat-image`** target.
+
+**Proven now:** `make rat-image` builds; `podman run` boots the daemon in-container (the launched stateplugin comes up via local-process *inside* the container, non-root, the gateway serves on `:7777`), and `podman stop` (SIGTERM) drains cleanly ("signal received — draining" → "drained"). `make core-test` + `core-serve-smoke` + `breaking` still green; additive, no proto/axis. **Note:** this is the *daemon-image* slice; the rest of Phase B (the data-dev Python plugins mediated by the gateway) and the full Phase-C compose stack (attach mode + MinIO/Postgres) remain — deferred per Tom's "keep current architecture, just containerize rat" steer.
+
+---
+
 ## 2026-06-02 — ADR-019 Phase A BUILT: `rat serve` — the core runs as a server 🐀🛰️
 
 On `phase-1-adr-019-rat-serve` (off `phase-1-data-dev-plane`). **The first time the sealed Phase-1 core runs as a daemon a client can connect to** — not a library wired up in a test. New `core/cmd/rat/` (a `main` package, **additive** — touches no sealed/tested package, doesn't move `rat/2.0`):
