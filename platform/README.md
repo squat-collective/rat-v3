@@ -72,5 +72,7 @@ This bundle is built in slices ([ADR-020](../docs/architecture/adrs/020-data-pla
 - ✅ **S2 — self-driving** — the medallion is a `strategy.apply` capability, and a
   `scheduler-backend` driver fires it on a cron (the demo: every 20s). `make platform-up` and it
   refreshes on its own — nobody runs `platform-run`. Watch: `podman logs rat-platform-scheduler-1`.
-- **S3 — merge strategies + quality gates** — `project/tests/` + branch-on-failure-discard.
+- 🟡 **S3 — quality gates** ← *done*: `project/tests/*.sql` run after the layers build; a violation
+  raises `FAILED_PRECONDITION` and **blocks the commit** (the catalog doesn't advance). Merge
+  strategies (incremental) + read-isolation (DuckLake branching) remain.
 - **S4 — state-backend + VS Code** — pipelines/runs/schedules metadata; `vscode-rat` on the stack.
