@@ -62,7 +62,7 @@ throughput bottleneck.
 
 | RAT axis | plugin | new? | role |
 |---|---|---|---|
-| **storage** | `minio-s3` | 🆕 | remote S3-compatible object store; vends short-TTL, prefix+tenant-scoped S3 creds |
+| **storage** | `minio-s3` | 🆕 ✅ | remote S3-compatible object store; vends short-TTL, prefix+tenant-scoped STS creds (built — first 5c read/write split impl) |
 | **catalog** (+format) | `ducklake-py` | 🆕 | [DuckLake](https://ducklake.select/docs/stable/) lakehouse: SQL metadata + Parquet/S3, snapshots, time-travel, ACID — **subsumes the `format` axis** |
 | **engine + ML** | `duckdb-ml-py` | 🆕 | DuckDB + extensions: `ducklake`, `httpfs`/S3, `vss` (vectors), and an `embed()` UDF → **compute *and* AI, no new axis** |
 | **strategy** | `incremental-embed-py` | 🆕 | a *real* ELT example: watermark-incremental load → transform → merge → embed → index → snapshot |
@@ -394,11 +394,23 @@ is exactly the "where they *don't* hold up" value §0 is after):
 - **F3 — DuckLake metadata sqlite is single-writer.** The engine *and* the catalog attach the
   same DuckLake; a catalog connection held open **locks out the engine's write COMMIT**
   ("database is locked"). Fix for the local sqlite demo: the catalog opens **short-lived**
-  read connections (the engine is idle at read time). The real multi-writer answer is a
-  **Postgres** metadata DB (already the §7 scale story) — this just makes the *why* concrete.
-- **F4 — DuckLake inlines small writes** into the metadata DB; Parquet files materialize only
-  on flush/checkpoint. Fine locally; relevant when we assert "data is on S3" (step 3) — we'll
-  need an explicit flush to force Parquet out.
+  read connections (the engine is idle at read time). ✅ **Resolved at remote scale by
+  Postgres metadata** (step 3): with `ducklake:postgres:…`, engine + catalog are genuine
+  concurrent writers, no lock. The catalog store now takes an `extensions` list so it loads
+  `httpfs`/`postgres` for the remote lake.
+- **F4 — DuckLake inlines small writes** into the metadata DB; Parquet materializes only on
+  flush. ✅ **Resolved:** the remote pipeline calls **`CALL ducklake_flush_inlined_data('lake')`**
+  to force the Parquet out to S3 (verified: files land under `s3://rat/<tenant>/lake/`).
+- **F6 — the catalog needs NO S3 credentials.** At remote scale the catalog resolves snapshots
+  + table existence from **Postgres metadata only** — it never touches bytes — so it attaches
+  the lake (with the `s3://` data path) without an S3 secret. This is the engine/catalog split
+  (bytes vs metadata) falling out *cleanly* in practice, and it sharpens least-privilege:
+  the catalog plugin never even holds storage creds.
+- **F7 — STS cred isolation is real, and least-privilege works.** MinIO `AssumeRole` with an
+  inline policy scoped to `s3://bucket/<tenant>/<prefix>/*` gives creds that physically cannot
+  cross the tenant boundary (read `acme/*` ok, `globex/*` denied) — and READ-vended creds are
+  denied writes. The 5c read/write split is enforced by real object-store policy, not just by
+  the RAT capability layer.
 - **F5 — `snapshot_time` pulls a `pytz` dep.** Selecting the timestamp column from
   `lake.snapshots()` triggers a timestamptz conversion needing pytz. The catalog only selects
   `snapshot_id`, so it stays pytz-free.
@@ -439,7 +451,14 @@ is exactly the "where they *don't* hold up" value §0 is after):
    green over real gRPC: [`run-local.py`](run-local.py) / `make data-dev-local`. The engine
    joins the conformance suite (engine-real-v1 + a new embed golden, [`engine-embed-v1.json`](../../contracts/conformance/engine-embed-v1.json)); the catalog has a `selftest.py`
    (frozen catalog-v1 parity deferred to the branch-model spike). Findings folded into §10.
-3. **`minio-s3` + S3 wiring** — vend scoped creds; point DuckDB at S3; move the data remote.
+3. **`minio-s3` + S3 wiring** ✅ **DONE** — the [`minio-s3`](../../examples/storage/minio-s3/)
+   storage plugin vends short-TTL, tenant+prefix-scoped **STS** creds (first impl of the 5c
+   read/write split); the engine reads/writes Parquet on **S3/MinIO** with them while DuckLake
+   metadata moves to **Postgres**. [`run-remote.py`](run-remote.py) / `make data-dev-remote`
+   runs the SAME flow distributed — **search distances byte-identical to local** (the data
+   plane is unchanged when storage goes remote), Parquet lands on S3, D3 cross-tenant isolation
+   holds. Stack: [`compose/compose.yaml`](compose/compose.yaml) or the dependency-free
+   `scripts/data-dev-remote.sh`. Resolves findings F3 + F4 (see §10).
 4. **`incremental-embed-py` strategy** — the real ELT (§5.4); idempotent, branch-isolated.
 5. **The composition** — a runner + a `make data-dev-plane` target that boots the stack
    (podman) and runs the pipeline on a real dataset.

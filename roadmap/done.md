@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — Data-dev plane build step 3 DONE: the pipeline goes REMOTE (S3 + Postgres)
+
+On `phase-1-data-dev-plane`. Build-order §11 step 3 — data moves to **S3/MinIO**, DuckLake metadata to **Postgres**, and the engine's S3 creds are **vended by a storage plugin**. The same pipeline runs distributed with **search distances byte-identical to local** — the data plane is unchanged when storage goes remote (the "swap a plugin, the rest holds" thesis). EXPLORATORY + **ADDITIVE**: conformance **34/34** (minio-s3 joined), `make breaking` clean, sealed `rat/2.0` surface untouched.
+
+- **[`examples/storage/minio-s3`](../examples/storage/minio-s3/)** (`ca13589`) — `kind: storage` plugin, **first impl of the Q02 5c read/write split**. Two minters ([`creds.py`](../examples/storage/minio-s3/creds.py)): `ScopeReceiptMinter` (offline, passes `storage-v1` golden vectors) + `MinioSTSMinter` (real `AssumeRole` with an inline policy scoped to `s3://bucket/<tenant>/<prefix>/*`). Tenant from `rat-callmeta-bin` (ADR-007, C7 anti-forgery). Verified against live MinIO: read creds read `acme/*`, denied cross-tenant `globex` + denied writes (least-privilege).
+- **[`run-remote.py`](../experiments/data-dev-plane/run-remote.py)** + **`make data-dev-remote`** ([`scripts/data-dev-remote.sh`](../scripts/data-dev-remote.sh), [`compose/compose.yaml`](../experiments/data-dev-plane/compose/compose.yaml)) — boots MinIO + Postgres, vends WRITE creds → engine `CREATE SECRET S3` + `ATTACH ducklake:postgres (DATA_PATH s3://…)` → create→register→transform→embed→**flush(Parquet→S3)**→snapshot→commit→🔍search→idempotent-replay→D3-isolation. Assertion-bearing; Parquet verified on S3; D3 cross-tenant denial verified.
+- **Enabling edits (additive, defaults unchanged):** engine `_EXTENSIONS` += `postgres`; engine `Engine(secret_sql=…)` runs `CREATE SECRET` before ATTACH; catalog `Catalog(extensions=…, secret_sql=…)` for the remote lake.
+- **Findings (README §10):** F3 ✅ resolved by Postgres (real concurrent writers); F4 ✅ resolved by `ducklake_flush_inlined_data`; **F6** the catalog needs **no S3 creds** (metadata-only — bytes/metadata split falls out cleanly, sharper least-privilege); **F7** STS isolation is real object-store policy, not just the RAT capability layer. **Next: §11 step 4 — `incremental-embed-py` strategy (watermark→merge→embed-only-new→index→snapshot).**
+
+---
+
 ## 2026-06-02 — Data-dev plane build step 2 DONE: the DuckDB heart runs local end-to-end
 
 On `phase-1-data-dev-plane`. Build-order §11 step 2 complete — the DuckLake catalog + DuckDB-ML engine, with a **local end-to-end transform→embed→search running green over real gRPC**. EXPLORATORY + **ADDITIVE**: `make breaking` clean, conformance **33/33** (was 32; the new engine joined), the sealed `rat/2.0` surface untouched — **no proto, no new axis** (the "ML is an engine extension" thesis, README §3, proven in code).

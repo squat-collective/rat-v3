@@ -53,17 +53,26 @@ class Catalog:
     """A DuckLake-backed catalog. `tracking` is the catalog's own sqlite bookkeeping
     file; `meta`/`data` point at the shared DuckLake the engine also attaches."""
 
-    def __init__(self, tracking: str, meta: str, data: str, alias: str = "lake") -> None:
+    def __init__(self, tracking: str, meta: str, data: str, alias: str = "lake",
+                 extensions=("ducklake",), secret_sql: str = "") -> None:
         self._tracking = tracking
         self._meta = meta
         self._data = data
         self._alias = alias
+        # Extensions a lake read needs. Local sqlite lake → just `ducklake`. Remote
+        # (step 3) → `httpfs`, `postgres`, `ducklake` (metadata on Postgres, data on S3).
+        self._extensions = tuple(extensions)
+        # Optional `CREATE SECRET … TYPE S3 …` run before ATTACH. The catalog reads only
+        # METADATA (Postgres) — it never touches bytes — so it usually needs NO S3 secret;
+        # provided only if a given build's ATTACH validates the data path. (Honesty knob.)
+        self._secret_sql = secret_sql
         self._local = threading.local()
         self._conn().executescript(_SCHEMA)
-        # Pre-install the ducklake extension ONCE (network/cache); per-read connections
-        # then just LOAD it (fast, local).
+        # Pre-install the extensions ONCE (network/cache); per-read connections then just
+        # LOAD them (fast, local).
         boot = duckdb.connect()
-        boot.execute("INSTALL ducklake;")
+        for ext in self._extensions:
+            boot.execute(f"INSTALL {ext};")
         boot.close()
 
     # --- the catalog's own sqlite bookkeeping (branches, linkage, idempotency) -----
@@ -89,7 +98,10 @@ class Catalog:
     def _lake_read(self, fn):
         con = duckdb.connect()
         try:
-            con.execute("LOAD ducklake;")
+            for ext in self._extensions:
+                con.execute(f"LOAD {ext};")
+            if self._secret_sql:
+                con.execute(self._secret_sql)
             con.execute(f"ATTACH 'ducklake:{self._meta}' AS {self._alias} (DATA_PATH '{self._data}')")
             return fn(con)
         finally:

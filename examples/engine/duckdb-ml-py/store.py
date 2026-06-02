@@ -36,7 +36,9 @@ ENGINE = "DuckDB-ML"
 
 # Extensions we try to load. Best-effort: a failure (e.g. offline INSTALL) degrades
 # the corresponding feature but never blocks plain-SQL serving / engine-real vectors.
-_EXTENSIONS = ("vss", "ducklake", "httpfs")
+# `postgres` enables a Postgres-backed DuckLake metadata catalog (remote/scale mode,
+# step 3) — harmless when unused (local uses sqlite metadata).
+_EXTENSIONS = ("vss", "ducklake", "httpfs", "postgres")
 
 
 class EngineError(Exception):
@@ -68,10 +70,15 @@ class DuckLakeConfig:
 
 
 class Engine:
-    def __init__(self, ducklake: "DuckLakeConfig | None" = None) -> None:
+    def __init__(self, ducklake: "DuckLakeConfig | None" = None, secret_sql: str = "") -> None:
         self.con = duckdb.connect()  # in-memory; the lake (if any) is attached
         self.loaded = self._load_extensions()
         self._register_embed()
+        # Optional `CREATE SECRET … TYPE S3 …` run BEFORE attaching the lake — the
+        # remote/scale path (step 3): the engine reads/writes Parquet on S3 with the
+        # short-TTL creds a storage plugin vended. Empty locally (sqlite lake, no S3).
+        if secret_sql:
+            self.con.execute(secret_sql)
         self.lake = ducklake if ducklake is not None else DuckLakeConfig.from_env()
         if self.lake is not None:
             self.attach_lake(self.lake)
