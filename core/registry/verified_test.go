@@ -94,3 +94,18 @@ func TestNewVerifiedAllowsUnattestedCaller(t *testing.T) {
 		t.Fatalf("NewVerified refused a caller that provides nothing: %v", err)
 	}
 }
+
+// TestNewVerifiedRefusesRevokedCapability: a provider with a VALID attestation covering
+// everything it declares is still REFUSED if the authority revoked one of those
+// capabilities out-of-band (Q02 PU-3, ADR-017) — revocation overrides a still-good
+// signature, and without rotating the key (every other plugin under it stays trusted).
+func TestNewVerifiedRefusesRevokedCapability(t *testing.T) {
+	provider, _, authority, priv := d4Fixture(t)
+	att := conformance.Sign(priv, "k1", "rat-fmt", []string{"rat://format/v1/overwrite", "rat://format/v1/scan"})
+	authority.Revoke("rat-fmt", "rat://format/v1/scan") // e.g. a CVE disclosed against scan
+
+	if _, err := NewVerified([]*manifest.Manifest{provider},
+		map[string]conformance.Attestation{"rat-fmt": att}, authority); err == nil {
+		t.Fatal("NewVerified accepted a provider whose conformance was revoked; want refusal")
+	}
+}
