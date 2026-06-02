@@ -33,6 +33,10 @@ from rat.strategy.v1 import strategy_pb2, strategy_pb2_grpc
 CALLER = os.environ.get("RAT_PLUGIN_NAME", "rat-sql-pipeline")
 
 
+class QualityFailure(Exception):
+    """A data-quality test returned violation rows — the run is gated (not committed)."""
+
+
 class GatewayInvoke:
     """invoke(capability, request, response_cls) -> response — over the core gateway,
     carrying this plugin's identity (C5) + a traceparent (C1)."""
@@ -73,11 +77,38 @@ class PipelineStrategy:
             rows = execute(sql).rows_affected  # the last model's rows (the target build)
 
         snap = execute(f"CALL ducklake_flush_inlined_data('{self._alias}')").snapshot_id
+
+        # QUALITY GATE (v2's "tests block the merge", on DuckLake): run project/tests/*.sql;
+        # a test that returns rows is a violation. On any failure the snapshot is NOT
+        # committed to the catalog — the published pointer stays at the last good snapshot.
+        failures = self._run_quality(execute)
+        if failures:
+            raise QualityFailure("; ".join(failures))
+
         invoke("rat://catalog/v1/register-table", catalog_pb2.RegisterTableRequest(identifier=target), catalog_pb2.RegisterTableResponse)
         commit = invoke("rat://catalog/v1/commit-table",
                         catalog_pb2.CommitTableRequest(identifier=target, snapshot_id=snap, idempotency_key=idem),
                         catalog_pb2.CommitTableResponse)
         return data_pb2.WriteResult(rows_affected=rows, snapshot_id=snap, already_applied=commit.already_applied)
+
+    def _run_quality(self, execute) -> list:
+        """Run each project/tests/*.sql as a CTAS — rows_affected IS the violation count
+        (so no Arrow row-pull is needed, sidestepping the in-proc data leg, F9). Returns
+        the list of failures ("<test>: N violation(s)"); empty == all passed."""
+        tests_dir = self._project / "tests"
+        if not tests_dir.is_dir():
+            return []
+        failures = []
+        for t in sorted(tests_dir.glob("*.sql")):
+            body = "\n".join(l for l in t.read_text().splitlines() if not l.strip().startswith("--")).strip().rstrip(";")
+            if not body:
+                continue
+            violations = execute(f"CREATE OR REPLACE TEMP TABLE _rat_qt AS\n{body}").rows_affected
+            status = "FAIL" if violations else "pass"
+            print(f"rat-pipeline: quality {t.name}: {status} ({violations} violation(s))", flush=True)
+            if violations > 0:
+                failures.append(f"{t.name}: {violations} violation(s)")
+        return failures
 
 
 class StrategyServicer(strategy_pb2_grpc.StrategyServiceServicer):
@@ -87,6 +118,8 @@ class StrategyServicer(strategy_pb2_grpc.StrategyServiceServicer):
     def Apply(self, request, context):
         try:
             result = self._strategy.apply(request.target.identifier, request.idempotency_key or "pipeline-run")
-        except Exception as e:  # surface a failed pipeline as a gRPC error
+        except QualityFailure as e:  # the quality gate blocked the commit (FAILED_PRECONDITION)
+            context.abort(grpc.StatusCode.FAILED_PRECONDITION, f"quality gate failed: {e}")
+        except Exception as e:  # any other pipeline error
             context.abort(grpc.StatusCode.INTERNAL, f"pipeline failed: {e}")
         return strategy_pb2.ApplyResponse(result=result)

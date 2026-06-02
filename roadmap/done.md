@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-020 S3 (quality gates) DONE: tests block the commit ✅🚦
+
+The pipeline strategy now runs **data-quality tests** that gate the catalog commit — v2's "tests block the merge", on DuckLake (on `phase-2-quality`). After building the layers + flushing, [`sql-pipeline-py`](../examples/strategy/sql-pipeline-py/) runs each `project/tests/*.sql`; a test that returns rows is a violation, and **any violation blocks the commit** (the strategy raises `FAILED_PRECONDITION` *before* `catalog.commit-table`, so the published snapshot pointer stays at the last good one).
+- **The F9 dodge:** each test runs as `CREATE OR REPLACE TEMP TABLE _rat_qt AS <test>` — so `rows_affected` **is** the violation count, needing no Arrow row-pull (the in-proc data leg, F9, never enters the picture).
+- **Proven live:** the self-driving stack passes both tests each tick and commits (`quality …: pass (0 violation(s))`); injecting a deliberately-failing test gated the very next tick — `rat-pipeline: quality _demo_failing.sql: FAIL (2 violation(s))` → `scheduler tick → error: FAILED_PRECONDITION quality gate failed`, **no commit**. Demo test removed after.
+
+`make breaking` clean; no Go/proto change. **Remaining in S3 (follow-ons):** (a) **merge strategies** beyond full_refresh — incremental on a `unique_key`+watermark (the incremental-embed strategy already shows the shape); (b) **read-isolation** — v2's Nessie branch-on-failure-discard so readers never see un-passed data; DuckLake's model is snapshots/time-travel (not git branches), so this needs a DuckLake-branching investigation. S3 today delivers quality-GATED COMMITS; full read-isolation is the richer form. **Next: those S3 follow-ons, or S4 — state-backend + VS Code.**
+
+---
+
 ## 2026-06-02 — ADR-020 S2 DONE: the platform is SELF-DRIVING — scheduled refresh through rat ⏰
 
 The always-on stack now refreshes **on its own**, no command needed — v2's `ratd` scheduler→runner, decoupled into v3 plugins behind the gateway. Two pieces (both proven live on `phase-2-scheduler`):
