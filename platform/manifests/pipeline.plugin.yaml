@@ -9,8 +9,5 @@ metadata:
 compatible_core: ["rat/1"]
 provides:
   - capability: rat://strategy/v1/apply
-requires:
-  - capability: rat://engine/v1/execute
-  - capability: rat://catalog/v1/get-table
-  - capability: rat://catalog/v1/register-table
-  - capability: rat://catalog/v1/commit-table
+# The dbt-runner needs no peer capability in this slice — dbt-duckdb + DuckLake are the
+# engine + catalog, in-process. (Dep-composition — vend lake creds via storage — is next.)

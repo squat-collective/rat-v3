@@ -1,0 +1,7 @@
+# Runtime deps for the dbt-runner. dbt-duckdb pulls dbt-core; duckdb pinned to the
+# ducklake-capable version the platform uses (the dbt-duckdb adapter uses the installed
+# duckdb). httpfs/postgres/ducklake are DuckDB extensions installed at runtime.
+grpcio==1.80.0
+protobuf==7.35.0
+dbt-duckdb==1.9.4
+duckdb==1.5.3
