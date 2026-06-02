@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — 2b: the launch-mode daemon — `rat serve` launches + supervises + self-heals 🚀
+
+`rat serve`'s launch path is now **reconciler-driven** (ADR-022): rat is the **sole launcher**, not a static one-shot. `core/cmd/rat`:
+- **`rewire.go`** — `gatewayRewire` implements `reconciler.Rewire`: `Bind` dials the plugin's endpoint + `gateway.SetProvider` (closing any prior conn); `Unbind` → `RemoveProvider` + close; `Close` for shutdown.
+- **`main.go`** — `assemble` now returns a mode-agnostic `runningPlane` (gateway + teardown). The launch branch is **`launchPlane`**: build the registry + an **empty** gateway → run the **reconciler** over the desired set with the `gatewayRewire` → the reconciler launches each plugin and, on Healthy, dials + wires it; on crash it relaunches + re-wires (self-healing). It waits for the initial set to be Healthy so the gateway is wired before serving (same "ready when serving" semantics). `BringUp`'s static launch is **replaced** (no double-launch); attach mode is untouched.
+
+**Proven:** `make core-serve-smoke` — the daemon boots the stateplugin **via the reconciler**, routes a C5-authorized call, denies an undeclared one, and SIGTERM drains (stop loop → terminate instance → GracefulStop). Full `make core-test` green (cmd/rat, ratctl, gateway, reconciler, supervisor) + `breaking` clean; gofmt clean; additive (no proto/axis). Self-heal-on-crash is unit-proven (`TestRewireOnRelaunch`) + now wired into the live daemon.
+
+So `rat serve` launches plugins, keeps them healthy, and re-wires routing when one relaunches — a real orchestrator. **Next:** apply this to the *platform* — a `plugins.yaml` + the **socket-mount** deployment-runtime so the compose stack drops the per-plugin services to just **rat + Postgres + MinIO** (ADR-022's "adding a plugin = one line"), then the **secret plugin**.
+
+---
+
 ## 2026-06-02 — reconciler re-wire hook — a relaunched plugin self-heals routing 🔁
 
 The launch-mode wiring's core mechanism: the reconciler now drives the gateway re-bind across a crash. `core/reconciler`: a `Rewire` interface (`Bind(name, endpoint)` / `Unbind(name)`) + an optional `Config.Rewire`; the reconciler calls **`Bind` when a plugin goes Healthy** (initial launch OR a crash-relaunch on a *new* endpoint) and **`Unbind` when a Healthy plugin is lost** — keeping the reconciler decoupled from the gateway (the daemon wires `Rewire` → `gateway.SetProvider`/`RemoveProvider`). Test `TestRewireOnRelaunch`: a healthy plugin is Bound at ep1 → crashes → Unbound → relaunches → Bound at ep2 (ep1 ≠ ep2) — routing self-heals automatically. `make core-test` (reconciler + gateway green; an unrelated `arrowticket` timing flake passes on re-run) + `breaking` clean; gofmt clean; additive (no proto/axis).
