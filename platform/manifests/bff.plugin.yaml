@@ -1,0 +1,13 @@
+# platform-bff — the UI's backend (a `kind: ui` driver). It serves JSON to a VS Code /
+# web client and issues the UI's control calls to the gateway, so C5 authorizes them
+# from this `requires` set. It serves no capability (the gateway never dials it).
+api_version: rat/1
+kind: ui
+metadata:
+  name: platform-bff
+  version: 0.1.0
+compatible_core: ["rat/1"]
+requires:
+  - capability: rat://strategy/v1/apply
+  - capability: rat://state/v1/list
+  - capability: rat://state/v1/get

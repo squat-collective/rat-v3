@@ -76,5 +76,7 @@ This bundle is built in slices ([ADR-020](../docs/architecture/adrs/020-data-pla
   raises `FAILED_PRECONDITION` and **blocks the commit** (the catalog doesn't advance). Merge
   strategies (incremental) + read-isolation (DuckLake branching) remain.
 - 🟡 **S4 — state-backend** ← *done*: a Postgres-backed `state-backend` plugin records **run history**
-  (the scheduler writes a run per fire; `make platform-run` lists them through the gateway). Repointing
-  `vscode-rat` at the live stack (S4b) remains.
+  (the scheduler writes a run per fire; `make platform-run` lists them through the gateway).
+- 🟡 **S4b — UI control-path** ← *done*: `bff.py` (a `ui` driver, host `:8088`) fronts the real gateway —
+  `GET /api/runs`, `POST /api/run` route through `rat serve` (audited). A VS Code/web UI talks JSON here.
+  The VS Code extension *UI itself* (platform-shaped, run interactively) is the follow-on.
