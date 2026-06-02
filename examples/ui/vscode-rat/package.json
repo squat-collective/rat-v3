@@ -7,7 +7,8 @@
   "license": "Apache-2.0",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],
-  "activationEvents": [],
+  "repository": { "type": "git", "url": "https://github.com/rat-dev/rat" },
+  "activationEvents": ["onView:ratDataDev.catalog", "onView:ratDataDev.health"],
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
@@ -55,6 +56,7 @@
     }
   },
   "scripts": {
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./"
   },

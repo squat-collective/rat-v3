@@ -34,19 +34,33 @@ engine with a real Flight endpoint would let a thin client pull the data leg too
 then the gateway BFF closes it so the whole demo runs from one URL. The extension talks
 to that one URL — swap it for a real core gateway and the editor code is unchanged.
 
-## Try it
+## Install it (as a real extension)
 
-1. **Start the gateway** (the backend) from the repo root:
-   ```bash
-   make data-dev-gateway          # serves http://localhost:8787
-   ```
-2. **Open this folder in VS Code** and build the extension:
-   ```bash
-   cd examples/ui/vscode-rat && npm install && npm run compile
-   ```
-3. **Press `F5`** (Run → Start Debugging) to launch an Extension Development Host.
-4. Click the **RAT Data-Dev** icon in the activity bar. Browse the catalog, hit
-   **Run Pipeline**, run a query, or **Semantic Search** for `how is the battery life`.
+Package it into a `.vsix` and install it into your VS Code — no host node/npm needed:
+
+```bash
+make data-dev-vsix                                          # builds examples/ui/vscode-rat/vscode-rat-0.1.0.vsix
+code --install-extension examples/ui/vscode-rat/vscode-rat-0.1.0.vsix
+```
+
+(Or in VS Code: **Extensions** view → `…` menu → **Install from VSIX…** → pick the file.)
+
+Then **start the backend** and reload:
+
+```bash
+make data-dev-gateway          # serves http://localhost:8787 (Ctrl-C to stop)
+```
+
+Click the **RAT Data-Dev** icon in the activity bar → browse the catalog, hit
+**Run Pipeline**, run a query, or **🔍 Semantic Search** for `how is the battery life`.
+The gateway URL is the `ratDataDev.gatewayUrl` setting (default `http://localhost:8787`).
+
+## Develop it (F5 debug)
+
+1. `make data-dev-gateway` (the backend).
+2. `cd examples/ui/vscode-rat && npm install && npm run compile`.
+3. Open this folder in VS Code and press **`F5`** → an Extension Development Host launches
+   with the extension loaded.
 
 The gateway URL is configurable via the `ratDataDev.gatewayUrl` setting (default
 `http://localhost:8787`) — point it at a remote gateway if you run one.

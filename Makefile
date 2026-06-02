@@ -27,7 +27,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway validate-manifests bench core-test core-test-podman breaking help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-test-podman breaking help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -93,6 +93,9 @@ data-dev-strategy: ## Run the incremental-embed ELT strategy (2 runs + idempoten
 
 data-dev-gateway: ## Serve the data-dev gateway (the VS Code extension's backend) on :8787
 	@scripts/data-dev-gateway.sh
+
+data-dev-vsix: ## Package the vscode-rat extension into an installable .vsix
+	@scripts/data-dev-vsix.sh
 
 ## --- manifest validation (ADR-011 / the static half of `rat plugin validate`) -
 validate-manifests: ## Validate example manifests vs envelope + per-kind schemas; assert the INVALID corpus is rejected
