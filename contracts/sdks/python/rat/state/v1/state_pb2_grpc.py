@@ -5,7 +5,7 @@ import grpc
 from rat.state.v1 import state_pb2 as rat_dot_state_dot_v1_dot_state__pb2
 
 
-class StateServiceStub(object):
+class StateServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -36,7 +36,7 @@ class StateServiceStub(object):
                 _registered_method=True)
 
 
-class StateServiceServicer(object):
+class StateServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Get(self, request, context):
@@ -101,7 +101,7 @@ def add_StateServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class StateService(object):
+class StateService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

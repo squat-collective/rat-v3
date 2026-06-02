@@ -5,7 +5,7 @@ import grpc
 from rat.engine.v1 import engine_pb2 as rat_dot_engine_dot_v1_dot_engine__pb2
 
 
-class EngineServiceStub(object):
+class EngineServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -31,7 +31,7 @@ class EngineServiceStub(object):
                 _registered_method=True)
 
 
-class EngineServiceServicer(object):
+class EngineServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Execute(self, request, context):
@@ -81,7 +81,7 @@ def add_EngineServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class EngineService(object):
+class EngineService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

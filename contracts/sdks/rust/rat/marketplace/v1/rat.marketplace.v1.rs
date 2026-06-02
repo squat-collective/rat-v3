@@ -30,6 +30,25 @@ pub struct Listing {
     /// Where users file issues (reviews/02 Stage 8 support attribution).
     #[prost(string, tag="10")]
     pub support_url: ::prost::alloc::string::String,
+    /// CONFORMANCE LIFECYCLE (Q02 PU-3, ADR-017): a conformance attestation is not
+    /// "conformed forever" — a plugin version conformed before a CVE is disclosed against
+    /// it must be expire-able and revoke-able, or the trust signal rots silently
+    /// (Sigstore/in-toto lesson). These additive fields put attestation lifecycle on the
+    /// frozen surface so the marketplace + the core's D4 keyring can act on it.
+    ///
+    /// When the conformance attestation for `conformed_capabilities` expires (unix epoch
+    /// millis). 0 == no expiry stated. A conformant marketplace MUST treat
+    /// conformed_capabilities as STALE/unverified past this instant (re-conformance
+    /// required), and the core's D4 verifier SHOULD refuse an expired attestation.
+    #[prost(int64, tag="11")]
+    pub conformance_expires_unix_ms: i64,
+    /// Capabilities whose conformance has been REVOKED (subset of, and overriding,
+    /// conformed_capabilities). A capability present here MUST NOT be treated as
+    /// conformed even if it also appears in conformed_capabilities — revocation wins. The
+    /// out-of-band revocation channel (transparency log / CRL) that populates this is GA;
+    /// the field is here so revocation is expressible in the frozen shape.
+    #[prost(string, repeated, tag="12")]
+    pub revoked_capabilities: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SearchRequest {

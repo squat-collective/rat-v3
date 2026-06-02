@@ -5,7 +5,7 @@ import grpc
 from rat.deploymentruntime.v1 import deployment_runtime_pb2 as rat_dot_deploymentruntime_dot_v1_dot_deployment__runtime__pb2
 
 
-class DeploymentRuntimeServiceStub(object):
+class DeploymentRuntimeServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -31,7 +31,7 @@ class DeploymentRuntimeServiceStub(object):
                 _registered_method=True)
 
 
-class DeploymentRuntimeServiceServicer(object):
+class DeploymentRuntimeServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Launch(self, request, context):
@@ -82,7 +82,7 @@ def add_DeploymentRuntimeServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class DeploymentRuntimeService(object):
+class DeploymentRuntimeService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

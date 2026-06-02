@@ -16,6 +16,21 @@
 // agreeing" — is rejected: isolation is the core's job; this plugin is policy on
 // top of an already-enforced boundary.
 //
+// v1 SCOPE — ISOLATION-ONLY (Q02 PU-4, ADR-017; ratified 2026-06-02): v1 tenancy is
+// ISOLATION-ONLY. The core structurally enforces tenant ISOLATION (equality on
+// RequestContext.identity.tenant across the state gateway, storage cred-vending, and
+// the invoke gateway), and this plugin may DECIDE permission/quota questions the core
+// then enforces. But DECISION_KIND_SHARING is ADVISORY-NOT-ENFORCED in v1: there is
+// deliberately NO frozen primitive by which an *allowed* cross-tenant share is
+// ACTIONED — no delegated-tenant / grant shape exists in the state or storage wire, so
+// a plugin returning allowed=true for a SHARING decision computes a verdict the core
+// CANNOT carry into a cross-tenant grant. Actioned cross-tenant sharing + hierarchical
+// tenancy are a deferred `v2` (a delegation primitive in state/storage — its own ADR,
+// only if a user pulls for it). Treat DECISION_KIND_SHARING as informational /
+// policy-signalling in v1, not as an enforceable grant. (Q02 architect F5: "decidable
+// but un-actionable"; the cheap, honest scope is to enforce only the isolation v1
+// actually has.)
+//
 // ERROR MODEL (reviews/06 C-5 / freeze-blocker #9): same convention as
 // identity.Authorize — transport/operational failures use gRPC status; a deny on
 // a successful Decide uses the in-band `allowed` bool + enumerated `deny_code`;
@@ -114,6 +129,10 @@ export enum DecisionKind {
   PERMISSION = 1,
 
   /**
+   * v1: ADVISORY-NOT-ENFORCED — decidable but NOT actioned (no delegated-tenant grant
+   * primitive in the v1 wire). See the "v1 SCOPE — ISOLATION-ONLY" note above
+   * (Q02 PU-4 / ADR-017). Actioned sharing is a deferred v2.
+   *
    * @generated from enum value: DECISION_KIND_SHARING = 2;
    */
   SHARING = 2,

@@ -5,7 +5,7 @@ import grpc
 from rat.runtime.v1 import runtime_pb2 as rat_dot_runtime_dot_v1_dot_runtime__pb2
 
 
-class RuntimeServiceStub(object):
+class RuntimeServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -21,7 +21,7 @@ class RuntimeServiceStub(object):
                 _registered_method=True)
 
 
-class RuntimeServiceServicer(object):
+class RuntimeServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Execute(self, request, context):
@@ -51,7 +51,7 @@ def add_RuntimeServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class RuntimeService(object):
+class RuntimeService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

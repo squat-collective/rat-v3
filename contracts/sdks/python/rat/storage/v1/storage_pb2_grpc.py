@@ -5,7 +5,7 @@ import grpc
 from rat.storage.v1 import storage_pb2 as rat_dot_storage_dot_v1_dot_storage__pb2
 
 
-class StorageServiceStub(object):
+class StorageServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -19,14 +19,42 @@ class StorageServiceStub(object):
                 request_serializer=rat_dot_storage_dot_v1_dot_storage__pb2.VendCredentialsRequest.SerializeToString,
                 response_deserializer=rat_dot_storage_dot_v1_dot_storage__pb2.VendCredentialsResponse.FromString,
                 _registered_method=True)
+        self.VendReadCredentials = channel.unary_unary(
+                '/rat.storage.v1.StorageService/VendReadCredentials',
+                request_serializer=rat_dot_storage_dot_v1_dot_storage__pb2.VendReadCredentialsRequest.SerializeToString,
+                response_deserializer=rat_dot_storage_dot_v1_dot_storage__pb2.VendReadCredentialsResponse.FromString,
+                _registered_method=True)
+        self.VendWriteCredentials = channel.unary_unary(
+                '/rat.storage.v1.StorageService/VendWriteCredentials',
+                request_serializer=rat_dot_storage_dot_v1_dot_storage__pb2.VendWriteCredentialsRequest.SerializeToString,
+                response_deserializer=rat_dot_storage_dot_v1_dot_storage__pb2.VendWriteCredentialsResponse.FromString,
+                _registered_method=True)
 
 
-class StorageServiceServicer(object):
+class StorageServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def VendCredentials(self, request, context):
         """rat://storage/v1/vend-credentials — issue short-TTL, prefix-scoped,
         tenant-scoped credentials the data plane uses to read/write bytes directly.
+        The mode is taken from the request; broad / back-compatible grant.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def VendReadCredentials(self, request, context):
+        """rat://storage/v1/vend-credentials-read — vend READ-only creds (Q02 5c). The mode is
+        FIXED by the method (not the request), so C5 authorizes read-vending distinctly and
+        a least-privilege grant can give read without write.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def VendWriteCredentials(self, request, context):
+        """rat://storage/v1/vend-credentials-write — vend WRITE-capable creds (Q02 5c). The
+        mode is FIXED by the method so a read-only grant can withhold write-vending.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -40,6 +68,16 @@ def add_StorageServiceServicer_to_server(servicer, server):
                     request_deserializer=rat_dot_storage_dot_v1_dot_storage__pb2.VendCredentialsRequest.FromString,
                     response_serializer=rat_dot_storage_dot_v1_dot_storage__pb2.VendCredentialsResponse.SerializeToString,
             ),
+            'VendReadCredentials': grpc.unary_unary_rpc_method_handler(
+                    servicer.VendReadCredentials,
+                    request_deserializer=rat_dot_storage_dot_v1_dot_storage__pb2.VendReadCredentialsRequest.FromString,
+                    response_serializer=rat_dot_storage_dot_v1_dot_storage__pb2.VendReadCredentialsResponse.SerializeToString,
+            ),
+            'VendWriteCredentials': grpc.unary_unary_rpc_method_handler(
+                    servicer.VendWriteCredentials,
+                    request_deserializer=rat_dot_storage_dot_v1_dot_storage__pb2.VendWriteCredentialsRequest.FromString,
+                    response_serializer=rat_dot_storage_dot_v1_dot_storage__pb2.VendWriteCredentialsResponse.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
             'rat.storage.v1.StorageService', rpc_method_handlers)
@@ -48,7 +86,7 @@ def add_StorageServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class StorageService(object):
+class StorageService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
@@ -68,6 +106,60 @@ class StorageService(object):
             '/rat.storage.v1.StorageService/VendCredentials',
             rat_dot_storage_dot_v1_dot_storage__pb2.VendCredentialsRequest.SerializeToString,
             rat_dot_storage_dot_v1_dot_storage__pb2.VendCredentialsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def VendReadCredentials(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/rat.storage.v1.StorageService/VendReadCredentials',
+            rat_dot_storage_dot_v1_dot_storage__pb2.VendReadCredentialsRequest.SerializeToString,
+            rat_dot_storage_dot_v1_dot_storage__pb2.VendReadCredentialsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def VendWriteCredentials(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/rat.storage.v1.StorageService/VendWriteCredentials',
+            rat_dot_storage_dot_v1_dot_storage__pb2.VendWriteCredentialsRequest.SerializeToString,
+            rat_dot_storage_dot_v1_dot_storage__pb2.VendWriteCredentialsResponse.FromString,
             options,
             channel_credentials,
             insecure,

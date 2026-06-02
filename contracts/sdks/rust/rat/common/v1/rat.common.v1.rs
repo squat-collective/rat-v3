@@ -113,9 +113,22 @@ pub struct ArrowStream {
     /// SEC-14): a conformant producer MUST issue tickets that are short-TTL,
     /// single-use, and bound to {caller_plugin, tenant, this stream} so a
     /// leaked/guessed ticket can't be replayed for cross-tenant data access. (The
-    /// bytes leg bypasses the core, so the ticket is the only gate.) The detailed
-    /// ticket-format spec is enforcement-layer (GA); the field is here so it's in
-    /// the frozen shape.
+    /// bytes leg bypasses the core, so the ticket is the only gate.)
+    ///
+    /// PRODUCER CHANNEL-AUTH IS MANDATORY (Q02 PU-1, ADR-017 — the bytes-leg twin of
+    /// the control-plane C2 identity fix): because the bytes leg bypasses the core, the
+    /// ticket binding above is only as strong as the channel the producer checks it
+    /// against. A conformant ArrowStream producer MUST verify that the PRESENTING
+    /// CHANNEL'S AUTHENTICATED identity (the mTLS peer, or a token the core vended
+    /// alongside the ticket) equals the ticket-bound {caller_plugin, tenant} BEFORE
+    /// serving bytes. Transport/application-layer headers (e.g. an "X-RAT-Tenant"
+    /// header) are NOT sufficient: an attacker presenting a leaked ticket can set them
+    /// to the bound values. The producer-conformance suite MUST include a
+    /// wrong-channel/right-header vector and require it to be REFUSED. SDKs ship
+    /// channel-auth as the default so a producer cannot omit it by accident.
+    ///
+    /// The detailed ticket-format spec is enforcement-layer (GA); the field is here so
+    /// it's in the frozen shape.
     #[prost(bytes="vec", tag="2")]
     pub ticket: ::prost::alloc::vec::Vec<u8>,
     /// Arrow IPC schema (serialized) so the dialing party can validate before
@@ -424,5 +437,35 @@ pub struct Event {
     /// no ordering guarantee beyond the transport's default.
     #[prost(string, tag="7")]
     pub partition_key: ::prost::alloc::string::String,
+    /// TAMPER-EVIDENCE (Q02 5b, ADR-017): `context.identity` is core-stamped at emit,
+    /// but the bus TRANSPORT is a plugin (ADR-002 D2) — a third party — and an unsigned
+    /// envelope means a compromised/buggy transport, or anyone able to publish to a
+    /// subject, could inject an Event with a forged context.tenant that a fan-out
+    /// subscriber has no way to detect (the async plane has no per-hop re-stamp, unlike
+    /// the sync gateway). This mirrors the signed + hash-chained AuditRecord
+    /// (audit.proto): the CORE signs the canonical Event bytes at emit; a subscriber
+    /// verifies against the core's PUBLISHED keyring and rejects any Event whose
+    /// signature does not verify BEFORE trusting context.identity / tenant for routing
+    /// or logic. (SubjectAssertion in context already self-verifies; this adds the same
+    /// integrity to the rest of the envelope.)
+    ///
+    /// CANONICAL SERIALIZATION (same rule as AuditRecord): the proto3 wire encoding of
+    /// all fields EXCEPT `signature` (field 8), in ascending field-number order, each
+    /// field present at most once, no unknown fields, varints minimal, default-valued
+    /// fields omitted. `key_id` (field 9) IS included in these signed bytes, so the
+    /// signature commits to which key it claims to be from (defeats key-substitution).
+    ///
+    /// Core signature over the canonical bytes above. Empty is permitted ONLY for a
+    /// transport whose integrity is otherwise guaranteed (e.g. an in-process bus); on
+    /// any pluggable/remote transport a conformant emitter sets it and subscribers
+    /// verify before trust.
+    #[prost(bytes="vec", tag="8")]
+    pub signature: ::prost::alloc::vec::Vec<u8>,
+    /// Identifier of the core key that signed this Event — resolves in the core's
+    /// published keyring to {public key, signature algorithm}, enabling key ROTATION and
+    /// algorithm AGILITY on new key_ids exactly as AuditRecord.key_id (audit.proto).
+    /// Empty only for a single-key deployment that never rotates.
+    #[prost(string, tag="9")]
+    pub key_id: ::prost::alloc::string::String,
 }
 // @@protoc_insertion_point(module)

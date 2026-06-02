@@ -5,7 +5,7 @@ import grpc
 from rat.auditlog.v1 import auditlog_pb2 as rat_dot_auditlog_dot_v1_dot_auditlog__pb2
 
 
-class AuditLogServiceStub(object):
+class AuditLogServiceStub:
     """NOTE (0c): the cross-cutting audit RECORD — common.v1.AuditRecord +
     common.v1.AuditOutcome — lives in common/v1/audit.proto, because the CORE authors
     + signs + emits it even when NO audit-log plugin is installed. This axis is only
@@ -26,7 +26,7 @@ class AuditLogServiceStub(object):
                 _registered_method=True)
 
 
-class AuditLogServiceServicer(object):
+class AuditLogServiceServicer:
     """NOTE (0c): the cross-cutting audit RECORD — common.v1.AuditRecord +
     common.v1.AuditOutcome — lives in common/v1/audit.proto, because the CORE authors
     + signs + emits it even when NO audit-log plugin is installed. This axis is only
@@ -60,7 +60,7 @@ def add_AuditLogServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class AuditLogService(object):
+class AuditLogService:
     """NOTE (0c): the cross-cutting audit RECORD — common.v1.AuditRecord +
     common.v1.AuditOutcome — lives in common/v1/audit.proto, because the CORE authors
     + signs + emits it even when NO audit-log plugin is installed. This axis is only

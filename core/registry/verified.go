@@ -43,6 +43,12 @@ func NewVerified(manifests []*manifest.Manifest, attestations map[string]conform
 			if !att.Conforms(capURI) {
 				return nil, fmt.Errorf("plugin %q declares `provides` %q but it is not conformed (D4: declared != conformed)", name, capURI)
 			}
+			// Q02 PU-3: a conformed capability can be REVOKED out-of-band (e.g. a CVE
+			// disclosed against that version) without rotating the authority key — it is
+			// refused even though the signed attestation still covers it.
+			if authority.IsRevoked(name, capURI) {
+				return nil, fmt.Errorf("plugin %q: conformance for %q has been REVOKED (Q02 PU-3)", name, capURI)
+			}
 		}
 	}
 	return New(manifests)

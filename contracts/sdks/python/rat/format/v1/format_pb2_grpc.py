@@ -5,7 +5,7 @@ import grpc
 from rat.format.v1 import format_pb2 as rat_dot_format_dot_v1_dot_format__pb2
 
 
-class FormatServiceStub(object):
+class FormatServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -41,7 +41,7 @@ class FormatServiceStub(object):
                 _registered_method=True)
 
 
-class FormatServiceServicer(object):
+class FormatServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Resolve(self, request, context):
@@ -117,7 +117,7 @@ def add_FormatServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class FormatService(object):
+class FormatService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

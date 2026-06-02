@@ -5,7 +5,7 @@ import grpc
 from rat.identity.v1 import identity_pb2 as rat_dot_identity_dot_v1_dot_identity__pb2
 
 
-class IdentityServiceStub(object):
+class IdentityServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -26,7 +26,7 @@ class IdentityServiceStub(object):
                 _registered_method=True)
 
 
-class IdentityServiceServicer(object):
+class IdentityServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Authenticate(self, request, context):
@@ -64,7 +64,7 @@ def add_IdentityServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class IdentityService(object):
+class IdentityService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

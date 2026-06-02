@@ -5,7 +5,7 @@ import grpc
 from rat.observability.v1 import observability_pb2 as rat_dot_observability_dot_v1_dot_observability__pb2
 
 
-class ObservabilityServiceStub(object):
+class ObservabilityServiceStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -21,7 +21,7 @@ class ObservabilityServiceStub(object):
                 _registered_method=True)
 
 
-class ObservabilityServiceServicer(object):
+class ObservabilityServiceServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Ingest(self, request_iterator, context):
@@ -55,7 +55,7 @@ def add_ObservabilityServiceServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class ObservabilityService(object):
+class ObservabilityService:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
