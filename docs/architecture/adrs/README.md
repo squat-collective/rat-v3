@@ -23,6 +23,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [015](015-phase-1-commitment-gate-cleared.md) | Phase-1 commitment gate CLEARED — commit to the full core build | Accepted | 2026-06-01 |
 | [016](016-plugin-provisioning-via-deployment-runtime.md) | Plugin provisioning via the deployment-runtime axis — the core launches, it doesn't dial (D1) | Accepted | 2026-06-01 |
 | [017](017-pre-unfreeze-contract-amendment-gate.md) | Pre-unfreeze contract-amendment gate (the Q02 dry-run punch-list) | Proposed | 2026-06-02 |
+| [018](018-connectionless-codegen-local-plugins.md) | Connectionless codegen via local plugins | Accepted | 2026-06-02 |
 
 ## Template
 
