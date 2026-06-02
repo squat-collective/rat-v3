@@ -1,0 +1,10 @@
+# dbt profile for the rat dbt-runner. KISS experiment: a plain local DuckDB file (on the
+# runner's /tmp). Proving the ADR-021 orchestration — rat → dbt-runner → `dbt build` with
+# ref()/tests. Materializing into the SHARED remote DuckLake (Postgres + S3) so other
+# plugins/UI see the tables is the next step (ADR-021 Q2: the lake-connection capability).
+rat:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /tmp/rat_lake.duckdb

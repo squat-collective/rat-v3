@@ -1,0 +1,12 @@
+# rat-dbt-runner — a pipeline-runner: runs a dbt project (ADR-021). EXPLORATORY.
+# Reuses the frozen strategy/v1 axis for the experiment (provides strategy/apply). It
+# needs no peer capability in this slice (dbt-duckdb + DuckLake are the engine+catalog,
+# in-process); the dep-composition (vend lake creds via storage) is the next step.
+api_version: rat/1
+kind: strategy
+metadata:
+  name: rat-dbt-runner
+  version: 0.1.0
+compatible_core: ["rat/1"]
+provides:
+  - capability: rat://strategy/v1/apply

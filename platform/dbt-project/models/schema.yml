@@ -1,0 +1,15 @@
+version: 2
+
+# Native dbt tests — the quality gate. `dbt build` runs models + tests; a failing test
+# fails the build, which the runner surfaces as FAILED_PRECONDITION (no successful run).
+models:
+  - name: silver_orders
+    columns:
+      - name: order_id
+        tests: [not_null, unique]
+      - name: amount
+        tests: [not_null]
+  - name: gold_daily_revenue
+    columns:
+      - name: revenue
+        tests: [not_null]
