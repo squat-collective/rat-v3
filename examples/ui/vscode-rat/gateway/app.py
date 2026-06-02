@@ -108,10 +108,28 @@ def _sql_str(s):
 
 def _display(value):
     """Render a cell for JSON. Embeddings (lists of float) collapse to a placeholder so
-    payloads stay small — the UI shows '[256 dims]', not 256 floats."""
+    payloads stay small — the UI shows '[256 dims]', not 256 floats. Datetimes (e.g. the
+    `_ingested_at` watermark column) become ISO strings so SELECT * is JSON-safe."""
+    import datetime
     if isinstance(value, list):
         return f"[{len(value)} dims]" if value and isinstance(value[0], float) else value
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+        return value.isoformat()
     return value
+
+
+def _json_default(o):
+    """Last-resort JSON encoder for types json.dumps can't handle natively (datetimes,
+    Decimal, bytes, …) — so no endpoint can 500 on an exotic cell type."""
+    import datetime
+    from decimal import Decimal
+    if isinstance(o, (datetime.datetime, datetime.date, datetime.time)):
+        return o.isoformat()
+    if isinstance(o, Decimal):
+        return float(o)
+    if isinstance(o, (bytes, bytearray)):
+        return o.hex()
+    return str(o)
 
 
 class Stack:
@@ -231,7 +249,7 @@ def make_handler(stack: Stack):
             pass
 
         def _send(self, code, payload):
-            body = json.dumps(payload).encode("utf-8")
+            body = json.dumps(payload, default=_json_default).encode("utf-8")
             self.send_response(code)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
