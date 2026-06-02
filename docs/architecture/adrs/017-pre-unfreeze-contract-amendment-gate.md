@@ -2,11 +2,16 @@
 
 ## Status: Proposed (2026-06-02)
 
-> **Update 2026-06-02 — PU-4 (Q01) ratified: v1 tenancy is _isolation-only_** (Tom's call;
-> see PU-4 below). That was the one genuine product-scoping fork. The ADR stays **Proposed**
-> for the single remaining reason: it rests partly on a **simulated** review, so it flips to
-> Accepted only once the **real** Q02 external human review (ADR-013 Q02) confirms or extends
-> the gate.
+> **Update 2026-06-02 — the punch-list is COMPLETE; PU-4 (Q01) ratified _isolation-only_.**
+> All gate items have landed + are verified (see [roadmap/done.md](../../../roadmap/done.md)):
+> **PU-1** bytes-leg producer-channel-auth MUST + an mTLS conformance vector · **PU-2** the
+> keystone context-carriage two-reference conformance (Go + Python cross-run, `make
+> context-carriage` 12/12) · **PU-3** attestation expiry/revocation (wire + core enforcement) ·
+> **PU-4** tenancy isolation-only (ratified) · the 5a/5b/5c additive seams. `make breaking`
+> stayed clean throughout. The ADR nonetheless stays **Proposed** for the single remaining
+> reason: it rests partly on a **simulated** review, so it flips to Accepted only once the
+> **real** Q02 external human review (ADR-013 Q02) confirms or extends the gate — which is now
+> the *sole* thing standing between the freeze and leaving local/unpushed.
 
 ## Context
 
