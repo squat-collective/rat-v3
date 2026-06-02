@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — Q02 recruiting prep — shortlist + cover-note variants + findings tracker
+
+Everything around running Q02 except the human step (recruiting), on `phase-1-q02-recruiting`:
+- **[`reviews/Q02-reviewer-shortlist.md`](../reviews/Q02-reviewer-shortlist.md)** — by-lens **profiles + sourcing pools** (not a contacts list), a selection checklist ("scars, not enthusiasm"; willing to disagree; no conflict), and how many/which (minimum viable = architect + security; + SRE comfortable; ecosystem only if adoption is the worry).
+- **Per-lens cover-note variants** appended to [`Q02-outreach-note.md`](../reviews/Q02-outreach-note.md) — a tuned "try to break X" opener per lens, each pointing at the matching brief.
+- **[`reviews/Q02-tracker.md`](../reviews/Q02-tracker.md)** — a reviewer status table + a findings-doc template (→ `reviews/11-q02-<name>.md`) + a synthesis section that feeds the **Q01** v2-vs-v3 call (incl. a freeze-reopen-trigger check).
+
+**Q02 is now fully teed up; the only remaining step is human — recruit the reviewer(s) + run it.** Freeze stays local/unpushed until the synthesis lands.
+
+---
+
 ## 2026-06-02 — Q02 kit COMPLETE: tailored SRE + ecosystem + architect briefs (all 5 internal lenses covered)
 
 Three more lens-tailored companions (parallel to the security one), each front-loading a real-vs-paper / settled-vs-open section + a lens-specific question set so the reviewer models the right system. With these the kit covers **all five internal review lenses** (security, SRE, ecosystem, architect/contracts) plus the general brief + outreach note.
