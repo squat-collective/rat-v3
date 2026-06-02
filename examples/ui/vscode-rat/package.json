@@ -1,0 +1,66 @@
+{
+  "name": "vscode-rat",
+  "displayName": "RAT Data-Dev",
+  "description": "A VS Code window into the RAT v3 data-dev plane — browse the DuckLake catalog, run the incremental-embed pipeline, query, and 🔍 semantic-search. EXPLORATORY (experiments/data-dev-plane).",
+  "version": "0.1.0",
+  "publisher": "rat-data-dev",
+  "license": "Apache-2.0",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ratDataDev",
+          "title": "RAT Data-Dev",
+          "icon": "media/rat.svg"
+        }
+      ]
+    },
+    "views": {
+      "ratDataDev": [
+        { "id": "ratDataDev.catalog", "name": "DuckLake Catalog" },
+        { "id": "ratDataDev.health", "name": "Plugin Health" }
+      ]
+    },
+    "commands": [
+      { "command": "ratDataDev.refresh", "title": "RAT: Refresh", "icon": "$(refresh)" },
+      { "command": "ratDataDev.runPipeline", "title": "RAT: Run Pipeline", "icon": "$(play)" },
+      { "command": "ratDataDev.query", "title": "RAT: Run SQL Query", "icon": "$(database)" },
+      { "command": "ratDataDev.search", "title": "RAT: Semantic Search", "icon": "$(search)" },
+      { "command": "ratDataDev.previewTable", "title": "RAT: Preview Table" }
+    ],
+    "menus": {
+      "view/title": [
+        { "command": "ratDataDev.runPipeline", "when": "view == ratDataDev.catalog", "group": "navigation@1" },
+        { "command": "ratDataDev.search", "when": "view == ratDataDev.catalog", "group": "navigation@2" },
+        { "command": "ratDataDev.query", "when": "view == ratDataDev.catalog", "group": "navigation@3" },
+        { "command": "ratDataDev.refresh", "when": "view == ratDataDev.catalog", "group": "navigation@4" }
+      ],
+      "view/item/context": [
+        { "command": "ratDataDev.previewTable", "when": "view == ratDataDev.catalog && viewItem == table" }
+      ]
+    },
+    "configuration": {
+      "title": "RAT Data-Dev",
+      "properties": {
+        "ratDataDev.gatewayUrl": {
+          "type": "string",
+          "default": "http://localhost:8787",
+          "description": "URL of the data-dev gateway (run `make data-dev-gateway`)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — Data-dev plane build step 6 DONE: the VS Code UI — the experiment is END-TO-END
+
+On `phase-1-data-dev-plane`. Build-order §11 step 6 — a VS Code extension as a UI client of the data-dev plane, closing the multi-UI vision (CLI / web-portal / **VS Code**). With this the experiment spans **storage → catalog → engine+ML → strategy → UI**, local AND remote. EXPLORATORY + **ADDITIVE**: `make breaking` clean, conformance unchanged (34/34), sealed `rat/2.0` surface untouched.
+
+- **[`examples/ui/vscode-rat`](../examples/ui/vscode-rat/)** — TypeScript VS Code extension: DuckLake catalog tree (tables→snapshots, click-to-preview), **Run Pipeline** (incremental-embed strategy), SQL query grid, **🔍 semantic search**, plugin-health view. Compiles clean under strict `tsc` (verified in a node:22 container → `out/*.js`).
+- **[`gateway/app.py`](../examples/ui/vscode-rat/gateway/)** + **`make data-dev-gateway`** ([`scripts/data-dev-gateway.sh`](../scripts/data-dev-gateway.sh)) — a stdlib-only Python BFF that owns the in-proc engine+catalog+strategy, seeds + runs the strategy at boot, and serves a JSON API (`/api/{health,tables,snapshots,query,search,pipeline/run}`). Its `selftest.py` exercises every endpoint over HTTP; verified host-facing over the published port (curl: health/tables/search/pipeline all correct, incremental 12→15).
+- **Finding F9 (README §10):** the bytes/control split means a UI needs a data-leg helper — `engine.Query` returns an out-of-band `ArrowStream` and the reference engine's leg is in-proc (a Flight stand-in), so an external client can't pull rows over the wire. Hence the gateway BFF. The frozen **control** capabilities are exactly what the connectionless Connect TS SDK (ADR-018) calls directly; a real Flight engine would retire the BFF. Honest deployment reality, not a contract gap.
+- **🎉 The data-dev plane experiment is now end-to-end** — 5 new plugins (`minio-s3`, `ducklake-py`, `duckdb-ml-py`, `incremental-embed-py`, `vscode-rat`) + a gateway, composing a real scalable ML lakehouse on the sealed `rat/2.0` core **without changing one byte of the frozen wire**. Steps 2/3/4/6 done; step 5 (full compose) is covered by the `make data-dev-{local,remote,strategy,gateway}` targets. The practical Q02 substitute (principle #8) has produced its findings (F1–F9). **Next: a synthesis writeup of what held / what bent, and decide which findings feed back into the contracts or a future ADR.**
+
+---
+
 ## 2026-06-02 — Data-dev plane build step 4 DONE: a real incremental-embed ELT strategy
 
 On `phase-1-data-dev-plane`. Build-order §11 step 4 — a genuine incremental ELT as a `kind: strategy` plugin, composing capabilities through the invoke gateway (names no concrete plugin). EXPLORATORY + **ADDITIVE**: `make breaking` clean, conformance unchanged (34/34 — the strategy, like fullrefresh/scd2, has no `harness_test.py`; it's exercised by its runner), sealed `rat/2.0` surface untouched.

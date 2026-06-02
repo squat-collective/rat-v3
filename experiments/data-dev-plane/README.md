@@ -66,7 +66,7 @@ throughput bottleneck.
 | **catalog** (+format) | `ducklake-py` | 🆕 | [DuckLake](https://ducklake.select/docs/stable/) lakehouse: SQL metadata + Parquet/S3, snapshots, time-travel, ACID — **subsumes the `format` axis** |
 | **engine + ML** | `duckdb-ml-py` | 🆕 | DuckDB + extensions: `ducklake`, `httpfs`/S3, `vss` (vectors), and an `embed()` UDF → **compute *and* AI, no new axis** |
 | **strategy** | `incremental-embed-py` | 🆕 ✅ | a *real* ELT (built): watermark-incremental load → merge → embed-only-new → flush → snapshot; idempotent (C1) |
-| **ui** | `vscode-rat` | 🆕 | a VS Code extension (client of the core via the generated **TypeScript SDK** — the ADR-018 connectionless codegen payoff) |
+| **ui** | `vscode-rat` | 🆕 ✅ | a VS Code extension (built) — catalog tree, run-pipeline, query grid, 🔍 semantic search, health; via a gateway BFF (F9), the connectionless TS SDK being the production control-plane path |
 | deployment-runtime | `podman` | reuse | each plugin a container → horizontal scale |
 | runtime | `subprocess-py` | reuse (maybe) | exec units if the strategy needs them |
 
@@ -447,7 +447,23 @@ is exactly the "where they *don't* hold up" value §0 is after):
 7. **Conformance** — ✅ **Done for `embed`:** [`engine-embed-v1.json`](../../contracts/conformance/engine-embed-v1.json) freezes deterministic `embed(hash-256, …)` golden vectors; the engine
    harness asserts them (dim + exact nonzero buckets + L2-norm). Vector-search/HNSW conformance
    is gated on the F1 derived-index question.
-8. **UX scope** — how much of VS Code's API to lean on (tree views, webview grid, notebooks?).
+8. **UX scope** — ✅ **first cut built:** tree views (catalog + health), an input-box query +
+   a webview results grid, semantic-search box, run-pipeline command. Notebooks / an inline
+   results editor are a possible next refinement.
+
+### Findings from building step 6 (the VS Code UI) — 2026-06-02
+
+- **F9 — the bytes/control split means a UI needs a data-leg helper.** The frozen contracts
+  keep bulk data off the control plane (`engine.Query` → an out-of-band `ArrowStream`). The
+  reference engine's Arrow leg is an **in-process** registry (a Flight stand-in), so an
+  external client (the editor) can't pull query rows over the wire. The VS Code extension
+  therefore talks to a small **gateway BFF** that owns the in-proc stack, pulls the Arrow, and
+  re-exposes results as JSON. The frozen **control** capabilities (catalog browse,
+  `strategy.Apply`, health) are exactly what the generated **Connect TS SDK** (ADR-018) calls
+  directly; a production engine with a real Flight endpoint would let the UI pull the data leg
+  too, retiring the BFF. This is the honest shape of "a UI is just a capability client" once
+  you respect that **the control plane never carries bytes** — the UX needs a data path, and
+  the reference's in-proc one isn't wire-reachable. Not a contract gap; a deployment reality.
 
 ---
 
@@ -478,7 +494,15 @@ is exactly the "where they *don't* hold up" value §0 is after):
    capability** — the engine writes the lake directly (finding F8, §10).
 5. **The composition** — a runner + a `make data-dev-plane` target that boots the stack
    (podman) and runs the pipeline on a real dataset.
-6. **`vscode-rat`** — the VS Code extension on top, via the TS SDK.
+6. **`vscode-rat`** ✅ **DONE** — a VS Code extension ([`examples/ui/vscode-rat`](../../examples/ui/vscode-rat/))
+   that's a UI client of the data-dev plane: DuckLake catalog tree (tables → snapshots,
+   click-to-preview), **Run Pipeline** (the incremental-embed strategy), SQL query grid,
+   **🔍 semantic search**, plugin-health view. Compiles clean (`tsc`, strict). Talks to a
+   small Python **gateway BFF** ([`gateway/app.py`](../../examples/ui/vscode-rat/gateway/),
+   `make data-dev-gateway`) that owns the in-proc stack and re-exposes it as JSON — because
+   the reference engine's Arrow result leg is in-proc only (finding F9). Verified host-facing
+   over the published port. The frozen control capabilities are what the connectionless
+   Connect TS SDK (ADR-018) would call against a production core.
 
 Land each on a `phase-1-<slug>` sub-branch, `make breaking` clean (it will be — all additive),
 and keep this doc fresh as the shape changes.
