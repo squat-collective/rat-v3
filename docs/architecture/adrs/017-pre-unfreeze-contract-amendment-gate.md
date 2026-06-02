@@ -2,10 +2,11 @@
 
 ## Status: Proposed (2026-06-02)
 
-> Proposed, not Accepted, on purpose: this ADR ratifies a set of *directions* (one of
-> which — PU-4 — is a genuine product-scoping fork for Tom), and it rests partly on a
-> **simulated** review. It flips to Accepted once the per-item directions are ratified
-> and the **real** Q02 external human review (ADR-013 Q02) either confirms or extends it.
+> **Update 2026-06-02 — PU-4 (Q01) ratified: v1 tenancy is _isolation-only_** (Tom's call;
+> see PU-4 below). That was the one genuine product-scoping fork. The ADR stays **Proposed**
+> for the single remaining reason: it rests partly on a **simulated** review, so it flips to
+> Accepted only once the **real** Q02 external human review (ADR-013 Q02) confirms or extends
+> the gate.
 
 ## Context
 
@@ -71,17 +72,19 @@ single key is a forge-oracle). Rationale: `Conforms` is static set-membership = 
 forever," and a single `Authority` keyring means one leaked key = full trust. **Wire impact:
 additive fields** (awkward to add post-major, hence pre-publish).
 
-### 4. PU-4 — Tenancy scope: isolation-only vs sharing-capable *(soft freeze-reopen — DECISION NEEDED, see Q01)*
-**Recommended (needs Tom's ratification):** declare **v1 tenancy isolation-only** — mark
-`DECISION_KIND_SHARING` as *advisory-not-enforced* so the axis stops advertising an
-un-actionable verb — and defer actioned cross-tenant sharing + hierarchical tenancy to a
-future `v2` delegation primitive (its own ADR). Rationale: `DECISION_KIND_SHARING` is today
-*decidable but un-actionable* on flat-string keys (no delegation/grant shape in `state`/
-`storage`); the cheap, honest path is to scope v1 to the isolation it actually enforces,
-and no user is pulling for cross-tenant sharing yet (Gate B unmet). **The alternative** —
-making v1 sharing-capable — requires adding the delegation primitive to `rat/1` **now**,
-because retrofitting cross-tenant semantics onto the namespace post-publish is the expensive
-`v2`. This is the one genuine fork in the punch-list.
+### 4. PU-4 — Tenancy scope: isolation-only vs sharing-capable *(soft freeze-reopen)*
+**DECIDED 2026-06-02 (Tom): v1 tenancy is _isolation-only_.** Mark `DECISION_KIND_SHARING`
+as *advisory-not-enforced* (the axis stops advertising an un-actionable verb), document v1
+tenancy as isolation-only, and defer actioned cross-tenant sharing + hierarchical tenancy to
+a future `v2` delegation primitive (its own ADR, only if a user pulls for it). Rationale:
+`DECISION_KIND_SHARING` is today *decidable but un-actionable* on flat-string keys (no
+delegation/grant shape in `state`/`storage`); scoping v1 to the isolation it actually
+enforces is the cheap, honest path, and no user is pulling for cross-tenant sharing yet
+(Gate B unmet). **The alternative — sharing-capable v1** (adding the delegation primitive to
+`rat/1` *now*, because retrofitting cross-tenant semantics post-publish is the expensive
+`v2`) — was **considered and rejected for v1** on those grounds. **Execution (part of the
+pre-publish cut):** a contract-prose note on the tenancy axis that `DECISION_KIND_SHARING`
+is advisory-not-enforced in v1 + the isolation-only scope statement (no wire change).
 
 ### 5. Decide-the-additive-now seams *(the additive door closes at publish)*
 - **5a — Semantic-field-skew negotiation** (architect F2 / maintainer A1): the
@@ -132,9 +135,9 @@ contract-surface, consistent with the `rat/1.x` additive-door precedent
 
 ## Open questions
 
-- **Q01** — PU-4: is v1 tenancy **isolation-only** (recommended) or **sharing-capable**?
-  Tom's call; the answer decides whether a delegation primitive must land in `rat/1` now or
-  becomes a documented `v2`.
+- ~~**Q01** — PU-4: is v1 tenancy **isolation-only** or **sharing-capable**?~~ **RESOLVED
+  2026-06-02 (Tom): isolation-only.** A `v2` cross-tenant delegation primitive becomes its
+  own ADR if/when a user pulls for sharing. See PU-4.
 - **Q02** — Does the **real** Q02 external review confirm this gate, or add/reprioritize
   items? The gate is provisional until it runs.
 - **Q03** — Sequencing: do the PU items land as **one** coordinated `rat/2.x` amendment cut,
