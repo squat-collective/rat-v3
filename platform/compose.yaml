@@ -1,0 +1,130 @@
+# platform/compose.yaml — the always-on RAT data platform stack (ADR-020 S1).
+#
+#   docker compose up -d        # Postgres + MinIO + engine + catalog + rat serve (stays up)
+#   docker compose run --rm runner   # run the medallion once through the gateway
+#   docker compose down -v      # tear it all down
+#
+# rat serve (the orchestrator) runs in a container and ATTACHES to the engine + catalog
+# sibling containers by service name — no docker-in-docker. The DuckLake's metadata lives
+# on Postgres and its data on MinIO/S3, so the plugin containers share one lake over the
+# network (the only way two containers can, given the frozen LaunchSpec has no volume mount).
+name: rat-platform
+
+services:
+  postgres:
+    image: docker.io/library/postgres:16
+    environment:
+      POSTGRES_USER: ducklake
+      POSTGRES_PASSWORD: ducklake
+      POSTGRES_DB: ducklake
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ducklake -d ducklake"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  minio:
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    # No host ports — the plugins + runner reach MinIO by service name on the network.
+
+  engine:
+    image: docker.io/library/python:3.12
+    working_dir: /work/examples/engine/duckdb-ml-py
+    command:
+      - bash
+      - -lc
+      - "pip install -q --root-user-action=ignore grpcio==1.80.0 protobuf==7.35.0 duckdb==1.5.3 pyarrow==24.0.0 numpy==2.2.6 && exec python main.py"
+    environment:
+      PYTHONPATH: /work/contracts/sdks/python
+      RAT_PLUGIN_ADDR: "0.0.0.0:50051"
+      RAT_DUCKLAKE_META: "postgres:host=postgres port=5432 dbname=ducklake user=ducklake password=ducklake"
+      RAT_DUCKLAKE_DATA: "s3://rat/platform/"
+      RAT_DUCKLAKE_ALIAS: "lake"
+      RAT_S3_ENDPOINT: "minio:9000"
+      RAT_S3_KEY_ID: "minioadmin"
+      RAT_S3_SECRET: "minioadmin"
+      RAT_S3_USE_SSL: "false"
+    volumes:
+      - ../:/work:z
+      - pipcache:/root/.cache/pip
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('localhost',50051),2)\""]
+      interval: 5s
+      timeout: 4s
+      retries: 40
+      start_period: 60s
+    depends_on:
+      postgres: {condition: service_healthy}
+      minio: {condition: service_started}
+
+  catalog:
+    image: docker.io/library/python:3.12
+    working_dir: /work/examples/catalog/ducklake-py
+    command:
+      - bash
+      - -lc
+      - "pip install -q --root-user-action=ignore grpcio==1.80.0 protobuf==7.35.0 duckdb==1.5.3 && exec python main.py"
+    environment:
+      PYTHONPATH: /work/contracts/sdks/python
+      RAT_PLUGIN_ADDR: "0.0.0.0:50051"
+      RAT_DUCKLAKE_META: "postgres:host=postgres port=5432 dbname=ducklake user=ducklake password=ducklake"
+      RAT_DUCKLAKE_DATA: "s3://rat/platform/"
+      RAT_DUCKLAKE_ALIAS: "lake"
+      RAT_DUCKLAKE_EXTENSIONS: "httpfs,postgres,ducklake"
+      RAT_CATALOG_TRACKING: "/tmp/tracking.db"
+    volumes:
+      - ../:/work:z
+      - pipcache:/root/.cache/pip
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('localhost',50051),2)\""]
+      interval: 5s
+      timeout: 4s
+      retries: 40
+      start_period: 60s
+    depends_on:
+      postgres: {condition: service_healthy}
+      minio: {condition: service_started}
+
+  rat-serve:
+    image: rat/serve:dev          # built by `make rat-image`
+    # the image entrypoint is `rat serve --plane /etc/rat/plane.yaml`; we mount our plane over it
+    ports:
+      - "7777:7777"
+    volumes:
+      - ./plane.yaml:/etc/rat/plane.yaml:ro,z
+      - ./manifests:/etc/rat/manifests:ro,z
+    depends_on:
+      engine: {condition: service_healthy}
+      catalog: {condition: service_healthy}
+
+  runner:
+    image: docker.io/library/python:3.12
+    profiles: ["run"]             # not started by `up`; run with `docker compose run --rm runner`
+    working_dir: /work/platform
+    command:
+      - bash
+      - -lc
+      - "pip install -q --root-user-action=ignore grpcio==1.80.0 protobuf==7.35.0 duckdb==1.5.3 pyarrow==24.0.0 numpy==2.2.6 boto3==1.40.0 pyyaml && exec python run.py"
+    environment:
+      PYTHONPATH: /work/contracts/sdks/python
+      RAT_GATEWAY: "rat-serve:7777"
+      RAT_PLATFORM_LANDING: "/work/platform/landing"
+      RAT_DUCKLAKE_META: "postgres:host=postgres port=5432 dbname=ducklake user=ducklake password=ducklake"
+      RAT_DUCKLAKE_DATA: "s3://rat/platform/"
+      RAT_DUCKLAKE_ALIAS: "lake"
+      RAT_S3_ENDPOINT: "minio:9000"
+      RAT_S3_KEY_ID: "minioadmin"
+      RAT_S3_SECRET: "minioadmin"
+      RAT_S3_USE_SSL: "false"
+    volumes:
+      - ../:/work:z
+      - pipcache:/root/.cache/pip
+    depends_on:
+      rat-serve: {condition: service_started}
+
+volumes:
+  pipcache:

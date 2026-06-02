@@ -1,30 +1,17 @@
-# plane.yaml — the plugin set `rat serve` brings up for this platform.
-# M1 uses the local-process runtime (plugins are processes inside the bundle image,
-# sharing the lake on the container filesystem). The launch `image:` values are thin
-# wrappers (built by the bundle image) that run each plugin's `python main.py`.
+# plane.yaml — the plugin set `rat serve` fronts in the always-on stack (ADR-020 S1).
+# ATTACH mode: compose starts every plugin as a sibling container; `rat serve` connects
+# to them by service name (no docker-in-docker). `runtime:` is ignored for attach.
 addr: 0.0.0.0:7777
 runtime: local
-health_timeout: 40s          # generous: first launch installs DuckDB extensions (ducklake, …)
+health_timeout: 90s
 plugins:
   - name: rat-engine
     manifest: ./manifests/engine.plugin.yaml
-    launch:
-      image: ./bin/rat-engine          # wrapper → python main.py (examples/engine/duckdb-ml-py)
-      isolation: i9
-      env:
-        RAT_DUCKLAKE_META: "sqlite:/data/lake/meta.db"
-        RAT_DUCKLAKE_DATA: "/data/lake/data/"
-        RAT_DUCKLAKE_ALIAS: "lake"
+    endpoint: engine:50051          # the `engine` compose service
 
   - name: rat-catalog
     manifest: ./manifests/catalog.plugin.yaml
-    launch:
-      image: ./bin/rat-catalog         # wrapper → python main.py (examples/catalog/ducklake-py)
-      isolation: i9
-      env:
-        RAT_DUCKLAKE_META: "sqlite:/data/lake/meta.db"
-        RAT_DUCKLAKE_DATA: "/data/lake/data/"
-        RAT_CATALOG_TRACKING: "/data/lake/tracking.db"
+    endpoint: catalog:50051         # the `catalog` compose service
 
   - name: platform-runner
     manifest: ./manifests/runner.plugin.yaml

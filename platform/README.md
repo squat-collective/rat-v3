@@ -38,26 +38,37 @@ platform/
 └── README.md
 ```
 
-## Run it (M1 — local)
+## Run it (the always-on stack)
 
 ```
-make platform-demo        # builds the bundle image, runs the medallion end to end
+make platform-up        # bring up the stack (Postgres + MinIO + engine + catalog + rat serve) — stays up
+make platform-run       # run the medallion once through the gateway (bronze→silver→gold)
+make platform-down      # tear it all down
 ```
 
-Under the hood: `rat serve --plane plane.yaml` (local runtime) launches the **DuckDB
-engine** + **DuckLake catalog** plugins; `run.py` connects to the gateway as
-`platform-runner` and issues each model as a `rat://engine/v1/execute` command (so every
-layer build is authorized + audited like any other command); then it reads the gold mart
-straight from the shared DuckLake to show the result.
+`compose.yaml` brings up every plugin as a sibling container; **`rat serve` runs in its
+own container and ATTACHES to the plugins by service name** (no docker-in-docker). The
+DuckLake's **metadata lives on Postgres** and its **data on MinIO/S3**, so the engine and
+catalog share one lake over the network. `make platform-run` connects to the gateway as
+`platform-runner` and issues each model as a `rat://engine/v1/execute` command — so every
+layer build is **C5-authorized + audited** by the core, just like any other command — then
+commits the gold snapshot to the **DuckLake catalog** (also through the gateway) and reads
+the mart back to show it.
 
-Add your own data: drop a CSV in `landing/`, add a `bronze/<name>.sql` that
-`read_csv`s it, then `silver`/`gold` models, and list them in `pipelines/medallion.yaml`.
+Watch the control hops in the orchestrator's audit log:
+```
+podman logs rat-platform-rat-serve-1 | grep capability
+```
+
+Add your own data: drop a CSV in `landing/`, add a `bronze/<name>.sql` that `read_csv`s
+`${LANDING}/<file>`, then `silver`/`gold` models, and list them in `pipelines/medallion.yaml`.
 
 ## Status
 
 This bundle is built in slices ([ADR-020](../docs/architecture/adrs/020-data-platform-bundle.md)):
 
-- **M1 — local medallion demo** ← *here*. Scaffold + a runnable local pipeline through the gateway.
-- **M2 — `compose up`** — containerize via attach mode: rat + plugins + Postgres + MinIO on one network.
-- **M3 — data-quality tests** — `project/tests/` run + reported.
-- **M4 — VS Code** — `vscode-rat` repointed at the running stack: browse layers, edit models, run pipelines.
+- ✅ **S1 — the decoupled stack runs the medallion through `rat serve`, remote** (DuckLake on
+  Postgres + data on MinIO; attach mode, no DinD). ← *done.* `make platform-up && make platform-run`.
+- **S2 — the scheduler plugin** — self-driving cron refresh (hourly), through rat.
+- **S3 — merge strategies + quality gates** — `project/tests/` + branch-on-failure-discard.
+- **S4 — state-backend + VS Code** — pipelines/runs/schedules metadata; `vscode-rat` on the stack.
