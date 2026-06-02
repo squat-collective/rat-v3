@@ -75,8 +75,10 @@ more environments (remote gateways included) — each appears as its own root in
 3. Open this folder in VS Code and press **`F5`** → an Extension Development Host launches
    with the extension loaded.
 
-The gateway URL is configurable via the `ratDataDev.gatewayUrl` setting (default
-`http://localhost:8787`) — point it at a remote gateway if you run one.
+Connections live in the `ratDataDev.connections` setting (add/edit them from the view's
+**＋ Add Connection** button, or edit the JSON directly) — point each at a local or
+remote gateway. There is no implicit default: an empty list shows an *Add Connection*
+welcome, and deleting your last connection leaves it empty (no phantom `local`).
 
 ## Layout
 

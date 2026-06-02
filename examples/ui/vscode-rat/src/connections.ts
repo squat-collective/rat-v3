@@ -18,14 +18,11 @@ export interface RatConnection {
 const SECTION = "ratDataDev";
 
 export function getConnections(): RatConnection[] {
-  const cfg = vscode.workspace.getConfiguration(SECTION);
-  const list = cfg.get<RatConnection[]>("connections", []);
-  if (list && list.length) {
-    return list.filter((c) => c && c.name && c.url);
-  }
-  // Seed from the legacy single-gateway setting, else a sensible local default.
-  const legacy = cfg.get<string>("gatewayUrl", "");
-  return [{ name: "local", url: legacy || "http://localhost:8787" }];
+  // Return exactly what the user configured — NO implicit default. An empty list is a
+  // valid, respected state (the view shows an "Add Connection" welcome). Re-seeding a
+  // default here is what made a sole `local` connection undeletable.
+  const list = vscode.workspace.getConfiguration(SECTION).get<RatConnection[]>("connections", []);
+  return (list || []).filter((c) => c && c.name && c.url);
 }
 
 export async function saveConnections(list: RatConnection[]): Promise<void> {

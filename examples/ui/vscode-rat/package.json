@@ -2,7 +2,7 @@
   "name": "vscode-rat",
   "displayName": "RAT Data-Dev",
   "description": "A VS Code window into RAT v3 data-dev planes — manage many RAT connections, browse the DuckLake catalog, run the incremental-embed pipeline, query, and 🔍 semantic-search. EXPLORATORY (experiments/data-dev-plane).",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "rat-data-dev",
   "license": "Apache-2.0",
   "engines": { "vscode": "^1.85.0" },
@@ -26,6 +26,16 @@
         { "id": "ratDataDev.health", "name": "Plugin Health" }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "ratDataDev.catalog",
+        "contents": "No RAT connections yet.\n[Add Connection](command:ratDataDev.addConnection)\nEach connection points at a RAT gateway — run `make data-dev-gateway` for a local one (http://localhost:8787)."
+      },
+      {
+        "view": "ratDataDev.health",
+        "contents": "No RAT connections yet.\n[Add Connection](command:ratDataDev.addConnection)"
+      }
+    ],
     "commands": [
       { "command": "ratDataDev.refresh", "title": "RAT: Refresh", "icon": "$(refresh)" },
       { "command": "ratDataDev.addConnection", "title": "RAT: Add Connection…", "icon": "$(add)" },
@@ -58,8 +68,8 @@
       "properties": {
         "ratDataDev.connections": {
           "type": "array",
-          "default": [{ "name": "local", "url": "http://localhost:8787" }],
-          "markdownDescription": "RAT connections — one per environment/plane (local, staging, prod, per-tenant). Each points at a RAT gateway/core endpoint. Manage them from the **RAT Data-Dev** view's *Add Connection* button, or edit here directly.",
+          "default": [],
+          "markdownDescription": "RAT connections — one per environment/plane (local, staging, prod, per-tenant). Each points at a RAT gateway/core endpoint. Add them from the **RAT Data-Dev** view's *Add Connection* button, or edit here directly. An empty list is fine — the view shows an *Add Connection* prompt.",
           "items": {
             "type": "object",
             "required": ["name", "url"],
@@ -69,12 +79,6 @@
               "tenant": { "type": "string", "description": "Optional tenant identity (forward-room for core-fronted auth)" }
             }
           }
-        },
-        "ratDataDev.gatewayUrl": {
-          "type": "string",
-          "default": "http://localhost:8787",
-          "markdownDeprecationMessage": "Deprecated: use `ratDataDev.connections` instead. Used only to seed the default `local` connection when no connections are configured.",
-          "description": "Legacy single-gateway URL (seeds the default connection)."
         }
       }
     }
