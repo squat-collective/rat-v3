@@ -4,19 +4,52 @@
 pub struct VendCredentialsRequest {
     /// Storage prefix the creds are scoped to (e.g. "s3://bucket/warehouse/orders").
     /// The plugin MUST further constrain by context.identity.tenant.
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub prefix: ::prost::alloc::string::String,
-    #[prost(enumeration="AccessMode", tag="3")]
+    #[prost(enumeration = "AccessMode", tag = "3")]
     pub mode: i32,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct VendCredentialsResponse {
     /// Opaque, provider-specific credential blob (e.g. STS token set). Never logged;
     /// `debug_redact` makes that structural (reviews/06 SEC-8).
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub credentials: ::prost::alloc::vec::Vec<u8>,
     /// Expiry (unix epoch millis). Callers must re-vend after this.
-    #[prost(int64, tag="2")]
+    #[prost(int64, tag = "2")]
+    pub expires_unix_ms: i64,
+}
+/// Q02 5c — request for the READ-scoped vend. No `mode` field: the method fixes the
+/// mode to READ so it is authorized at the capability level (C5), not chosen by the
+/// caller. Same prefix/tenant scoping rules as VendCredentials.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct VendReadCredentialsRequest {
+    /// Storage prefix the creds are scoped to. The plugin MUST further constrain by
+    /// context.identity.tenant.
+    #[prost(string, tag = "2")]
+    pub prefix: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct VendReadCredentialsResponse {
+    #[prost(bytes = "vec", tag = "1")]
+    pub credentials: ::prost::alloc::vec::Vec<u8>,
+    #[prost(int64, tag = "2")]
+    pub expires_unix_ms: i64,
+}
+/// Q02 5c — request for the WRITE-scoped vend. No `mode` field: the method fixes the
+/// mode to write-capable so it is authorized at the capability level (C5).
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct VendWriteCredentialsRequest {
+    /// Storage prefix the creds are scoped to. The plugin MUST further constrain by
+    /// context.identity.tenant.
+    #[prost(string, tag = "2")]
+    pub prefix: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct VendWriteCredentialsResponse {
+    #[prost(bytes = "vec", tag = "1")]
+    pub credentials: ::prost::alloc::vec::Vec<u8>,
+    #[prost(int64, tag = "2")]
     pub expires_unix_ms: i64,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]

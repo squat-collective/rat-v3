@@ -3,70 +3,70 @@
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetRequest {
     /// Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub key: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetResponse {
-    #[prost(bool, tag="1")]
+    #[prost(bool, tag = "1")]
     pub found: bool,
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub value: ::prost::alloc::vec::Vec<u8>,
     /// Monotonic revision for CAS / optimistic concurrency.
-    #[prost(int64, tag="3")]
+    #[prost(int64, tag = "3")]
     pub revision: i64,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PutRequest {
     /// Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub key: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes = "vec", tag = "3")]
     pub value: ::prost::alloc::vec::Vec<u8>,
     /// CAS: if > 0, the put succeeds only if the current revision matches.
     /// 0 == unconditional write. This backs leader-election leases (ADR-002 D5).
-    #[prost(int64, tag="4")]
+    #[prost(int64, tag = "4")]
     pub if_revision: i64,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PutResponse {
-    #[prost(enumeration="PutOutcome", tag="1")]
+    #[prost(enumeration = "PutOutcome", tag = "1")]
     pub outcome: i32,
     /// New revision on COMMITTED; the current conflicting revision on CONFLICT;
     /// unspecified (0) on UNKNOWN.
-    #[prost(int64, tag="2")]
+    #[prost(int64, tag = "2")]
     pub revision: i64,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListRequest {
     /// Plugin-relative prefix; subject to KEY GRAMMAR (file header). MAY be empty
     /// (== list all of this plugin+tenant namespace).
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub prefix: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListResponse {
-    #[prost(string, repeated, tag="1")]
+    #[prost(string, repeated, tag = "1")]
     pub keys: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct WatchRequest {
     /// Plugin-relative prefix; subject to KEY GRAMMAR (file header). MAY be empty.
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub prefix: ::prost::alloc::string::String,
     /// Resume from this revision (0 == from now).
-    #[prost(int64, tag="3")]
+    #[prost(int64, tag = "3")]
     pub from_revision: i64,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct WatchResponse {
-    #[prost(enumeration="watch_response::Type", tag="1")]
+    #[prost(enumeration = "watch_response::Type", tag = "1")]
     pub r#type: i32,
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub key: ::prost::alloc::string::String,
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes = "vec", tag = "3")]
     pub value: ::prost::alloc::vec::Vec<u8>,
-    #[prost(int64, tag="4")]
+    #[prost(int64, tag = "4")]
     pub revision: i64,
 }
 /// Nested message and enum types in `WatchResponse`.

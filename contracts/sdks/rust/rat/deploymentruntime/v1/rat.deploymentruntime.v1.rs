@@ -4,83 +4,83 @@
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ResourceQuantities {
     /// e.g. "500m"
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub cpu: ::prost::alloc::string::String,
     /// e.g. "512Mi"
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub memory: ::prost::alloc::string::String,
 }
 /// I9 minimum isolation profile — contract, not convention.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct IsolationProfile {
-    #[prost(bool, tag="1")]
+    #[prost(bool, tag = "1")]
     pub run_as_non_root: bool,
-    #[prost(bool, tag="2")]
+    #[prost(bool, tag = "2")]
     pub drop_all_capabilities: bool,
-    #[prost(bool, tag="3")]
+    #[prost(bool, tag = "3")]
     pub no_new_privileges: bool,
-    #[prost(bool, tag="4")]
+    #[prost(bool, tag = "4")]
     pub read_only_root_fs: bool,
     /// Block egress to cloud metadata endpoints (e.g. 169.254.169.254).
-    #[prost(bool, tag="5")]
+    #[prost(bool, tag = "5")]
     pub block_metadata_egress: bool,
     /// Optional seccomp profile name (empty == runtime default, which must be at
     /// least "RuntimeDefault"-equivalent).
-    #[prost(string, tag="6")]
+    #[prost(string, tag = "6")]
     pub seccomp_profile: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LaunchSpec {
     /// OCI image reference for the plugin.
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub image: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="2")]
+    #[prost(message, optional, tag = "2")]
     pub requests: ::core::option::Option<ResourceQuantities>,
-    #[prost(message, optional, tag="3")]
+    #[prost(message, optional, tag = "3")]
     pub limits: ::core::option::Option<ResourceQuantities>,
-    #[prost(message, optional, tag="4")]
+    #[prost(message, optional, tag = "4")]
     pub isolation: ::core::option::Option<IsolationProfile>,
     /// Environment the plugin needs (NEVER secrets — those come via secret-backend).
-    #[prost(map="string, string", tag="5")]
+    #[prost(map = "string, string", tag = "5")]
     pub env: ::std::collections::HashMap<::prost::alloc::string::String, ::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LaunchRequest {
     /// Logical plugin id this instance serves (for healthcheck/terminate).
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub plugin_id: ::prost::alloc::string::String,
-    #[prost(message, optional, tag="3")]
+    #[prost(message, optional, tag = "3")]
     pub spec: ::core::option::Option<LaunchSpec>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct LaunchResponse {
     /// Opaque handle the runtime uses to identify this instance later.
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub instance_id: ::prost::alloc::string::String,
     /// Address the core/API gateway dials to reach the launched plugin.
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub endpoint: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TerminateRequest {
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub instance_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TerminateResponse {
-    #[prost(bool, tag="1")]
+    #[prost(bool, tag = "1")]
     pub terminated: bool,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HealthcheckRequest {
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub instance_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HealthcheckResponse {
-    #[prost(enumeration="HealthStatus", tag="1")]
+    #[prost(enumeration = "HealthStatus", tag = "1")]
     pub status: i32,
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub detail: ::prost::alloc::string::String,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]

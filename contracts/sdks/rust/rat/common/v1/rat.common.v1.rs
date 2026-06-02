@@ -16,33 +16,33 @@
 pub struct AuditRecord {
     /// Core-assigned chain position id (monotonic). Set by the CORE, never the caller.
     /// With prev_hash this forms the linear hash chain.
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
     /// Core-computed hash of the previous record's canonical bytes (chain link). Empty
     /// for the first record in the chain.
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub prev_hash: ::prost::alloc::string::String,
-    #[prost(int64, tag="3")]
+    #[prost(int64, tag = "3")]
     pub timestamp_unix_ms: i64,
     /// Who (subject) did what (action) to which (resource), and the result.
-    #[prost(string, tag="4")]
+    #[prost(string, tag = "4")]
     pub subject: ::prost::alloc::string::String,
-    #[prost(string, tag="5")]
+    #[prost(string, tag = "5")]
     pub tenant: ::prost::alloc::string::String,
-    #[prost(string, tag="6")]
+    #[prost(string, tag = "6")]
     pub action: ::prost::alloc::string::String,
-    #[prost(string, tag="7")]
+    #[prost(string, tag = "7")]
     pub resource: ::prost::alloc::string::String,
-    #[prost(enumeration="AuditOutcome", tag="8")]
+    #[prost(enumeration = "AuditOutcome", tag = "8")]
     pub outcome: i32,
     /// Correlation back to the operation (C1).
-    #[prost(string, tag="9")]
+    #[prost(string, tag = "9")]
     pub correlation_id: ::prost::alloc::string::String,
     /// Core's signature over this record's canonical serialization (all fields above
     /// PLUS key_id; this field itself is excluded from the signed bytes). The authority
     /// of the record — a sink verifies against the core's published key and rejects any
     /// record whose signature does not verify.
-    #[prost(bytes="vec", tag="10")]
+    #[prost(bytes = "vec", tag = "10")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
     /// Identifier of the core verification key that signed this record (M3,
     /// reviews/07). Resolves, in the core's PUBLISHED keyring, to {public key,
@@ -51,7 +51,7 @@ pub struct AuditRecord {
     /// against the retired key, which the keyring retains), and algorithm AGILITY is a
     /// new key_id bound to a new algorithm (no separate on-wire `alg` field needed).
     /// Empty is permitted ONLY for a single-key deployment that never rotates.
-    #[prost(string, tag="11")]
+    #[prost(string, tag = "11")]
     pub key_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
@@ -86,19 +86,160 @@ impl AuditOutcome {
         }
     }
 }
+/// RequestContext is carried in the `rat-callmeta-bin` transport-metadata header
+/// (ADR-007), not as a request field. Its shape is the keystone design, unchanged.
+///
+/// The split is deliberate: `trace` is relayed verbatim across hops; `identity`
+/// is (re)stamped by the core every hop and its wire-supplied values are ignored
+/// by trusting components. Keeping them in separate sub-messages makes the
+/// "propagate this / never-trust that" boundary structural, not a per-field
+/// convention an author might misread.
+///
+/// NOTE: the async plane (common/v1 Event) still embeds RequestContext in its
+/// envelope body — a published event is core-stamped once at publish and has no
+/// per-hop metadata channel, so in-body carriage is correct there. The metadata
+/// carriage applies to the synchronous, gateway-mediated control RPCs.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RequestContext {
+    /// Distributed-trace correlation. Caller-propagated verbatim (C1).
+    #[prost(message, optional, tag = "1")]
+    pub trace: ::core::option::Option<TraceContext>,
+    /// Authenticated principals for this hop. Core-stamped; see Identity (C2/C3/C7).
+    #[prost(message, optional, tag = "2")]
+    pub identity: ::core::option::Option<Identity>,
+    /// Soft deadline hint (unix epoch millis). The authoritative deadline is still
+    /// gRPC's; this lets plugins make shed-load / early-abort decisions. 0 == none.
+    #[prost(int64, tag = "3")]
+    pub deadline_unix_ms: i64,
+}
+/// W3C-style trace correlation. These fields are caller-supplied and PROPAGATED
+/// UNCHANGED across every hop — they are diagnostic, not authorization-bearing,
+/// so relaying them verbatim is safe and required. (They are still attacker-
+/// influenced strings: sinks that log them must treat them as untrusted input —
+/// see reviews/06 SEC-12, log-injection.)
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct TraceContext {
+    /// W3C `traceparent`, e.g.
+    /// "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01". MANDATORY — the
+    /// core rejects RPCs without a well-formed traceparent.
+    #[prost(string, tag = "1")]
+    pub traceparent: ::prost::alloc::string::String,
+    /// W3C `tracestate` — optional vendor trace data, propagated verbatim.
+    #[prost(string, tag = "2")]
+    pub tracestate: ::prost::alloc::string::String,
+    /// Correlation ID stable across one whole logical operation (a pipeline run, a
+    /// user action) even as it fans out across many plugins + spans. MANDATORY.
+    /// Also the anti-replay binding target for SubjectAssertion (see below).
+    #[prost(string, tag = "3")]
+    pub correlation_id: ::prost::alloc::string::String,
+}
+/// The three principals. EVERY field here is set by the CORE, never trusted from
+/// the wire by a component making an authorization decision. The core's
+/// capability-invoke gateway (ADR-005) derives/verifies these on each hop before
+/// proxying. A plugin may READ them (for its own logic + audit) but a plugin's
+/// own writes to them are ignored/overwritten by the core on the next hop.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Identity {
+    /// PRINCIPAL 1 — the immediate authenticated caller of THIS hop.
+    ///
+    /// DERIVED server-side from this hop's channel credential (C2), RE-DERIVED
+    /// every hop, and NEVER propagated end-to-end. On strategy→format,
+    /// caller_plugin=strategy; on the core-mediated format→state hop,
+    /// caller_plugin=format. This is load-bearing for C3: the state gateway's
+    /// per-plugin namespace = (caller_plugin, tenant), so each plugin can only
+    /// address its own state. If this propagated instead of re-deriving, `format`
+    /// would write into `strategy`'s namespace — the exact cross-plugin leak C3
+    /// forbids. Plugins MUST NOT set this; the core stamps it.
+    #[prost(string, tag = "1")]
+    pub caller_plugin: ::prost::alloc::string::String,
+    /// PRINCIPAL 2 — the end user on whose behalf the operation runs.
+    ///
+    /// A CORE-SIGNED assertion, not a bare string (the forgeability fix). Verified
+    /// against the core's key at every consuming hop, AND bound to the operation so
+    /// it cannot be stockpiled and replayed (see SubjectAssertion). Propagated
+    /// end-to-end (unlike caller_plugin) because downstream authz/audit needs to
+    /// know "who triggered this", but its authority is the signature, not presence.
+    /// Empty only for pre-auth bootstrap calls (e.g. identity.Authenticate itself).
+    #[prost(message, optional, tag = "2")]
+    pub subject: ::core::option::Option<SubjectAssertion>,
+    /// PRINCIPAL 3 — the tenant this operation runs within.
+    ///
+    /// STRUCTURAL, not advisory (C7): server-stamped from the authenticated
+    /// principal, propagated, never caller-writable. The state gateway namespaces
+    /// by it, storage vends creds scoped to it, billing meters by it, and the core
+    /// refuses cross-tenant access. Empty string == the single-tenant/solo
+    /// deployment's implicit default tenant.
+    #[prost(string, tag = "3")]
+    pub tenant: ::prost::alloc::string::String,
+}
+/// A core-signed assertion that an end-user principal is authenticated, bound to
+/// one operation and short-lived. This is the anti-forgery + anti-replay core of
+/// the keystone (reviews/06 C-1, confused-deputy refinement).
+///
+/// VERIFICATION CONTRACT — every hop that consumes this assertion MUST:
+///    1. select the verification key by `key_id` from the core's published keyring
+///       (which also pins the algorithm — so rotation/agility is a new key_id), then
+///       verify `signature` over (principal, tenant, bound_correlation_id,
+///       expires_unix_ms, key_id) against that key;
+///    2. check bound_correlation_id == inbound TraceContext.correlation_id
+///       (an assertion is valid only for the operation it was minted for — a
+///       downstream plugin cannot bank it and reuse it for an unrelated op within
+///       the same tenant);
+///    3. check now <= expires_unix_ms (short-TTL belt-and-braces);
+///    4. CROSS-CHECK THE BARE MIRRORS (M4, reviews/07): the bare Identity.tenant and
+///       this `principal` MUST equal the signature-covered tenant + principal, else
+///       reject. The bare strings are convenience mirrors of the signed payload; a
+///       hop that reads them (instead of the verified values) must not be handed a
+///       value the signature does not cover.
+/// A `principal` value not covered by a valid signature MUST NOT be trusted —
+/// the bare string is a convenience mirror of the signed payload, nothing more.
+///
+/// TRUST BASIS for the UNSIGNED principals (M4): `caller_plugin` and `tenant` in
+/// Identity are NOT individually signed — `caller_plugin` is re-derived by the core
+/// per hop and `tenant` is server-stamped (and additionally covered by THIS
+/// assertion's signature, cross-checked in step 4). Their integrity therefore rests
+/// on AUTHENTICATED TRANSPORT (C2: mTLS / per-plugin token on the core↔plugin
+/// channel). On an unauthenticated channel they are forgeable — so a non-mTLS
+/// transport is out of contract for any multi-tenant deployment.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SubjectAssertion {
+    /// The authenticated end-user principal id (the signed, authoritative value
+    /// mirrored here for convenience). Empty for bootstrap/pre-auth calls.
+    #[prost(string, tag = "1")]
+    pub principal: ::prost::alloc::string::String,
+    /// The core's detached signature over (principal, tenant, bound_correlation_id,
+    /// expires_unix_ms, key_id). The authority of this assertion. NEVER trust
+    /// `principal` without verifying this.
+    #[prost(bytes = "vec", tag = "2")]
+    pub signature: ::prost::alloc::vec::Vec<u8>,
+    /// The correlation_id this assertion is bound to — must equal the inbound
+    /// TraceContext.correlation_id at every consuming hop (anti-stockpile).
+    #[prost(string, tag = "3")]
+    pub bound_correlation_id: ::prost::alloc::string::String,
+    /// Expiry (unix epoch millis). Short-TTL; re-mint rather than cache past this.
+    #[prost(int64, tag = "4")]
+    pub expires_unix_ms: i64,
+    /// Identifier of the core key that signed this assertion (M3, reviews/07).
+    /// Resolves in the core's published keyring to {public key, algorithm}; a verifier
+    /// picks the key by this id (step 1). Key ROTATION and algorithm AGILITY are both
+    /// "mint under a new key_id" — no separate on-wire `alg` field. Covered by the
+    /// signature. Empty only for a single-key deployment that never rotates.
+    #[prost(string, tag = "5")]
+    pub key_id: ::prost::alloc::string::String,
+}
 /// A reference to a table/dataset, resolvable by a format/catalog plugin.
 /// Deliberately opaque-ish: the format plugin interprets `uri` per its own
 /// scheme; the control plane just routes it.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TableRef {
     /// Catalog-qualified identifier, e.g. "warehouse.sales.orders".
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub identifier: ::prost::alloc::string::String,
     /// Optional storage/format URI hint, e.g. "s3://bucket/warehouse/orders".
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub uri: ::prost::alloc::string::String,
     /// Optional catalog branch/snapshot selector (catalog plugins that support it).
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub branch: ::prost::alloc::string::String,
 }
 /// An Arrow data stream endpoint — the out-of-band side channel for bulk bytes.
@@ -107,7 +248,7 @@ pub struct TableRef {
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ArrowStream {
     /// Endpoint the dialing party connects to for record batches.
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub endpoint: ::prost::alloc::string::String,
     /// Opaque ticket that authorizes + identifies this stream. SECURITY (reviews/06
     /// SEC-14): a conformant producer MUST issue tickets that are short-TTL,
@@ -129,17 +270,17 @@ pub struct ArrowStream {
     ///
     /// The detailed ticket-format spec is enforcement-layer (GA); the field is here so
     /// it's in the frozen shape.
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub ticket: ::prost::alloc::vec::Vec<u8>,
     /// Arrow IPC schema (serialized) so the dialing party can validate before
     /// transferring.
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes = "vec", tag = "3")]
     pub ipc_schema: ::prost::alloc::vec::Vec<u8>,
     /// The wire protocol of this stream. MUST be set (UNSPECIFIED is rejected).
-    #[prost(enumeration="ArrowTransport", tag="4")]
+    #[prost(enumeration = "ArrowTransport", tag = "4")]
     pub transport: i32,
     /// Which party hosts `endpoint`. MUST be set so the holder knows host-vs-dial.
-    #[prost(enumeration="ArrowStreamRole", tag="5")]
+    #[prost(enumeration = "ArrowStreamRole", tag = "5")]
     pub role: i32,
     /// COMPLETENESS (C2, reviews/08 — ADR-012): the total row count the producer
     /// intends to send. proto3 `optional` for presence: ABSENT == the producer cannot
@@ -149,11 +290,11 @@ pub struct ArrowStream {
     /// declared) signals a TRUNCATED transfer (producer died mid-send): the consumer
     /// MUST fail the write, never commit a partial dataset. Closes the silent-partial-
     /// commit corruption path (a truncated scan looks identical to a clean finish).
-    #[prost(int64, optional, tag="6")]
+    #[prost(int64, optional, tag = "6")]
     pub expected_rows: ::core::option::Option<i64>,
     /// Companion to expected_rows at Arrow record-batch granularity (same MUST-verify
     /// semantics). A consumer may check either or both; absent == not declared.
-    #[prost(int64, optional, tag="7")]
+    #[prost(int64, optional, tag = "7")]
     pub expected_batches: ::core::option::Option<i64>,
 }
 /// Outcome envelope reused by data-plane mutating RPCs.
@@ -162,7 +303,7 @@ pub struct WriteResult {
     /// Rows affected. proto3 `optional` for explicit presence: ABSENT == the
     /// engine/format cannot report a count (replaces the old -1 sentinel —
     /// reviews/06 API-13). Present 0 means "zero rows", distinctly from "unknown".
-    #[prost(int64, optional, tag="1")]
+    #[prost(int64, optional, tag = "1")]
     pub rows_affected: ::core::option::Option<i64>,
     /// Resulting version id of the written table state. proto3 `optional` for explicit
     /// presence (A1, reviews/08 — the sibling fix to rows_affected's, absorbed into the
@@ -170,14 +311,14 @@ pub struct WriteResult {
     /// version; present-empty == the write produced no version (unversioned format);
     /// present-nonempty == the version id. Set by a versioned format/table (a snapshot
     /// id) or by an engine whose write produced a new table version.
-    #[prost(string, optional, tag="2")]
+    #[prost(string, optional, tag = "2")]
     pub snapshot_id: ::core::option::Option<::prost::alloc::string::String>,
     /// Idempotent-retry signal (C1, reviews/08 — ADR-012): true when this response
     /// reflects a previously-committed write with the same `idempotency_key` (the retry
     /// was a no-op returning the original result), rather than a write applied now.
     /// Mirrors catalog MergeBranchResponse/CommitTableResponse.already_applied — the data
     /// plane has ONE idempotency model across the commit leg and the write leg.
-    #[prost(bool, tag="3")]
+    #[prost(bool, tag = "3")]
     pub already_applied: bool,
 }
 /// The wire protocol of an out-of-band data stream. PINNED at freeze
@@ -248,147 +389,6 @@ impl ArrowStreamRole {
         }
     }
 }
-/// RequestContext is carried in the `rat-callmeta-bin` transport-metadata header
-/// (ADR-007), not as a request field. Its shape is the keystone design, unchanged.
-///
-/// The split is deliberate: `trace` is relayed verbatim across hops; `identity`
-/// is (re)stamped by the core every hop and its wire-supplied values are ignored
-/// by trusting components. Keeping them in separate sub-messages makes the
-/// "propagate this / never-trust that" boundary structural, not a per-field
-/// convention an author might misread.
-///
-/// NOTE: the async plane (common/v1 Event) still embeds RequestContext in its
-/// envelope body — a published event is core-stamped once at publish and has no
-/// per-hop metadata channel, so in-body carriage is correct there. The metadata
-/// carriage applies to the synchronous, gateway-mediated control RPCs.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct RequestContext {
-    /// Distributed-trace correlation. Caller-propagated verbatim (C1).
-    #[prost(message, optional, tag="1")]
-    pub trace: ::core::option::Option<TraceContext>,
-    /// Authenticated principals for this hop. Core-stamped; see Identity (C2/C3/C7).
-    #[prost(message, optional, tag="2")]
-    pub identity: ::core::option::Option<Identity>,
-    /// Soft deadline hint (unix epoch millis). The authoritative deadline is still
-    /// gRPC's; this lets plugins make shed-load / early-abort decisions. 0 == none.
-    #[prost(int64, tag="3")]
-    pub deadline_unix_ms: i64,
-}
-/// W3C-style trace correlation. These fields are caller-supplied and PROPAGATED
-/// UNCHANGED across every hop — they are diagnostic, not authorization-bearing,
-/// so relaying them verbatim is safe and required. (They are still attacker-
-/// influenced strings: sinks that log them must treat them as untrusted input —
-/// see reviews/06 SEC-12, log-injection.)
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct TraceContext {
-    /// W3C `traceparent`, e.g.
-    /// "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01". MANDATORY — the
-    /// core rejects RPCs without a well-formed traceparent.
-    #[prost(string, tag="1")]
-    pub traceparent: ::prost::alloc::string::String,
-    /// W3C `tracestate` — optional vendor trace data, propagated verbatim.
-    #[prost(string, tag="2")]
-    pub tracestate: ::prost::alloc::string::String,
-    /// Correlation ID stable across one whole logical operation (a pipeline run, a
-    /// user action) even as it fans out across many plugins + spans. MANDATORY.
-    /// Also the anti-replay binding target for SubjectAssertion (see below).
-    #[prost(string, tag="3")]
-    pub correlation_id: ::prost::alloc::string::String,
-}
-/// The three principals. EVERY field here is set by the CORE, never trusted from
-/// the wire by a component making an authorization decision. The core's
-/// capability-invoke gateway (ADR-005) derives/verifies these on each hop before
-/// proxying. A plugin may READ them (for its own logic + audit) but a plugin's
-/// own writes to them are ignored/overwritten by the core on the next hop.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct Identity {
-    /// PRINCIPAL 1 — the immediate authenticated caller of THIS hop.
-    ///
-    /// DERIVED server-side from this hop's channel credential (C2), RE-DERIVED
-    /// every hop, and NEVER propagated end-to-end. On strategy→format,
-    /// caller_plugin=strategy; on the core-mediated format→state hop,
-    /// caller_plugin=format. This is load-bearing for C3: the state gateway's
-    /// per-plugin namespace = (caller_plugin, tenant), so each plugin can only
-    /// address its own state. If this propagated instead of re-deriving, `format`
-    /// would write into `strategy`'s namespace — the exact cross-plugin leak C3
-    /// forbids. Plugins MUST NOT set this; the core stamps it.
-    #[prost(string, tag="1")]
-    pub caller_plugin: ::prost::alloc::string::String,
-    /// PRINCIPAL 2 — the end user on whose behalf the operation runs.
-    ///
-    /// A CORE-SIGNED assertion, not a bare string (the forgeability fix). Verified
-    /// against the core's key at every consuming hop, AND bound to the operation so
-    /// it cannot be stockpiled and replayed (see SubjectAssertion). Propagated
-    /// end-to-end (unlike caller_plugin) because downstream authz/audit needs to
-    /// know "who triggered this", but its authority is the signature, not presence.
-    /// Empty only for pre-auth bootstrap calls (e.g. identity.Authenticate itself).
-    #[prost(message, optional, tag="2")]
-    pub subject: ::core::option::Option<SubjectAssertion>,
-    /// PRINCIPAL 3 — the tenant this operation runs within.
-    ///
-    /// STRUCTURAL, not advisory (C7): server-stamped from the authenticated
-    /// principal, propagated, never caller-writable. The state gateway namespaces
-    /// by it, storage vends creds scoped to it, billing meters by it, and the core
-    /// refuses cross-tenant access. Empty string == the single-tenant/solo
-    /// deployment's implicit default tenant.
-    #[prost(string, tag="3")]
-    pub tenant: ::prost::alloc::string::String,
-}
-/// A core-signed assertion that an end-user principal is authenticated, bound to
-/// one operation and short-lived. This is the anti-forgery + anti-replay core of
-/// the keystone (reviews/06 C-1, confused-deputy refinement).
-///
-/// VERIFICATION CONTRACT — every hop that consumes this assertion MUST:
-///    1. select the verification key by `key_id` from the core's published keyring
-///       (which also pins the algorithm — so rotation/agility is a new key_id), then
-///       verify `signature` over (principal, tenant, bound_correlation_id,
-///       expires_unix_ms, key_id) against that key;
-///    2. check bound_correlation_id == inbound TraceContext.correlation_id
-///       (an assertion is valid only for the operation it was minted for — a
-///       downstream plugin cannot bank it and reuse it for an unrelated op within
-///       the same tenant);
-///    3. check now <= expires_unix_ms (short-TTL belt-and-braces);
-///    4. CROSS-CHECK THE BARE MIRRORS (M4, reviews/07): the bare Identity.tenant and
-///       this `principal` MUST equal the signature-covered tenant + principal, else
-///       reject. The bare strings are convenience mirrors of the signed payload; a
-///       hop that reads them (instead of the verified values) must not be handed a
-///       value the signature does not cover.
-/// A `principal` value not covered by a valid signature MUST NOT be trusted —
-/// the bare string is a convenience mirror of the signed payload, nothing more.
-///
-/// TRUST BASIS for the UNSIGNED principals (M4): `caller_plugin` and `tenant` in
-/// Identity are NOT individually signed — `caller_plugin` is re-derived by the core
-/// per hop and `tenant` is server-stamped (and additionally covered by THIS
-/// assertion's signature, cross-checked in step 4). Their integrity therefore rests
-/// on AUTHENTICATED TRANSPORT (C2: mTLS / per-plugin token on the core↔plugin
-/// channel). On an unauthenticated channel they are forgeable — so a non-mTLS
-/// transport is out of contract for any multi-tenant deployment.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct SubjectAssertion {
-    /// The authenticated end-user principal id (the signed, authoritative value
-    /// mirrored here for convenience). Empty for bootstrap/pre-auth calls.
-    #[prost(string, tag="1")]
-    pub principal: ::prost::alloc::string::String,
-    /// The core's detached signature over (principal, tenant, bound_correlation_id,
-    /// expires_unix_ms, key_id). The authority of this assertion. NEVER trust
-    /// `principal` without verifying this.
-    #[prost(bytes="vec", tag="2")]
-    pub signature: ::prost::alloc::vec::Vec<u8>,
-    /// The correlation_id this assertion is bound to — must equal the inbound
-    /// TraceContext.correlation_id at every consuming hop (anti-stockpile).
-    #[prost(string, tag="3")]
-    pub bound_correlation_id: ::prost::alloc::string::String,
-    /// Expiry (unix epoch millis). Short-TTL; re-mint rather than cache past this.
-    #[prost(int64, tag="4")]
-    pub expires_unix_ms: i64,
-    /// Identifier of the core key that signed this assertion (M3, reviews/07).
-    /// Resolves in the core's published keyring to {public key, algorithm}; a verifier
-    /// picks the key by this id (step 1). Key ROTATION and algorithm AGILITY are both
-    /// "mint under a new key_id" — no separate on-wire `alg` field. Covered by the
-    /// signature. Empty only for a single-key deployment that never rotates.
-    #[prost(string, tag="5")]
-    pub key_id: ::prost::alloc::string::String,
-}
 /// One event on the bus. Published by the core (or a core-mediated plugin),
 /// delivered to every subscriber whose subscription matches `type`.
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -401,41 +401,41 @@ pub struct Event {
     /// correlation_id chains the event to the operation that produced it;
     /// identity.tenant scopes routing/isolation; traceparent continues the
     /// distributed trace across the async hop.
-    #[prost(message, optional, tag="1")]
+    #[prost(message, optional, tag = "1")]
     pub context: ::core::option::Option<RequestContext>,
     /// Globally-unique id for THIS event instance. Used for idempotent delivery:
     /// a subscriber that has already processed this event_id MUST treat redelivery
     /// as a no-op (at-least-once transports redeliver). Distinct from
     /// context.correlation_id (which is shared by all events of one operation).
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub event_id: ::prost::alloc::string::String,
     /// The event type, e.g. "pipeline_run_requested", "pipeline_run_completed",
     /// "pipeline_run_failed", "plugin_installed", "plane_warmed". Subscriptions
     /// match on this (overview.md reconciliation model: subscriptions = [event,
     /// action]). Convention: lower_snake_case; the open-set is not enumerated
     /// centrally (community event types are allowed, namespaced by emitter).
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub r#type: ::prost::alloc::string::String,
     /// When the event occurred (unix epoch millis). Consistent with the int64-ms
     /// timestamp convention used across the contracts.
-    #[prost(int64, tag="4")]
+    #[prost(int64, tag = "4")]
     pub timestamp_unix_ms: i64,
     /// The emitting component: the core reconciler ("rat-core") or the plugin id of
     /// a core-mediated emitter. Set by the core; lets subscribers + audit attribute
     /// the event. (Mirrors identity.caller_plugin semantics for the async path.)
-    #[prost(string, tag="5")]
+    #[prost(string, tag = "5")]
     pub source: ::prost::alloc::string::String,
     /// The event payload — a serialized, type-specific message whose schema is
     /// implied by `type`. Opaque to the bus transport (which routes by `type` +
     /// tenant without interpreting it), exactly as core/v1/invoke.proto's payload is
     /// opaque to the gateway. Subscribers decode it per the documented type.
-    #[prost(bytes="vec", tag="6")]
+    #[prost(bytes = "vec", tag = "6")]
     pub payload: ::prost::alloc::vec::Vec<u8>,
     /// Optional ordering key. Events sharing a partition_key are delivered to a
     /// subscriber in emit order (e.g. all events for one pipeline run, keyed by its
     /// run id), where the transport supports partitioned/ordered delivery. Empty ==
     /// no ordering guarantee beyond the transport's default.
-    #[prost(string, tag="7")]
+    #[prost(string, tag = "7")]
     pub partition_key: ::prost::alloc::string::String,
     /// TAMPER-EVIDENCE (Q02 5b, ADR-017): `context.identity` is core-stamped at emit,
     /// but the bus TRANSPORT is a plugin (ADR-002 D2) — a third party — and an unsigned
@@ -459,13 +459,13 @@ pub struct Event {
     /// transport whose integrity is otherwise guaranteed (e.g. an in-process bus); on
     /// any pluggable/remote transport a conformant emitter sets it and subscribers
     /// verify before trust.
-    #[prost(bytes="vec", tag="8")]
+    #[prost(bytes = "vec", tag = "8")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
     /// Identifier of the core key that signed this Event — resolves in the core's
     /// published keyring to {public key, signature algorithm}, enabling key ROTATION and
     /// algorithm AGILITY on new key_ids exactly as AuditRecord.key_id (audit.proto).
     /// Empty only for a single-key deployment that never rotates.
-    #[prost(string, tag="9")]
+    #[prost(string, tag = "9")]
     pub key_id: ::prost::alloc::string::String,
 }
 // @@protoc_insertion_point(module)
