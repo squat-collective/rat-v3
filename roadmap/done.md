@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-018 connectionless codegen: Go + TypeScript landed (Rust/Python staged)
+
+[ADR-018](../docs/architecture/adrs/018-connectionless-codegen-local-plugins.md) on `phase-1-adr-018-connectionless-codegen` — switch SDK codegen from **remote BSR plugins** (the ADR-017 rate-limit friction) to **LOCAL plugins** in pinned per-language toolchain images. `scripts/gen-sdks.sh` now dispatches per language (a local `rat-codegen-<lang>` image if `contracts/codegen/Dockerfile.<lang>` exists, else the stock buf image + remote plugins); `make gen-images` pre-builds them.
+- **Go ✅** (`6e32223`) — `Dockerfile.go` (buf + protoc-gen-go v1.36.11 + protoc-gen-go-grpc v1.6.2, pinned to the committed headers). A connectionless `buf generate` reproduces the Go SDK **byte-for-byte — ZERO churn**.
+- **TypeScript ✅** (`ec947ef`) — `Dockerfile.typescript` (node + protoc-gen-es v2.12.0 + protoc-gen-connect-es v1.6.1). **Zero churn**.
+- **Rust ⏸️ staged** — the cargo plugins build fine, but bare `protoc-gen-prost@0.4.0` differs from the committed output in BOTH **layout** (flat `rat.<axis>.v1.rs` vs the committed nested `rat/<axis>/v1/…`) AND **content** (the committed adds `Eq, Hash` derives) → neoeinstein's buf-plugin config must be replicated before it's a clean swap. Rust has **no reference plugins** (unused), so deferred rather than forcing a messy diff. Follow-on: match the neoeinstein prost/tonic config (derives + nested layout), flip, and complete the pending 5c rust-storage regen.
+- **Python ⏸️ staged** — ADR-018 **Open Q01**: no standalone `protoc-gen-python` (it's a protoc builtin); the `grpc_tools.protoc` fallback (Alternative #3) is the path.
+
+Go + TS are now **BSR-free**; rust + python stay on remote plugins until their follow-ons. ADR-006's remote-plugin *mechanism* is superseded (layout unchanged).
+
+---
+
 ## 2026-06-02 — Additive pre-publish cut LANDED (ADR-017 §Migration step 2)
 
 Executed the ADR-017 additive cut on `phase-1-q02-additive-cut` (3 commits), **all verified additive** (`make breaking` clean vs sealed `main`; `make lint` / `compile-sdks` / `validate-manifests` 32/32; `make core-test` green for the demos; generation deterministic):
