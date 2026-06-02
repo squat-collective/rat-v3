@@ -26,7 +26,7 @@ from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotatio
 from rat.common.v1 import data_pb2 as rat_dot_common_dot_v1_dot_data__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1arat/format/v1/format.proto\x12\rrat.format.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"}\n\x0eResolveRequest\x12-\n\x05table\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.TableRefR\x05table\x12\x18\n\x07\x63olumns\x18\x03 \x03(\tR\x07\x63olumns\x12\x1c\n\tpredicate\x18\x04 \x01(\tR\tpredicateJ\x04\x08\x01\x10\x02\"E\n\x0fResolveResponse\x12\x32\n\x06stream\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.ArrowStreamR\x06stream\"\xa1\x01\n\rAppendRequest\x12-\n\x05table\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.TableRefR\x05table\x12\x32\n\x06source\x18\x03 \x01(\x0b\x32\x1a.rat.common.v1.ArrowStreamR\x06source\x12\'\n\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKeyJ\x04\x08\x01\x10\x02\"D\n\x0e\x41ppendResponse\x12\x32\n\x06result\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.WriteResultR\x06result\"\xbf\x01\n\x0cMergeRequest\x12-\n\x05table\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.TableRefR\x05table\x12\x32\n\x06source\x18\x03 \x01(\x0b\x32\x1a.rat.common.v1.ArrowStreamR\x06source\x12\x1d\n\nmerge_keys\x18\x04 \x03(\tR\tmergeKeys\x12\'\n\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKeyJ\x04\x08\x01\x10\x02\"C\n\rMergeResponse\x12\x32\n\x06result\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.WriteResultR\x06result\"\xa4\x01\n\x10OverwriteRequest\x12-\n\x05table\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.TableRefR\x05table\x12\x32\n\x06source\x18\x03 \x01(\x0b\x32\x1a.rat.common.v1.ArrowStreamR\x06source\x12\'\n\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKeyJ\x04\x08\x01\x10\x02\"G\n\x11OverwriteResponse\x12\x32\n\x06result\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.WriteResultR\x06result\"F\n\x0fMaintainRequest\x12-\n\x05table\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.TableRefR\x05tableJ\x04\x08\x01\x10\x02\"F\n\x10MaintainResponse\x12\x32\n\x06result\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.WriteResultR\x06result2\x8f\x04\n\rFormatService\x12\x62\n\x07Resolve\x12\x1d.rat.format.v1.ResolveRequest\x1a\x1e.rat.format.v1.ResolveResponse\"\x18\x8a\x97\"\x14rat://format/v1/scan\x12\x61\n\x06\x41ppend\x12\x1c.rat.format.v1.AppendRequest\x1a\x1d.rat.format.v1.AppendResponse\"\x1a\x8a\x97\"\x16rat://format/v1/append\x12]\n\x05Merge\x12\x1b.rat.format.v1.MergeRequest\x1a\x1c.rat.format.v1.MergeResponse\"\x19\x8a\x97\"\x15rat://format/v1/merge\x12m\n\tOverwrite\x12\x1f.rat.format.v1.OverwriteRequest\x1a .rat.format.v1.OverwriteResponse\"\x1d\x8a\x97\"\x19rat://format/v1/overwrite\x12i\n\x08Maintain\x12\x1e.rat.format.v1.MaintainRequest\x1a\x1f.rat.format.v1.MaintainResponse\"\x1c\x8a\x97\"\x18rat://format/v1/maintainB3Z1github.com/rat-dev/rat/gen/rat/format/v1;formatv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1arat/format/v1/format.proto\x12\rrat.format.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"b\n\x0eResolveRequest\x12&\n\x05table\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.TableRef\x12\x0f\n\x07\x63olumns\x18\x03 \x03(\t\x12\x11\n\tpredicate\x18\x04 \x01(\tJ\x04\x08\x01\x10\x02\"=\n\x0fResolveResponse\x12*\n\x06stream\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.ArrowStream\"\x82\x01\n\rAppendRequest\x12&\n\x05table\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.TableRef\x12*\n\x06source\x18\x03 \x01(\x0b\x32\x1a.rat.common.v1.ArrowStream\x12\x17\n\x0fidempotency_key\x18\x04 \x01(\tJ\x04\x08\x01\x10\x02\"<\n\x0e\x41ppendResponse\x12*\n\x06result\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.WriteResult\"\x95\x01\n\x0cMergeRequest\x12&\n\x05table\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.TableRef\x12*\n\x06source\x18\x03 \x01(\x0b\x32\x1a.rat.common.v1.ArrowStream\x12\x12\n\nmerge_keys\x18\x04 \x03(\t\x12\x17\n\x0fidempotency_key\x18\x05 \x01(\tJ\x04\x08\x01\x10\x02\";\n\rMergeResponse\x12*\n\x06result\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.WriteResult\"\x85\x01\n\x10OverwriteRequest\x12&\n\x05table\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.TableRef\x12*\n\x06source\x18\x03 \x01(\x0b\x32\x1a.rat.common.v1.ArrowStream\x12\x17\n\x0fidempotency_key\x18\x04 \x01(\tJ\x04\x08\x01\x10\x02\"?\n\x11OverwriteResponse\x12*\n\x06result\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.WriteResult\"?\n\x0fMaintainRequest\x12&\n\x05table\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.TableRefJ\x04\x08\x01\x10\x02\">\n\x10MaintainResponse\x12*\n\x06result\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.WriteResult2\x8f\x04\n\rFormatService\x12\x62\n\x07Resolve\x12\x1d.rat.format.v1.ResolveRequest\x1a\x1e.rat.format.v1.ResolveResponse\"\x18\x8a\x97\"\x14rat://format/v1/scan\x12\x61\n\x06\x41ppend\x12\x1c.rat.format.v1.AppendRequest\x1a\x1d.rat.format.v1.AppendResponse\"\x1a\x8a\x97\"\x16rat://format/v1/append\x12]\n\x05Merge\x12\x1b.rat.format.v1.MergeRequest\x1a\x1c.rat.format.v1.MergeResponse\"\x19\x8a\x97\"\x15rat://format/v1/merge\x12m\n\tOverwrite\x12\x1f.rat.format.v1.OverwriteRequest\x1a .rat.format.v1.OverwriteResponse\"\x1d\x8a\x97\"\x19rat://format/v1/overwrite\x12i\n\x08Maintain\x12\x1e.rat.format.v1.MaintainRequest\x1a\x1f.rat.format.v1.MaintainResponse\"\x1c\x8a\x97\"\x18rat://format/v1/maintainB3Z1github.com/rat-dev/rat/gen/rat/format/v1;formatv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -45,25 +45,25 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_FORMATSERVICE'].methods_by_name['Maintain']._loaded_options = None
   _globals['_FORMATSERVICE'].methods_by_name['Maintain']._serialized_options = b'\212\227\"\030rat://format/v1/maintain'
   _globals['_RESOLVEREQUEST']._serialized_start=104
-  _globals['_RESOLVEREQUEST']._serialized_end=229
-  _globals['_RESOLVERESPONSE']._serialized_start=231
-  _globals['_RESOLVERESPONSE']._serialized_end=300
-  _globals['_APPENDREQUEST']._serialized_start=303
-  _globals['_APPENDREQUEST']._serialized_end=464
-  _globals['_APPENDRESPONSE']._serialized_start=466
-  _globals['_APPENDRESPONSE']._serialized_end=534
-  _globals['_MERGEREQUEST']._serialized_start=537
-  _globals['_MERGEREQUEST']._serialized_end=728
-  _globals['_MERGERESPONSE']._serialized_start=730
-  _globals['_MERGERESPONSE']._serialized_end=797
-  _globals['_OVERWRITEREQUEST']._serialized_start=800
-  _globals['_OVERWRITEREQUEST']._serialized_end=964
-  _globals['_OVERWRITERESPONSE']._serialized_start=966
-  _globals['_OVERWRITERESPONSE']._serialized_end=1037
-  _globals['_MAINTAINREQUEST']._serialized_start=1039
-  _globals['_MAINTAINREQUEST']._serialized_end=1109
-  _globals['_MAINTAINRESPONSE']._serialized_start=1111
-  _globals['_MAINTAINRESPONSE']._serialized_end=1181
-  _globals['_FORMATSERVICE']._serialized_start=1184
-  _globals['_FORMATSERVICE']._serialized_end=1711
+  _globals['_RESOLVEREQUEST']._serialized_end=202
+  _globals['_RESOLVERESPONSE']._serialized_start=204
+  _globals['_RESOLVERESPONSE']._serialized_end=265
+  _globals['_APPENDREQUEST']._serialized_start=268
+  _globals['_APPENDREQUEST']._serialized_end=398
+  _globals['_APPENDRESPONSE']._serialized_start=400
+  _globals['_APPENDRESPONSE']._serialized_end=460
+  _globals['_MERGEREQUEST']._serialized_start=463
+  _globals['_MERGEREQUEST']._serialized_end=612
+  _globals['_MERGERESPONSE']._serialized_start=614
+  _globals['_MERGERESPONSE']._serialized_end=673
+  _globals['_OVERWRITEREQUEST']._serialized_start=676
+  _globals['_OVERWRITEREQUEST']._serialized_end=809
+  _globals['_OVERWRITERESPONSE']._serialized_start=811
+  _globals['_OVERWRITERESPONSE']._serialized_end=874
+  _globals['_MAINTAINREQUEST']._serialized_start=876
+  _globals['_MAINTAINREQUEST']._serialized_end=939
+  _globals['_MAINTAINRESPONSE']._serialized_start=941
+  _globals['_MAINTAINRESPONSE']._serialized_end=1003
+  _globals['_FORMATSERVICE']._serialized_start=1006
+  _globals['_FORMATSERVICE']._serialized_end=1533
 # @@protoc_insertion_point(module_scope)

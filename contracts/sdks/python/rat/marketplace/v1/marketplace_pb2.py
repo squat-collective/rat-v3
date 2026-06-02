@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n$rat/marketplace/v1/marketplace.proto\x12\x12rat.marketplace.v1\x1a\x1frat/common/v1/annotations.proto\"\xdf\x03\n\x07Listing\x12\x1b\n\tplugin_id\x18\x01 \x01(\tR\x08pluginId\x12\x12\n\x04kind\x18\x02 \x01(\tR\x04kind\x12\x18\n\x07version\x18\x03 \x01(\tR\x07version\x12 \n\x0b\x64\x65scription\x18\x04 \x01(\tR\x0b\x64\x65scription\x12\x33\n\x15provided_capabilities\x18\x05 \x03(\tR\x14providedCapabilities\x12\x33\n\x15required_capabilities\x18\x06 \x03(\tR\x14requiredCapabilities\x12\x35\n\x16\x63onformed_capabilities\x18\x07 \x03(\tR\x15\x63onformedCapabilities\x12\x16\n\x06signed\x18\x08 \x01(\x08R\x06signed\x12\x1b\n\tsigned_by\x18\t \x01(\tR\x08signedBy\x12\x1f\n\x0bsupport_url\x18\n \x01(\tR\nsupportUrl\x12=\n\x1b\x63onformance_expires_unix_ms\x18\x0b \x01(\x03R\x18\x63onformanceExpiresUnixMs\x12\x31\n\x14revoked_capabilities\x18\x0c \x03(\tR\x13revokedCapabilities\"x\n\rSearchRequest\x12\x14\n\x05query\x18\x02 \x01(\tR\x05query\x12\x12\n\x04kind\x18\x03 \x01(\tR\x04kind\x12\x37\n\x17\x64\x65ployment_capabilities\x18\x04 \x03(\tR\x16\x64\x65ploymentCapabilitiesJ\x04\x08\x01\x10\x02\"I\n\x0eSearchResponse\x12\x37\n\x08listings\x18\x01 \x03(\x0b\x32\x1b.rat.marketplace.v1.ListingR\x08listings\"/\n\nGetRequest\x12\x1b\n\tplugin_id\x18\x02 \x01(\tR\x08pluginIdJ\x04\x08\x01\x10\x02\"D\n\x0bGetResponse\x12\x35\n\x07listing\x18\x01 \x01(\x0b\x32\x1b.rat.marketplace.v1.ListingR\x07listing2\xec\x01\n\x12MarketplaceService\x12p\n\x06Search\x12!.rat.marketplace.v1.SearchRequest\x1a\".rat.marketplace.v1.SearchResponse\"\x1f\x8a\x97\"\x1brat://marketplace/v1/search\x12\x64\n\x03Get\x12\x1e.rat.marketplace.v1.GetRequest\x1a\x1f.rat.marketplace.v1.GetResponse\"\x1c\x8a\x97\"\x18rat://marketplace/v1/getB=Z;github.com/rat-dev/rat/gen/rat/marketplace/v1;marketplacev1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n$rat/marketplace/v1/marketplace.proto\x12\x12rat.marketplace.v1\x1a\x1frat/common/v1/annotations.proto\"\xa9\x02\n\x07Listing\x12\x11\n\tplugin_id\x18\x01 \x01(\t\x12\x0c\n\x04kind\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x1d\n\x15provided_capabilities\x18\x05 \x03(\t\x12\x1d\n\x15required_capabilities\x18\x06 \x03(\t\x12\x1e\n\x16\x63onformed_capabilities\x18\x07 \x03(\t\x12\x0e\n\x06signed\x18\x08 \x01(\x08\x12\x11\n\tsigned_by\x18\t \x01(\t\x12\x13\n\x0bsupport_url\x18\n \x01(\t\x12#\n\x1b\x63onformance_expires_unix_ms\x18\x0b \x01(\x03\x12\x1c\n\x14revoked_capabilities\x18\x0c \x03(\t\"S\n\rSearchRequest\x12\r\n\x05query\x18\x02 \x01(\t\x12\x0c\n\x04kind\x18\x03 \x01(\t\x12\x1f\n\x17\x64\x65ployment_capabilities\x18\x04 \x03(\tJ\x04\x08\x01\x10\x02\"?\n\x0eSearchResponse\x12-\n\x08listings\x18\x01 \x03(\x0b\x32\x1b.rat.marketplace.v1.Listing\"%\n\nGetRequest\x12\x11\n\tplugin_id\x18\x02 \x01(\tJ\x04\x08\x01\x10\x02\";\n\x0bGetResponse\x12,\n\x07listing\x18\x01 \x01(\x0b\x32\x1b.rat.marketplace.v1.Listing2\xec\x01\n\x12MarketplaceService\x12p\n\x06Search\x12!.rat.marketplace.v1.SearchRequest\x1a\".rat.marketplace.v1.SearchResponse\"\x1f\x8a\x97\"\x1brat://marketplace/v1/search\x12\x64\n\x03Get\x12\x1e.rat.marketplace.v1.GetRequest\x1a\x1f.rat.marketplace.v1.GetResponse\"\x1c\x8a\x97\"\x18rat://marketplace/v1/getB=Z;github.com/rat-dev/rat/gen/rat/marketplace/v1;marketplacev1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -38,15 +38,15 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_MARKETPLACESERVICE'].methods_by_name['Get']._loaded_options = None
   _globals['_MARKETPLACESERVICE'].methods_by_name['Get']._serialized_options = b'\212\227\"\030rat://marketplace/v1/get'
   _globals['_LISTING']._serialized_start=94
-  _globals['_LISTING']._serialized_end=573
-  _globals['_SEARCHREQUEST']._serialized_start=575
-  _globals['_SEARCHREQUEST']._serialized_end=695
-  _globals['_SEARCHRESPONSE']._serialized_start=697
-  _globals['_SEARCHRESPONSE']._serialized_end=770
-  _globals['_GETREQUEST']._serialized_start=772
-  _globals['_GETREQUEST']._serialized_end=819
-  _globals['_GETRESPONSE']._serialized_start=821
-  _globals['_GETRESPONSE']._serialized_end=889
-  _globals['_MARKETPLACESERVICE']._serialized_start=892
-  _globals['_MARKETPLACESERVICE']._serialized_end=1128
+  _globals['_LISTING']._serialized_end=391
+  _globals['_SEARCHREQUEST']._serialized_start=393
+  _globals['_SEARCHREQUEST']._serialized_end=476
+  _globals['_SEARCHRESPONSE']._serialized_start=478
+  _globals['_SEARCHRESPONSE']._serialized_end=541
+  _globals['_GETREQUEST']._serialized_start=543
+  _globals['_GETREQUEST']._serialized_end=580
+  _globals['_GETRESPONSE']._serialized_start=582
+  _globals['_GETRESPONSE']._serialized_end=641
+  _globals['_MARKETPLACESERVICE']._serialized_start=644
+  _globals['_MARKETPLACESERVICE']._serialized_end=880
 # @@protoc_insertion_point(module_scope)

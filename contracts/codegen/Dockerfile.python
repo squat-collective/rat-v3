@@ -1,0 +1,25 @@
+# ADR-018 — connectionless Python SDK codegen (protoc-35 hybrid).
+#
+# Python message gen is a protoc BUILTIN, and the committed gencode (protobuf 7.35.0) comes
+# from buf's protocolbuffers/python, which runs AHEAD of grpcio-tools (its latest bundles
+# only protobuf 6.33.5). To stay byte-compatible with the reference plugins (which pin
+# protobuf==7.35.0) WITHOUT downgrading the stack, this image pairs:
+#   - standalone protoc v35.0 (protobuf release) for the MESSAGES  (--python_out -> 7.35.0)
+#   - grpcio-tools 1.80 for the gRPC SERVICE stubs (matches refs)  (--grpc_python_out)
+# Both run locally — no buf, no BSR. The image BUILD needs GitHub + PyPI; the RUN is offline.
+FROM docker.io/library/python:3.12
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl unzip ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && curl -fsSL "https://github.com/protocolbuffers/protobuf/releases/download/v35.0/protoc-35.0-linux-x86_64.zip" -o /tmp/protoc.zip \
+ && unzip -o /tmp/protoc.zip -d /usr/local 'bin/protoc' 'include/*' \
+ && rm /tmp/protoc.zip \
+ && chmod +x /usr/local/bin/protoc
+# grpcio-tools pinned to match the reference plugins' runtime (grpcio==1.80.0): the grpc
+# python stubs embed a GRPC_GENERATED_VERSION guard, so a newer grpcio-tools would make the
+# stubs require a newer grpcio than the refs install. 1.80.0 keeps them runnable.
+RUN pip install --no-cache-dir grpcio-tools==1.80.0
+COPY gen-python.sh /usr/local/bin/gen-python.sh
+RUN chmod +x /usr/local/bin/gen-python.sh
+WORKDIR /workspace
+ENTRYPOINT ["/usr/local/bin/gen-python.sh"]

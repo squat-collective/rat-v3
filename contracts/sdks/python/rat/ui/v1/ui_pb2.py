@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12rat/ui/v1/ui.proto\x12\trat.ui.v1\x1a\x1frat/common/v1/annotations.proto\"\x17\n\x0f\x44\x65scribeRequestJ\x04\x08\x01\x10\x02\"B\n\nHostedSlot\x12\x12\n\x04slot\x18\x01 \x01(\tR\x04slot\x12 \n\x0b\x64\x65scription\x18\x02 \x01(\tR\x0b\x64\x65scription\"b\n\x10\x44\x65scribeResponse\x12!\n\x0c\x64isplay_name\x18\x01 \x01(\tR\x0b\x64isplayName\x12+\n\x05slots\x18\x02 \x03(\x0b\x32\x15.rat.ui.v1.HostedSlotR\x05slots\"K\n\x11RenderSlotRequest\x12\x12\n\x04slot\x18\x02 \x01(\tR\x04slot\x12\x1c\n\tcomponent\x18\x03 \x01(\tR\tcomponentJ\x04\x08\x01\x10\x02\"T\n\x12RenderSlotResponse\x12\x1b\n\tasset_ref\x18\x01 \x01(\tR\x08\x61ssetRef\x12!\n\x0cprops_schema\x18\x02 \x01(\x0cR\x0bpropsSchema2\xd2\x01\n\tUiService\x12]\n\x08\x44\x65scribe\x12\x1a.rat.ui.v1.DescribeRequest\x1a\x1b.rat.ui.v1.DescribeResponse\"\x18\x8a\x97\"\x14rat://ui/v1/describe\x12\x66\n\nRenderSlot\x12\x1c.rat.ui.v1.RenderSlotRequest\x1a\x1d.rat.ui.v1.RenderSlotResponse\"\x1b\x8a\x97\"\x17rat://ui/v1/render-slotB+Z)github.com/rat-dev/rat/gen/rat/ui/v1;uiv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12rat/ui/v1/ui.proto\x12\trat.ui.v1\x1a\x1frat/common/v1/annotations.proto\"\x17\n\x0f\x44\x65scribeRequestJ\x04\x08\x01\x10\x02\"/\n\nHostedSlot\x12\x0c\n\x04slot\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\"N\n\x10\x44\x65scribeResponse\x12\x14\n\x0c\x64isplay_name\x18\x01 \x01(\t\x12$\n\x05slots\x18\x02 \x03(\x0b\x32\x15.rat.ui.v1.HostedSlot\":\n\x11RenderSlotRequest\x12\x0c\n\x04slot\x18\x02 \x01(\t\x12\x11\n\tcomponent\x18\x03 \x01(\tJ\x04\x08\x01\x10\x02\"=\n\x12RenderSlotResponse\x12\x11\n\tasset_ref\x18\x01 \x01(\t\x12\x14\n\x0cprops_schema\x18\x02 \x01(\x0c\x32\xd2\x01\n\tUiService\x12]\n\x08\x44\x65scribe\x12\x1a.rat.ui.v1.DescribeRequest\x1a\x1b.rat.ui.v1.DescribeResponse\"\x18\x8a\x97\"\x14rat://ui/v1/describe\x12\x66\n\nRenderSlot\x12\x1c.rat.ui.v1.RenderSlotRequest\x1a\x1d.rat.ui.v1.RenderSlotResponse\"\x1b\x8a\x97\"\x17rat://ui/v1/render-slotB+Z)github.com/rat-dev/rat/gen/rat/ui/v1;uiv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -40,13 +40,13 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_DESCRIBEREQUEST']._serialized_start=66
   _globals['_DESCRIBEREQUEST']._serialized_end=89
   _globals['_HOSTEDSLOT']._serialized_start=91
-  _globals['_HOSTEDSLOT']._serialized_end=157
-  _globals['_DESCRIBERESPONSE']._serialized_start=159
-  _globals['_DESCRIBERESPONSE']._serialized_end=257
-  _globals['_RENDERSLOTREQUEST']._serialized_start=259
-  _globals['_RENDERSLOTREQUEST']._serialized_end=334
-  _globals['_RENDERSLOTRESPONSE']._serialized_start=336
-  _globals['_RENDERSLOTRESPONSE']._serialized_end=420
-  _globals['_UISERVICE']._serialized_start=423
-  _globals['_UISERVICE']._serialized_end=633
+  _globals['_HOSTEDSLOT']._serialized_end=138
+  _globals['_DESCRIBERESPONSE']._serialized_start=140
+  _globals['_DESCRIBERESPONSE']._serialized_end=218
+  _globals['_RENDERSLOTREQUEST']._serialized_start=220
+  _globals['_RENDERSLOTREQUEST']._serialized_end=278
+  _globals['_RENDERSLOTRESPONSE']._serialized_start=280
+  _globals['_RENDERSLOTRESPONSE']._serialized_end=341
+  _globals['_UISERVICE']._serialized_start=344
+  _globals['_UISERVICE']._serialized_end=554
 # @@protoc_insertion_point(module_scope)

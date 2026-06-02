@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n(rat/observability/v1/observability.proto\x12\x14rat.observability.v1\x1a\x1frat/common/v1/annotations.proto\"\xb1\x02\n\x0eTelemetryPoint\x12\x34\n\x04type\x18\x01 \x01(\x0e\x32 .rat.observability.v1.SignalTypeR\x04type\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n\x05value\x18\x03 \x01(\x01R\x05value\x12T\n\nattributes\x18\x04 \x03(\x0b\x32\x34.rat.observability.v1.TelemetryPoint.AttributesEntryR\nattributes\x12*\n\x11timestamp_unix_ms\x18\x05 \x01(\x03R\x0ftimestampUnixMs\x1a=\n\x0f\x41ttributesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"S\n\rIngestRequest\x12<\n\x06points\x18\x02 \x03(\x0b\x32$.rat.observability.v1.TelemetryPointR\x06pointsJ\x04\x08\x01\x10\x02\"H\n\x0eIngestResponse\x12\x1a\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x03R\x08\x61\x63\x63\x65pted\x12\x1a\n\x08rejected\x18\x02 \x01(\x03R\x08rejected*l\n\nSignalType\x12\x1b\n\x17SIGNAL_TYPE_UNSPECIFIED\x10\x00\x12\x16\n\x12SIGNAL_TYPE_METRIC\x10\x01\x12\x14\n\x10SIGNAL_TYPE_SPAN\x10\x02\x12\x13\n\x0fSIGNAL_TYPE_LOG\x10\x03\x32\x92\x01\n\x14ObservabilityService\x12z\n\x06Ingest\x12#.rat.observability.v1.IngestRequest\x1a$.rat.observability.v1.IngestResponse\"!\x8a\x97\"\x1drat://observability/v1/ingest(\x01\x30\x01\x42\x41Z?github.com/rat-dev/rat/gen/rat/observability/v1;observabilityv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n(rat/observability/v1/observability.proto\x12\x14rat.observability.v1\x1a\x1frat/common/v1/annotations.proto\"\xf5\x01\n\x0eTelemetryPoint\x12.\n\x04type\x18\x01 \x01(\x0e\x32 .rat.observability.v1.SignalType\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\r\n\x05value\x18\x03 \x01(\x01\x12H\n\nattributes\x18\x04 \x03(\x0b\x32\x34.rat.observability.v1.TelemetryPoint.AttributesEntry\x12\x19\n\x11timestamp_unix_ms\x18\x05 \x01(\x03\x1a\x31\n\x0f\x41ttributesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"K\n\rIngestRequest\x12\x34\n\x06points\x18\x02 \x03(\x0b\x32$.rat.observability.v1.TelemetryPointJ\x04\x08\x01\x10\x02\"4\n\x0eIngestResponse\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x03\x12\x10\n\x08rejected\x18\x02 \x01(\x03*l\n\nSignalType\x12\x1b\n\x17SIGNAL_TYPE_UNSPECIFIED\x10\x00\x12\x16\n\x12SIGNAL_TYPE_METRIC\x10\x01\x12\x14\n\x10SIGNAL_TYPE_SPAN\x10\x02\x12\x13\n\x0fSIGNAL_TYPE_LOG\x10\x03\x32\x92\x01\n\x14ObservabilityService\x12z\n\x06Ingest\x12#.rat.observability.v1.IngestRequest\x1a$.rat.observability.v1.IngestResponse\"!\x8a\x97\"\x1drat://observability/v1/ingest(\x01\x30\x01\x42\x41Z?github.com/rat-dev/rat/gen/rat/observability/v1;observabilityv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -37,16 +37,16 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_TELEMETRYPOINT_ATTRIBUTESENTRY']._serialized_options = b'8\001'
   _globals['_OBSERVABILITYSERVICE'].methods_by_name['Ingest']._loaded_options = None
   _globals['_OBSERVABILITYSERVICE'].methods_by_name['Ingest']._serialized_options = b'\212\227\"\035rat://observability/v1/ingest'
-  _globals['_SIGNALTYPE']._serialized_start=566
-  _globals['_SIGNALTYPE']._serialized_end=674
+  _globals['_SIGNALTYPE']._serialized_start=478
+  _globals['_SIGNALTYPE']._serialized_end=586
   _globals['_TELEMETRYPOINT']._serialized_start=100
-  _globals['_TELEMETRYPOINT']._serialized_end=405
-  _globals['_TELEMETRYPOINT_ATTRIBUTESENTRY']._serialized_start=344
-  _globals['_TELEMETRYPOINT_ATTRIBUTESENTRY']._serialized_end=405
-  _globals['_INGESTREQUEST']._serialized_start=407
-  _globals['_INGESTREQUEST']._serialized_end=490
-  _globals['_INGESTRESPONSE']._serialized_start=492
-  _globals['_INGESTRESPONSE']._serialized_end=564
-  _globals['_OBSERVABILITYSERVICE']._serialized_start=677
-  _globals['_OBSERVABILITYSERVICE']._serialized_end=823
+  _globals['_TELEMETRYPOINT']._serialized_end=345
+  _globals['_TELEMETRYPOINT_ATTRIBUTESENTRY']._serialized_start=296
+  _globals['_TELEMETRYPOINT_ATTRIBUTESENTRY']._serialized_end=345
+  _globals['_INGESTREQUEST']._serialized_start=347
+  _globals['_INGESTREQUEST']._serialized_end=422
+  _globals['_INGESTRESPONSE']._serialized_start=424
+  _globals['_INGESTRESPONSE']._serialized_end=476
+  _globals['_OBSERVABILITYSERVICE']._serialized_start=589
+  _globals['_OBSERVABILITYSERVICE']._serialized_end=735
 # @@protoc_insertion_point(module_scope)
