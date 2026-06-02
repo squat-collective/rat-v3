@@ -195,3 +195,36 @@ connection is just a URL.
 
 Status: **multi-connection model being built now** (connection store + add/remove/edit +
 connection-rooted trees). Auth/tenant + gateway-remote-mode are the queued follow-ons.
+
+---
+
+## 2026-06-02 — [core, architecture] runtime plugin self-registration (a `RegisterPlugin` gRPC)
+
+**Surfaced in conversation with Tom while building the `rat serve` orchestrator + the
+`ratctl` client.** Today the plugin set is **declarative**: `rat serve --plane plane.yaml`
+lists the plugins and `rat` launches them (k8s-style desired-state, via the
+deployment-runtime + reconciler). Tom floated the inverse model: **plugins register
+themselves at runtime** by calling a gRPC command on a running `rat`
+(`rat serve --config rat.yaml --port X`, no plugin list up front) — so `rat` is a pure
+broker that *everything connects to* (plugins connect up to register; clients connect in
+to issue commands). No DinD, plugins can live anywhere.
+
+- **What it'd take (additive to the frozen wire — a new service is not breaking):** a
+  `RegisterPlugin(manifest, endpoint) -> ok` gRPC on the core, making the **Registry**
+  (one of the six core things) runtime-writable.
+- **The blocking core gap — SAME as the Phase-A reconciler-rewire finding:** `gateway.New`
+  fixes its provider-connection map at construction; there is no way to add a provider
+  while serving. Runtime registration needs a **mutable, concurrency-safe** provider/route
+  path (`AddProvider`/`Register`). That one change unlocks BOTH self-registration AND the
+  deferred hot reconcile-restart. (See backlog: "wire the reconciler crash-restart loop.")
+- **Trust shift:** a launched image is implicitly trusted; a self-registering plugin must
+  be authenticated (C2 channel-auth / per-plugin token) before `rat` believes its declared
+  capabilities. Localhost-accept for a dev plane; matters for shared planes.
+- **Discipline:** touches a core thing → wants an **ADR** before building (CLAUDE.md #2/#3).
+  Can **complement** the plane model (declarative for launched plugins + registration for
+  external ones) rather than replace it.
+
+Status: **PARKED (decided not to build now).** It's a *scale* feature (multi-host / dynamic
+ecosystems); the project is solo + pre–Gate-B, and the "many UIs connect to the orchestrator"
+goal is **orthogonal** to it (clients invoke capabilities regardless of how plugins registered
+— proven by `ratctl`). Revisit when the launch-only model actually hurts; write the ADR then.
