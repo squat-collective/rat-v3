@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — Data-dev plane experiment KICKED OFF (exploratory) — design doc
+
+[`experiments/data-dev-plane/README.md`](../experiments/data-dev-plane/README.md) on `phase-1-data-dev-plane` (`5d55371`). The **practical substitute** for the (impractical-for-a-solo-dev) Q02 external review: prove the platform by composing a real, scalable, **end-to-end ML lakehouse** workflow from plugins (principle #8 — "test the deployment topology"). EXPLORATORY + changeable; **ADDITIVE** (no new axis, no contract change, `make breaking` untouched). Stack: `minio-s3` (remote S3) · `ducklake-py` ([DuckLake](https://ducklake.select/docs/stable/) catalog, subsumes format) · `duckdb-ml-py` (engine **+ ML as DuckDB extensions** — `embed()` UDF + `vss`, **NO new proto**) · `incremental-embed-py` (a real ELT strategy) · `vscode-rat` (VS Code UI via the connectionless TS SDK). The doc documents every plugin + manifests + schemas + the exact SQL composition + the pluggable embed backend (hash-256 / minilm / ollama-on-HAL-9000) + scalability + the catalog/engine-boundary tension & open questions + the build order. **Next (fresh session): build the DuckLake catalog + DuckDB-ML engine heart (build order in the doc §11).**
+
+---
+
 ## 2026-06-02 — PU-2 DONE: keystone context-carriage two-reference conformance → punch-list COMPLETE
 
 `c0508a6` on `phase-1-pu2-keystone-conformance` — the last pre-unfreeze gate item (ADR-017 PU-2). The keystone context-carriage contract (`common/v1/context.proto` + ADR-007 gateway stamping — the carrier for C1/C2/C3/C5/C7/C8, the most-irreversible frozen surface) had the **weakest** conformance of the freeze: one impl (the spike Go gateway); the ADR-003 two-reference rule never reached it (architect F1, maintainer-conceded). PU-2 applies that forcing function:
