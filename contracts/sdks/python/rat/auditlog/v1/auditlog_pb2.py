@@ -26,7 +26,7 @@ from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotatio
 from rat.common.v1 import audit_pb2 as rat_dot_common_dot_v1_dot_audit__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1erat/auditlog/v1/auditlog.proto\x12\x0frat.auditlog.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x19rat/common/v1/audit.proto\"K\n\rAppendRequest\x12\x34\n\x07records\x18\x02 \x03(\x0b\x32\x1a.rat.common.v1.AuditRecordR\x07recordsJ\x04\x08\x01\x10\x02\"\x90\x01\n\tRecordAck\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x35\n\x06status\x18\x02 \x01(\x0e\x32\x1d.rat.auditlog.v1.AppendStatusR\x06status\x12<\n\x0breject_code\x18\x03 \x01(\x0e\x32\x1b.rat.auditlog.v1.RejectCodeR\nrejectCode\"\x9c\x01\n\x0e\x41ppendResponse\x12.\n\x04\x61\x63ks\x18\x01 \x03(\x0b\x32\x1a.rat.auditlog.v1.RecordAckR\x04\x61\x63ks\x12*\n\x11last_committed_id\x18\x02 \x01(\tR\x0flastCommittedId\x12.\n\x13last_committed_hash\x18\x03 \x01(\tR\x11lastCommittedHash*\x83\x01\n\x0c\x41ppendStatus\x12\x1d\n\x19\x41PPEND_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n\x17\x41PPEND_STATUS_COMMITTED\x10\x01\x12\x1b\n\x17\x41PPEND_STATUS_DUPLICATE\x10\x02\x12\x1a\n\x16\x41PPEND_STATUS_REJECTED\x10\x03*\x84\x01\n\nRejectCode\x12\x1b\n\x17REJECT_CODE_UNSPECIFIED\x10\x00\x12\x1d\n\x19REJECT_CODE_BAD_SIGNATURE\x10\x01\x12\x1b\n\x17REJECT_CODE_CHAIN_BREAK\x10\x02\x12\x1d\n\x19REJECT_CODE_STORAGE_ERROR\x10\x03\x32z\n\x0f\x41uditLogService\x12g\n\x06\x41ppend\x12\x1e.rat.auditlog.v1.AppendRequest\x1a\x1f.rat.auditlog.v1.AppendResponse\"\x1c\x8a\x97\"\x18rat://auditlog/v1/appendB7Z5github.com/rat-dev/rat/gen/rat/auditlog/v1;auditlogv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1erat/auditlog/v1/auditlog.proto\x12\x0frat.auditlog.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x19rat/common/v1/audit.proto\"B\n\rAppendRequest\x12+\n\x07records\x18\x02 \x03(\x0b\x32\x1a.rat.common.v1.AuditRecordJ\x04\x08\x01\x10\x02\"x\n\tRecordAck\x12\n\n\x02id\x18\x01 \x01(\t\x12-\n\x06status\x18\x02 \x01(\x0e\x32\x1d.rat.auditlog.v1.AppendStatus\x12\x30\n\x0breject_code\x18\x03 \x01(\x0e\x32\x1b.rat.auditlog.v1.RejectCode\"r\n\x0e\x41ppendResponse\x12(\n\x04\x61\x63ks\x18\x01 \x03(\x0b\x32\x1a.rat.auditlog.v1.RecordAck\x12\x19\n\x11last_committed_id\x18\x02 \x01(\t\x12\x1b\n\x13last_committed_hash\x18\x03 \x01(\t*\x83\x01\n\x0c\x41ppendStatus\x12\x1d\n\x19\x41PPEND_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n\x17\x41PPEND_STATUS_COMMITTED\x10\x01\x12\x1b\n\x17\x41PPEND_STATUS_DUPLICATE\x10\x02\x12\x1a\n\x16\x41PPEND_STATUS_REJECTED\x10\x03*\x84\x01\n\nRejectCode\x12\x1b\n\x17REJECT_CODE_UNSPECIFIED\x10\x00\x12\x1d\n\x19REJECT_CODE_BAD_SIGNATURE\x10\x01\x12\x1b\n\x17REJECT_CODE_CHAIN_BREAK\x10\x02\x12\x1d\n\x19REJECT_CODE_STORAGE_ERROR\x10\x03\x32z\n\x0f\x41uditLogService\x12g\n\x06\x41ppend\x12\x1e.rat.auditlog.v1.AppendRequest\x1a\x1f.rat.auditlog.v1.AppendResponse\"\x1c\x8a\x97\"\x18rat://auditlog/v1/appendB7Z5github.com/rat-dev/rat/gen/rat/auditlog/v1;auditlogv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,16 +36,16 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z5github.com/rat-dev/rat/gen/rat/auditlog/v1;auditlogv1'
   _globals['_AUDITLOGSERVICE'].methods_by_name['Append']._loaded_options = None
   _globals['_AUDITLOGSERVICE'].methods_by_name['Append']._serialized_options = b'\212\227\"\030rat://auditlog/v1/append'
-  _globals['_APPENDSTATUS']._serialized_start=495
-  _globals['_APPENDSTATUS']._serialized_end=626
-  _globals['_REJECTCODE']._serialized_start=629
-  _globals['_REJECTCODE']._serialized_end=761
+  _globals['_APPENDSTATUS']._serialized_start=418
+  _globals['_APPENDSTATUS']._serialized_end=549
+  _globals['_REJECTCODE']._serialized_start=552
+  _globals['_REJECTCODE']._serialized_end=684
   _globals['_APPENDREQUEST']._serialized_start=111
-  _globals['_APPENDREQUEST']._serialized_end=186
-  _globals['_RECORDACK']._serialized_start=189
-  _globals['_RECORDACK']._serialized_end=333
-  _globals['_APPENDRESPONSE']._serialized_start=336
-  _globals['_APPENDRESPONSE']._serialized_end=492
-  _globals['_AUDITLOGSERVICE']._serialized_start=763
-  _globals['_AUDITLOGSERVICE']._serialized_end=885
+  _globals['_APPENDREQUEST']._serialized_end=177
+  _globals['_RECORDACK']._serialized_start=179
+  _globals['_RECORDACK']._serialized_end=299
+  _globals['_APPENDRESPONSE']._serialized_start=301
+  _globals['_APPENDRESPONSE']._serialized_end=415
+  _globals['_AUDITLOGSERVICE']._serialized_start=686
+  _globals['_AUDITLOGSERVICE']._serialized_end=808
 # @@protoc_insertion_point(module_scope)

@@ -26,7 +26,7 @@ from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotatio
 from rat.common.v1 import data_pb2 as rat_dot_common_dot_v1_dot_data__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1arat/engine/v1/engine.proto\x12\rrat.engine.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"Y\n\x0e\x45xecuteRequest\x12\x10\n\x03sql\x18\x02 \x01(\tR\x03sql\x12/\n\x06tables\x18\x03 \x03(\x0b\x32\x17.rat.common.v1.TableRefR\x06tablesJ\x04\x08\x01\x10\x02\"E\n\x0f\x45xecuteResponse\x12\x32\n\x06result\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.WriteResultR\x06result\"W\n\x0cQueryRequest\x12\x10\n\x03sql\x18\x02 \x01(\tR\x03sql\x12/\n\x06tables\x18\x03 \x03(\x0b\x32\x17.rat.common.v1.TableRefR\x06tablesJ\x04\x08\x01\x10\x02\"C\n\rQueryResponse\x12\x32\n\x06stream\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.ArrowStreamR\x06stream\"o\n\x0ePreviewRequest\x12\x10\n\x03sql\x18\x02 \x01(\tR\x03sql\x12/\n\x06tables\x18\x03 \x03(\x0b\x32\x17.rat.common.v1.TableRefR\x06tables\x12\x14\n\x05limit\x18\x04 \x01(\x03R\x05limitJ\x04\x08\x01\x10\x02\"E\n\x0fPreviewResponse\x12\x32\n\x06stream\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.ArrowStreamR\x06stream2\xbc\x02\n\rEngineService\x12\x65\n\x07\x45xecute\x12\x1d.rat.engine.v1.ExecuteRequest\x1a\x1e.rat.engine.v1.ExecuteResponse\"\x1b\x8a\x97\"\x17rat://engine/v1/execute\x12]\n\x05Query\x12\x1b.rat.engine.v1.QueryRequest\x1a\x1c.rat.engine.v1.QueryResponse\"\x19\x8a\x97\"\x15rat://engine/v1/query\x12\x65\n\x07Preview\x12\x1d.rat.engine.v1.PreviewRequest\x1a\x1e.rat.engine.v1.PreviewResponse\"\x1b\x8a\x97\"\x17rat://engine/v1/previewB3Z1github.com/rat-dev/rat/gen/rat/engine/v1;enginev1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1arat/engine/v1/engine.proto\x12\rrat.engine.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"L\n\x0e\x45xecuteRequest\x12\x0b\n\x03sql\x18\x02 \x01(\t\x12\'\n\x06tables\x18\x03 \x03(\x0b\x32\x17.rat.common.v1.TableRefJ\x04\x08\x01\x10\x02\"=\n\x0f\x45xecuteResponse\x12*\n\x06result\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.WriteResult\"J\n\x0cQueryRequest\x12\x0b\n\x03sql\x18\x02 \x01(\t\x12\'\n\x06tables\x18\x03 \x03(\x0b\x32\x17.rat.common.v1.TableRefJ\x04\x08\x01\x10\x02\";\n\rQueryResponse\x12*\n\x06stream\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.ArrowStream\"[\n\x0ePreviewRequest\x12\x0b\n\x03sql\x18\x02 \x01(\t\x12\'\n\x06tables\x18\x03 \x03(\x0b\x32\x17.rat.common.v1.TableRef\x12\r\n\x05limit\x18\x04 \x01(\x03J\x04\x08\x01\x10\x02\"=\n\x0fPreviewResponse\x12*\n\x06stream\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.ArrowStream2\xbc\x02\n\rEngineService\x12\x65\n\x07\x45xecute\x12\x1d.rat.engine.v1.ExecuteRequest\x1a\x1e.rat.engine.v1.ExecuteResponse\"\x1b\x8a\x97\"\x17rat://engine/v1/execute\x12]\n\x05Query\x12\x1b.rat.engine.v1.QueryRequest\x1a\x1c.rat.engine.v1.QueryResponse\"\x19\x8a\x97\"\x15rat://engine/v1/query\x12\x65\n\x07Preview\x12\x1d.rat.engine.v1.PreviewRequest\x1a\x1e.rat.engine.v1.PreviewResponse\"\x1b\x8a\x97\"\x17rat://engine/v1/previewB3Z1github.com/rat-dev/rat/gen/rat/engine/v1;enginev1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -41,17 +41,17 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_ENGINESERVICE'].methods_by_name['Preview']._loaded_options = None
   _globals['_ENGINESERVICE'].methods_by_name['Preview']._serialized_options = b'\212\227\"\027rat://engine/v1/preview'
   _globals['_EXECUTEREQUEST']._serialized_start=104
-  _globals['_EXECUTEREQUEST']._serialized_end=193
-  _globals['_EXECUTERESPONSE']._serialized_start=195
-  _globals['_EXECUTERESPONSE']._serialized_end=264
-  _globals['_QUERYREQUEST']._serialized_start=266
-  _globals['_QUERYREQUEST']._serialized_end=353
-  _globals['_QUERYRESPONSE']._serialized_start=355
-  _globals['_QUERYRESPONSE']._serialized_end=422
-  _globals['_PREVIEWREQUEST']._serialized_start=424
-  _globals['_PREVIEWREQUEST']._serialized_end=535
-  _globals['_PREVIEWRESPONSE']._serialized_start=537
-  _globals['_PREVIEWRESPONSE']._serialized_end=606
-  _globals['_ENGINESERVICE']._serialized_start=609
-  _globals['_ENGINESERVICE']._serialized_end=925
+  _globals['_EXECUTEREQUEST']._serialized_end=180
+  _globals['_EXECUTERESPONSE']._serialized_start=182
+  _globals['_EXECUTERESPONSE']._serialized_end=243
+  _globals['_QUERYREQUEST']._serialized_start=245
+  _globals['_QUERYREQUEST']._serialized_end=319
+  _globals['_QUERYRESPONSE']._serialized_start=321
+  _globals['_QUERYRESPONSE']._serialized_end=380
+  _globals['_PREVIEWREQUEST']._serialized_start=382
+  _globals['_PREVIEWREQUEST']._serialized_end=473
+  _globals['_PREVIEWRESPONSE']._serialized_start=475
+  _globals['_PREVIEWRESPONSE']._serialized_end=536
+  _globals['_ENGINESERVICE']._serialized_start=539
+  _globals['_ENGINESERVICE']._serialized_end=855
 # @@protoc_insertion_point(module_scope)

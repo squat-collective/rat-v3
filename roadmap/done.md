@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-02 — ADR-018 COMPLETE: Python connectionless (protoc-35 hybrid) — all 4 SDKs BSR-free
+
+Resolved the python blocker (Tom chose the protoc-35 hybrid) — `2ee749e` on `phase-1-adr-018-python`. `contracts/codegen/Dockerfile.python` pairs **standalone protoc v35.0** (the MESSAGES → `ValidateProtobufRuntimeVersion(7,35,0)`, matching buf's `protocolbuffers/python` and the refs' `protobuf==7.35.0` — **no downgrade**) with **grpcio-tools 1.80.0** (the gRPC stubs → `GRPC_GENERATED_VERSION 1.80.0`, matching the refs' `grpcio==1.80.0`). `gen-python.sh` runs both; `gen-sdks.sh` special-cases python (no standalone `protoc-gen-python` — messages are a protoc builtin).
+
+The one-time migration (48 files) is benign — protoc-35 omits default `json_name`s buf serialized explicitly (protobuf computes the same defaults at runtime; `json_name` only affects JSON, not the binary wire) + the grpc stubs gain a version guard. **VERIFIED: `make conformance` 32/32 references conform** — every python ref runs on the hybrid SDK.
+
+🎉 **ADR-018 rollout COMPLETE: Go + TypeScript + Rust + Python all generate connectionless — codegen is fully BSR-free.** The rate-limit friction that bit the ADR-017 cut is gone for every language.
+
+---
+
 ## 2026-06-02 — ADR-018 rollout: Rust connectionless + 5c closed; Python blocked on version-skew
 
 Continued the ADR-018 rollout on `phase-1-adr-018-rust-python`:
