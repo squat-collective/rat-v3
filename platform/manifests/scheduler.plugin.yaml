@@ -9,3 +9,4 @@ metadata:
 compatible_core: ["rat/1"]
 requires:
   - capability: rat://strategy/v1/apply
+  - capability: rat://state/v1/put       # records a run record per fire

@@ -1,0 +1,13 @@
+# rat-state-postgres — a Postgres-backed state-backend (the platform's metadata store:
+# runs, pipelines, schedules). EXPLORATORY (ADR-020 S4). Provides the frozen state/v1
+# Get/Put/List (+ monotonic revisions / CAS).
+api_version: rat/1
+kind: state-backend
+metadata:
+  name: rat-state
+  version: 0.1.0
+compatible_core: ["rat/1"]
+provides:
+  - capability: rat://state/v1/get
+  - capability: rat://state/v1/put
+  - capability: rat://state/v1/list

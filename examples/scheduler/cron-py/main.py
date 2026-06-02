@@ -18,6 +18,7 @@ Env:
   RAT_PLUGIN_NAME        the caller identity (default rat-scheduler; must `requires` apply)
 """
 
+import json
 import os
 import sys
 import time
@@ -26,7 +27,19 @@ import grpc
 
 from rat.common.v1 import context_pb2, data_pb2
 from rat.core.v1 import invoke_pb2, invoke_pb2_grpc
+from rat.state.v1 import state_pb2
 from rat.strategy.v1 import strategy_pb2
+
+
+def _record_run(stub, md, tick, status, snapshot, error):
+    """Record a run record to the state-backend (rat://state/v1/put) — the platform's
+    run history, exactly v2's `runs` table, now a state-backend plugin behind the gateway."""
+    rec = json.dumps({"tick": tick, "status": status, "snapshot": snapshot, "error": error}).encode()
+    try:
+        stub.Invoke(invoke_pb2.InvokeRequest(capability="rat://state/v1/put",
+                    payload=state_pb2.PutRequest(key=f"runs/{tick:06d}", value=rec).SerializeToString()), metadata=md)
+    except grpc.RpcError as e:
+        print(f"rat-scheduler: tick {tick} → could not record run: {e.code()}", flush=True)
 
 
 def main():
@@ -45,14 +58,18 @@ def main():
     tick = 0
     while True:
         tick += 1
+        status, snapshot, error = "success", "", ""
         req = strategy_pb2.ApplyRequest(target=data_pb2.TableRef(identifier=target), idempotency_key=f"sched-{tick}")
         try:
             r = stub.Invoke(invoke_pb2.InvokeRequest(capability="rat://strategy/v1/apply", payload=req.SerializeToString()), metadata=md)
             resp = strategy_pb2.ApplyResponse()
             resp.ParseFromString(r.result)
-            print(f"rat-scheduler: tick {tick} → refreshed (rows={resp.result.rows_affected} snapshot={resp.result.snapshot_id!r})", flush=True)
+            snapshot = resp.result.snapshot_id
+            print(f"rat-scheduler: tick {tick} → refreshed (rows={resp.result.rows_affected} snapshot={snapshot!r})", flush=True)
         except grpc.RpcError as e:
-            print(f"rat-scheduler: tick {tick} → error: {e.code()} {e.details()}", flush=True)
+            status, error = "failed", f"{e.code()}: {e.details()}"
+            print(f"rat-scheduler: tick {tick} → error: {error}", flush=True)
+        _record_run(stub, md, tick, status, snapshot, error)  # the run history → state-backend
         time.sleep(interval)
 
 

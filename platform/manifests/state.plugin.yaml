@@ -1,0 +1,12 @@
+# rat-state — the platform's state-backend (run/pipeline/schedule metadata), Postgres-backed.
+# Provides the frozen state/v1 Get/Put/List.
+api_version: rat/1
+kind: state-backend
+metadata:
+  name: rat-state
+  version: 0.1.0
+compatible_core: ["rat/1"]
+provides:
+  - capability: rat://state/v1/get
+  - capability: rat://state/v1/put
+  - capability: rat://state/v1/list

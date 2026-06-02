@@ -8,3 +8,5 @@ metadata:
 compatible_core: ["rat/1"]
 requires:
   - capability: rat://strategy/v1/apply
+  - capability: rat://state/v1/list      # read the run history
+  - capability: rat://state/v1/get

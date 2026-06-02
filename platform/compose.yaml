@@ -130,6 +130,29 @@ services:
     # No depends_on rat-serve: it serves immediately and dials the gateway only at Apply
     # time (by then rat-serve is up). rat-serve depends_on IT (to attach).
 
+  state:
+    image: docker.io/library/python:3.12
+    working_dir: /work/examples/state/postgres-py
+    command:
+      - bash
+      - -lc
+      - "pip install -q --root-user-action=ignore grpcio==1.80.0 protobuf==7.35.0 psycopg2-binary==2.9.9 && exec python main.py"
+    environment:
+      PYTHONPATH: /work/contracts/sdks/python
+      RAT_PLUGIN_ADDR: "0.0.0.0:50051"
+      RAT_STATE_PG: "host=postgres port=5432 dbname=ducklake user=ducklake password=ducklake"
+    volumes:
+      - ../:/work:z
+      - pipcache:/root/.cache/pip
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('localhost',50051),2)\""]
+      interval: 5s
+      timeout: 4s
+      retries: 40
+      start_period: 30s
+    depends_on:
+      postgres: {condition: service_healthy}
+
   rat-serve:
     image: rat/serve:dev          # built by `make rat-image`
     # the image entrypoint is `rat serve --plane /etc/rat/plane.yaml`; we mount our plane over it
@@ -142,6 +165,7 @@ services:
       engine: {condition: service_healthy}
       catalog: {condition: service_healthy}
       pipeline: {condition: service_healthy}
+      state: {condition: service_healthy}
 
   scheduler:
     image: docker.io/library/python:3.12
