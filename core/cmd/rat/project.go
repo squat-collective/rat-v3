@@ -171,17 +171,42 @@ func runAdd(args []string, out io.Writer) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	if name == "" {
-		return fmt.Errorf("usage: rat add <name> --manifest <path> [--image <ref>] [--env K=V]...")
-	}
-	if *manifest == "" {
-		return fmt.Errorf("--manifest <path> is required (the plugin's kind/provides/requires)")
-	}
-
-	tomlPath, _, err := findProject(".")
+	tomlPath, dir, err := findProject(".")
 	if err != nil {
 		return err
 	}
+
+	// Manifest-from-image (ADR-026 Q05): with --image and no --manifest, read the manifest
+	// STAMPED into the (packed) image, materialize it into the project, and reference it. So
+	// `rat add --image <packed-ref>` needs no --manifest, and the name comes from the manifest.
+	if *manifest == "" && *image != "" {
+		if err := ensureImagePresent(out, *image); err != nil {
+			return err
+		}
+		m, raw, err := readStampedManifest(*image)
+		if err != nil {
+			return fmt.Errorf("%s: %w (pass --manifest, or `rat plugin pack` the image to stamp one in)", *image, err)
+		}
+		if name == "" {
+			name = m.Metadata.Name
+		}
+		rel := filepath.Join("manifests", name+".plugin.yaml")
+		if err := os.MkdirAll(filepath.Join(dir, "manifests"), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dir, rel), raw, 0o644); err != nil {
+			return err
+		}
+		*manifest = rel
+		fmt.Fprintf(out, "read manifest from %s → %s\n", *image, rel)
+	}
+	if name == "" {
+		return fmt.Errorf("usage: rat add <name> --manifest <path> [--image <ref>]  (or `rat add --image <packed-ref>` to read the stamped manifest)")
+	}
+	if *manifest == "" {
+		return fmt.Errorf("--manifest <path> required (or pass --image a packed image whose manifest is stamped in)")
+	}
+
 	rt, err := parseProject(tomlPath)
 	if err != nil {
 		return err
