@@ -32,6 +32,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [024](024-ui-assembled-from-plugin-contributions.md) | The UI is assembled from plugin contributions, not hardcoded (the VSCode `contributes` model) | Proposed | 2026-06-03 |
 | [025](025-surfaces-and-consumers.md) | Surfaces & consumers — plugins contribute per-surface interfaces; consumers are out-of-stack renderers | Proposed | 2026-06-03 |
 | [026](026-plugin-authoring-and-packaging.md) | Plugin authoring & packaging — the `rat plugin` toolkit, the verified-plugin gate, scaffolded CI/CD | Proposed | 2026-06-03 |
+| [027](027-live-plugin-control-rpc.md) | Live plugin control — the daemon's `ControlService` (Register/Deregister/List); live `rat add`/`remove` | Proposed | 2026-06-03 |
 
 ## Template
 
