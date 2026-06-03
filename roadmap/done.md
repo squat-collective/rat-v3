@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 2c: the Python plugin images are baked 🐳
+
+The launchable images for every platform plugin (ADR-022) — so rat can `podman run` each as its own container (no per-plugin compose service). A `Dockerfile` per plugin (build context = repo root; `.dockerignore` loosened to allow `examples/` + `platform/`, junk excluded) + `make plugin-images`:
+- `rat/state:dev` (161M) · `rat/catalog:dev` (214M) · `rat/engine:dev` (443M) · `rat/scheduler:dev` (153M) · `rat/dbt-runner:dev` (324M) · `rat/bff:dev` (153M) — each `FROM python:3.12-slim`, copies the python SDK into site-packages + the plugin code, pip-installs its `requirements.txt`, `CMD python main.py`.
+- The **dbt-runner** is special: dbt lives in its **own venv** (`/opt/dbtvenv`, `$RAT_DBT_BIN`) because dbt-core pins an older protobuf than the RAT SDK's 7.35 — verified live: the gRPC side runs **protobuf 7.35.0** + imports the SDK, AND **dbt 1.11.11** runs from the venv. The Go `rat/stateplugin:dev` (19M) from the prior step rounds out the set.
+
+Verified **functional** (not just built): `rat/engine:dev` imports duckdb/pyarrow/numpy + the SDK + its plugin code; `rat/dbt-runner:dev` runs both sides. `make breaking` clean; additive (Dockerfiles + `.dockerignore` + a make target). **Next:** the slim launch-mode platform — a `plugins.yaml` (one entry per plugin → these images) + a compose that drops to **rat + Postgres + MinIO** (rat launches the rest); the scheduler/bff (drivers, no served port) get a trivial health port so the reconciler can launch+supervise them; prove the medallion runs through the launched stack. Then **socket-mount** (containerize rat) as the refinement.
+
+---
+
 ## 2026-06-02 — 2c (first step): rat launches a SEPARATE plugin container — the decoupled loop, proven 📦
 
 The reliable, decoupled-launch proof (the path chosen over a blind socket-mount): **rat launches a plugin as its own container** from a plane. `core/testplugins/stateplugin/Dockerfile` bakes a launchable `rat/stateplugin:dev` image (a static Go binary, alpine, runs under the podman runtime's I9 profile); `core/cmd/rat/plane.podman.yaml` is a `runtime: podman` plane that launches it. Proven live (rat on the host, the proven podman runtime — no socket-in-container yet): `rat serve --plane plane.podman.yaml` →
