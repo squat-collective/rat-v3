@@ -164,14 +164,11 @@ def _invoke(capability, data):
 # --- the UI is ASSEMBLED from plugin contributions (ADR-024) ---
 # A contribution is a JSON component spec at state key ui/components/<plugin>/<id>. The bff
 # aggregates them by slot; the generic shell renders. Adding UI = publishing a contribution
-# (any plugin via state/put); the bff + shell never change. The platform seeds its own.
+# (any plugin via the SDK's contribute_ui); the bff + shell never change. The bff contributes
+# only its OWN component (Run History); rat-pipeline contributes Lake Tables + Run pipeline
+# itself (via rat.contrib.contribute_ui) — each plugin owns its UI.
 PLATFORM_COMPONENTS = [
-    {"slot": "explorer", "id": "lake-tables", "title": "Lake Tables", "icon": "database",
-     "data": "/api/tables", "item": "/api/table/"},
     {"slot": "explorer", "id": "run-history", "title": "Run History", "icon": "history", "data": "/api/runs"},
-    {"slot": "command", "id": "run-pipeline", "title": "Run pipeline", "icon": "play",
-     "capability": "rat://strategy/v1/apply",
-     "args": {"target": {"identifier": TARGET}, "idempotencyKey": "ui-run"}},
 ]
 
 
