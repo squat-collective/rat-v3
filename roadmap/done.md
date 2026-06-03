@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 🎉 PHASE 8 SEALED — `rat/5.5` (the marketplace)
+
+Phase 8 — **the marketplace** — is **sealed at `rat/5.5`** (`phase-8` merged to `main`, annotated tag). It closes the Phase-7 follow-on and completes the **discover** leg of the ecosystem story: alongside **author** (`rat plugin …`), **run** (`rat serve`/`add`), **distribute** (GHCR), you can now **find** a plugin.
+
+The `kind: marketplace` axis (ADR-001): a marketplace is a **source of plugin entries**, read in aggregate — **local** (images on this machine, by their ADR-026 stamped manifest) + **added** (index files/URLs, `~/.config/rat/marketplaces.json`). Verbs `rat search` / `rat list` / `rat marketplace add|list`, and the headline **`rat add` auto-suggest**: each unsatisfied `requires` names the exact provider + a ready-to-run `rat add --image <ref>` line. Reference index `marketplace/rat-official.json` (5 plugins).
+
+The sealed line: `rat/2.0` core · `rat/2.5` platform+daemon UX · `rat/3.0` multi-surface UI · `rat/3.5` distribution · `rat/4.0` authoring · `rat/4.5` authoring↔runtime · `rat/5.0` dependency resolution · `rat/5.5` the marketplace. Additive throughout — `make breaking` clean, no proto/axis change since `rat/2.0`. **Open follow-ons:** `rat add` *running* the suggested add (pull+add in one); a remote/HTTP-hosted official index; signed marketplace entries; the remaining ADR-026 (launch-time manifest resolution, golden-vector conformance in `test`, signing, build-backend/template axes) + ADR-025 surface follow-ons.
+
+---
+
 ## 2026-06-03 — Phase 8 slice 1: the marketplace — discovery + `rat add` auto-suggest 🛒
 
 Built the **marketplace axis** (`kind: marketplace`, ADR-001) — closes the Phase-7 follow-on "`rat add` auto-suggesting the *exact* plugin." A marketplace is a **source of plugin entries**; rat reads several at once:
