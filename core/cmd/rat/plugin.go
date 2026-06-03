@@ -147,9 +147,88 @@ func runPluginCheck(args []string, out io.Writer) error {
 	if m.Metadata.Version == "" {
 		return fmt.Errorf("check failed: missing metadata.version")
 	}
-	fmt.Fprintf(out, "✓ %s (%s) — manifest valid: %d provides, %d requires\n",
-		m.Metadata.Name, m.Kind, len(m.Provides), len(m.Requires))
+
+	// DEPENDENCY COHERENCE (ADR-026 §3): a capability must NAME SOMETHING REAL, and a
+	// plugin's `provides` must be its own axis. `requires` are legitimately cross-axis
+	// (capability composition), so only their reality is checked, not their axis.
+	linked := linkedAxes()
+	unverified := 0
+	checkReal := func(cap, role string) error {
+		axis := capAxisOf(cap)
+		if !linked[axis] {
+			unverified++ // can't verify: this axis isn't compiled into this rat (not a typo, just unknown here)
+			return nil
+		}
+		if _, _, _, err := resolveMethod(cap); err != nil {
+			return fmt.Errorf("check failed: %s — %s %q is not a real capability of axis %q (typo?)", m.Metadata.Name, role, cap, axis)
+		}
+		return nil
+	}
+	for _, c := range m.ProvidesCaps() {
+		if err := checkReal(c, "provides"); err != nil {
+			return err
+		}
+	}
+	for _, c := range m.RequiresCaps() {
+		if err := checkReal(c, "requires"); err != nil {
+			return err
+		}
+	}
+	if want := kindAxis(m.Kind); want != "" {
+		for _, c := range m.ProvidesCaps() {
+			if a := capAxisOf(c); a != want {
+				return fmt.Errorf("check failed: a %q plugin provides %q (axis %q) — expected %q-axis capabilities", m.Kind, c, a, want)
+			}
+		}
+	}
+
+	note := ""
+	if unverified > 0 {
+		note = fmt.Sprintf(" (%d capabilit%s unverified — their axis isn't compiled into this rat)", unverified, plural(unverified))
+	}
+	fmt.Fprintf(out, "✓ %s (%s) — manifest + deps valid: %d provides, %d requires%s\n",
+		m.Metadata.Name, m.Kind, len(m.Provides), len(m.Requires), note)
 	return nil
+}
+
+// capAxisOf extracts the axis segment from a capability URI: "rat://state/v1/get" → "state".
+func capAxisOf(cap string) string {
+	s := strings.TrimPrefix(cap, "rat://")
+	if i := strings.IndexByte(s, '/'); i >= 0 {
+		return s[:i]
+	}
+	return ""
+}
+
+// kindAxis returns the axis a plugin of this kind serves (derived from the scaffold map, so
+// it stays consistent), or "" when the kind has no well-known axis (skip coherence then).
+func kindAxis(kind string) string {
+	if caps := kindProvides[kind]; len(caps) > 0 {
+		return capAxisOf(caps[0])
+	}
+	return ""
+}
+
+// linkedAxes is the set of axis segments compiled into THIS rat (from the capability
+// annotations in the linked descriptors) — so `check` only HARD-FAILS a made-up capability
+// in an axis it can actually see, and merely notes capabilities of axes it can't.
+func linkedAxes() map[string]bool {
+	axes := map[string]bool{}
+	protoregistry.GlobalFiles.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
+		svcs := fd.Services()
+		for i := 0; i < svcs.Len(); i++ {
+			ms := svcs.Get(i).Methods()
+			for j := 0; j < ms.Len(); j++ {
+				if c, _ := proto.GetExtension(ms.Get(j).Options(), commonv1.E_Capability).(string); c != "" {
+					if a := capAxisOf(c); a != "" {
+						axes[a] = true
+					}
+				}
+			}
+		}
+		return true
+	})
+	return axes
 }
 
 // runPluginTest is the strong gate (ADR-026): build the image (or use --image), LAUNCH it
