@@ -16,6 +16,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 🎉 PHASE 2 SEALED — `rat/2.5` (the v2-on-v3 platform + the daemon UX)
+
+Phase 2 — the data platform bundle (ADR-020) reimagined as the orchestrator + plugin model — is **sealed at `rat/2.5`** (`phase-2` merged to `main`, annotated tag). What landed across the phase, all proven running:
+
+- **The platform (v2 on v3):** landing → medallion (bronze/silver/gold) as **your dbt code** (`rat apply`'d, ADR-021) → quality-gated tests → **self-driving** scheduled refresh → **run history** → output in a **shared DuckLake** (Postgres catalog + S3 Parquet) → the bff serves it. Six plugins behind one gateway (scheduler · pipeline/dbt · state/Postgres · secret · bff · runner), every hop C5-authorized + audited, **DuckLake as the catalog** — the v2→v3 mapping, complete.
+- **Launch, not compose (ADR-022):** rat launches plugins from a plane; the infra is just Postgres + MinIO; **socket-mount** lets rat run as a container launching siblings by name (k8s-shaped).
+- **The daemon UX (ADR-023):** rat is a **per-project, poetry-style daemon** — `rat init`/`add`/`up -d`/`down`/`ls`/`status`/`call`/`apply`, one binary, many coexisting per machine (per-project unix socket + auto-port callback companion + instance-namespaced runtime).
+- **Secrets centralized:** every credential (state DSN, lake DSN, S3) lives only in the secret plugin; consumers hold refs and resolve at use (C5 + audit + redaction).
+- **An extensible UI (ADR-024/025):** the UI is **assembled from plugin contributions** — a generic shell renders `/api/ui`; `contribute_ui` lets a plugin add a view/command/config in one call; ADR-025 captures the **surfaces & consumers** model (per-surface interfaces; vscode/cli/webapp as out-of-stack consumers).
+
+ADRs 019–025 land the thinking; `make breaking` held clean across the phase (additive only — no proto/axis change since `rat/2.0`). The frozen contract surface is untouched; Phase 2 is all core-daemon + reference plugins + platform + UX on top of the sealed `rat/2.0` wire. **Next: Phase 3 — build the surfaces & consumers model (ADR-025), starting with the CLI surface (the one provable headlessly).**
+
+---
+
 ## 2026-06-03 — `contribute_ui` SDK helper: a plugin adds UI in one call 🧩
 
 Made ADR-024's "a plugin contributes UI" a **one-liner**. New hand-written SDK module **`contracts/sdks/python/rat/contrib.py`** (`rat/contrib`, not generated — codegen only writes `rat/<axis>/v1`; named `contrib` to avoid the `rat/ui/` axis package): `contribute_ui(gateway, caller, components, retries=…)` publishes a plugin's UI components to `ui/components/<caller>/<id>` in the state-backend (via the gateway — C5-authorized + audited), riding out the state plugin's boot wiring with retries.

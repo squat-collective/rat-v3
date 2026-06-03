@@ -10,9 +10,9 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 |---|---|---|---|---|
 | **−1** | Architectural design + adversarial review | **done** (2026-05-30) | ~1 day | ADRs 001-003, vision, overview, 5-perspective review, synthesis |
 | **0** | Lock the contracts (with Critical concerns baked in) | ✅ **DONE — SEALED `rat/1.5`** (2026-06-01) | 4-6 months | All 18 axes frozen + board-reviewed ([reviews/08](../reviews/08-post-freeze-board-review.md)); the close-out is complete — catalog commit-linkage (ADR-010), manifest freeze + 18 per-kind schemas (ADR-011), all 18 `CONTRACT.md` + doc tail (E1/E3/E4/E7), C1/C2 crash-safety (ADR-012) — and `rat/1.5` is cut. Phase 1 acceptance criteria = the deferred C3–C5/D1–D5 findings. |
-| **1** | Build the core (~12-15k LOC) | **in-flight** (committed) | 3 months | Spike validated the contracts ([reviews/10](../reviews/10-phase-1-spike-exit.md), no freeze-reopen) → **gate CLEARED ([ADR-015](../docs/architecture/adrs/015-phase-1-commitment-gate-cleared.md))** → full core build committed. Six things + cross-cutting enforcement. |
-| **2** | Solo deployment reference plugins (production-grade) | not-started | 2 months | `chmod +x ./rat` works end-to-end |
-| **3** | Self-hosted team reference plugins | not-started | 2 months | Match v2's operational shape |
+| **1** | Build the core (~12-15k LOC) | ✅ **DONE — SEALED `rat/2.0`** (2026-06-02) | 3 months | All 9 board exit criteria met (C1/C3/C4/C5, D1–D4, sre#4) against real launched plugins. Six things + cross-cutting enforcement. |
+| **2** | The v2-on-v3 **data platform** + the **per-project daemon UX** | ✅ **DONE — SEALED `rat/2.5`** (2026-06-03) | — | *Reframed from "solo reference plugins":* the data platform bundle (ADR-020/021) — landing→medallion as dbt code, self-driving, shared DuckLake — built as launch-mode plugins (ADR-022) under a poetry-style per-project daemon (ADR-023), secrets centralized, an extensible UI (ADR-024/025). Additive to `rat/2.0` (no wire change). ADRs 019–025. |
+| **3** | **Surfaces & consumers** (ADR-025) — per-surface plugin interfaces; out-of-stack consumers | **in-flight** (2026-06-03) | — | CLI surface first (provable headlessly); then vscode/webapp. *(Absorbs the original "team reference plugins" framing as multi-surface lands.)* |
 | **4** | Hardening + GTM motion | not-started | 3 months | 4-of-5 non-engineering GTM gaps land here |
 | **5** | Ecosystem moves | not-started | 1-2 months | Marketplace UX, multi-UI, hybrid topology |
 
