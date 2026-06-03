@@ -63,7 +63,13 @@ func main() {
 		err = serve(*planePath)
 	case "up":
 		log.SetPrefix("rat: ")
-		err = runUp(args)
+		err = runUp(args, os.Stdout)
+	case "down":
+		err = runDown(args, os.Stdout)
+	case "status":
+		err = runStatus(args, os.Stdout)
+	case "ls":
+		err = runLs(args, os.Stdout)
 	case "init":
 		err = runInit(args, os.Stdout)
 	case "add":
@@ -72,7 +78,7 @@ func main() {
 		// the client verbs (the kubectl side), shared with the ratctl alias (ADR-023).
 		err = client.Run(append([]string{cmd}, args...), os.Stdout)
 	default:
-		err = fmt.Errorf("unknown command %q (want: serve | up | init | add | call | apply)", cmd)
+		err = fmt.Errorf("unknown command %q (want: serve | up | down | status | ls | init | add | call | apply)", cmd)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "rat:", err)
@@ -139,6 +145,12 @@ func serveResolved(pl *Plane) error {
 
 	srv := grpc.NewServer()
 	corev1.RegisterCapabilityInvokeServiceServer(srv, plane.Gateway)
+
+	// Publish this daemon's pid + global registry entry (slice 2c) so `rat down`/`ls`/
+	// `status` can find it; retract both on drain. No-op when the plane has no project
+	// (.rat/) context — a raw `rat serve --plane …`.
+	registerDaemon(pl)
+	defer deregisterDaemon(pl)
 
 	// Serve the same gateway on both listeners. GracefulStop in drain() closes both.
 	serveErr := make(chan error, 2)

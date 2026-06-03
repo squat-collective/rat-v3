@@ -77,6 +77,12 @@ type Plane struct {
 	// when the control plane is a unix socket (unreachable by plugins), it is the auto-port
 	// TCP companion; when control is already TCP, it is that. Empty until serve() sets it.
 	CallbackAddr string
+
+	// RuntimeDir is the project's `.rat/` directory (ADR-023 slice 2c). When set, the daemon
+	// writes its pid there and registers itself in the machine-global instance registry so
+	// `rat down`/`rat ls`/`rat status` can find it. Empty for a raw `rat serve --plane` (no
+	// project context). Set by LoadProject.
+	RuntimeDir string
 }
 
 // LoadPlane parses + validates the plane file at path. Manifest and (local) image
