@@ -71,6 +71,12 @@ type Plane struct {
 	Runtime       string
 	HealthTimeout time.Duration
 	Specs         []supervisor.PluginSpec
+
+	// CallbackAddr is the network address a launched DRIVER plugin dials to reach the
+	// gateway back (injected as RAT_GATEWAY). serve() fills it once the listeners exist —
+	// when the control plane is a unix socket (unreachable by plugins), it is the auto-port
+	// TCP companion; when control is already TCP, it is that. Empty until serve() sets it.
+	CallbackAddr string
 }
 
 // LoadPlane parses + validates the plane file at path. Manifest and (local) image

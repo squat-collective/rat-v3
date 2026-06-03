@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — slice 1.5: the dual-listener daemon — unix control socket + auto-port TCP callback companion 🔁
+
+Closed the gap slice 1 deferred: a unix-socket-only gateway can't be dialed *back* by launched **driver** plugins (scheduler/bff) that need a network endpoint. The daemon now serves the **same gateway on two listeners** (`core/cmd/rat`):
+- **control** = `pl.Addr` — a per-project **unix socket** (ADR-023, collision-free) or TCP;
+- **plugin-callbacks** = when control is a unix socket, an **auto-port TCP companion** (`0.0.0.0:0` → a free port, so it never collides across instances either); when control is already TCP, that doubles as the callback endpoint.
+
+Listeners open **before** assembly so the companion's actual port is known in time to inject `RAT_GATEWAY` (now `host.containers.internal:<companion-port>` / `<rat-hostname>:<port>` / loopback, per topology — `gatewayCallbackAddr(pl, port)`). `GracefulStop` closes both; the socket unlinks on drain.
+
+**Proven live — the FULL platform under the per-project model:** `rat serve` with `addr: unix:/tmp/rat-platform.sock` (podman, host mode) logged `control /tmp/rat-platform.sock · plugin-callbacks [::]:38673`; the **scheduler self-drove through the companion** (`firing … → host.containers.internal:38673`, ticks refreshed) and recorded **durable** run history to Postgres; **`ratctl` read that history over the UNIX SOCKET** simultaneously (`platform-runner → state/list`); audit shows both paths through **one gateway** (drivers via companion: `rat-scheduler → apply/put`, `rat-state → resolve`; CLI via socket: `→ list`); socket cleaned on drain. `make core-test` + `breaking` green; additive (no proto/axis). The full self-driving platform now runs per-project, collision-free on both the control and callback channels — two such platforms can coexist (distinct sockets + distinct auto-ports). Next: the poetry verbs (`init`/`add`/`install`/`lock`) + `.rat/` layout + `rat ls`, then fold `ratctl` into one `rat`.
+
+---
+
 ## 2026-06-03 — ADR-023 + slice 1: rat is a per-project daemon — two rats coexist on one machine 🏠
 
 Decided the *shape of the daemon* (the question Phase 2 left open) and built the load-bearing half. **[ADR-023](../docs/architecture/adrs/023-rat-as-a-per-project-daemon.md) (Proposed):** rat is a small, **disposable per-project daemon** (a venv with a heartbeat) whose desired state lives in an **external, git-committed spec** (`rat.toml`+`rat.lock`); control is **hybrid, poetry-style** (imperative `rat add` writes the spec *then* reconciles; declarative `rat install` rebuilds from it); the running registry is **status, never the source of truth** (k8s spec/status — sidesteps the snowflake-server failure mode of a living broker). Ships as a GHCR binary (`chmod +x ./rat`) **and** image; one multi-call `rat` (refines ADR-019's two-binary split — boundary kept, artifact unified). Many rats per machine ⇒ per-instance isolation is mandatory. Promotes the parked runtime-self-registration idea (its `SetProvider` keystone is now built).
