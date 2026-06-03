@@ -27,7 +27,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image platform-up platform-run platform-down core-test-podman breaking help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-images platform-up platform-run platform-down core-test-podman breaking help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -133,6 +133,16 @@ rat-image: ## ADR-019: build the rat control-plane daemon image (run `rat serve`
 stateplugin-image: ## ADR-022: build a launchable stateplugin image (rat `podman run`s it as a plugin container)
 	@echo ">> building rat/stateplugin:dev"
 	@$(RUNTIME) build -f core/testplugins/stateplugin/Dockerfile -t rat/stateplugin:dev .
+
+plugin-images: ## ADR-022: build the launchable Python plugin images (rat/<name>:dev) — the platform's plugins
+	@echo ">> building the Python plugin images"
+	@$(RUNTIME) build -f examples/state/postgres-py/Dockerfile   -t rat/state:dev .
+	@$(RUNTIME) build -f examples/catalog/ducklake-py/Dockerfile -t rat/catalog:dev .
+	@$(RUNTIME) build -f examples/engine/duckdb-ml-py/Dockerfile -t rat/engine:dev .
+	@$(RUNTIME) build -f examples/scheduler/cron-py/Dockerfile   -t rat/scheduler:dev .
+	@$(RUNTIME) build -f examples/runner/dbt-duckdb/Dockerfile   -t rat/dbt-runner:dev .
+	@$(RUNTIME) build -f platform/bff.Dockerfile                 -t rat/bff:dev .
+	@echo ">> built: rat/{state,catalog,engine,scheduler,dbt-runner,bff}:dev"
 
 ## --- the data platform bundle (ADR-020) --------------------------------------
 platform-up: rat-image ## ADR-020 S1: bring up the always-on data platform stack (Postgres+MinIO+engine+catalog+rat serve)
