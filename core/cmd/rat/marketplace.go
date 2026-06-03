@@ -241,6 +241,79 @@ func runMarketplace(args []string, out io.Writer) error {
 	}
 }
 
+// addMarketEntry adds a marketplace provider to the project (the `rat add --with-deps`
+// machinery). It SYNTHESIZES a manifest from the entry's advertised kind/provides/requires —
+// no image pull at declare-time (the image is fetched at `rat up`/`serve`) — writes
+// manifests/<name>.plugin.yaml, and appends a [[plugin]] block. Returns false (no error) if a
+// plugin of that name is already present, so the resolver loop converges.
+func addMarketEntry(out io.Writer, tomlPath, dir string, e marketEntry) (bool, error) {
+	rt, err := parseProject(tomlPath)
+	if err != nil {
+		return false, err
+	}
+	for _, p := range rt.Plugins {
+		if p.Name == e.Name {
+			return false, nil
+		}
+	}
+	rel := filepath.Join("manifests", e.Name+".plugin.yaml")
+	if err := os.MkdirAll(filepath.Join(dir, "manifests"), 0o755); err != nil {
+		return false, err
+	}
+	if err := os.WriteFile(filepath.Join(dir, rel), synthManifest(e), 0o644); err != nil {
+		return false, err
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "\n[[plugin]]\nname     = %q\n", e.Name)
+	if e.Image != "" {
+		fmt.Fprintf(&b, "image    = %q\n", e.Image)
+	}
+	fmt.Fprintf(&b, "manifest = %q\n", rel)
+	if e.Image != "" {
+		fmt.Fprintf(&b, "isolation = %q\n", "i9")
+	}
+	f, err := os.OpenFile(tomlPath, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+	if _, err := f.WriteString(b.String()); err != nil {
+		return false, err
+	}
+	fmt.Fprintf(out, "  + %s (%s, from %s) — provides %s\n", e.Name, e.Image, e.source, strings.Join(e.Provides, ", "))
+	return true, nil
+}
+
+// synthManifest renders a marketplace entry as a plugin manifest (the frozen YAML subset the
+// loader reads). The entry's provides/requires ARE the manifest's — that's how a marketplace
+// index doubles as a dependency declaration.
+func synthManifest(e marketEntry) []byte {
+	var b strings.Builder
+	fmt.Fprintf(&b, "# synthesized by `rat add --with-deps` from marketplace %q\n", e.source)
+	b.WriteString("api_version: rat.dev/v1\n")
+	fmt.Fprintf(&b, "kind: %s\n", e.Kind)
+	b.WriteString("metadata:\n")
+	fmt.Fprintf(&b, "  name: %s\n", e.Name)
+	ver := e.Version
+	if ver == "" {
+		ver = "0.0"
+	}
+	fmt.Fprintf(&b, "  version: %q\n", ver)
+	if len(e.Provides) > 0 {
+		b.WriteString("provides:\n")
+		for _, c := range e.Provides {
+			fmt.Fprintf(&b, "  - capability: %s\n", c)
+		}
+	}
+	if len(e.Requires) > 0 {
+		b.WriteString("requires:\n")
+		for _, c := range e.Requires {
+			fmt.Fprintf(&b, "  - capability: %s\n", c)
+		}
+	}
+	return []byte(b.String())
+}
+
 // reportUnsatisfiedSuggesting is `rat add`'s resolver report, enhanced with marketplace
 // auto-suggestions: for each unsatisfied requires, name the exact plugin (+ `rat add`) that
 // provides it, if any marketplace has one.

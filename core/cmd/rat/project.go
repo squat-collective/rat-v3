@@ -167,6 +167,7 @@ func runAdd(args []string, out io.Writer) error {
 	image := fs.String("image", "", "plugin OCI image ref (omit for a register-only driver)")
 	manifest := fs.String("manifest", "", "path to the plugin manifest (required)")
 	isolation := fs.String("isolation", "i9", "isolation profile")
+	withDeps := fs.Bool("with-deps", false, "auto-add marketplace providers for any unsatisfied `requires` (transitive)")
 	var envs multiFlag
 	fs.Var(&envs, "env", "env var KEY=VALUE (repeatable; NEVER secrets)")
 	if err := fs.Parse(args); err != nil {
@@ -251,15 +252,61 @@ func runAdd(args []string, out io.Writer) error {
 	}
 	fmt.Fprintf(out, "added %q (%s) to %s\n", name, kind, projectFile)
 
-	// poetry-style: after adding, surface any `requires` the project now leaves unsatisfied.
+	// poetry-style: after adding, resolve the project's `requires`.
+	//   --with-deps  → auto-add the marketplace provider for each (transitively).
+	//   otherwise    → just surface what's now unsatisfied, with a suggestion.
+	if *withDeps {
+		return resolveWithDeps(out, tomlPath, dir)
+	}
 	if pl, err := LoadProject(tomlPath); err == nil {
-		ms := make([]*manifestpkg.Manifest, 0, len(pl.Specs))
-		for _, s := range pl.Specs {
-			ms = append(ms, s.Manifest)
-		}
-		reportUnsatisfiedSuggesting(out, unsatisfiedRequires(ms))
+		reportUnsatisfiedSuggesting(out, unsatisfiedRequires(manifestsOf(pl)))
 	}
 	return nil
+}
+
+// manifestsOf flattens a loaded plane's specs to their manifests (the resolver's input).
+func manifestsOf(pl *Plane) []*manifestpkg.Manifest {
+	ms := make([]*manifestpkg.Manifest, 0, len(pl.Specs))
+	for _, s := range pl.Specs {
+		ms = append(ms, s.Manifest)
+	}
+	return ms
+}
+
+// resolveWithDeps repeatedly adds marketplace providers for the project's unsatisfied
+// `requires` until every one has a provider in the project — or no marketplace can supply
+// one. Transitive: a provider added this round has its OWN `requires` resolved next round
+// (e.g. add rat-scheduler → pulls rat-state + dbt-runner → rat-state pulls rat-secret).
+func resolveWithDeps(out io.Writer, tomlPath, dir string) error {
+	entries := allMarketEntries()
+	for {
+		pl, err := LoadProject(tomlPath)
+		if err != nil {
+			return err
+		}
+		miss := unsatisfiedRequires(manifestsOf(pl))
+		if len(miss) == 0 {
+			fmt.Fprintf(out, "✓ all dependencies satisfied\n")
+			return nil
+		}
+		progress := false
+		for _, d := range miss {
+			e, ok := providerFor(entries, d.Capability)
+			if !ok {
+				continue
+			}
+			added, err := addMarketEntry(out, tomlPath, dir, e)
+			if err != nil {
+				return err
+			}
+			progress = progress || added
+		}
+		if !progress {
+			// what's left has no marketplace provider — report it (with the axis hint).
+			reportUnsatisfiedSuggesting(out, miss)
+			return nil
+		}
+	}
 }
 
 // multiFlag collects a repeatable string flag (e.g. --env A=1 --env B=2).
