@@ -1,0 +1,132 @@
+// Core daemon control service (ADR-027). The daemon's ADMIN face: it mutates the
+// RUNNING plane — add/remove a plugin without a restart — and reports the live set.
+//
+// This is the operator counterpart to CapabilityInvokeService (invoke.proto): that
+// service is the DATA plane (a plugin calls a capability it `requires`, C5-gated);
+// this is the CONTROL plane (an operator adds/removes plugins). They are deliberately
+// SEPARATE services with different authorization: capability-invocation is authorized
+// from the caller's manifest `requires` (C5), whereas control is an OPERATOR action —
+// `rat add` is a CLI, not a plugin with a manifest — so it does not flow through C5.
+// In v1 the control listener's REACHABILITY is the authorization: a per-project unix
+// socket (.rat/daemon.sock, ADR-023) means filesystem permissions gate who may
+// register, exactly as they gate `rat down`. Operator identity + mTLS for a networked
+// (TCP) control endpoint is deferred (ADR-027 Q01).
+//
+// This stays within the six-thing core: it mutates the Registry and exposes an admin
+// RPC on the API gateway — two EXISTING responsibilities — and reuses the reconciler's
+// unchanged convergence (it only makes the desired SET mutable). No 7th core thing.
+//
+// Status: v1 additive (ADR-027; bound by the ADR-017 pre-unfreeze gate). Core↔operator,
+// not a plugin contract.
+syntax = "proto3";
+
+package rat.core.v1;
+
+option go_package = "github.com/rat-dev/rat/gen/rat/core/v1;corev1";
+
+// ControlService is served on the daemon's CONTROL listener alongside
+// CapabilityInvokeService. rat.toml stays the source of truth; these RPCs only apply a
+// diff to the running daemon (the CLI writes the file first, then materializes).
+service ControlService {
+  // Add a plugin to the running plane: validate its manifest, register it (so C5
+  // authorization now knows it), add it to the reconciler's desired set (launch +
+  // wire), and wait — bounded — for it to become Healthy. Idempotent: re-registering
+  // a present plugin refreshes its spec. On a launch/readiness failure the daemon
+  // rolls the desired entry back so a failed live-add leaves no partial state.
+  rpc RegisterPlugin(RegisterPluginRequest) returns (RegisterPluginResponse);
+
+  // Remove a plugin from the running plane: drop it from the desired set (terminate
+  // the instance), unbind it from the gateway, and deregister it from the registry.
+  rpc DeregisterPlugin(DeregisterPluginRequest) returns (DeregisterPluginResponse);
+
+  // The live plane as the daemon sees it — distinct from `rat status`, which reads
+  // rat.toml. Reports each plugin's name, kind, reconcile state, endpoint, provides.
+  rpc ListPlugins(ListPluginsRequest) returns (ListPluginsResponse);
+}
+
+// LaunchSpec is how a plugin is launched (the subset rat.toml carries). An empty image
+// means a REGISTER-ONLY driver (an operator identity that dials the gateway but is not
+// itself launched), mirroring a rat.toml [[plugin]] with no image.
+message LaunchSpec {
+  // OCI image ref. Empty = a register-only driver (no launch).
+  string image = 1;
+
+  // Isolation profile shorthand (e.g. "i9"); the daemon maps it to a full profile, the
+  // same mapping rat.toml uses. Empty defaults to the hardened profile.
+  string isolation = 2;
+
+  // Launch environment. NEVER secrets — only opaque refs (the *_REF convention); the
+  // secret-backend resolves them at first use (ADR-022).
+  map<string, string> env = 3;
+}
+
+// RegisterPluginRequest adds one plugin to the running plane.
+message RegisterPluginRequest {
+  // The plugin's instance name in this plane (the key `rat remove` / Deregister uses).
+  string name = 1;
+
+  // The plugin's manifest as raw YAML (the frozen plugin.v1 shape). The daemon parses +
+  // validates it; its kind + provides/requires are what the registry authorizes from.
+  // Carried as bytes so the manifest stays YAML end to end (no proto schema dup).
+  bytes manifest_yaml = 2;
+
+  // How to launch it. Absent (or empty image) = a register-only driver.
+  LaunchSpec launch = 3;
+}
+
+// RegisterPluginResponse reports the plugin's live state after the daemon materialized it.
+message RegisterPluginResponse {
+  // The plugin name, echoed.
+  string name = 1;
+
+  // The reconcile state after materialize (e.g. "Healthy"). A driver with no launch is
+  // reported as registered without a health probe.
+  string state = 2;
+
+  // Where the gateway bound the plugin (its routable endpoint); empty for a driver.
+  string endpoint = 3;
+}
+
+// DeregisterPluginRequest removes one plugin from the running plane by name.
+message DeregisterPluginRequest {
+  // The plugin instance name to remove.
+  string name = 1;
+}
+
+// DeregisterPluginResponse confirms the removal.
+message DeregisterPluginResponse {
+  // The plugin name, echoed.
+  string name = 1;
+
+  // Whether the plugin was actually present in the running plane (false = no-op).
+  bool was_present = 2;
+}
+
+// ListPluginsRequest asks for the live plane (no parameters in v1).
+message ListPluginsRequest {}
+
+// ListPluginsResponse is the live plane as the daemon sees it.
+message ListPluginsResponse {
+  // One entry per plugin currently known to the running daemon.
+  repeated PluginStatus plugins = 1;
+}
+
+// PluginStatus is one plugin's live state in the running plane.
+message PluginStatus {
+  // The plugin instance name.
+  string name = 1;
+
+  // The plugin's manifest kind (the axis it implements).
+  string kind = 2;
+
+  // The reconcile state (e.g. "Healthy", "Launching", "Degraded"); "registered" for a
+  // register-only driver with no health probe.
+  string state = 3;
+
+  // The plugin's routable endpoint, if bound; empty for a driver or a not-yet-Healthy
+  // plugin.
+  string endpoint = 4;
+
+  // The capability URIs this plugin provides (from its manifest).
+  repeated string provides = 5;
+}
