@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 🎉 PHASE 3 SEALED — `rat/3.0` (surfaces & consumers)
+
+Phase 3 — the **surfaces & consumers** model (ADR-024/025) — is **sealed at `rat/3.0`** (`phase-3` merged to `main`, annotated tag). The UI is assembled from plugin contributions, and a plugin presents **per-surface** interfaces that **out-of-stack consumers** render — demonstrated across all three surfaces:
+
+- **CLI** (`rat ui`) — proven live (text);
+- **VS Code** (the generic shell, `?surface=vscode`) — surface-scoped + compiles strict;
+- **webapp** (the bff's SPA at `/`) — **rendered in a real browser** ([screenshot](../platform/media/webapp-surface.png)).
+
+One contribution registry (`ui/components/<plugin>/<surface>/<id>` in the state-backend); `contribute_ui` lets a plugin add UI in one call; actions route through the gateway (C5 + audit). Additive to `rat/2.5` — no proto/axis change; `make breaking` clean throughout. **Next: the GHCR release pipeline (Phase 4 / distribution) — ship rat as a `ghcr.io` binary + image so getting started is `curl … && chmod +x ./rat`, no clone/make.**
+
+---
+
 ## 2026-06-03 — Phase 3 slice 3: the WEBAPP surface — a browser consumer, visually proven 🌐
 
 The third surface (ADR-025) — and the one we can prove **visually**. The bff now serves a self-contained **SPA at `/`** (`WEBAPP_HTML` in `platform/bff.py`): the browser loads it, it fetches `/api/ui?surface=webapp`, and renders the webapp-targeted contributions — views (with drill-into-table), command buttons (→ `/api/invoke`). It runs in the **browser**, not the daemon — an out-of-stack consumer, exactly like the CLI/VS Code ones; it hardcodes no view.
