@@ -39,6 +39,41 @@ rat marketplace add acme https://plugins.acme.example/index.json
 - **Degraded sources are surfaced, not silently dropped** — a bad URL / malformed index warns
   on `rat search` rather than vanishing.
 
+## Signing & provenance
+
+A marketplace index can be **signed** so consumers verify it came from the publisher and
+wasn't tampered with in transit (or in a compromised CDN/cache). RAT uses detached **ed25519**
+signatures (the house signature algo) over the raw index bytes.
+
+**Publisher** — sign the index, publish `index.json` *and* `index.json.sig` side by side:
+
+```bash
+rat marketplace keygen --out maintainer        # → maintainer.key (secret) + maintainer.pub
+rat marketplace sign official.json --key maintainer.key   # → official.json.sig
+# publish official.json + official.json.sig; share maintainer.pub
+```
+
+**Consumer** — pin the publisher's public key when adding the source; every fetch is then
+verified (including the cached copy on offline fallback):
+
+```bash
+rat marketplace add official https://…/official.json --pubkey maintainer.pub
+rat marketplace verify official      # on-demand re-check
+rat search                           # TRUST column shows `signed✓`
+```
+
+- A pinned key with a **missing or invalid** signature is a **hard error** — the index is
+  rejected, not used (a tampered index disappears from `search`, `verify` exits non-zero).
+- `rat add --with-deps --require-signed` will **only** auto-pull providers from
+  signature-verified sources; an unsigned provider is skipped and the dependency is reported
+  unsatisfied.
+- Sources are tagged in `rat marketplace list` (`🔑 signature-enforced`) and per-entry in
+  `rat search` (`TRUST`: `signed✓` / `unsigned` / `local`).
+
+> The built-in `official` source is **unsigned for now** (the canonical URL is a placeholder
+> until the `rat-dev` org publishes it). Once published, its index will be signed and its
+> public key pinned by default.
+
 ## Index format
 
 ```json
