@@ -16,6 +16,51 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 🎉 PHASE 3 SEALED — `rat/3.0` (surfaces & consumers)
+
+Phase 3 — the **surfaces & consumers** model (ADR-024/025) — is **sealed at `rat/3.0`** (`phase-3` merged to `main`, annotated tag). The UI is assembled from plugin contributions, and a plugin presents **per-surface** interfaces that **out-of-stack consumers** render — demonstrated across all three surfaces:
+
+- **CLI** (`rat ui`) — proven live (text);
+- **VS Code** (the generic shell, `?surface=vscode`) — surface-scoped + compiles strict;
+- **webapp** (the bff's SPA at `/`) — **rendered in a real browser** ([screenshot](../platform/media/webapp-surface.png)).
+
+One contribution registry (`ui/components/<plugin>/<surface>/<id>` in the state-backend); `contribute_ui` lets a plugin add UI in one call; actions route through the gateway (C5 + audit). Additive to `rat/2.5` — no proto/axis change; `make breaking` clean throughout. **Next: the GHCR release pipeline (Phase 4 / distribution) — ship rat as a `ghcr.io` binary + image so getting started is `curl … && chmod +x ./rat`, no clone/make.**
+
+---
+
+## 2026-06-03 — Phase 3 slice 3: the WEBAPP surface — a browser consumer, visually proven 🌐
+
+The third surface (ADR-025) — and the one we can prove **visually**. The bff now serves a self-contained **SPA at `/`** (`WEBAPP_HTML` in `platform/bff.py`): the browser loads it, it fetches `/api/ui?surface=webapp`, and renders the webapp-targeted contributions — views (with drill-into-table), command buttons (→ `/api/invoke`). It runs in the **browser**, not the daemon — an out-of-stack consumer, exactly like the CLI/VS Code ones; it hardcodes no view.
+
+- **Surface-keyed contributions:** `contribute_ui` now keys by surface (`ui/components/<plugin>/<surface>/<id>`) so the same component id targets multiple surfaces without colliding (the bff seed too). `rat-pipeline` now contributes a **webapp** interface (Lake Tables view + Run pipeline button) alongside its vscode + cli ones; the bff adds a webapp Run-History view.
+- **Proven LIVE + VISUALLY:** the bff served the SPA at `/`; `/api/ui?surface=webapp` returned `{explorer:[run-history, lake-tables], command:[run-pipeline]}` (webapp-scoped — cli `build` absent); and a **headless Chromium screenshot** ([`platform/media/webapp-surface.png`](../platform/media/webapp-surface.png)) shows the rendered page: *EXPLORER* → "Run History" (platform-bff) = **9 runs recorded**, "Lake Tables" (rat-pipeline) = **bronze_orders / gold_daily_revenue / silver_orders** (the real lake tables); *COMMAND* → a **Run pipeline** button. Two plugins' webapp contributions, in one browser, scoped to the surface. `make core-test` + `breaking` green; additive (no proto/axis).
+
+**🎉 ALL THREE surfaces now consume the same contribution registry independently:** **CLI** (`rat ui`, proven live), **VS Code** (surface-scoped shell, compiles), **webapp** (SPA, **rendered in a real browser**). ADR-025's surfaces-&-consumers model is real and demonstrated end to end. *(Visual proof needed a headless-chromium-via-podman screenshot — the Playwright MCP was blocked by a container-permission issue in this env.)* Remaining ADR-025 follow-ons: per-consumer identity/connection; the webview rich-content protocol; view-data capabilities (so a consumer fetches view data without the bff).
+
+---
+
+## 2026-06-03 — Phase 3 slice 2: the VS Code shell becomes the `vscode` surface consumer 🪟
+
+Pointed the generic shell (`examples/ui/vscode-platform/`) at its surface: it now fetches `GET /api/ui?surface=vscode` (a `surface()` helper + `uiPath()`; a `ratPlatform.surface` setting, default `vscode`) instead of the unscoped `/api/ui`. So the shell renders only the **vscode-targeted** contributions — a plugin's `cli`/`webapp` interfaces never leak in. Compile-verified strict (`tsc`).
+
+The rendering still needs a running VS Code (unprovable headlessly), but the data side is proven: the bff already returns `?surface=vscode` → `{explorer:[run-history,lake-tables], command:[run-pipeline]}` (and `?surface=cli` → `{command:[build]}`), so the shell receives exactly its surface's set, `build` excluded. Two surfaces now consume the same registry independently: the **CLI** (`rat ui`, proven live) and the **VS Code** shell (surface-scoped + compiling). Additive (TS only). Next: a webapp consumer; the ADR-025 follow-ons (per-consumer identity/connection, the webview content protocol, view-data capabilities).
+
+---
+
+## 2026-06-03 — Phase 3 slice 1: the CLI surface — `rat ui` (surfaces & consumers, ADR-025) 🖥️
+
+First buildable + provable slice of ADR-025 (the surface the CLI lets us prove headlessly): a plugin contributes a **per-surface** interface, and an **out-of-stack consumer** renders only its surface.
+
+- **Surface dimension.** Component specs carry a `surface` (`vscode`|`cli`|`webapp`|agnostic); `contribute_ui` gained a `surface=` default; the bff's `/api/ui?surface=X` filters; the CLI consumer filters `surface == cli` (+ agnostic). `matchesSurface` unit-tested.
+- **`rat ui` — the CLI surface consumer** (`core/client/ui.go`, a new `rat` verb): a **direct-to-gateway** client (nothing of it in the daemon) that reads `ui/components/*` from the state-backend, renders the cli-targeted contributions, and `rat ui run <id>` invokes a command's capability through the gateway. Identity via `--as` (C5 bounds it — ADR-025 #6).
+- **`rat-pipeline` now contributes per-surface** (`main.py`): a **vscode** interface (Lake Tables view + Run pipeline command) AND a **cli** interface (a `build` command) — same capabilities, two surfaces.
+
+**Proven live:** `rat ui` (cli) showed only `build` (from rat-pipeline); `rat ui run build` fired `strategy/apply` → `{snapshotId: cli-build}`; `rat ui --surface vscode` showed the *same registry's* vscode interface (`run-pipeline` + `lake-tables`) with `build` invisible; the bff filtered identically (`?surface=cli` → `{command:[build]}`, `?surface=vscode` → the vscode set); audit shows the cli consumer's command routed through the gateway (C5). `make core-test` + `breaking` green; additive (no proto/axis).
+
+So ADR-025 is real for the CLI surface: one plugin, multiple surface-tailored interfaces; consumers are out-of-stack renderers that pull only their surface; absence of a surface is inert. Next on Phase 3: the vscode shell reads `?surface=vscode` (the generic shell already exists — point it at the surface); a webapp consumer; ADR-025 follow-ons (consumer identity/connection, the webview content protocol, view-data capabilities).
+
+---
+
 ## 2026-06-03 — 🎉 PHASE 2 SEALED — `rat/2.5` (the v2-on-v3 platform + the daemon UX)
 
 Phase 2 — the data platform bundle (ADR-020) reimagined as the orchestrator + plugin model — is **sealed at `rat/2.5`** (`phase-2` merged to `main`, annotated tag). What landed across the phase, all proven running:

@@ -22,12 +22,23 @@ def _contribute_ui() -> None:
         return
     caller = os.environ.get("RAT_PLUGIN_NAME", "rat-pipeline")
     target = os.environ.get("RAT_PIPELINE_TARGET", "gold_daily_revenue")
+    # PER-SURFACE interfaces (ADR-025): the same plugin presents a vscode interface AND a cli
+    # one, from the same capabilities. Each surface consumer pulls only its own.
     components = [
-        {"slot": "explorer", "id": "lake-tables", "title": "Lake Tables", "icon": "database",
+        {"slot": "explorer", "surface": "vscode", "id": "lake-tables", "title": "Lake Tables", "icon": "database",
          "data": "/api/tables", "item": "/api/table/"},
-        {"slot": "command", "id": "run-pipeline", "title": "Run pipeline", "icon": "play",
+        {"slot": "command", "surface": "vscode", "id": "run-pipeline", "title": "Run pipeline", "icon": "play",
          "capability": "rat://strategy/v1/apply",
          "args": {"target": {"identifier": target}, "idempotencyKey": "ui-run"}},
+        {"slot": "command", "surface": "cli", "id": "build", "title": "Build the medallion",
+         "capability": "rat://strategy/v1/apply",
+         "args": {"target": {"identifier": target}, "idempotencyKey": "cli-build"}},
+        # webapp surface: a Lake Tables view + a Run button (same capabilities, browser-flavored)
+        {"slot": "explorer", "surface": "webapp", "id": "lake-tables", "title": "Lake Tables",
+         "data": "/api/tables", "item": "/api/table/"},
+        {"slot": "command", "surface": "webapp", "id": "run-pipeline", "title": "Run pipeline",
+         "capability": "rat://strategy/v1/apply",
+         "args": {"target": {"identifier": target}, "idempotencyKey": "webapp-run"}},
     ]
     try:
         contribute_ui(gw, caller, components, retries=120)
