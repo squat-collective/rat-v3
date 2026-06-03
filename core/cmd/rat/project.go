@@ -257,7 +257,7 @@ func runAdd(args []string, out io.Writer) error {
 		for _, s := range pl.Specs {
 			ms = append(ms, s.Manifest)
 		}
-		reportUnsatisfied(out, unsatisfiedRequires(ms))
+		reportUnsatisfiedSuggesting(out, unsatisfiedRequires(ms))
 	}
 	return nil
 }

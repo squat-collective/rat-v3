@@ -1,0 +1,51 @@
+{
+  "name": "rat-official",
+  "description": "The reference RAT plugins (the example marketplace index, ADR-001 marketplace axis).",
+  "plugins": [
+    {
+      "name": "rat-secret",
+      "kind": "secret-backend",
+      "image": "ghcr.io/rat-dev/secret-env:1.0",
+      "version": "1.0",
+      "provides": ["rat://secret/v1/resolve"],
+      "requires": [],
+      "description": "env-backed secret-backend; resolves refs tenant-scoped"
+    },
+    {
+      "name": "rat-state",
+      "kind": "state-backend",
+      "image": "ghcr.io/rat-dev/state-postgres:1.0",
+      "version": "1.0",
+      "provides": ["rat://state/v1/get", "rat://state/v1/put", "rat://state/v1/list"],
+      "requires": ["rat://secret/v1/resolve"],
+      "description": "Postgres-backed state-backend (run history, project store)"
+    },
+    {
+      "name": "rat-scheduler",
+      "kind": "scheduler-backend",
+      "image": "ghcr.io/rat-dev/scheduler-cron:1.0",
+      "version": "1.0",
+      "provides": [],
+      "requires": ["rat://strategy/v1/apply", "rat://state/v1/put"],
+      "description": "a self-driving cron clock that fires the pipeline"
+    },
+    {
+      "name": "dbt-runner",
+      "kind": "strategy",
+      "image": "ghcr.io/rat-dev/dbt-runner:1.0",
+      "version": "1.0",
+      "provides": ["rat://strategy/v1/apply"],
+      "requires": ["rat://state/v1/get"],
+      "description": "runs `dbt build` — your pipeline as code"
+    },
+    {
+      "name": "duckdb-engine",
+      "kind": "engine",
+      "image": "ghcr.io/rat-dev/duckdb-ml:1.0",
+      "version": "1.0",
+      "provides": ["rat://engine/v1/execute"],
+      "requires": [],
+      "description": "DuckDB engine with ML (embeddings, vss)"
+    }
+  ]
+}
