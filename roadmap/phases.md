@@ -16,6 +16,7 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | **4** | **Distribution** — the GHCR release pipeline | ✅ **DONE — SEALED `rat/3.5`** (2026-06-03) | — | rat ships as a `ghcr.io` binary + image (`curl …/install.sh \| sh && ./rat version`). Reproducible make targets + `.github/workflows/release.yml` + `scripts/install.sh`. Hardening/GTM + GHCR plugin-image pull are the follow-ons. |
 | **5** | **Plugin authoring & packaging** (ADR-026) — `rat plugin init/check/test/pack/publish` | ✅ **DONE — SEALED `rat/4.0`** (2026-06-03) | — | *Reframed from "ecosystem moves":* the authoring lifecycle (scaffold → check incl. dep coherence → I9 launch-verify → verified manifest-stamped image → publish to a registry). The third pillar (author) beside run + distribute. Marketplace/signing/conformance are follow-ons. |
 | **6** | **Authoring ↔ runtime** (ADR-026 Q05) — manifest-from-image | ✅ **DONE — SEALED `rat/4.5`** (2026-06-03) | — | `rat add --image <ref>` reads the manifest stamped into a packed image (no `--manifest`; name derived). Closes the author→run handoff; the image is self-describing. |
+| **7** | **Dependency resolution** (ADR-023 #6) — the satisfiability resolver | ✅ **DONE — SEALED `rat/5.0`** (2026-06-03) | — | `rat add`/`rat up` warn when a `requires` has no provider in the project (the poetry-resolver). With `rat plugin check`'s coherence, both halves of dep-checking are real. Auto-suggest-the-plugin (marketplace) is the follow-on. |
 
 **Total:** ~12-18 months from Phase 0 kick-off to v1 GA.
 
