@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Phase 8 slice 5: `rat remove` — the inverse of `rat add` ➖
+
+Closed the project lifecycle's missing half. `rat remove <name>` (alias `rat rm`) strips the named `[[plugin]]` block from `rat.toml` at the **text level** (so the file's header comments + the sibling blocks — incl. a `[plugin.env]` sub-table — survive verbatim; the inverse of `rat add`'s append), deletes the **rat-managed** manifest under `manifests/` (only files rat wrote — a user-supplied `--manifest` elsewhere is left alone; `--keep-manifest` skips even the managed one), and — symmetry with add — re-runs the resolver so a now-unsatisfied `requires` surfaces. **Proven live**: build a 4-plugin plane via `--with-deps`, `rat remove rat-state` (a *provider*) → block + managed manifest gone, resolver re-warns that `my-scheduler`/`dbt-runner` now lack `state/put`/`state/get` (with a re-add suggestion), `rat list` drops to 3; `--keep-manifest` keeps the file; header comments preserved; removing an absent plugin errors (exit 1). Unit test `TestRemovePluginBlock` (sibling + `[plugin.env]` + comments preserved, re-parses, absent→error). New: `runRemove`/`removePluginBlock`/`managedManifest` (project.go), `remove`/`rm` dispatch (main.go), `project_remove_test.go`. Additive — `make breaking` clean, `make core-test` green, no proto change.
+
+---
+
 ## 2026-06-03 — 🎉 PHASE 8 RE-SEALED — `rat/5.8` (marketplace iteration 4: signed entries)
 
 The marketplace phase iterates to **`rat/5.8`** (`phase-8` merged to `main` again, annotated tag) — slice 4, **signed entries**: detached ed25519 signatures over the index bytes, pinned per source (`keygen`/`sign`/`--pubkey`/`verify`), a tampered index rejected as a hard error, `--require-signed` strict auto-resolve, and trust surfaced in `list`/`search`. The sealed line is now `… rat/5.5` (discover) · `rat/5.6` (auto-resolve) · `rat/5.7` (remote index) · `rat/5.8` (signed entries). Additive — `make breaking` clean, no proto/axis change. **Open marketplace follow-ons:** publish + sign `official.json` on the `rat-dev` Pages site (URL + key are placeholders); `rat remove` symmetry; `rat add` *launching* into a live daemon (RegisterPlugin RPC, ADR-023).
