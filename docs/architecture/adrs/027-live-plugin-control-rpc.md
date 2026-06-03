@@ -1,6 +1,6 @@
 # ADR-027: Live plugin control — the daemon's `ControlService` (Register/Deregister/List)
 
-## Status: Proposed (2026-06-03)
+## Status: Accepted (2026-06-03) — built + proven (Phase 9)
 
 ## Context
 
