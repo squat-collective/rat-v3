@@ -6,31 +6,92 @@ axis is the formalization. On Apply it runs `dbt build` on a dbt project — dbt
 DAG, ref(), Jinja, materializations AND tests, so rat reinvents none of it. A failed dbt
 build (a model error OR a failing test) surfaces as FAILED_PRECONDITION — the quality
 gate, native to dbt.
+
+PROJECT DELIVERY (ADR-021 "your pipeline is code you submit"): the dbt project is not
+baked — it is whatever was `rat apply`'d. When $RAT_PROJECT_KEY is set, on each run this
+fetches the project tarball from the state-backend (rat://state/v1/get, via the gateway —
+C5-authorized + audited), extracts it (re-extracting only when the stored revision
+changed), and runs YOUR submitted code. A baked sample project is the fallback when
+nothing has been applied yet.
 """
 
+import io
 import os
+import shutil
 import subprocess
+import tarfile
+import threading
 
 import grpc
 
-from rat.common.v1 import data_pb2
+from rat.common.v1 import context_pb2, data_pb2
+from rat.core.v1 import invoke_pb2, invoke_pb2_grpc
+from rat.state.v1 import state_pb2
 from rat.strategy.v1 import strategy_pb2, strategy_pb2_grpc
 
 
 class DbtRunner:
     def __init__(self) -> None:
-        self.project = os.environ["RAT_DBT_PROJECT"]
-        self.profiles = os.environ.get("RAT_DBT_PROFILES", self.project)
+        # the baked sample project — the fallback before anything is applied
+        self.baked_project = os.environ["RAT_DBT_PROJECT"]
+        self.baked_profiles = os.environ.get("RAT_DBT_PROFILES", self.baked_project)
+        # applied-project delivery (rat apply -> state-backend)
+        self.project_key = os.environ.get("RAT_PROJECT_KEY")  # e.g. projects/medallion
+        self.gateway = os.environ.get("RAT_GATEWAY", "127.0.0.1:7777")
+        self.caller = os.environ.get("RAT_PLUGIN_NAME", "rat-pipeline")
+        self.tenant = os.environ.get("RAT_TENANT", "acme")
+        self.extract_root = "/tmp/rat-applied-project"
+        self._lock = threading.Lock()
+        self._applied_rev = None  # the state revision currently extracted (re-extract on change)
+
+    def _md(self):
+        rc = context_pb2.RequestContext(
+            trace=context_pb2.TraceContext(traceparent="00-" + "a" * 32 + "-" + "c" * 16 + "-01", correlation_id="dbt-runner"),
+            identity=context_pb2.Identity(caller_plugin=self.caller, tenant=self.tenant))
+        return [("rat-callmeta-bin", rc.SerializeToString())]
+
+    def _applied_project(self):
+        """The project dir to run: the `rat apply`'d project from the state-backend, or None
+        to use the baked fallback. Re-extracts only when the stored revision changed."""
+        if not self.project_key:
+            return None
+        stub = invoke_pb2_grpc.CapabilityInvokeServiceStub(grpc.insecure_channel(self.gateway))
+        try:
+            r = stub.Invoke(invoke_pb2.InvokeRequest(
+                capability="rat://state/v1/get",
+                payload=state_pb2.GetRequest(key=self.project_key).SerializeToString()), metadata=self._md())
+        except grpc.RpcError as e:
+            print(f"rat-pipeline: could not fetch {self.project_key!r}: {e.code()} — using baked project", flush=True)
+            return None
+        gr = state_pb2.GetResponse()
+        gr.ParseFromString(r.result)
+        if not gr.found:
+            return None  # nothing applied yet → baked fallback
+        with self._lock:
+            if self._applied_rev == gr.revision and os.path.isdir(self.extract_root):
+                return self.extract_root  # unchanged since last extract — reuse
+            shutil.rmtree(self.extract_root, ignore_errors=True)
+            os.makedirs(self.extract_root, exist_ok=True)
+            with tarfile.open(fileobj=io.BytesIO(gr.value), mode="r:gz") as tar:
+                tar.extractall(self.extract_root, filter="data")  # py3.12 safe extraction
+            self._applied_rev = gr.revision
+            print(f"rat-pipeline: extracted applied project {self.project_key!r} rev {gr.revision} → {self.extract_root}", flush=True)
+            return self.extract_root
 
     def apply(self, idem: str) -> data_pb2.WriteResult:
+        applied = self._applied_project()
+        if applied:
+            project, profiles = applied, applied
+        else:
+            project, profiles = self.baked_project, self.baked_profiles
         # dbt runs as a subprocess from its OWN venv ($RAT_DBT_BIN): dbt-core pins an
         # older protobuf than the RAT gRPC SDK (7.35), so the two can't share one env —
         # isolating dbt behind a binary boundary is the clean fix.
         dbt = os.environ.get("RAT_DBT_BIN", "dbt")
         proc = subprocess.run(
             [dbt, "build",
-             "--project-dir", self.project,
-             "--profiles-dir", self.profiles,
+             "--project-dir", project,
+             "--profiles-dir", profiles,
              "--target-path", "/tmp/dbt-target",
              "--log-path", "/tmp/dbt-logs"],
             capture_output=True, text=True)

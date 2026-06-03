@@ -16,6 +16,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — `rat apply`: your pipeline is code you submit (not baked) 📦
+
+ADR-021's headline made real: the dbt project is no longer baked into the runner image — you **submit** it to the running orchestrator, and the next run executes YOUR code. Crucially, this needed **no new axis and no proto change**: the **state-backend IS the project store**.
+
+- **`ratctl apply --project <dir> --name <name>`** (`core/cmd/ratctl`): tar.gz's the project client-side (generated/VCS noise excluded — `tarProject` + `TestTarProject`), then ships it to `projects/<name>` via `rat://state/v1/put` — the same C5-authorized, audited gateway path as any command. `ratctl` grew a subcommand dispatcher (`call` | `apply`); `apply` builds a `state.PutRequest` directly (binary tarball, not protojson). Default caller `--as platform-runner`.
+- **The dbt-runner fetches the applied project** (`examples/runner/dbt-duckdb/server.py`): on each `strategy/apply` it `rat://state/v1/get`s `projects/<name>`, extracts it (py3.12 `filter="data"` safe untar), and runs `dbt build` on it — re-extracting **only when the stored revision changed** (revision-cached). The baked sample project is the fallback until something is applied.
+- **Wiring:** `rat-pipeline` manifest `requires rat://state/v1/get`; `platform-runner` `requires rat://state/v1/put` (the operator identity `ratctl apply` uses); rat now **injects `RAT_PLUGIN_NAME`** (each plugin's manifest name → its caller identity) alongside `RAT_GATEWAY` in `launchPlane`, so the runner can identify itself when it calls `state/get`; `plugins.yaml` sets `RAT_PROJECT_KEY: projects/medallion`.
+
+**Proven live** (host mode): the **baked** run was `PASS=7` (no `applied_marker`); `ratctl apply` of a modified project returned `applied … → projects/medallion (8 files, revision 1)`; the runner logged `extracted applied project 'projects/medallion' rev 1` and the next run built `1 of 8 OK created sql table model main.applied_marker` → `PASS=8`, with DuckDB ground-truth `('applied-via-rat-apply', 42)`. **Re-apply** of a further-changed project bumped to **rev 2**, re-extracted, and the value propagated `42 → 99`. Audit shows the full path: `platform-runner → state/put → rat-state` (the apply) + `rat-pipeline → state/get → rat-state` (the fetch). `make core-test` + `breaking` + `ratctl-smoke` green; additive (no proto/axis).
+
+So adding/updating a pipeline is now `ratctl apply` — your code, submitted to the always-on orchestrator, picked up on the next run. (Known nit: the host-mode SIGTERM drain occasionally races and leaves plugin containers up — a teardown-robustness follow-on; manual cleanup is one line.) Follow-ons: Q2 (dbt→shared-DuckLake so the UI sees the tables), per-project cron, the dedicated `pipeline/v1/run` axis.
+
+---
+
 ## 2026-06-03 — secret plugin: creds out of consumer plugins, resolved through the gateway 🔐
 
 Tom's "store one or 2 secrets on a communicating secret plugin" made real, on the **frozen `secret/v1`** contract (no proto change). A `kind: secret-backend` plugin holds the platform's secrets in **one trust boundary**; consumer plugins hold only an opaque **ref** and resolve it at point of use through the gateway (C5-authorized, audited, tenant-scoped, redacted).

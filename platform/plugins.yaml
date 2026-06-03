@@ -13,8 +13,12 @@ plugins:
   - name: rat-pipeline
     manifest: ./manifests/pipeline.plugin.yaml
     launch:
-      image: rat/dbt-runner:dev      # the dbt-runner — runs `dbt build` on its baked project
+      image: rat/dbt-runner:dev      # the dbt-runner — runs `dbt build` on the APPLIED project
       isolation: i9
+      env:
+        # run the `rat apply`'d project (fetched from the state-backend each run); the baked
+        # sample is the fallback until something is applied. RAT_GATEWAY/RAT_PLUGIN_NAME injected.
+        RAT_PROJECT_KEY: "projects/medallion"
 
   - name: rat-secret
     manifest: ./manifests/secret.plugin.yaml

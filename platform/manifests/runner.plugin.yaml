@@ -1,5 +1,6 @@
-# platform-runner — a register-only driver. run.py connects as this identity; the
-# gateway authorizes the medallion's commands against this `requires` set (C5).
+# platform-runner — a register-only driver / operator identity. run.py and `ratctl --as
+# platform-runner` connect as this identity; the gateway authorizes their commands against
+# this `requires` set (C5).
 api_version: rat/1
 kind: strategy
 metadata:
@@ -10,3 +11,4 @@ requires:
   - capability: rat://strategy/v1/apply
   - capability: rat://state/v1/list      # read the run history
   - capability: rat://state/v1/get
+  - capability: rat://state/v1/put       # `rat apply` ships the project into state (ADR-021)
