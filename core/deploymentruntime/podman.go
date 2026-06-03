@@ -59,6 +59,12 @@ type Podman struct {
 	// bridge is still a private netns that drops the 169.254 metadata route.
 	Network string
 
+	// NamePrefix, when set, prefixes every SIBLING-mode container name with "<prefix>-"
+	// (ADR-023). It is the rat INSTANCE id: with many rat daemons on one machine, two
+	// instances must not collide on a name like "rat-state-1" (especially if they ever
+	// share a network) — "<instance>-rat-state-1" keeps them distinct. Empty == no prefix.
+	NamePrefix string
+
 	mu        sync.Mutex
 	seq       int
 	instances map[string]*podmanInstance
@@ -80,6 +86,15 @@ func NewPodman() *Podman {
 func NewPodmanNetworked(network string) *Podman {
 	r := NewPodman()
 	r.Network = network
+	return r
+}
+
+// NewPodmanInstanced returns a SIBLING-mode runtime on the given network whose container
+// names are prefixed with the rat instance id (ADR-023) — so many rat daemons coexist on
+// one machine without name collisions.
+func NewPodmanInstanced(network, instance string) *Podman {
+	r := NewPodmanNetworked(network)
+	r.NamePrefix = instance
 	return r
 }
 
@@ -132,7 +147,7 @@ func (r *Podman) Launch(ctx context.Context, req *deploymentruntimev1.LaunchRequ
 		// (rat's 127.0.0.1 isn't the host's). --replace clears any same-named container
 		// leaked by a prior crashed rat (within one rat, seq is monotonic so names never
 		// self-collide). The user bridge is still a private netns → metadata stays blocked.
-		name = containerName(req.GetPluginId(), seq)
+		name = containerName(r.NamePrefix, req.GetPluginId(), seq)
 		args = append(args,
 			"--network="+r.Network,
 			"--name", name,
@@ -282,10 +297,11 @@ func (r *Podman) podman(ctx context.Context, args ...string) (string, error) {
 }
 
 // containerName builds a stable, podman-legal container name for SIBLING mode:
-// "<sanitized-plugin-id>-<seq>". podman names match [a-zA-Z0-9][a-zA-Z0-9_.-]*; any
-// other byte in the plugin id becomes '-'. The seq suffix keeps names unique within one
+// "[<instance>-]<sanitized-plugin-id>-<seq>". podman names match [a-zA-Z0-9][a-zA-Z0-9_.-]*;
+// any other byte in the plugin id becomes '-'. The optional instance prefix (ADR-023) keeps
+// two rat daemons from colliding on one machine; the seq suffix keeps names unique within one
 // rat process so a relaunch never collides with the not-yet-Terminated old instance.
-func containerName(pluginID string, seq int) string {
+func containerName(prefix, pluginID string, seq int) string {
 	b := make([]byte, 0, len(pluginID))
 	for i := 0; i < len(pluginID); i++ {
 		c := pluginID[i]
@@ -297,6 +313,9 @@ func containerName(pluginID string, seq int) string {
 		}
 	}
 	s := string(b)
+	if prefix != "" {
+		s = prefix + "-" + s
+	}
 	if s == "" || !((s[0] >= 'a' && s[0] <= 'z') || (s[0] >= 'A' && s[0] <= 'Z') || (s[0] >= '0' && s[0] <= '9')) {
 		s = "rat-" + s
 	}

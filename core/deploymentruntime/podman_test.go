@@ -187,23 +187,30 @@ func TestPodmanRefusesBelowI9(t *testing.T) {
 	}
 }
 
-// TestContainerName covers SIBLING-mode naming (ADR-022 socket-mount): podman-legal,
-// stable, seq-suffixed, and never starting with a non-alnum byte. No podman needed.
+// TestContainerName covers SIBLING-mode naming (ADR-022 socket-mount + ADR-023 instance
+// prefix): podman-legal, stable, seq-suffixed, instance-prefixed, never starting with a
+// non-alnum byte. No podman needed.
 func TestContainerName(t *testing.T) {
-	cases := []struct{ in, want string }{
-		{"rat-pipeline", "rat-pipeline-1"},
-		{"rat_state.v1", "rat_state.v1-1"},
-		{"weird/id:tag", "weird-id-tag-1"},   // illegal bytes → '-'
-		{"_leading", "rat-_leading-1"},       // illegal leading byte → rat- prefix
-		{"", "rat--1"},                       // empty id still yields a legal name
+	cases := []struct{ prefix, in, want string }{
+		{"", "rat-pipeline", "rat-pipeline-1"},
+		{"", "rat_state.v1", "rat_state.v1-1"},
+		{"", "weird/id:tag", "weird-id-tag-1"},  // illegal bytes → '-'
+		{"", "_leading", "rat-_leading-1"},      // illegal leading byte → rat- prefix
+		{"", "", "rat--1"},                      // empty id still yields a legal name
+		{"sales", "rat-state", "sales-rat-state-1"},  // ADR-023 instance prefix
+		{"ml", "rat-state", "ml-rat-state-1"},        // a DIFFERENT instance → distinct name
 	}
 	for _, c := range cases {
-		if got := containerName(c.in, 1); got != c.want {
-			t.Errorf("containerName(%q,1) = %q, want %q", c.in, got, c.want)
+		if got := containerName(c.prefix, c.in, 1); got != c.want {
+			t.Errorf("containerName(%q,%q,1) = %q, want %q", c.prefix, c.in, got, c.want)
 		}
 	}
+	// the instance prefix keeps two daemons from colliding on the same plugin+seq.
+	if a, b := containerName("sales", "rat-state", 1), containerName("ml", "rat-state", 1); a == b {
+		t.Errorf("instance prefix must disambiguate: %q == %q", a, b)
+	}
 	// seq makes names unique within a process (relaunch never self-collides).
-	if a, b := containerName("p", 1), containerName("p", 2); a == b {
+	if a, b := containerName("", "p", 1), containerName("", "p", 2); a == b {
 		t.Errorf("names not unique across seq: %q == %q", a, b)
 	}
 }

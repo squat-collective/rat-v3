@@ -16,6 +16,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — ADR-023 + slice 1: rat is a per-project daemon — two rats coexist on one machine 🏠
+
+Decided the *shape of the daemon* (the question Phase 2 left open) and built the load-bearing half. **[ADR-023](../docs/architecture/adrs/023-rat-as-a-per-project-daemon.md) (Proposed):** rat is a small, **disposable per-project daemon** (a venv with a heartbeat) whose desired state lives in an **external, git-committed spec** (`rat.toml`+`rat.lock`); control is **hybrid, poetry-style** (imperative `rat add` writes the spec *then* reconciles; declarative `rat install` rebuilds from it); the running registry is **status, never the source of truth** (k8s spec/status — sidesteps the snowflake-server failure mode of a living broker). Ships as a GHCR binary (`chmod +x ./rat`) **and** image; one multi-call `rat` (refines ADR-019's two-binary split — boundary kept, artifact unified). Many rats per machine ⇒ per-instance isolation is mandatory. Promotes the parked runtime-self-registration idea (its `SetProvider` keystone is now built).
+
+**Slice 1 built + proven** (`phase-2-rat-per-project-daemon`) — the two pieces that touch existing code and make coexistence real:
+- **Per-project unix socket.** The daemon's `listen()` now binds a `unix:<path>` address (parent dir created, stale socket removed, unlinked on drain) instead of only `tcp` — so many daemons coexist with **no port war** (the old fixed `:7777` made the 2nd daemon fail). `ratctl --addr unix:<path>` dials it (gRPC's native `unix:` target).
+- **Instance-namespaced deployment-runtime.** A plane `name:` (or the plane-dir basename) becomes the **instance id**; the podman runtime (`NewPodmanInstanced`) prefixes SIBLING-mode container names with it (`<instance>-rat-state-1`), so two daemons never collide on a name even if they share a network. `TestContainerName` covers it.
+
+**Proven live:** two daemons (`alpha`, `beta`) started on `/tmp/rat-A/daemon.sock` and `/tmp/rat-B/daemon.sock` — both `gateway serving` at once; `ratctl` against each socket routed to a **distinct** stateplugin process (`pid=3924413` vs `pid=3924406`); C5 still enforced per-instance (undeclared `put` → `PermissionDenied`); both sockets cleaned on drain. `make core-test` + `breaking` green; additive (no proto/axis).
+
+**Deferred within slice 1 (noted):** a unix-only gateway can't be dialed *back* by launched **driver** plugins (scheduler/bff) that need a network endpoint — so the proof used serve-only plugins. The driver-callback endpoint (an auto-port TCP companion, or mounting the socket into plugin containers) is the next sub-step, before the poetry verbs (`init`/`add`/`install`/`lock`) + `.rat/` layout + `rat ls`.
+
+---
+
 ## 2026-06-03 — `rat apply`: your pipeline is code you submit (not baked) 📦
 
 ADR-021's headline made real: the dbt project is no longer baked into the runner image — you **submit** it to the running orchestrator, and the next run executes YOUR code. Crucially, this needed **no new axis and no proto change**: the **state-backend IS the project store**.
