@@ -19,6 +19,13 @@ plugins:
         # run the `rat apply`'d project (fetched from the state-backend each run); the baked
         # sample is the fallback until something is applied. RAT_GATEWAY/RAT_PLUGIN_NAME injected.
         RAT_PROJECT_KEY: "projects/medallion"
+        # Q2: materialize the medallion into the SHARED DuckLake (Postgres catalog + S3 data)
+        # so other plugins/UI can read the tables. (Creds here for now; secret-plugin is the follow-on.)
+        RAT_LAKE_PG: "dbname=ducklake host=host.containers.internal port=55440 user=ducklake password=ducklake"
+        RAT_LAKE_DATA: "s3://rat/lake/"
+        RAT_S3_ENDPOINT: "host.containers.internal:59010"
+        RAT_S3_KEY: "minioadmin"
+        RAT_S3_SECRET: "minioadmin"
 
   - name: rat-secret
     manifest: ./manifests/secret.plugin.yaml
@@ -59,6 +66,12 @@ plugins:
       env:
         RAT_PLUGIN_NAME: "platform-bff"
         # RAT_GATEWAY injected by rat per topology (see rat-scheduler above)
+        # the shared lake (read-only) for the bulk data leg — /api/tables, /api/table/<name> (Q2)
+        RAT_LAKE_PG: "dbname=ducklake host=host.containers.internal port=55440 user=ducklake password=ducklake"
+        RAT_LAKE_DATA: "s3://rat/lake/"
+        RAT_S3_ENDPOINT: "host.containers.internal:59010"
+        RAT_S3_KEY: "minioadmin"
+        RAT_S3_SECRET: "minioadmin"
 
   - name: platform-runner
     manifest: ./manifests/runner.plugin.yaml

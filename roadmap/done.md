@@ -16,6 +16,21 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Q2: the medallion writes to a SHARED DuckLake — the UI sees pipeline output 🪣
+
+The data-side gap closed (ADR-021 Q2): the pipeline no longer writes a local DuckDB trapped in the runner's tmpfs — it materializes into a **shared DuckLake** (DuckLake catalog on **Postgres**, data as Parquet on **S3/MinIO**), so any plugin/client/UI can read the tables.
+
+**The blocker was always dbt** (the engine plugin already did remote DuckLake). Root cause + fix found empirically: **dbt-duckdb 1.9.4 attaches DuckLake natively** — its `Attachment` has an `options` dict, so `attach: [{path: "ducklake:postgres:…", alias: lake, options: {data_path: "s3://…"}}]` emits exactly `ATTACH 'ducklake:postgres:…' AS lake (DATA_PATH 's3://…')`, plus a `TYPE S3` secret for MinIO. Models materialize with `+database: lake`.
+
+- **Write side** (`platform/dbt-project/`): `profiles.yml` attaches the shared lake via env vars rat injects (`RAT_LAKE_PG` / `RAT_LAKE_DATA` / `RAT_S3_*` — no creds committed); `dbt_project.yml` sets `+database: lake`. `plugins.yaml` gives `rat-pipeline` the lake connection. The dbt-runner image gained `HOME=/tmp` so DuckDB's `~/.duckdb` lands on the I9 tmpfs (read-only rootfs otherwise rejected `/plugin/.duckdb`).
+- **Read side / the UI's view** (`platform/bff.py` + `bff.Dockerfile`): the bff gained the **bulk DATA leg** — `GET /api/tables` and `GET /api/table/<name>` attach the same lake **read-only** and return JSON. This is the honest **F9 split**: control (trigger / run history) through the gateway, the bulk data leg **direct** (the lake read never appears in the audit). `+duckdb` in the image, `HOME=/tmp`.
+
+**Proven live:** the full platform self-drove → `dbt build` created `lake.main.{bronze_orders, silver_orders, gold_daily_revenue}` (PASS=7) **in the shared lake**; a **separate** client (a throwaway DuckDB attaching the same lake) read `gold_daily_revenue` → `2026-05-01: 2 orders $59.98`, `2026-05-03: 2 orders $179.49`; and the **bff served it** — `/api/tables` → `[bronze_orders, gold_daily_revenue, silver_orders]`, `/api/table/gold_daily_revenue` → the rows as JSON. Control still flows through the gateway (run history, 15 runs; audit shows `platform-bff → state/get/list`, `rat-scheduler → apply/put`, `rat-state → secret/resolve`) — the lake read is **not** in the audit, confirming the data leg is direct. `make breaking` green; additive (no proto/axis/Go — config + images + bff.py).
+
+So the v2 picture is whole on v3: **landing → medallion (bronze/silver/gold) → quality-gated → self-driving refresh → run history → and now the OUTPUT is in a shared DuckLake the UI reads.** Follow-ons: resolve `RAT_LAKE_PG` via the secret plugin (creds out of `plugins.yaml`); DuckLake snapshots/time-travel for read-isolation; a real VS Code UI pointed at these bff endpoints.
+
+---
+
 ## 2026-06-03 — slice 2c: the daemon lifecycle — `rat up -d` / `down` / `ls` / `status` 🔌
 
 The daemon-lifecycle ergonomics (ADR-023 slice 2c) — and the fix for the backgrounded-kill papercut. `core/cmd/rat/lifecycle.go`:
