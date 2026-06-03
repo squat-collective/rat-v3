@@ -17,8 +17,29 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 )
+
+// officialIndexURL is the canonical home of the reference RAT marketplace — `rat
+// marketplace add official` (no URL) registers it. It tracks marketplace/rat-official.json
+// in this repo, published as a static file (GitHub Pages for the rat-dev org). Placeholder
+// host until the org's Pages site is live; the file format is what's load-bearing.
+const officialIndexURL = "https://rat-dev.github.io/marketplace/official.json"
+
+// wellKnownMarketplaces maps a short name → its canonical URL, so `rat marketplace add
+// <name>` needs no URL for the built-ins.
+var wellKnownMarketplaces = map[string]string{"official": officialIndexURL}
+
+func wellKnownNames() []string {
+	names := make([]string, 0, len(wellKnownMarketplaces))
+	for n := range wellKnownMarketplaces {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
+}
 
 // marketEntry is one plugin a marketplace advertises.
 type marketEntry struct {
@@ -72,17 +93,52 @@ func saveMarketConfig(cfg marketConfig) error {
 	return os.WriteFile(p, data, 0o644)
 }
 
-// readSource reads a marketplace index from a file path or an http(s) URL.
-func readSource(path string) ([]byte, error) {
-	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
-		resp, err := http.Get(path)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		return io.ReadAll(resp.Body)
+func isURL(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
+}
+
+// marketCacheDir holds the last-good copy of each fetched remote index, so `rat search`
+// keeps working offline once an index has been seen.
+func marketCacheDir() string {
+	base := os.Getenv("XDG_CACHE_HOME")
+	if base == "" {
+		home, _ := os.UserHomeDir()
+		base = filepath.Join(home, ".cache")
 	}
-	return os.ReadFile(path)
+	return filepath.Join(base, "rat", "marketplaces")
+}
+
+// marketHTTP has a bounded timeout so a hung host can't wedge every `rat search`.
+var marketHTTP = &http.Client{Timeout: 10 * time.Second}
+
+// fetchSource loads a marketplace index. File paths read directly. URLs are fetched (with a
+// timeout) and cached to disk; on a fetch failure the last cached copy is used as a fallback
+// (returned with a `note`), so a remote index degrades gracefully offline.
+func fetchSource(src marketSource) (data []byte, note string, err error) {
+	if !isURL(src.Path) {
+		b, e := os.ReadFile(src.Path)
+		return b, "", e
+	}
+	cache := filepath.Join(marketCacheDir(), src.Name+".json")
+	resp, e := marketHTTP.Get(src.Path)
+	if e == nil {
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			if b, re := io.ReadAll(resp.Body); re == nil {
+				_ = os.MkdirAll(marketCacheDir(), 0o755)
+				_ = os.WriteFile(cache, b, 0o644)
+				return b, "", nil
+			} else {
+				e = re
+			}
+		} else {
+			e = fmt.Errorf("HTTP %s", resp.Status)
+		}
+	}
+	if b, ce := os.ReadFile(cache); ce == nil { // fetch failed → fall back to cache
+		return b, fmt.Sprintf("⚠ %s unreachable (%v) — using cached copy", src.Name, e), nil
+	}
+	return nil, "", fmt.Errorf("fetch %s: %w", src.Path, e)
 }
 
 // localEntries: plugin IMAGES on this machine, found by their stamped manifest (ADR-026).
@@ -108,29 +164,37 @@ func localEntries() []marketEntry {
 	return out
 }
 
-// addedEntries: the plugins listed by every registered marketplace index.
-func addedEntries() []marketEntry {
-	var out []marketEntry
+// addedEntries: the plugins listed by every registered marketplace index, plus any warnings
+// (an unreachable remote, a malformed index) so callers can surface a degraded source instead
+// of silently dropping it.
+func addedEntries() (entries []marketEntry, warns []string) {
 	for _, src := range loadMarketConfig().Marketplaces {
-		data, err := readSource(src.Path)
+		data, note, err := fetchSource(src)
 		if err != nil {
+			warns = append(warns, fmt.Sprintf("⚠ marketplace %q: %v", src.Name, err))
 			continue
+		}
+		if note != "" {
+			warns = append(warns, note)
 		}
 		var idx marketIndex
 		if json.Unmarshal(data, &idx) != nil {
+			warns = append(warns, fmt.Sprintf("⚠ marketplace %q: malformed index", src.Name))
 			continue
 		}
 		for _, e := range idx.Plugins {
 			e.source = src.Name
-			out = append(out, e)
+			entries = append(entries, e)
 		}
 	}
-	return out
+	return entries, warns
 }
 
-// allMarketEntries: local + added (local first, so a locally-built image wins on display).
-func allMarketEntries() []marketEntry {
-	return append(localEntries(), addedEntries()...)
+// allMarketEntries: local + added (local first, so a locally-built image wins on display),
+// plus the added sources' warnings.
+func allMarketEntries() (entries []marketEntry, warns []string) {
+	added, warns := addedEntries()
+	return append(localEntries(), added...), warns
 }
 
 // providerFor returns the first marketplace entry that provides a capability (the auto-suggest).
@@ -152,8 +216,12 @@ func runSearch(args []string, out io.Writer) error {
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		query = strings.ToLower(args[0])
 	}
+	entries, warns := allMarketEntries()
+	for _, w := range warns {
+		fmt.Fprintln(out, w)
+	}
 	var matched []marketEntry
-	for _, e := range allMarketEntries() {
+	for _, e := range entries {
 		if query == "" || matchesQuery(e, query) {
 			matched = append(matched, e)
 		}
@@ -214,26 +282,47 @@ func runMarketplace(args []string, out io.Writer) error {
 	}
 	switch sub {
 	case "add":
-		if len(args) < 3 {
-			return fmt.Errorf("usage: rat marketplace add <name> <path-or-url>")
+		if len(args) < 2 {
+			return fmt.Errorf("usage: rat marketplace add <name> [<path-or-url>]  (URL optional for a built-in like `official`)")
+		}
+		name := args[1]
+		path := ""
+		if len(args) >= 3 {
+			path = args[2]
+		} else if u, ok := wellKnownMarketplaces[name]; ok {
+			path = u // built-in: `rat marketplace add official` needs no URL
+		} else {
+			return fmt.Errorf("usage: rat marketplace add %s <path-or-url>  (or add a built-in: %s)", name, strings.Join(wellKnownNames(), ", "))
 		}
 		cfg := loadMarketConfig()
 		for _, s := range cfg.Marketplaces {
-			if s.Name == args[1] {
-				return fmt.Errorf("marketplace %q already added", args[1])
+			if s.Name == name {
+				return fmt.Errorf("marketplace %q already added", name)
 			}
 		}
-		cfg.Marketplaces = append(cfg.Marketplaces, marketSource{Name: args[1], Path: args[2]})
+		cfg.Marketplaces = append(cfg.Marketplaces, marketSource{Name: name, Path: path})
 		if err := saveMarketConfig(cfg); err != nil {
 			return err
 		}
-		fmt.Fprintf(out, "added marketplace %q → %s\n", args[1], args[2])
+		fmt.Fprintf(out, "added marketplace %q → %s\n", name, path)
 		return nil
 	case "list":
 		cfg := loadMarketConfig()
 		fmt.Fprintf(out, "marketplaces:\n  %-12s %s\n", "local", "(plugin images on this machine, via their stamped manifest)")
+		added := map[string]bool{}
 		for _, s := range cfg.Marketplaces {
-			fmt.Fprintf(out, "  %-12s %s\n", s.Name, s.Path)
+			kind := "(file)"
+			if isURL(s.Path) {
+				kind = "(remote)"
+			}
+			fmt.Fprintf(out, "  %-12s %-8s %s\n", s.Name, kind, s.Path)
+			added[s.Name] = true
+		}
+		// surface built-ins not yet added, so `official` is discoverable.
+		for _, n := range wellKnownNames() {
+			if !added[n] {
+				fmt.Fprintf(out, "  %-12s %-8s %s  (add with `rat marketplace add %s`)\n", n, "(built-in)", wellKnownMarketplaces[n], n)
+			}
 		}
 		return nil
 	default:
@@ -321,7 +410,7 @@ func reportUnsatisfiedSuggesting(out io.Writer, miss []missingDep) {
 	if len(miss) == 0 {
 		return
 	}
-	entries := allMarketEntries()
+	entries, _ := allMarketEntries()
 	fmt.Fprintf(out, "⚠ %d unsatisfied dependenc%s:\n", len(miss), plural(len(miss)))
 	for _, d := range miss {
 		if e, ok := providerFor(entries, d.Capability); ok {
