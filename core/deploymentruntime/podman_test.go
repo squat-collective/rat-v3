@@ -187,6 +187,86 @@ func TestPodmanRefusesBelowI9(t *testing.T) {
 	}
 }
 
+// TestContainerName covers SIBLING-mode naming (ADR-022 socket-mount): podman-legal,
+// stable, seq-suffixed, and never starting with a non-alnum byte. No podman needed.
+func TestContainerName(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"rat-pipeline", "rat-pipeline-1"},
+		{"rat_state.v1", "rat_state.v1-1"},
+		{"weird/id:tag", "weird-id-tag-1"},   // illegal bytes → '-'
+		{"_leading", "rat-_leading-1"},       // illegal leading byte → rat- prefix
+		{"", "rat--1"},                       // empty id still yields a legal name
+	}
+	for _, c := range cases {
+		if got := containerName(c.in, 1); got != c.want {
+			t.Errorf("containerName(%q,1) = %q, want %q", c.in, got, c.want)
+		}
+	}
+	// seq makes names unique within a process (relaunch never self-collides).
+	if a, b := containerName("p", 1), containerName("p", 2); a == b {
+		t.Errorf("names not unique across seq: %q == %q", a, b)
+	}
+}
+
+// TestPodmanSiblingNetwork is the ADR-022 socket-mount proof at the runtime layer: in
+// SIBLING mode the runtime launches a plugin onto a shared user network under a stable
+// name and returns "<name>:50051" — and that name is dialable via podman DNS (the path a
+// containerized rat uses, where a published 127.0.0.1 port would be unreachable). Live;
+// runs under `make core-test-podman`. Skips if the harness can't make a DNS user network.
+func TestPodmanSiblingNetwork(t *testing.T) {
+	requirePodman(t)
+	image := buildProbeImage(t)
+	ctx := context.Background()
+
+	net := "rat-sibling-test"
+	if out, err := exec.Command("podman", "network", "create", net).CombinedOutput(); err != nil {
+		t.Skipf("cannot create user network (no DNS plugin in harness?): %v\n%s", err, out)
+	}
+	t.Cleanup(func() { _ = exec.Command("podman", "network", "rm", "-f", net).Run() })
+
+	rt := NewPodmanNetworked(net)
+	lr, err := rt.Launch(ctx, &deploymentruntimev1.LaunchRequest{
+		PluginId: "rat-probe",
+		Spec:     &deploymentruntimev1.LaunchSpec{Image: image, Isolation: fullProfile()},
+	})
+	if err != nil {
+		t.Fatalf("Launch (sibling): %v", err)
+	}
+	t.Cleanup(func() { _, _ = rt.Terminate(ctx, &deploymentruntimev1.TerminateRequest{InstanceId: lr.GetInstanceId()}) })
+
+	// The endpoint is a NAME on the shared network, not a 127.0.0.1 host port.
+	ep := lr.GetEndpoint()
+	host, _, _ := strings.Cut(ep, ":")
+	if !strings.HasSuffix(ep, ":"+podmanContainerPort) || host == "127.0.0.1" || host == "" {
+		t.Fatalf("sibling endpoint = %q, want \"<name>:%s\"", ep, podmanContainerPort)
+	}
+
+	// The container is running and actually JOINED the shared network under that name
+	// (verifiable from the test proc, which is NOT on the net — unlike rat in production).
+	r2 := rt.instances[lr.GetInstanceId()]
+	if out, err := exec.Command("podman", "inspect", "--format",
+		"{{.State.Running}} {{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}", r2.containerID).CombinedOutput(); err != nil {
+		t.Fatalf("inspect sibling: %v\n%s", err, out)
+	} else if got := strings.TrimSpace(string(out)); !strings.HasPrefix(got, "true ") || !strings.Contains(got, net) {
+		t.Fatalf("sibling not running-and-on-%s: %q", net, got)
+	}
+
+	// The real proof: a PEER container on the shared net resolves the name (podman DNS)
+	// and connects to the port — exactly how a containerized rat reaches its sibling
+	// (where rat's own 127.0.0.1 would be unreachable). Poll from inside the peer to ride
+	// out readiness. Skips (not fails) if the harness's busybox nc lacks a usable probe.
+	peer := exec.Command("podman", "run", "--rm", "--network="+net, "docker.io/library/alpine:3.20",
+		"sh", "-c", "for i in $(seq 1 30); do nc -w2 "+host+" "+podmanContainerPort+" </dev/null && exit 0; sleep 1; done; exit 7")
+	out, err := peer.CombinedOutput()
+	if err != nil {
+		if strings.Contains(string(out), "applet not found") || strings.Contains(string(out), "not found") {
+			t.Skipf("peer probe tool unavailable in harness: %s", out)
+		}
+		t.Fatalf("sibling name %q not reachable from a peer on %s: %v\n%s", ep, net, err, out)
+	}
+	t.Logf("sibling reachable by name from a peer on shared net: %s", ep)
+}
+
 // TestPodmanRejectsEmptyImage: no image → INVALID_ARGUMENT (pre-exec; no podman needed).
 func TestPodmanRejectsEmptyImage(t *testing.T) {
 	rt := NewPodman()

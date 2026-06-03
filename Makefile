@@ -27,7 +27,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-images platform-up platform-run platform-down core-test-podman breaking help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -154,6 +154,12 @@ platform-run: ## ADR-020 S1: run the medallion once through the rat serve gatewa
 
 platform-down: ## tear the data platform stack down (and its volumes)
 	@$(RUNTIME) compose -f platform/compose.yaml down -v
+
+platform-socket: ## ADR-022 socket-mount: rat AS A CONTAINER launches the plugins as siblings (infra = Postgres+MinIO only)
+	@./platform/run-socket-mount.sh up
+
+platform-socket-down: ## tear the socket-mount platform down
+	@./platform/run-socket-mount.sh down
 
 ## --- podman deployment-runtime LIVE full-profile proof (D1 / ADR-016 §4) ------
 # Drives a REAL `podman run` (nested) under the full I9 profile and asserts the kernel

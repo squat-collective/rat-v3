@@ -24,15 +24,27 @@ RUN go build -trimpath -ldflags="-s -w" -o /out/rat ./cmd/rat \
  && go build -trimpath -ldflags="-s -w" -o /out/stateplugin ./testplugins/stateplugin
 
 # ---- runtime: minimal alpine, NON-ROOT -----------------------------------------------
-# Non-root is mandatory: the local-process deployment-runtime refuses to run as root
+# Non-root is the default: the local-process deployment-runtime refuses to run as root
 # (it cannot honor run_as_non_root with privileges — I9). uid 10001 is an arbitrary
-# unprivileged user.
+# unprivileged user. The SIBLING/socket-mount mode (ADR-022) overrides this at run time
+# with `--user 0` so rat can reach the host's rootless podman socket (which maps to the
+# host user) — there rat uses the PODMAN runtime, so the local-process root-refusal is moot.
+#
+# `podman` is installed so a CONTAINERIZED rat can drive the HOST's podman over a mounted
+# socket (Docker-out-of-Docker). The `podman-remote` wrapper forces remote mode; point it
+# at the socket with $CONTAINER_HOST and select it with $RAT_PODMAN_BIN=podman-remote.
 FROM docker.io/library/alpine:3.20
-RUN adduser -D -u 10001 rat
+RUN adduser -D -u 10001 rat \
+ && apk add --no-cache podman \
+ && printf '#!/bin/sh\nexec podman --remote "$@"\n' > /usr/local/bin/podman-remote \
+ && chmod +x /usr/local/bin/podman-remote
 COPY --from=build /out/rat /usr/local/bin/rat
 COPY --from=build /out/stateplugin /usr/local/bin/stateplugin
 COPY core/cmd/rat/manifests/ /etc/rat/manifests/
 COPY core/cmd/rat/plane.container.yaml /etc/rat/plane.yaml
 USER rat
 EXPOSE 7777
-ENTRYPOINT ["/usr/local/bin/rat", "serve", "--plane", "/etc/rat/plane.yaml"]
+# ENTRYPOINT is just the binary; CMD carries the default plane so it can be overridden
+# (`podman run rat/serve:dev serve --plane /plane/plugins.yaml`) for the socket-mount stack.
+ENTRYPOINT ["/usr/local/bin/rat"]
+CMD ["serve", "--plane", "/etc/rat/plane.yaml"]
