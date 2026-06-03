@@ -16,6 +16,21 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — slice 2: the poetry verbs — `rat init` / `add` / `up` over `rat.toml` 📜
+
+The ergonomics layer of ADR-023: the platform is now a **command-written `rat.toml`** (the committed spec, never hand-edited — poetry's `pyproject.toml` model) driven by poetry-shaped verbs. `rat` became a **multi-call binary** (`serve` | `up` | `init` | `add`).
+
+- **`rat.toml`** (TOML, via `github.com/pelletier/go-toml/v2`): `name` + `runtime` + `addr` + `[[plugin]]` tables. Reduces to the same internal `Plane` as a YAML plane (`planeFromRaw` is now shared by `LoadPlane`/`LoadProject`), so the daemon's bring-up path is unchanged. Default `addr` = this project's **per-project unix socket** (`.rat/daemon.sock`).
+- **`rat init`** — writes a commented `rat.toml` SHELL (name + runtime, no plugins) + a `.rat/.gitignore` (runtime junk is ignored, like `.venv`); refuses to clobber.
+- **`rat add <name> --image <ref> --manifest <path> [--env K=V]`** — **appends** a `[[plugin]]` (preserves the file's comments/order), with a duplicate-name check; no `--image` ⇒ a register-only driver. (Live hot-register lands with the `RegisterPlugin` RPC; for now `rat up` materializes the spec.)
+- **`rat up`** — walks up from cwd to find `rat.toml` (git/poetry/cargo-style), loads it, and runs the daemon (`serveResolved`, shared with `rat serve`). Foreground for now.
+
+**Proven live:** in `/tmp/rat-poetry-demo`, `rat init --name demo` → `rat add rat-state --image … --manifest …` + `rat add rat-caller` wrote a clean `rat.toml`; `rat up` discovered it and served on `/tmp/rat-poetry-demo/.rat/daemon.sock` (+ companion `[::]:37135`); `ratctl … --addr unix:…/.rat/daemon.sock` routed to the launched plugin (`pid=4069897 key=poetry`). `TestProjectInitAddLoad` covers the init→add→load round-trip (incl. dup-add + clobber refusal). `make core-test` + `breaking` green; additive (no proto/axis; +`go-toml/v2` dep).
+
+So the real flow is now `rat init` → `rat add` → `rat up`, over a committed `rat.toml`. Remaining on the daemon track: **2c** (`rat up -d` background + `rat down` + `rat ls` global registry + `rat status`), `rat lock` + the capability resolver at add-time, image-embedded manifests (drop the `--manifest` path), and **slice 3** (fold `ratctl` into the one `rat` binary so it's `rat call`/`rat apply`). *(Papercut still open: a backgrounded daemon's kill occasionally misses in the test harness — the daemon drains fine on real SIGTERM.)*
+
+---
+
 ## 2026-06-03 — slice 1.5: the dual-listener daemon — unix control socket + auto-port TCP callback companion 🔁
 
 Closed the gap slice 1 deferred: a unix-socket-only gateway can't be dialed *back* by launched **driver** plugins (scheduler/bff) that need a network endpoint. The daemon now serves the **same gateway on two listeners** (`core/cmd/rat`):

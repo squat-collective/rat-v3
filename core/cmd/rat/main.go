@@ -42,36 +42,59 @@ const shutdownGrace = 15 * time.Second
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)
-	log.SetPrefix("rat serve: ")
 
-	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	planePath := fs.String("plane", "plane.yaml", "path to the plane file (the desired plugin set)")
-
-	// `rat serve [flags]` — serve is the only verb in Phase A. Tolerate it being
-	// present or absent so both `rat serve --plane …` and `rat --plane …` work.
+	// rat is a multi-call binary (ADR-023): daemon verbs (serve/up) + project verbs
+	// (init/add). A leading non-flag token is the subcommand; legacy `rat --plane …`
+	// (no subcommand) still serves.
 	args := os.Args[1:]
-	if len(args) > 0 && args[0] == "serve" {
-		args = args[1:]
+	cmd := ""
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		cmd, args = args[0], args[1:]
 	}
-	_ = fs.Parse(args)
 
-	if err := serve(*planePath); err != nil {
-		log.Fatal(err)
+	var err error
+	switch cmd {
+	case "", "serve":
+		log.SetPrefix("rat serve: ")
+		fs := flag.NewFlagSet("serve", flag.ExitOnError)
+		planePath := fs.String("plane", "plane.yaml", "path to the plane file (the desired plugin set)")
+		_ = fs.Parse(args)
+		err = serve(*planePath)
+	case "up":
+		log.SetPrefix("rat: ")
+		err = runUp(args)
+	case "init":
+		err = runInit(args, os.Stdout)
+	case "add":
+		err = runAdd(args, os.Stdout)
+	default:
+		err = fmt.Errorf("unknown command %q (want: serve | up | init | add)", cmd)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "rat:", err)
+		os.Exit(1)
 	}
 }
 
-// serve runs the daemon until a signal arrives, then drains. It returns an error
-// only on a boot/serve failure; a clean signal-driven drain returns nil.
+// serve loads a YAML plane file and runs the daemon (`rat serve --plane …`, the low-level
+// path beneath the poetry verbs).
 func serve(planePath string) error {
+	pl, err := LoadPlane(planePath)
+	if err != nil {
+		return err
+	}
+	return serveResolved(pl)
+}
+
+// serveResolved runs the daemon for an already-loaded Plane until a signal arrives, then
+// drains. Shared by `rat serve` (YAML plane) and `rat up` (TOML project). Returns an error
+// only on a boot/serve failure; a clean signal-driven drain returns nil.
+func serveResolved(pl *Plane) error {
 	// The signal context governs the SERVING lifetime; boot + drain use their own
 	// contexts so they aren't cancelled by the very signal we want to drain on.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	pl, err := LoadPlane(planePath)
-	if err != nil {
-		return err
-	}
 	rt, err := newRuntime(pl.Runtime, pl.Instance)
 	if err != nil {
 		return err
