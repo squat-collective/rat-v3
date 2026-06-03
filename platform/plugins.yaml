@@ -16,6 +16,34 @@ plugins:
       image: rat/dbt-runner:dev      # the dbt-runner — runs `dbt build` on its baked project
       isolation: i9
 
+  - name: rat-state
+    manifest: ./manifests/state.plugin.yaml
+    launch:
+      image: rat/state:dev           # run history, backed by Postgres (from the infra compose)
+      isolation: i9
+      env:
+        RAT_STATE_PG: "host=host.containers.internal port=55440 dbname=ducklake user=ducklake password=ducklake"
+
+  - name: rat-scheduler
+    manifest: ./manifests/scheduler.plugin.yaml
+    launch:
+      image: rat/scheduler:dev       # self-driving clock — fires the pipeline on a cron
+      isolation: i9
+      env:
+        RAT_PLUGIN_NAME: "rat-scheduler"
+        RAT_GATEWAY: "host.containers.internal:7777"     # calls the gateway back through the host
+        RAT_SCHEDULE_INTERVAL: "20"
+        RAT_PIPELINE_TARGET: "gold_daily_revenue"
+
+  - name: platform-bff
+    manifest: ./manifests/bff.plugin.yaml
+    launch:
+      image: rat/bff:dev             # the UI control-path backend (HTTP on the launched port)
+      isolation: i9
+      env:
+        RAT_PLUGIN_NAME: "platform-bff"
+        RAT_GATEWAY: "host.containers.internal:7777"
+
   - name: platform-runner
     manifest: ./manifests/runner.plugin.yaml
-    # register-only driver — the trigger identity (requires strategy/apply).
+    # register-only driver — the manual-trigger identity (requires strategy/apply + state).

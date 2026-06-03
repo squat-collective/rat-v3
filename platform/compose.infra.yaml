@@ -1,0 +1,44 @@
+# compose.infra.yaml — the launch-mode platform's INFRA, and only the infra (ADR-022).
+# Just the backends; rat (host, or a container via socket-mount) launches every plugin
+# from plugins.yaml. The infra carries NO per-plugin service — adding a plugin never
+# touches this file. Published to host ports so rat-launched plugin containers reach them
+# via host.containers.internal.
+#
+#   podman compose -f platform/compose.infra.yaml up -d     # Postgres + MinIO
+#   ( cd platform && /path/to/bin/rat serve --plane plugins.yaml )   # rat launches the rest
+#   podman compose -f platform/compose.infra.yaml down -v
+name: rat-platform-infra
+
+services:
+  postgres:
+    image: docker.io/library/postgres:16
+    environment:
+      POSTGRES_USER: ducklake
+      POSTGRES_PASSWORD: ducklake
+      POSTGRES_DB: ducklake
+    ports:
+      - "55440:5432"                 # rat-launched plugins reach host.containers.internal:55432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ducklake -d ducklake"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  minio:
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "59010:9000"                 # for the dbt→shared-DuckLake path (Q2); idle for the local-DuckDB demo
+
+  minio-setup:
+    image: quay.io/minio/mc
+    depends_on:
+      minio: {condition: service_started}
+    entrypoint:
+      - sh
+      - -lc
+      - "until mc alias set m http://minio:9000 minioadmin minioadmin; do sleep 1; done; mc mb --ignore-existing m/rat; echo bucket-ready"
+    restart: "no"
