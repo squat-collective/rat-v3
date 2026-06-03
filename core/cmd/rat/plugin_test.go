@@ -47,3 +47,21 @@ func TestPluginInitCheck(t *testing.T) {
 		t.Error("check should fail on an unknown kind")
 	}
 }
+
+// TestResolveMethod covers the capability→gRPC-method resolution `rat plugin test` uses to
+// smoke-invoke a launched plugin (no podman needed — just the linked descriptors).
+func TestResolveMethod(t *testing.T) {
+	path, in, out, err := resolveMethod("rat://secret/v1/resolve")
+	if err != nil {
+		t.Fatalf("resolveMethod: %v", err)
+	}
+	if path != "/rat.secret.v1.SecretService/Resolve" {
+		t.Errorf("path = %q, want /rat.secret.v1.SecretService/Resolve", path)
+	}
+	if in == nil || out == nil {
+		t.Error("expected non-nil input/output descriptors")
+	}
+	if _, _, _, err := resolveMethod("rat://nope/v1/none"); err == nil {
+		t.Error("expected error for an unknown capability")
+	}
+}
