@@ -16,6 +16,19 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Phase 6 slice 1: `rat add` reads the stamped manifest (manifest-from-image) 🏷️
+
+Closed ADR-026 Q05: `rat add --image <packed-ref>` no longer needs `--manifest`. With `--image` and no `--manifest`, `rat add` (`core/cmd/rat/project.go`):
+- ensures the image is present (`podman pull` if not — so a GHCR ref works);
+- reads the manifest from the image's `dev.rat.manifest.v1.b64` label (`readStampedManifest`, now returning the raw bytes too) — **the name is derived from it** when not given;
+- materializes the manifest into `manifests/<name>.plugin.yaml` (original bytes, comments preserved) and references it in `rat.toml`.
+
+**Proven live:** `rat plugin pack` → a stamped `localhost/rat/secret:packed`; then `rat add --image localhost/rat/secret:packed` (no `--manifest`, no name) → `read manifest from … → manifests/rat-secret.plugin.yaml`, recorded `name = "rat-secret"` (derived) + image + manifest path in `rat.toml`; `rat plugin check` on the materialized manifest passes — full circle. `make core-test` + `breaking` green; additive (no proto/axis).
+
+So the authoring→runtime handoff is seamless: `rat plugin pack` stamps the manifest in, `rat add <ref>` reads it back. The image is now genuinely self-describing. (Follow-ons: `rat add` resolving the manifest at *launch* without materializing a file; the satisfiability resolver; signing.)
+
+---
+
 ## 2026-06-03 — 🎉 PHASE 5 SEALED — `rat/4.0` (plugin authoring & packaging)
 
 Phase 5 — the **plugin authoring toolkit** (ADR-026) — is **sealed at `rat/4.0`** (`phase-5` merged to `main`, annotated tag). rat now has the third pillar an ecosystem needs (**author**, beside **run** and **distribute**): the complete lifecycle **`rat plugin init → check → test → pack → publish`**, all proven live —
