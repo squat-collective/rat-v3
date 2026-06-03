@@ -33,6 +33,12 @@ def _contribute_ui() -> None:
         {"slot": "command", "surface": "cli", "id": "build", "title": "Build the medallion",
          "capability": "rat://strategy/v1/apply",
          "args": {"target": {"identifier": target}, "idempotencyKey": "cli-build"}},
+        # webapp surface: a Lake Tables view + a Run button (same capabilities, browser-flavored)
+        {"slot": "explorer", "surface": "webapp", "id": "lake-tables", "title": "Lake Tables",
+         "data": "/api/tables", "item": "/api/table/"},
+        {"slot": "command", "surface": "webapp", "id": "run-pipeline", "title": "Run pipeline",
+         "capability": "rat://strategy/v1/apply",
+         "args": {"target": {"identifier": target}, "idempotencyKey": "webapp-run"}},
     ]
     try:
         contribute_ui(gw, caller, components, retries=120)

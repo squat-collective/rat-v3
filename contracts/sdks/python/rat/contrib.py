@@ -50,7 +50,9 @@ def contribute_ui(gateway, caller, components, tenant="acme", retries=1, tracepa
     for attempt in range(max(1, retries)):
         try:
             for c in components:
-                key = f"ui/components/{caller}/{c['id']}"
+                # key by surface (ADR-025) so the same component id can target multiple
+                # surfaces (vscode/cli/webapp) without colliding.
+                key = f"ui/components/{caller}/{c.get('surface', 'generic')}/{c['id']}"
                 stub.Invoke(invoke_pb2.InvokeRequest(
                     capability="rat://state/v1/put",
                     payload=state_pb2.PutRequest(key=key, value=json.dumps(c).encode()).SerializeToString()), metadata=md)

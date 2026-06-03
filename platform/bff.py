@@ -169,6 +169,7 @@ def _invoke(capability, data):
 # itself (via rat.contrib.contribute_ui) — each plugin owns its UI.
 PLATFORM_COMPONENTS = [
     {"slot": "explorer", "surface": "vscode", "id": "run-history", "title": "Run History", "icon": "history", "data": "/api/runs"},
+    {"slot": "explorer", "surface": "webapp", "id": "run-history", "title": "Run History", "data": "/api/runs"},
 ]
 
 
@@ -196,7 +197,7 @@ def _state_put(key, value):
 
 def _seed_platform_ui():
     for c in PLATFORM_COMPONENTS:
-        _state_put(f"ui/components/platform-bff/{c['id']}", json.dumps(c).encode())
+        _state_put(f"ui/components/platform-bff/{c.get('surface', 'generic')}/{c['id']}", json.dumps(c).encode())
 
 
 def _ui(surface=None):
@@ -219,9 +220,66 @@ def _ui(surface=None):
     return {"slots": slots}
 
 
+# The WEBAPP surface consumer (ADR-025): a self-contained SPA the bff serves at `/`. The
+# browser loads it; it then fetches /api/ui?surface=webapp and renders the webapp-targeted
+# contributions — views (with drill-in), command buttons (→ /api/invoke). It runs in the
+# BROWSER, not the daemon — an out-of-stack consumer, exactly like the VS Code one. It
+# hardcodes no view; a plugin's webapp contributions appear with zero change here.
+WEBAPP_HTML = """<!doctype html><html><head><meta charset="utf-8"><title>RAT Platform</title>
+<style>
+ body{font-family:system-ui,sans-serif;margin:2rem;max-width:920px;color:#222}
+ h1{font-size:1.4rem} h2{font-size:1rem;text-transform:uppercase;color:#666;margin:1.4rem 0 .4rem}
+ .src{color:#999;font-size:.8em} button{margin:.2rem .4rem .2rem 0;padding:.4rem .9rem;cursor:pointer}
+ .view{margin:.3rem 0} .item{cursor:pointer;color:#0366d6} table{border-collapse:collapse;margin:.3rem 0}
+ td,th{border:1px solid #ddd;padding:.2rem .6rem;font-size:.9em} #out{color:#0a7}
+</style></head><body>
+<h1>🐀 RAT Platform <span class="src">webapp surface</span></h1>
+<div id="app">loading…</div><pre id="out"></pre>
+<script>
+const SURFACE="webapp";
+const j=async(p,o)=>(await fetch(p,o)).json();
+async function showTable(route,parent){const d=await j(route);const t=document.createElement("table");
+ t.innerHTML="<tr>"+(d.columns||[]).map(c=>"<th>"+c+"</th>").join("")+"</tr>"+
+  (d.rows||[]).map(r=>"<tr>"+r.map(v=>"<td>"+v+"</td>").join("")+"</tr>").join("");parent.appendChild(t);}
+async function render(){
+ const ui=await j("/api/ui?surface="+SURFACE),app=document.getElementById("app");app.innerHTML="";
+ for(const [slot,items] of Object.entries(ui.slots||{})){
+  const sec=document.createElement("div");sec.innerHTML="<h2>"+slot+"</h2>";
+  for(const c of items){
+   if(slot==="command"){
+    const b=document.createElement("button");b.textContent=c.title;b.dataset.cmd=c.id;
+    b.onclick=async()=>{const res=await j("/api/invoke",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({capability:c.capability,data:c.args||{}})});
+      document.getElementById("out").textContent=c.title+" → "+JSON.stringify(res);render();};
+    sec.appendChild(b);
+   } else if(slot==="explorer"){
+    const v=document.createElement("div");v.className="view";v.dataset.view=c.id;
+    v.innerHTML="<b>"+c.title+"</b> <span class=src>"+(c._source||"")+"</span>";sec.appendChild(v);
+    if(c.data){const d=await j(c.data);
+     if(d.tables)for(const tb of d.tables){const a=document.createElement("div");a.className="item";a.dataset.table=tb;
+       a.textContent="\\u25B8 "+tb;a.onclick=()=>showTable(c.item+tb,v);sec.appendChild(a);}
+     else if(d.runs){const n=document.createElement("div");n.textContent=d.runs.length+" runs recorded";sec.appendChild(n);}
+    }
+   } else { const d=document.createElement("div");d.textContent=c.title+" (config)";sec.appendChild(d);}
+  }
+  app.appendChild(sec);
+ }
+}
+render();
+</script></body></html>"""
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):  # quiet
         pass
+
+    def _send_html(self, code, html):
+        body = html.encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def _send(self, code, payload):
         body = json.dumps(payload, default=str).encode()  # default=str: dates/decimals
@@ -235,7 +293,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         u = urlparse(self.path)
         try:
-            if u.path == "/api/health":
+            if u.path in ("/", "/app"):  # the webapp surface consumer (ADR-025)
+                self._send_html(200, WEBAPP_HTML)
+            elif u.path == "/api/health":
                 self._send(200, {"ok": True, "gateway": GATEWAY})
             elif u.path == "/api/runs":
                 self._send(200, {"runs": _runs()})
