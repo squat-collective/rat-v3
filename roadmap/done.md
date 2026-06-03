@@ -16,6 +16,86 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 🎉 PHASE 5 SEALED — `rat/4.0` (plugin authoring & packaging)
+
+Phase 5 — the **plugin authoring toolkit** (ADR-026) — is **sealed at `rat/4.0`** (`phase-5` merged to `main`, annotated tag). rat now has the third pillar an ecosystem needs (**author**, beside **run** and **distribute**): the complete lifecycle **`rat plugin init → check → test → pack → publish`**, all proven live —
+
+- **`init`** — scaffolds a ready-to-build folder per kind (manifest + SDK stub + Dockerfile + README + **portable CI/CD**), poetry-init style;
+- **`check`** — the static gate: manifest schema + per-kind + **dependency coherence** (provides/requires name *real* capabilities; kind matches its axis; cross-axis requires allowed);
+- **`test`** — launches the image under the **real I9 profile** + verifies it **serves** every declared capability (fails on `Unimplemented`);
+- **`pack`** — builds a **verified, manifest-stamped** image (manifest-from-image; `rat add <ref>` can read it);
+- **`publish`** — re-verifies + pushes to a registry (`ghcr.io` or a local `registry:2`), **never shipping a broken plugin**.
+
+Builds on the sealed line: **`rat/2.0`** core · **`rat/2.5`** platform + per-project daemon UX · **`rat/3.0`** multi-surface UI · **`rat/3.5`** distribution · **`rat/4.0`** authoring. Additive throughout — `make breaking` clean, no proto/axis change since `rat/2.0`. **Open follow-ons (ADR-026):** golden-vector conformance in `test` (Q03), `rat add` reading the stamped manifest, the deploy-time satisfiability resolver, the build-backend + template axes, signing + the marketplace index.
+
+---
+
+## 2026-06-03 — Phase 5 slice 5: `rat plugin check` now validates DEPENDENCIES 🔗
+
+Closed the ADR-026 §3 gap — `check` was syntax-only on deps; now it validates them. `check` verifies (`core/cmd/rat/plugin.go`):
+- **real capabilities** — every `provides`/`requires` must `resolveMethod` against the linked axis descriptors. A made-up capability in a **linked** axis hard-fails (typo); a capability whose axis isn't compiled into this rat is **noted unverified** (honest — not a false negative);
+- **kind coherence** — a plugin's `provides` must be its own axis (`kindAxis`); `requires` are legitimately **cross-axis** (capability composition), so only their reality is checked, never their axis.
+
+Helpers: `capAxisOf`, `kindAxis`, `linkedAxes`. **Proven live:** `rat-pipeline` passes (1 provides, **3 cross-axis requires all confirmed real**); a made-up `requires` → `✗ not a real capability of axis "state" (typo?)`; a `state-backend` providing a `strategy` cap → `✗ expected "state"-axis capabilities`. `TestPluginCheckDeps` covers it; `make core-test` + `breaking` green; additive. *(Satisfiability — is a provider actually available — stays the deploy-time `rat add`/`up` resolver, the poetry-resolver from ADR-023, not a per-plugin check.)*
+
+So `rat plugin check` answers "are the plugin's deps real + coherent?" — yes, now. The authoring loop **`init → check → test → pack → publish`** is complete and the static gate has teeth on dependencies.
+
+---
+
+## 2026-06-03 — Phase 5 slice 4: `rat plugin publish` — the lifecycle is complete 🚀
+
+The last verb (ADR-026): ship a verified plugin image to a registry (the team diff). `rat plugin publish` (`core/cmd/rat/plugin.go`):
+
+- resolves the manifest from `--manifest` **or the image's stamped label** (`readStampedManifest` — manifest-from-image, ADR-026 Q05);
+- **RE-verifies** the image being shipped (`launchAndProbe` — never publish a broken plugin);
+- tags + `podman push`es to `<registry>/<name>:<version>` (+ `:latest`). Registry = `ghcr.io/<owner>` (prod) or a local **`registry:2`** (`localhost:5000`, the "local packaging service") — same mechanism; push handles TLS/auth (auto-insecure for localhost).
+
+**Proven live end-to-end:** a local `registry:2` came up; `rat plugin pack` made a verified, stamped `localhost/rat/secret:packed`; `rat plugin publish --image … --registry localhost:5000` read the stamped manifest, re-verified (`✓ launches under I9 … serves rat://secret/v1/resolve`), pushed → `🚀 published localhost:5000/rat-secret:0.1.0`; the registry confirmed `{"name":"rat-secret","tags":["0.1.0"]}`. `make core-test` (cmd/rat) + `breaking` green; additive (no proto/axis). *(arrowticket's `TestBulkLegTicket` flaked once on a timing race, passed on rerun — unrelated.)*
+
+🎉 **The plugin authoring lifecycle is COMPLETE:** **`rat plugin init → check → test → pack → publish`** — scaffold (poetry-init) → static gate → launch-verify under I9 → a verified, self-describing image → shipped to a registry, never publishing a broken plugin. Together with the runtime model (launch/route) and the distribution pipeline (rat's own GHCR release), rat now has the three things an ecosystem needs: **author, run, distribute.** Remaining ADR-026 follow-ons: full golden-vector conformance in `test` (Q03), `rat add` reading the stamped manifest (drop `--manifest`), the build-backend + template axes, signing + the marketplace index.
+
+---
+
+## 2026-06-03 — Phase 5 slice 3: `rat plugin pack` — the verified, manifest-stamped image 📦
+
+The verb that ties authoring together (ADR-026): run the gate AND produce the artifact. `rat plugin pack` (`core/cmd/rat/plugin.go`):
+
+- **stamps the validated manifest into the image** as the OCI label `dev.rat.manifest.v1.b64` (base64 YAML) — either building the dir's Dockerfile `--label` or, with `--image`, deriving `FROM <existing> + LABEL` in a temp context;
+- runs the **gate** on the FINAL tag (`launchAndProbe`, extracted + shared with `test`: launch under I9 → healthy → serves every declared capability);
+- **reads the manifest back** from the image to confirm it's recoverable, then tags the verified image (default `rat/<name>:<version>`).
+
+This lands the **manifest-from-image** path (ADR-026 Q05): a packed image carries its own manifest, so `rat add <ref>` can read it (dropping `--manifest`). **Proven live:** `rat plugin pack --image rat/secret:dev --manifest …/secret.plugin.yaml --tag localhost/rat/secret:packed` → stamped, `✓ launches under I9 … serves rat://secret/v1/resolve`, `📦 packed … — verified + manifest stamped`; `podman inspect … | base64 -d` returned the full manifest. `make core-test` + `breaking` green; additive.
+
+The authoring loop is now **`rat plugin init → check → test → pack`** — scaffold → static gate → launch-verify → a verified, self-describing image. Only **`publish`** (push the verified image → GHCR, the team diff) remains; then full golden-vector conformance (ADR-026 Q03) and `rat add` reading the stamped manifest.
+
+---
+
+## 2026-06-03 — Phase 5 slice 2: `rat plugin test` — the verified-plugin gate (launch + serves) 🔬
+
+The strong gate (ADR-026): a plugin isn't "verified" because it built — it's verified because it **launches under I9 and actually serves what it declares**. `rat plugin test` (`core/cmd/rat/plugin.go`):
+
+- builds the image (or `--image` an existing one), **launches it under the real I9 profile** via the deployment-runtime (non-root · cap-drop ALL · read-only rootfs), waits healthy;
+- then **smoke-invokes each `provides` capability** directly on the launched plugin — capability → gRPC method via the linked descriptors (`resolveMethod`), a `dynamicpb` empty-request `conn.Invoke` — and **fails if any is `Unimplemented`** ("declares it, doesn't serve it"). `--manifest` overrides the manifest path.
+
+**Proven live:** `rat plugin test --image rat/secret:dev --manifest …/secret.plugin.yaml` → `✓ launches under I9 … + healthy`, `✓ serves rat://secret/v1/resolve`, `✓ rat-secret PASSED`. A **lying** manifest (claims `rat://state/v1/get`) → `✗ declares … but does NOT serve it (Unimplemented)`. The deferred Terminate cleans the container. `TestResolveMethod` covers the capability→method resolution; `make core-test` + `breaking` green; additive (no proto/axis).
+
+So the authoring loop now has its teeth: `rat plugin init → check → test`. A plugin that passes `test` is proven to run hardened + honor its contract surface. Full golden-vector conformance (ADR-026 Q03) + `pack`/`publish` (verified image → GHCR) are the remaining slices.
+
+---
+
+## 2026-06-03 — Phase 5 slice 1: `rat plugin init` + `check` — the authoring toolkit (ADR-026) 🧰
+
+The build-time complement to the runtime model: **ADR-026** (Proposed) defines the `rat plugin` toolkit (init/check/test/pack/publish) — scaffold, the verified-plugin gate, scaffolded portable CI/CD, local-vs-GHCR tiers. This slice lands the two provable, immediately-useful verbs.
+
+- **`rat plugin init <name> --kind <kind>`** (`core/cmd/rat/plugin.go`): scaffolds a ready-to-build folder — `manifest.yaml` (provides pre-filled from a per-kind map), a `server.py` SDK stub, `Dockerfile`, `requirements.txt`, `README.md`, `.gitignore`, and **portable CI/CD** (`ci.sh` + `.github/workflows/plugin.yml`, whose logic is just `rat plugin check && test && pack`, bootstrapped by the Phase-4 one-line install — works on GH + others; CI on PR, CD-publish on a `v*` tag). Refuses an unknown kind (must be one of the 18 axes). poetry-init for plugins.
+- **`rat plugin check`** (the fast STATIC gate): `manifest.Load` (schema-subset: kind, name, well-formed capability URIs) + coherence (kind is a known axis; version present). Pass/fail.
+
+**Proven live:** `rat plugin init my-secrets --kind secret-backend` scaffolded **9 files** with `provides: rat://secret/v1/resolve` pre-filled; `rat plugin check` passed (`✓ my-secrets (secret-backend) — manifest valid: 1 provides`); corrupting a capability made check **refuse** it (`malformed provides capability URI`). `TestPluginInitCheck` covers the loop (scaffold passes, unknown kind rejected, broken manifest fails). `make core-test` + `breaking` green; additive (no proto/axis). `test`/`pack`/`publish` (launch+conformance → verified image → GHCR) are the next slices.
+
+So authoring a plugin is now `rat plugin init → check` (then the gate fills in) — `poetry`/`cargo` for plugins, with CI/CD baked in from `init`. Follow-ons (ADR-026 open questions): `test`/`pack`/`publish`; the build-backend + template axes; manifest-in-image; signing + the marketplace index.
+
+---
+
 ## 2026-06-03 — 🎉 PHASE 4 SEALED — `rat/3.5` (distribution: the GHCR release pipeline)
 
 Phase 4 — **distribution** — is **sealed at `rat/3.5`** (`phase-4` merged to `main`, annotated tag). rat now ships as a **`ghcr.io` binary + image**, so getting started is the founding `chmod +x ./rat` vision — no clone, no make:
