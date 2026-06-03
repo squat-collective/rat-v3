@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 🎉 PHASE 4 SEALED — `rat/3.5` (distribution: the GHCR release pipeline)
+
+Phase 4 — **distribution** — is **sealed at `rat/3.5`** (`phase-4` merged to `main`, annotated tag). rat now ships as a **`ghcr.io` binary + image**, so getting started is the founding `chmod +x ./rat` vision — no clone, no make:
+
+- **`rat version`** (build-time `-ldflags -X main.version=<tag>`); **`make release-build`** → a static, versioned binary; **`make release-image`** → `ghcr.io/rat-dev/rat:<ver>` (version baked); **`make release-checksums`** → `SHA256SUMS` — all reproducible locally.
+- **`.github/workflows/release.yml`** wraps them on a `rat/*` tag → a GitHub Release (binaries + SHA256SUMS + install.sh) + a multi-arch image on ghcr.io.
+- **`scripts/install.sh`** → `curl … | sh` (detect os/arch, download, sha256-verify, drop `./rat`).
+
+Proven via the reproducible build (`make release-build VERSION=3.0` → a statically-linked binary that runs `rat version`/`rat init`; the image's `rat version` reports the tag too). The CI run + `curl|sh` download need a real GitHub/remote (out of sandbox); the artifact-defining build logic is verified. Additive — `make breaking` clean; no proto/axis change since `rat/2.0`. **Next (Phase 4 continues / Phase 5): wire `rat add` to pull plugin images from GHCR (so `rat.toml` refs resolve end to end), signed releases + SBOM, then the ADR-025 surface follow-ons.**
+
+---
+
 ## 2026-06-03 — Phase 4 slice 1: the GHCR release pipeline — `curl … && chmod +x ./rat` 📦
 
 The distribution front door (the inbox idea, ADR-023): ship rat as a **`ghcr.io` binary + image** so a user never clones or `make`s. Built as **reproducible `make` targets** with a thin CI wrapper, so a release is exactly what builds locally.
