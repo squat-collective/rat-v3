@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Phase 3 slice 3: the WEBAPP surface — a browser consumer, visually proven 🌐
+
+The third surface (ADR-025) — and the one we can prove **visually**. The bff now serves a self-contained **SPA at `/`** (`WEBAPP_HTML` in `platform/bff.py`): the browser loads it, it fetches `/api/ui?surface=webapp`, and renders the webapp-targeted contributions — views (with drill-into-table), command buttons (→ `/api/invoke`). It runs in the **browser**, not the daemon — an out-of-stack consumer, exactly like the CLI/VS Code ones; it hardcodes no view.
+
+- **Surface-keyed contributions:** `contribute_ui` now keys by surface (`ui/components/<plugin>/<surface>/<id>`) so the same component id targets multiple surfaces without colliding (the bff seed too). `rat-pipeline` now contributes a **webapp** interface (Lake Tables view + Run pipeline button) alongside its vscode + cli ones; the bff adds a webapp Run-History view.
+- **Proven LIVE + VISUALLY:** the bff served the SPA at `/`; `/api/ui?surface=webapp` returned `{explorer:[run-history, lake-tables], command:[run-pipeline]}` (webapp-scoped — cli `build` absent); and a **headless Chromium screenshot** ([`platform/media/webapp-surface.png`](../platform/media/webapp-surface.png)) shows the rendered page: *EXPLORER* → "Run History" (platform-bff) = **9 runs recorded**, "Lake Tables" (rat-pipeline) = **bronze_orders / gold_daily_revenue / silver_orders** (the real lake tables); *COMMAND* → a **Run pipeline** button. Two plugins' webapp contributions, in one browser, scoped to the surface. `make core-test` + `breaking` green; additive (no proto/axis).
+
+**🎉 ALL THREE surfaces now consume the same contribution registry independently:** **CLI** (`rat ui`, proven live), **VS Code** (surface-scoped shell, compiles), **webapp** (SPA, **rendered in a real browser**). ADR-025's surfaces-&-consumers model is real and demonstrated end to end. *(Visual proof needed a headless-chromium-via-podman screenshot — the Playwright MCP was blocked by a container-permission issue in this env.)* Remaining ADR-025 follow-ons: per-consumer identity/connection; the webview rich-content protocol; view-data capabilities (so a consumer fetches view data without the bff).
+
+---
+
 ## 2026-06-03 — Phase 3 slice 2: the VS Code shell becomes the `vscode` surface consumer 🪟
 
 Pointed the generic shell (`examples/ui/vscode-platform/`) at its surface: it now fetches `GET /api/ui?surface=vscode` (a `surface()` helper + `uiPath()`; a `ratPlatform.surface` setting, default `vscode`) instead of the unscoped `/api/ui`. So the shell renders only the **vscode-targeted** contributions — a plugin's `cli`/`webapp` interfaces never leak in. Compile-verified strict (`tsc`).
