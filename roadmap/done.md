@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — `contribute_ui` SDK helper: a plugin adds UI in one call 🧩
+
+Made ADR-024's "a plugin contributes UI" a **one-liner**. New hand-written SDK module **`contracts/sdks/python/rat/contrib.py`** (`rat/contrib`, not generated — codegen only writes `rat/<axis>/v1`; named `contrib` to avoid the `rat/ui/` axis package): `contribute_ui(gateway, caller, components, retries=…)` publishes a plugin's UI components to `ui/components/<caller>/<id>` in the state-backend (via the gateway — C5-authorized + audited), riding out the state plugin's boot wiring with retries.
+
+Migrated the platform to the proper pattern — **each plugin owns its UI**:
+- **`rat-pipeline`** (dbt-runner) now self-contributes its `Lake Tables` view + `Run pipeline` command (`main.py` spawns a background `contribute_ui` once at startup); its manifest gains `requires: state/v1/put` + the declarative `contributes.slots` binding (`rat://ui/v1/explorer`→lake-tables, `rat://ui/v1/command`→run-pipeline).
+- **the bff** drops those from its seed and keeps only its OWN `Run History`.
+
+**Proven live:** the dbt-runner logged `contributed 2 UI components`; `/api/ui` shows `lake-tables` + `run-pipeline` **sourced from `rat-pipeline`** and `run-history` from `platform-bff` — the contributions come from the owning plugins, not a central seed. `make breaking` green; `contrib.py` parses clean; additive (no proto/axis/Go). So a plugin adds UI by: declare `contributes.slots`, `requires state/put`, call `contribute_ui(...)` once. Follow-ons unchanged: registry-introspection (read `contributes` from manifests), contribution trust.
+
+---
+
 ## 2026-06-03 — the UI is assembled from plugin contributions (ADR-024) — plugins extend the UI 🧩
 
 Made the VS Code UI **scalable by plugins**: it hardcodes no view; plugins *contribute* views/commands/config and the UI renders them — the VSCode `contributes` model, which the **frozen manifest already carries** (`contributes.slots: [{target, component}]`). **[ADR-024](../docs/architecture/adrs/024-ui-assembled-from-plugin-contributions.md) (Proposed)** defines the runtime mechanism; no contract change (uses `contributes.slots` + `state/v1`).
