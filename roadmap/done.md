@@ -16,6 +16,19 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Phase 5 slice 1: `rat plugin init` + `check` — the authoring toolkit (ADR-026) 🧰
+
+The build-time complement to the runtime model: **ADR-026** (Proposed) defines the `rat plugin` toolkit (init/check/test/pack/publish) — scaffold, the verified-plugin gate, scaffolded portable CI/CD, local-vs-GHCR tiers. This slice lands the two provable, immediately-useful verbs.
+
+- **`rat plugin init <name> --kind <kind>`** (`core/cmd/rat/plugin.go`): scaffolds a ready-to-build folder — `manifest.yaml` (provides pre-filled from a per-kind map), a `server.py` SDK stub, `Dockerfile`, `requirements.txt`, `README.md`, `.gitignore`, and **portable CI/CD** (`ci.sh` + `.github/workflows/plugin.yml`, whose logic is just `rat plugin check && test && pack`, bootstrapped by the Phase-4 one-line install — works on GH + others; CI on PR, CD-publish on a `v*` tag). Refuses an unknown kind (must be one of the 18 axes). poetry-init for plugins.
+- **`rat plugin check`** (the fast STATIC gate): `manifest.Load` (schema-subset: kind, name, well-formed capability URIs) + coherence (kind is a known axis; version present). Pass/fail.
+
+**Proven live:** `rat plugin init my-secrets --kind secret-backend` scaffolded **9 files** with `provides: rat://secret/v1/resolve` pre-filled; `rat plugin check` passed (`✓ my-secrets (secret-backend) — manifest valid: 1 provides`); corrupting a capability made check **refuse** it (`malformed provides capability URI`). `TestPluginInitCheck` covers the loop (scaffold passes, unknown kind rejected, broken manifest fails). `make core-test` + `breaking` green; additive (no proto/axis). `test`/`pack`/`publish` (launch+conformance → verified image → GHCR) are the next slices.
+
+So authoring a plugin is now `rat plugin init → check` (then the gate fills in) — `poetry`/`cargo` for plugins, with CI/CD baked in from `init`. Follow-ons (ADR-026 open questions): `test`/`pack`/`publish`; the build-backend + template axes; manifest-in-image; signing + the marketplace index.
+
+---
+
 ## 2026-06-03 — 🎉 PHASE 4 SEALED — `rat/3.5` (distribution: the GHCR release pipeline)
 
 Phase 4 — **distribution** — is **sealed at `rat/3.5`** (`phase-4` merged to `main`, annotated tag). rat now ships as a **`ghcr.io` binary + image**, so getting started is the founding `chmod +x ./rat` vision — no clone, no make:
