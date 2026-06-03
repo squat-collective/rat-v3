@@ -48,6 +48,39 @@ func TestPluginInitCheck(t *testing.T) {
 	}
 }
 
+// TestPluginCheckDeps covers the dependency coherence `rat plugin check` adds (ADR-026):
+// capabilities must name something real, and `provides` must be the plugin's own axis.
+func TestPluginCheckDeps(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	write := func(name, body string) {
+		_ = os.MkdirAll(name, 0o755)
+		_ = os.WriteFile(filepath.Join(name, "manifest.yaml"), []byte(body), 0o644)
+	}
+	hdr := func(kind, name string) string {
+		return "api_version: rat/1\nkind: " + kind + "\nmetadata:\n  name: " + name + "\n  version: 0.1.0\ncompatible_core: [\"rat/1\"]\n"
+	}
+	var out bytes.Buffer
+
+	// valid: a strategy provides strategy/apply, requires state/get (cross-axis is fine).
+	write("ok", hdr("strategy", "ok")+"provides:\n  - capability: rat://strategy/v1/apply\nrequires:\n  - capability: rat://state/v1/get\n")
+	if err := runPluginCheck([]string{"ok"}, &out); err != nil {
+		t.Fatalf("valid plugin should pass: %v", err)
+	}
+
+	// a made-up `requires` in a LINKED axis → fail (not just a syntax check).
+	write("bogus", hdr("strategy", "bogus")+"provides:\n  - capability: rat://strategy/v1/apply\nrequires:\n  - capability: rat://state/v1/nonsense\n")
+	if err := runPluginCheck([]string{"bogus"}, &out); err == nil {
+		t.Error("a made-up requires in a linked axis should fail")
+	}
+
+	// kind/axis mismatch: a state-backend providing a strategy capability → fail.
+	write("mismatch", hdr("state-backend", "mismatch")+"provides:\n  - capability: rat://strategy/v1/apply\n")
+	if err := runPluginCheck([]string{"mismatch"}, &out); err == nil {
+		t.Error("a state-backend providing a strategy cap should fail kind coherence")
+	}
+}
+
 // TestResolveMethod covers the capability→gRPC-method resolution `rat plugin test` uses to
 // smoke-invoke a launched plugin (no podman needed — just the linked descriptors).
 func TestResolveMethod(t *testing.T) {
