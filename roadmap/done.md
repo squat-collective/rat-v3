@@ -16,6 +16,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — the UI is assembled from plugin contributions (ADR-024) — plugins extend the UI 🧩
+
+Made the VS Code UI **scalable by plugins**: it hardcodes no view; plugins *contribute* views/commands/config and the UI renders them — the VSCode `contributes` model, which the **frozen manifest already carries** (`contributes.slots: [{target, component}]`). **[ADR-024](../docs/architecture/adrs/024-ui-assembled-from-plugin-contributions.md) (Proposed)** defines the runtime mechanism; no contract change (uses `contributes.slots` + `state/v1`).
+
+- **Contribution = manifest binding + runtime spec.** The manifest declares the slot binding; the rich component spec (`title`, `data` endpoint / `capability` / `schema`) is published to the **state-backend** at `ui/components/<plugin>/<id>` — the state-backend is the contribution registry (as it is the project store, ADR-021). No core change.
+- **bff aggregates** (`platform/bff.py`): `GET /api/ui` does `state/list ui/components/` + get-each → a slot-grouped descriptor (`explorer`/`command`/`config`); it **hardcodes no view** (seeds only the platform's *own* components once). `POST /api/invoke {capability, data}` is the **generic action path** — any contributed command resolves its capability via the protobuf descriptor pool (json↔proto) and routes through the gateway (C5 + audit). bff manifest gains `state/v1/put`.
+- **Generic shell** (`examples/ui/vscode-platform/`): a VS Code extension that fetches `/api/ui`, renders each slot (explorer→tree with table/row drill-in, command→VS Code command, config→form), and fires actions via `/api/invoke`. **Compile-verified strict** (`tsc`, reusing vscode-rat's toolchain); the rendering needs a running VS Code (only the aggregation is headlessly provable — and is).
+
+**Proven live:** the platform's seeded contributions showed in `/api/ui` (explorer: Lake Tables, Run History; command: Run pipeline); then a **brand-new "cooltool" plugin** published a **config form + a command** to `ui/components/cooltool/*` (via `state/put`) and **both appeared in `/api/ui` with the bff + shell unchanged** (`from cooltool`); `/api/invoke` fired a contributed command generically → `{rowsAffected:0, snapshotId:ui-test}`, audited as `platform-bff → strategy/apply` through the gateway. `make breaking` green; additive (no proto/axis/Go).
+
+So **adding a plugin can add UI** — a view, a command, a config form — by publishing a contribution; the shell + bff never change. The last visible mile (a human opening the VS Code shell) is the only unprovable-here part; the extensibility mechanism beneath it is real + tested. Follow-ons: a `contribute_ui` SDK helper (one-call publish); a registry-introspection capability so the bff reads `contributes` from manifests directly; contribution trust (ties to the marketplace idea).
+
+---
+
 ## 2026-06-03 — lake creds → the secret plugin: all platform secrets in ONE place 🔐
 
 Closed the cred gap Q2 left: the lake DSN + S3 creds no longer sit in `plugins.yaml` — every consumer resolves them from `rat-secret` at point of use (the same pattern `rat-state` already used for its DSN). Now **the only place a credential appears is `rat-secret`'s `RAT_SECRETS`**.
