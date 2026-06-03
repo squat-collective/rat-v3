@@ -66,7 +66,7 @@ func runPlugin(argv []string, out io.Writer) error {
 	case "pack":
 		return runPluginPack(rest, out)
 	case "publish":
-		return fmt.Errorf("`rat plugin publish` is not built yet (ADR-026 next slice — push the verified image to GHCR)")
+		return runPluginPublish(rest, out)
 	default:
 		return fmt.Errorf("unknown `rat plugin %s` (want: init | check | test | pack | publish)", sub)
 	}
@@ -250,6 +250,102 @@ func launchAndProbe(out io.Writer, img string, m *manifest.Manifest) error {
 // manifestLabel is the OCI label `pack` stamps the validated manifest into (base64 YAML), so
 // `rat add <ref>` can read the manifest FROM the image — no separate --manifest (ADR-026 Q05).
 const manifestLabel = "dev.rat.manifest.v1.b64"
+
+// readStampedManifest recovers the manifest from a packed image's label (manifest-from-image).
+func readStampedManifest(image string) (*manifest.Manifest, error) {
+	got, err := exec.Command("podman", "inspect", "--format", "{{ index .Config.Labels \""+manifestLabel+"\" }}", image).Output()
+	if err != nil {
+		return nil, fmt.Errorf("inspect %s: %w", image, err)
+	}
+	b64 := strings.TrimSpace(string(got))
+	if b64 == "" || b64 == "<no value>" {
+		return nil, fmt.Errorf("%s has no stamped manifest — run `rat plugin pack` first, or pass --manifest", image)
+	}
+	raw, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		return nil, fmt.Errorf("decode manifest label: %w", err)
+	}
+	td, err := os.MkdirTemp("", "rat-mf-")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(td)
+	p := filepath.Join(td, "manifest.yaml")
+	if err := os.WriteFile(p, raw, 0o644); err != nil {
+		return nil, err
+	}
+	return manifest.Load(p)
+}
+
+// runPluginPublish ships a VERIFIED plugin image to a registry (ADR-026, the team diff). It
+// reads the manifest (from --manifest or the image's stamped label), RE-VERIFIES the image
+// (launch under I9 + serves — never publish a broken plugin), then tags + pushes it to
+// <registry>/<name>:<version>. The registry is ghcr.io/<owner> in prod, or a local registry:2
+// (localhost:5000, the "local packaging service") — same mechanism, push handles TLS/auth.
+func runPluginPublish(args []string, out io.Writer) error {
+	fs := flag.NewFlagSet("rat plugin publish", flag.ContinueOnError)
+	image := fs.String("image", "", "the local VERIFIED image to publish (from `rat plugin pack`)")
+	registry := fs.String("registry", "", "target registry, e.g. ghcr.io/<owner> or localhost:5000")
+	manifestPath := fs.String("manifest", "", "manifest path (default: read from the image's stamped label)")
+	latest := fs.Bool("latest", false, "also push :latest")
+	insecure := fs.Bool("insecure", false, "skip TLS verification (auto-on for localhost registries)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *image == "" || *registry == "" {
+		return fmt.Errorf("usage: rat plugin publish --image <verified image> --registry <ghcr.io/owner|localhost:5000> [--latest] [--manifest <path>]")
+	}
+
+	var m *manifest.Manifest
+	var err error
+	if *manifestPath != "" {
+		m, err = manifest.Load(*manifestPath)
+	} else {
+		m, err = readStampedManifest(*image)
+	}
+	if err != nil {
+		return err
+	}
+
+	// Never publish a broken plugin: re-run the gate on the image being shipped.
+	if err := launchAndProbe(out, *image, m); err != nil {
+		return err
+	}
+
+	reg := strings.TrimSuffix(*registry, "/")
+	tls := !*insecure && !isLocalRegistry(reg)
+	remote := fmt.Sprintf("%s/%s:%s", reg, m.Metadata.Name, m.Metadata.Version)
+	if err := pushImage(out, *image, remote, tls); err != nil {
+		return err
+	}
+	if *latest {
+		if err := pushImage(out, *image, fmt.Sprintf("%s/%s:latest", reg, m.Metadata.Name), tls); err != nil {
+			return err
+		}
+	}
+	fmt.Fprintf(out, "🚀 published %s (verified) — `rat add %s` to use it\n", remote, remote)
+	return nil
+}
+
+func isLocalRegistry(reg string) bool {
+	return strings.HasPrefix(reg, "localhost") || strings.HasPrefix(reg, "127.0.0.1")
+}
+
+func pushImage(out io.Writer, local, remote string, tls bool) error {
+	if b, err := exec.Command("podman", "tag", local, remote).CombinedOutput(); err != nil {
+		return fmt.Errorf("tag %s %s: %v\n%s", local, remote, err, b)
+	}
+	pushArgs := []string{"push"}
+	if !tls {
+		pushArgs = append(pushArgs, "--tls-verify=false")
+	}
+	pushArgs = append(pushArgs, remote)
+	fmt.Fprintf(out, "pushing %s …\n", remote)
+	if b, err := exec.Command("podman", pushArgs...).CombinedOutput(); err != nil {
+		return fmt.Errorf("push %s: %v\n%s", remote, err, tailString(string(b), 800))
+	}
+	return nil
+}
 
 // runPluginPack is the full gate + the artifact (ADR-026): check → build with the manifest
 // stamped in → launch+probe (test) → tag the VERIFIED, manifest-bearing image. Pass --image

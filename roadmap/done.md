@@ -16,6 +16,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Phase 5 slice 4: `rat plugin publish` — the lifecycle is complete 🚀
+
+The last verb (ADR-026): ship a verified plugin image to a registry (the team diff). `rat plugin publish` (`core/cmd/rat/plugin.go`):
+
+- resolves the manifest from `--manifest` **or the image's stamped label** (`readStampedManifest` — manifest-from-image, ADR-026 Q05);
+- **RE-verifies** the image being shipped (`launchAndProbe` — never publish a broken plugin);
+- tags + `podman push`es to `<registry>/<name>:<version>` (+ `:latest`). Registry = `ghcr.io/<owner>` (prod) or a local **`registry:2`** (`localhost:5000`, the "local packaging service") — same mechanism; push handles TLS/auth (auto-insecure for localhost).
+
+**Proven live end-to-end:** a local `registry:2` came up; `rat plugin pack` made a verified, stamped `localhost/rat/secret:packed`; `rat plugin publish --image … --registry localhost:5000` read the stamped manifest, re-verified (`✓ launches under I9 … serves rat://secret/v1/resolve`), pushed → `🚀 published localhost:5000/rat-secret:0.1.0`; the registry confirmed `{"name":"rat-secret","tags":["0.1.0"]}`. `make core-test` (cmd/rat) + `breaking` green; additive (no proto/axis). *(arrowticket's `TestBulkLegTicket` flaked once on a timing race, passed on rerun — unrelated.)*
+
+🎉 **The plugin authoring lifecycle is COMPLETE:** **`rat plugin init → check → test → pack → publish`** — scaffold (poetry-init) → static gate → launch-verify under I9 → a verified, self-describing image → shipped to a registry, never publishing a broken plugin. Together with the runtime model (launch/route) and the distribution pipeline (rat's own GHCR release), rat now has the three things an ecosystem needs: **author, run, distribute.** Remaining ADR-026 follow-ons: full golden-vector conformance in `test` (Q03), `rat add` reading the stamped manifest (drop `--manifest`), the build-backend + template axes, signing + the marketplace index.
+
+---
+
 ## 2026-06-03 — Phase 5 slice 3: `rat plugin pack` — the verified, manifest-stamped image 📦
 
 The verb that ties authoring together (ADR-026): run the gate AND produce the artifact. `rat plugin pack` (`core/cmd/rat/plugin.go`):
