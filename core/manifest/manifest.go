@@ -69,13 +69,23 @@ func Load(path string) (*Manifest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read manifest %s: %w", path, err)
 	}
-	var m Manifest
-	if err := yaml.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("parse manifest %s: %w", path, err)
+	m, err := Parse(data)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	m.Path = path
+	return m, nil
+}
+
+// Parse parses and validates a manifest from raw YAML bytes (the wire form the live
+// ControlService.RegisterPlugin carries, ADR-027 — same validation as Load, no file).
+func Parse(data []byte) (*Manifest, error) {
+	var m Manifest
+	if err := yaml.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("parse manifest: %w", err)
+	}
 	if err := m.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid manifest %s: %w", path, err)
+		return nil, fmt.Errorf("invalid manifest: %w", err)
 	}
 	return &m, nil
 }

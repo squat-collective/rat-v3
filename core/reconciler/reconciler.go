@@ -13,6 +13,7 @@ package reconciler
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -90,8 +91,8 @@ type Reconciler struct {
 	plugins map[string]*pluginStatus
 }
 
-// New builds a reconciler. The desired set is fixed for the spike (the full core reads
-// it from the state-backend).
+// New builds a reconciler. The desired set seeds the loop; AddDesired/RemoveDesired
+// mutate it at runtime (the live ControlService, ADR-027).
 func New(runtime deploymentruntimev1.DeploymentRuntimeServiceServer, desired []Desired, cfg Config) *Reconciler {
 	if cfg.Clock == nil {
 		cfg.Clock = time.Now
@@ -100,6 +101,55 @@ func New(runtime deploymentruntimev1.DeploymentRuntimeServiceServer, desired []D
 		cfg.Jitter = func(time.Duration) time.Duration { return 0 }
 	}
 	return &Reconciler{runtime: runtime, cfg: cfg, desired: desired, plugins: map[string]*pluginStatus{}}
+}
+
+// AddDesired adds a plugin to the desired set of a RUNNING reconciler (the live
+// ControlService, ADR-027). The next reconcile pass launches + wires it through the
+// UNCHANGED convergence path (Pending → launch → Healthy → Rewire.Bind). Rejects a
+// duplicate name. Concurrency-safe.
+func (r *Reconciler) AddDesired(d Desired) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, x := range r.desired {
+		if x.Name == d.Name {
+			return fmt.Errorf("plugin %q is already in the desired set", d.Name)
+		}
+	}
+	r.desired = append(r.desired, d)
+	return nil
+}
+
+// RemoveDesired drops a plugin from the desired set and tears it down immediately:
+// terminate its instance, unbind its routing (Rewire.Unbind), and forget its status. A
+// no-op if absent. Concurrency-safe.
+func (r *Reconciler) RemoveDesired(ctx context.Context, name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	kept := r.desired[:0]
+	for _, x := range r.desired {
+		if x.Name != name {
+			kept = append(kept, x)
+		}
+	}
+	r.desired = kept
+	if ps := r.plugins[name]; ps != nil {
+		if ps.instanceID != "" {
+			_, _ = r.runtime.Terminate(ctx, &deploymentruntimev1.TerminateRequest{InstanceId: ps.instanceID})
+		}
+		r.unbind(name)
+		delete(r.plugins, name)
+	}
+}
+
+// DesiredNames returns the names currently in the desired set (for ListPlugins).
+func (r *Reconciler) DesiredNames() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]string, 0, len(r.desired))
+	for _, d := range r.desired {
+		out = append(out, d.Name)
+	}
+	return out
 }
 
 // Reconcile runs ONE convergence pass over every desired plugin at now. The leader
