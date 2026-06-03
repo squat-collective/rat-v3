@@ -92,7 +92,13 @@ func LoadPlane(path string) (*Plane, error) {
 	if err := yaml.Unmarshal(data, &rp); err != nil {
 		return nil, fmt.Errorf("parse plane %s: %w", path, err)
 	}
+	return planeFromRaw(&rp, path)
+}
 
+// planeFromRaw validates a parsed plane (from YAML plane.yaml OR TOML rat.toml — both
+// reduce to rawPlane) and builds the ready-to-bring-up Plane. Manifest and (local) image
+// paths resolve relative to the file's directory, so a plane/project is relocatable.
+func planeFromRaw(rp *rawPlane, path string) (*Plane, error) {
 	pl := &Plane{
 		// The instance id (ADR-023) namespaces this daemon's runtime resources (podman
 		// network + container names) so many rats coexist on one machine. Explicit `name:`
