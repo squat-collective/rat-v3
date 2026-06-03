@@ -11,6 +11,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -51,6 +52,20 @@ type marketEntry struct {
 	Requires    []string `json:"requires"`
 	Description string   `json:"description"`
 	source      string   // the marketplace it came from (not serialized)
+	verified    bool     // its source's index signature verified against a pinned key
+}
+
+// trustLabel describes an entry's provenance for display: a locally-built image (trusted by
+// possession), a signature-verified remote, or an unsigned remote.
+func trustLabel(e marketEntry) string {
+	switch {
+	case e.source == "local":
+		return "local"
+	case e.verified:
+		return "signed✓"
+	default:
+		return "unsigned"
+	}
 }
 
 type marketIndex struct {
@@ -59,8 +74,9 @@ type marketIndex struct {
 }
 
 type marketSource struct {
-	Name string `json:"name"`
-	Path string `json:"path"` // a file path or an http(s) URL
+	Name   string `json:"name"`
+	Path   string `json:"path"`             // a file path or an http(s) URL
+	PubKey string `json:"pubkey,omitempty"` // pinned ed25519 public key (base64); enforces the index signature
 }
 
 type marketConfig struct {
@@ -111,23 +127,24 @@ func marketCacheDir() string {
 // marketHTTP has a bounded timeout so a hung host can't wedge every `rat search`.
 var marketHTTP = &http.Client{Timeout: 10 * time.Second}
 
-// fetchSource loads a marketplace index. File paths read directly. URLs are fetched (with a
-// timeout) and cached to disk; on a fetch failure the last cached copy is used as a fallback
-// (returned with a `note`), so a remote index degrades gracefully offline.
-func fetchSource(src marketSource) (data []byte, note string, err error) {
-	if !isURL(src.Path) {
-		b, e := os.ReadFile(src.Path)
-		return b, "", e
-	}
-	cache := filepath.Join(marketCacheDir(), src.Name+".json")
-	resp, e := marketHTTP.Get(src.Path)
+// sourceLoad is the result of loading one marketplace source.
+type sourceLoad struct {
+	data     []byte
+	note     string // a non-fatal warning (e.g. served from cache)
+	verified bool   // the index signature checked out against the pinned key
+}
+
+// getCached fetches one URL (bounded timeout), caching the body to cachePath; on any failure
+// it falls back to the cached copy. Returns (bytes, fromCache, err).
+func getCached(url, cachePath string) (data []byte, fromCache bool, err error) {
+	resp, e := marketHTTP.Get(url)
 	if e == nil {
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			if b, re := io.ReadAll(resp.Body); re == nil {
-				_ = os.MkdirAll(marketCacheDir(), 0o755)
-				_ = os.WriteFile(cache, b, 0o644)
-				return b, "", nil
+				_ = os.MkdirAll(filepath.Dir(cachePath), 0o755)
+				_ = os.WriteFile(cachePath, b, 0o644)
+				return b, false, nil
 			} else {
 				e = re
 			}
@@ -135,10 +152,56 @@ func fetchSource(src marketSource) (data []byte, note string, err error) {
 			e = fmt.Errorf("HTTP %s", resp.Status)
 		}
 	}
-	if b, ce := os.ReadFile(cache); ce == nil { // fetch failed → fall back to cache
-		return b, fmt.Sprintf("⚠ %s unreachable (%v) — using cached copy", src.Name, e), nil
+	if b, ce := os.ReadFile(cachePath); ce == nil {
+		return b, true, nil
 	}
-	return nil, "", fmt.Errorf("fetch %s: %w", src.Path, e)
+	return nil, false, e
+}
+
+// fetchSource loads a marketplace index (file or URL, with offline cache for URLs) and, when
+// the source pins a public key, fetches the detached `<index>.sig` and VERIFIES it. A pinned
+// key with a missing or invalid signature is a hard error — the index is rejected, not used.
+func fetchSource(src marketSource) (sourceLoad, error) {
+	var data []byte
+	var sig, note string
+
+	if !isURL(src.Path) {
+		b, err := os.ReadFile(src.Path)
+		if err != nil {
+			return sourceLoad{}, err
+		}
+		data = b
+		if sb, err := os.ReadFile(src.Path + ".sig"); err == nil {
+			sig = strings.TrimSpace(string(sb))
+		}
+	} else {
+		cache := filepath.Join(marketCacheDir(), src.Name+".json")
+		b, fromCache, err := getCached(src.Path, cache)
+		if err != nil {
+			return sourceLoad{}, fmt.Errorf("fetch %s: %w", src.Path, err)
+		}
+		data = b
+		if fromCache {
+			note = fmt.Sprintf("⚠ %s unreachable — using cached copy", src.Name)
+		}
+		if src.PubKey != "" { // only fetch the sig when a key is pinned
+			if sb, _, err := getCached(src.Path+".sig", cache+".sig"); err == nil {
+				sig = strings.TrimSpace(string(sb))
+			}
+		}
+	}
+
+	res := sourceLoad{data: data, note: note}
+	if src.PubKey != "" {
+		if sig == "" {
+			return sourceLoad{}, fmt.Errorf("source %q pins a key but no signature (%s.sig) was found", src.Name, src.Path)
+		}
+		if err := verifyBytes(src.PubKey, data, sig); err != nil {
+			return sourceLoad{}, fmt.Errorf("source %q signature INVALID: %w", src.Name, err)
+		}
+		res.verified = true
+	}
+	return res, nil
 }
 
 // localEntries: plugin IMAGES on this machine, found by their stamped manifest (ADR-026).
@@ -169,21 +232,22 @@ func localEntries() []marketEntry {
 // of silently dropping it.
 func addedEntries() (entries []marketEntry, warns []string) {
 	for _, src := range loadMarketConfig().Marketplaces {
-		data, note, err := fetchSource(src)
+		res, err := fetchSource(src)
 		if err != nil {
 			warns = append(warns, fmt.Sprintf("⚠ marketplace %q: %v", src.Name, err))
 			continue
 		}
-		if note != "" {
-			warns = append(warns, note)
+		if res.note != "" {
+			warns = append(warns, res.note)
 		}
 		var idx marketIndex
-		if json.Unmarshal(data, &idx) != nil {
+		if json.Unmarshal(res.data, &idx) != nil {
 			warns = append(warns, fmt.Sprintf("⚠ marketplace %q: malformed index", src.Name))
 			continue
 		}
 		for _, e := range idx.Plugins {
 			e.source = src.Name
+			e.verified = res.verified
 			entries = append(entries, e)
 		}
 	}
@@ -230,9 +294,9 @@ func runSearch(args []string, out io.Writer) error {
 		fmt.Fprintf(out, "no plugins match %q (try `rat marketplace add` a marketplace, or `rat plugin pack` a local one)\n", query)
 		return nil
 	}
-	fmt.Fprintf(out, "%-16s %-18s %-9s %s\n", "NAME", "KIND", "SOURCE", "PROVIDES")
+	fmt.Fprintf(out, "%-16s %-18s %-16s %-9s %s\n", "NAME", "KIND", "SOURCE", "TRUST", "PROVIDES")
 	for _, e := range matched {
-		fmt.Fprintf(out, "%-16s %-18s %-9s %s\n", e.Name, e.Kind, e.source, strings.Join(e.Provides, ", "))
+		fmt.Fprintf(out, "%-16s %-18s %-16s %-9s %s\n", e.Name, e.Kind, e.source, trustLabel(e), strings.Join(e.Provides, ", "))
 	}
 	return nil
 }
@@ -277,57 +341,183 @@ func runList(args []string, out io.Writer) error {
 
 func runMarketplace(args []string, out io.Writer) error {
 	sub := "list"
+	var rest []string
 	if len(args) > 0 {
-		sub = args[0]
+		sub, rest = args[0], args[1:]
 	}
 	switch sub {
 	case "add":
-		if len(args) < 2 {
-			return fmt.Errorf("usage: rat marketplace add <name> [<path-or-url>]  (URL optional for a built-in like `official`)")
+		return marketAdd(rest, out)
+	case "list":
+		return marketList(rest, out)
+	case "keygen":
+		return marketKeygen(rest, out)
+	case "sign":
+		return marketSign(rest, out)
+	case "verify":
+		return marketVerify(rest, out)
+	default:
+		return fmt.Errorf("usage: rat marketplace <add|list|keygen|sign|verify>")
+	}
+}
+
+// leadingPositionals peels the non-flag args off the front so a subcommand can take
+// positionals before its flags (Go's flag package otherwise stops at the first positional).
+func leadingPositionals(args []string) (pos, rest []string) {
+	for len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		pos = append(pos, args[0])
+		args = args[1:]
+	}
+	return pos, args
+}
+
+// marketAdd: rat marketplace add <name> [<path-or-url>] [--pubkey <key-or-path>]
+func marketAdd(args []string, out io.Writer) error {
+	pos, rest := leadingPositionals(args)
+	fs := flag.NewFlagSet("rat marketplace add", flag.ContinueOnError)
+	pubkey := fs.String("pubkey", "", "ed25519 public key (base64) or path to a .pub file — pins + enforces the index signature")
+	if err := fs.Parse(rest); err != nil {
+		return err
+	}
+	if len(pos) < 1 {
+		return fmt.Errorf("usage: rat marketplace add <name> [<path-or-url>] [--pubkey <key>]")
+	}
+	name := pos[0]
+	path := ""
+	switch {
+	case len(pos) >= 2:
+		path = pos[1]
+	case wellKnownMarketplaces[name] != "":
+		path = wellKnownMarketplaces[name] // built-in: needs no URL
+	default:
+		return fmt.Errorf("usage: rat marketplace add %s <path-or-url>  (or a built-in: %s)", name, strings.Join(wellKnownNames(), ", "))
+	}
+	key, err := resolveKeyArg(*pubkey)
+	if err != nil {
+		return err
+	}
+	cfg := loadMarketConfig()
+	for _, s := range cfg.Marketplaces {
+		if s.Name == name {
+			return fmt.Errorf("marketplace %q already added", name)
 		}
-		name := args[1]
-		path := ""
-		if len(args) >= 3 {
-			path = args[2]
-		} else if u, ok := wellKnownMarketplaces[name]; ok {
-			path = u // built-in: `rat marketplace add official` needs no URL
-		} else {
-			return fmt.Errorf("usage: rat marketplace add %s <path-or-url>  (or add a built-in: %s)", name, strings.Join(wellKnownNames(), ", "))
+	}
+	cfg.Marketplaces = append(cfg.Marketplaces, marketSource{Name: name, Path: path, PubKey: key})
+	if err := saveMarketConfig(cfg); err != nil {
+		return err
+	}
+	trust := "unsigned"
+	if key != "" {
+		trust = "signature-enforced"
+	}
+	fmt.Fprintf(out, "added marketplace %q → %s  [%s]\n", name, path, trust)
+	return nil
+}
+
+func marketList(_ []string, out io.Writer) error {
+	cfg := loadMarketConfig()
+	fmt.Fprintf(out, "marketplaces:\n  %-12s %s\n", "local", "(plugin images on this machine, via their stamped manifest)")
+	added := map[string]bool{}
+	for _, s := range cfg.Marketplaces {
+		kind := "(file)"
+		if isURL(s.Path) {
+			kind = "(remote)"
 		}
-		cfg := loadMarketConfig()
-		for _, s := range cfg.Marketplaces {
-			if s.Name == name {
-				return fmt.Errorf("marketplace %q already added", name)
-			}
+		trust := ""
+		if s.PubKey != "" {
+			trust = "  🔑 signature-enforced"
 		}
-		cfg.Marketplaces = append(cfg.Marketplaces, marketSource{Name: name, Path: path})
-		if err := saveMarketConfig(cfg); err != nil {
+		fmt.Fprintf(out, "  %-12s %-8s %s%s\n", s.Name, kind, s.Path, trust)
+		added[s.Name] = true
+	}
+	// surface built-ins not yet added, so `official` is discoverable.
+	for _, n := range wellKnownNames() {
+		if !added[n] {
+			fmt.Fprintf(out, "  %-12s %-8s %s  (add with `rat marketplace add %s`)\n", n, "(built-in)", wellKnownMarketplaces[n], n)
+		}
+	}
+	return nil
+}
+
+// marketKeygen: rat marketplace keygen [--out <prefix>] — writes <prefix>.key (private,
+// 0600) + <prefix>.pub (public), prints the public key to pin with `add --pubkey`.
+func marketKeygen(args []string, out io.Writer) error {
+	fs := flag.NewFlagSet("rat marketplace keygen", flag.ContinueOnError)
+	prefix := fs.String("out", "rat-marketplace", "output key prefix (writes <prefix>.key + <prefix>.pub)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	pub, priv, err := genKeypair()
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(*prefix+".key", []byte(priv+"\n"), 0o600); err != nil {
+		return err
+	}
+	if err := os.WriteFile(*prefix+".pub", []byte(pub+"\n"), 0o644); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "wrote %s.key (private — keep secret) + %s.pub\npublic key: %s\n", *prefix, *prefix, pub)
+	return nil
+}
+
+// marketSign: rat marketplace sign <index.json> --key <priv-path-or-b64> — writes the
+// detached <index.json>.sig a consumer verifies against the pinned public key.
+func marketSign(args []string, out io.Writer) error {
+	pos, rest := leadingPositionals(args)
+	fs := flag.NewFlagSet("rat marketplace sign", flag.ContinueOnError)
+	keyArg := fs.String("key", "", "ed25519 private key (base64) or path to a .key file")
+	if err := fs.Parse(rest); err != nil {
+		return err
+	}
+	if len(pos) < 1 || *keyArg == "" {
+		return fmt.Errorf("usage: rat marketplace sign <index.json> --key <priv-path-or-b64>")
+	}
+	priv, err := resolveKeyArg(*keyArg)
+	if err != nil {
+		return err
+	}
+	data, err := os.ReadFile(pos[0])
+	if err != nil {
+		return err
+	}
+	sig, err := signBytes(priv, data)
+	if err != nil {
+		return err
+	}
+	sigPath := pos[0] + ".sig"
+	if err := os.WriteFile(sigPath, []byte(sig+"\n"), 0o644); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "signed %s → %s\n", pos[0], sigPath)
+	return nil
+}
+
+// marketVerify: rat marketplace verify <name> — re-fetch + re-check a configured source's
+// signature on demand (the same check `search`/`add` run, surfaced explicitly).
+func marketVerify(args []string, out io.Writer) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: rat marketplace verify <name>")
+	}
+	name := args[0]
+	for _, s := range loadMarketConfig().Marketplaces {
+		if s.Name != name {
+			continue
+		}
+		if s.PubKey == "" {
+			return fmt.Errorf("marketplace %q has no pinned key (re-add with --pubkey to enforce signatures)", name)
+		}
+		res, err := fetchSource(s)
+		if err != nil {
 			return err
 		}
-		fmt.Fprintf(out, "added marketplace %q → %s\n", name, path)
-		return nil
-	case "list":
-		cfg := loadMarketConfig()
-		fmt.Fprintf(out, "marketplaces:\n  %-12s %s\n", "local", "(plugin images on this machine, via their stamped manifest)")
-		added := map[string]bool{}
-		for _, s := range cfg.Marketplaces {
-			kind := "(file)"
-			if isURL(s.Path) {
-				kind = "(remote)"
-			}
-			fmt.Fprintf(out, "  %-12s %-8s %s\n", s.Name, kind, s.Path)
-			added[s.Name] = true
+		if res.note != "" {
+			fmt.Fprintln(out, res.note)
 		}
-		// surface built-ins not yet added, so `official` is discoverable.
-		for _, n := range wellKnownNames() {
-			if !added[n] {
-				fmt.Fprintf(out, "  %-12s %-8s %s  (add with `rat marketplace add %s`)\n", n, "(built-in)", wellKnownMarketplaces[n], n)
-			}
-		}
+		fmt.Fprintf(out, "✓ marketplace %q signature verified against its pinned key\n", name)
 		return nil
-	default:
-		return fmt.Errorf("usage: rat marketplace <add|list>")
 	}
+	return fmt.Errorf("marketplace %q not found (`rat marketplace list`)", name)
 }
 
 // addMarketEntry adds a marketplace provider to the project (the `rat add --with-deps`
@@ -369,7 +559,7 @@ func addMarketEntry(out io.Writer, tomlPath, dir string, e marketEntry) (bool, e
 	if _, err := f.WriteString(b.String()); err != nil {
 		return false, err
 	}
-	fmt.Fprintf(out, "  + %s (%s, from %s) — provides %s\n", e.Name, e.Image, e.source, strings.Join(e.Provides, ", "))
+	fmt.Fprintf(out, "  + %s (%s, from %s [%s]) — provides %s\n", e.Name, e.Image, e.source, trustLabel(e), strings.Join(e.Provides, ", "))
 	return true, nil
 }
 
@@ -414,7 +604,7 @@ func reportUnsatisfiedSuggesting(out io.Writer, miss []missingDep) {
 	fmt.Fprintf(out, "⚠ %d unsatisfied dependenc%s:\n", len(miss), plural(len(miss)))
 	for _, d := range miss {
 		if e, ok := providerFor(entries, d.Capability); ok {
-			fmt.Fprintf(out, "   %s requires %s → rat add --image %s  (%s, from %s)\n", d.Plugin, d.Capability, e.Image, e.Name, e.source)
+			fmt.Fprintf(out, "   %s requires %s → rat add --image %s  (%s, from %s [%s])\n", d.Plugin, d.Capability, e.Image, e.Name, e.source, trustLabel(e))
 		} else {
 			fmt.Fprintf(out, "   %s requires %s — no marketplace provider (add a %s-axis plugin)\n", d.Plugin, d.Capability, capAxisOf(d.Capability))
 		}

@@ -168,6 +168,7 @@ func runAdd(args []string, out io.Writer) error {
 	manifest := fs.String("manifest", "", "path to the plugin manifest (required)")
 	isolation := fs.String("isolation", "i9", "isolation profile")
 	withDeps := fs.Bool("with-deps", false, "auto-add marketplace providers for any unsatisfied `requires` (transitive)")
+	requireSigned := fs.Bool("require-signed", false, "with --with-deps, only auto-add providers from signature-verified marketplaces")
 	var envs multiFlag
 	fs.Var(&envs, "env", "env var KEY=VALUE (repeatable; NEVER secrets)")
 	if err := fs.Parse(args); err != nil {
@@ -256,7 +257,7 @@ func runAdd(args []string, out io.Writer) error {
 	//   --with-deps  → auto-add the marketplace provider for each (transitively).
 	//   otherwise    → just surface what's now unsatisfied, with a suggestion.
 	if *withDeps {
-		return resolveWithDeps(out, tomlPath, dir)
+		return resolveWithDeps(out, tomlPath, dir, *requireSigned)
 	}
 	if pl, err := LoadProject(tomlPath); err == nil {
 		reportUnsatisfiedSuggesting(out, unsatisfiedRequires(manifestsOf(pl)))
@@ -277,7 +278,7 @@ func manifestsOf(pl *Plane) []*manifestpkg.Manifest {
 // `requires` until every one has a provider in the project — or no marketplace can supply
 // one. Transitive: a provider added this round has its OWN `requires` resolved next round
 // (e.g. add rat-scheduler → pulls rat-state + dbt-runner → rat-state pulls rat-secret).
-func resolveWithDeps(out io.Writer, tomlPath, dir string) error {
+func resolveWithDeps(out io.Writer, tomlPath, dir string, requireSigned bool) error {
 	entries, warns := allMarketEntries()
 	for _, w := range warns {
 		fmt.Fprintln(out, w)
@@ -298,6 +299,12 @@ func resolveWithDeps(out io.Writer, tomlPath, dir string) error {
 			if !ok {
 				continue
 			}
+			if requireSigned && !e.verified {
+				// --require-signed: refuse to auto-pull an unverified provider; leave the
+				// dep unsatisfied so it surfaces in the final report.
+				fmt.Fprintf(out, "  ✗ skipping %s for %s — source %q is unsigned (--require-signed)\n", e.Name, d.Capability, e.source)
+				continue
+			}
 			added, err := addMarketEntry(out, tomlPath, dir, e)
 			if err != nil {
 				return err
@@ -305,7 +312,7 @@ func resolveWithDeps(out io.Writer, tomlPath, dir string) error {
 			progress = progress || added
 		}
 		if !progress {
-			// what's left has no marketplace provider — report it (with the axis hint).
+			// what's left has no (acceptable) marketplace provider — report it.
 			reportUnsatisfiedSuggesting(out, miss)
 			return nil
 		}
