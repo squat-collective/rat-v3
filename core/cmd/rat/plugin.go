@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"io"
@@ -62,8 +63,10 @@ func runPlugin(argv []string, out io.Writer) error {
 		return runPluginCheck(rest, out)
 	case "test":
 		return runPluginTest(rest, out)
-	case "pack", "publish":
-		return fmt.Errorf("`rat plugin %s` is not built yet (ADR-026 next slice — verified image / GHCR)", sub)
+	case "pack":
+		return runPluginPack(rest, out)
+	case "publish":
+		return fmt.Errorf("`rat plugin publish` is not built yet (ADR-026 next slice — push the verified image to GHCR)")
 	default:
 		return fmt.Errorf("unknown `rat plugin %s` (want: init | check | test | pack | publish)", sub)
 	}
@@ -182,6 +185,17 @@ func runPluginTest(args []string, out io.Writer) error {
 		}
 	}
 
+	if err := launchAndProbe(out, img, m); err != nil {
+		return err
+	}
+	fmt.Fprintln(out, "  (golden-vector conformance is the next refinement — ADR-026 Q03)")
+	return nil
+}
+
+// launchAndProbe is the verified-plugin core (shared by test + pack): launch the image under
+// the real I9 profile, wait healthy, and verify it serves every capability it declares (a
+// smoke invoke that must not be Unimplemented). Returns an error on the first failure.
+func launchAndProbe(out io.Writer, img string, m *manifest.Manifest) error {
 	iso, _ := isolationProfile("i9")
 	rt := deploymentruntime.NewPodman()
 	ctx := context.Background()
@@ -194,7 +208,6 @@ func runPluginTest(args []string, out io.Writer) error {
 	}
 	defer rt.Terminate(ctx, &deploymentruntimev1.TerminateRequest{InstanceId: lr.GetInstanceId()})
 
-	// 1. launches under I9 + becomes healthy (non-root, cap-drop, read-only — the runtime enforces it).
 	deadline := time.Now().Add(30 * time.Second)
 	healthy := false
 	for time.Now().Before(deadline) {
@@ -210,7 +223,6 @@ func runPluginTest(args []string, out io.Writer) error {
 	}
 	fmt.Fprintf(out, "✓ launches under I9 (non-root · cap-drop ALL · read-only rootfs) + healthy at %s\n", lr.GetEndpoint())
 
-	// 2. serves what it declares: each `provides` capability responds (NOT Unimplemented).
 	conn, err := grpc.NewClient(lr.GetEndpoint(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
@@ -232,7 +244,84 @@ func runPluginTest(args []string, out io.Writer) error {
 	}
 	fmt.Fprintf(out, "✓ %s PASSED — launches under I9 + serves its %d declared capabilit%s\n",
 		m.Metadata.Name, len(m.ProvidesCaps()), plural(len(m.ProvidesCaps())))
-	fmt.Fprintln(out, "  (golden-vector conformance is the next refinement — ADR-026 Q03)")
+	return nil
+}
+
+// manifestLabel is the OCI label `pack` stamps the validated manifest into (base64 YAML), so
+// `rat add <ref>` can read the manifest FROM the image — no separate --manifest (ADR-026 Q05).
+const manifestLabel = "dev.rat.manifest.v1.b64"
+
+// runPluginPack is the full gate + the artifact (ADR-026): check → build with the manifest
+// stamped in → launch+probe (test) → tag the VERIFIED, manifest-bearing image. Pass --image
+// to stamp+verify an already-built image instead of building from a Dockerfile.
+func runPluginPack(args []string, out io.Writer) error {
+	fs := flag.NewFlagSet("rat plugin pack", flag.ContinueOnError)
+	from := fs.String("image", "", "stamp+verify an existing image (else build the dir's Dockerfile)")
+	manifestPath := fs.String("manifest", "", "manifest path (default <dir>/manifest.yaml)")
+	tag := fs.String("tag", "", "the verified image tag (default rat/<name>:<version>)")
+	dir := "."
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		dir, args = args[0], args[1:]
+	}
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	mp := *manifestPath
+	if mp == "" {
+		mp = filepath.Join(dir, "manifest.yaml")
+	}
+	m, err := manifest.Load(mp)
+	if err != nil {
+		return err
+	}
+	if !knownKinds[m.Kind] {
+		return fmt.Errorf("pack: unknown kind %q", m.Kind)
+	}
+	finalTag := *tag
+	if finalTag == "" {
+		finalTag = fmt.Sprintf("localhost/rat/%s:%s", m.Metadata.Name, m.Metadata.Version)
+	}
+
+	raw, err := os.ReadFile(mp)
+	if err != nil {
+		return err
+	}
+	b64 := base64.StdEncoding.EncodeToString(raw)
+
+	// Build the verified image with the manifest stamped as a label.
+	if *from != "" {
+		// derive from an existing image: FROM <image> + the label, built in a temp context.
+		td, err := os.MkdirTemp("", "rat-pack-")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(td)
+		df := fmt.Sprintf("FROM %s\nLABEL %s=%s\n", *from, manifestLabel, b64)
+		if err := os.WriteFile(filepath.Join(td, "Dockerfile"), []byte(df), 0o644); err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "stamping %s → %s …\n", *from, finalTag)
+		if b, err := exec.Command("podman", "build", "-t", finalTag, td).CombinedOutput(); err != nil {
+			return fmt.Errorf("podman build: %v\n%s", err, tailString(string(b), 1500))
+		}
+	} else {
+		fmt.Fprintf(out, "building %s (manifest stamped) …\n", finalTag)
+		if b, err := exec.Command("podman", "build", "--label", manifestLabel+"="+b64, "-t", finalTag, dir).CombinedOutput(); err != nil {
+			return fmt.Errorf("podman build: %v\n%s", err, tailString(string(b), 1500))
+		}
+	}
+
+	// Verify the stamped image (the test gate) on the FINAL tag.
+	if err := launchAndProbe(out, finalTag, m); err != nil {
+		return err
+	}
+
+	// Confirm the manifest is readable back from the image (what `rat add <ref>` will do).
+	got, err := exec.Command("podman", "inspect", "--format", "{{ index .Config.Labels \""+manifestLabel+"\" }}", finalTag).Output()
+	if err != nil || strings.TrimSpace(string(got)) != b64 {
+		return fmt.Errorf("pack: manifest label not readable back from %s", finalTag)
+	}
+	fmt.Fprintf(out, "📦 packed %s — verified + manifest stamped (rat add %s reads it; rat plugin publish ships it)\n", finalTag, finalTag)
 	return nil
 }
 

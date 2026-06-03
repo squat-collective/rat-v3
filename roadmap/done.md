@@ -16,6 +16,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Phase 5 slice 3: `rat plugin pack` — the verified, manifest-stamped image 📦
+
+The verb that ties authoring together (ADR-026): run the gate AND produce the artifact. `rat plugin pack` (`core/cmd/rat/plugin.go`):
+
+- **stamps the validated manifest into the image** as the OCI label `dev.rat.manifest.v1.b64` (base64 YAML) — either building the dir's Dockerfile `--label` or, with `--image`, deriving `FROM <existing> + LABEL` in a temp context;
+- runs the **gate** on the FINAL tag (`launchAndProbe`, extracted + shared with `test`: launch under I9 → healthy → serves every declared capability);
+- **reads the manifest back** from the image to confirm it's recoverable, then tags the verified image (default `rat/<name>:<version>`).
+
+This lands the **manifest-from-image** path (ADR-026 Q05): a packed image carries its own manifest, so `rat add <ref>` can read it (dropping `--manifest`). **Proven live:** `rat plugin pack --image rat/secret:dev --manifest …/secret.plugin.yaml --tag localhost/rat/secret:packed` → stamped, `✓ launches under I9 … serves rat://secret/v1/resolve`, `📦 packed … — verified + manifest stamped`; `podman inspect … | base64 -d` returned the full manifest. `make core-test` + `breaking` green; additive.
+
+The authoring loop is now **`rat plugin init → check → test → pack`** — scaffold → static gate → launch-verify → a verified, self-describing image. Only **`publish`** (push the verified image → GHCR, the team diff) remains; then full golden-vector conformance (ADR-026 Q03) and `rat add` reading the stamped manifest.
+
+---
+
 ## 2026-06-03 — Phase 5 slice 2: `rat plugin test` — the verified-plugin gate (launch + serves) 🔬
 
 The strong gate (ADR-026): a plugin isn't "verified" because it built — it's verified because it **launches under I9 and actually serves what it declares**. `rat plugin test` (`core/cmd/rat/plugin.go`):
