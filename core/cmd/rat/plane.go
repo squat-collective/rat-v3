@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/rat-dev/rat/core/manifest"
@@ -16,7 +17,10 @@ import (
 // RAT plane. This file parses + validates it and translates it into the
 // supervisor.PluginSpec list the assembly in main.go brings up.
 //
-//	addr: 0.0.0.0:7777          # gateway listen address (gRPC)
+//	name: my-project            # instance id (ADR-023); else derived from this file's dir.
+//	                            # namespaces podman resources so many rats coexist.
+//	addr: unix:./.rat/daemon.sock  # gateway listen address: a per-project UNIX SOCKET
+//	                            # (ADR-023, no port war) or a TCP host:port (":0" = auto-port).
 //	runtime: local              # local | podman
 //	health_timeout: 10s         # per-plugin readiness wait (launch mode)
 //	plugins:
@@ -38,6 +42,7 @@ const (
 
 // rawPlane / rawPlugin / rawLaunch mirror the on-disk YAML before validation.
 type rawPlane struct {
+	Name          string      `yaml:"name"`
 	Addr          string      `yaml:"addr"`
 	Runtime       string      `yaml:"runtime"`
 	HealthTimeout string      `yaml:"health_timeout"`
@@ -61,6 +66,7 @@ type rawLaunch struct {
 // runtime, the per-plugin readiness wait, and the supervisor specs (launch providers
 // + register-only drivers).
 type Plane struct {
+	Instance      string // per-project instance id (ADR-023) — namespaces runtime resources
 	Addr          string
 	Runtime       string
 	HealthTimeout time.Duration
@@ -82,6 +88,10 @@ func LoadPlane(path string) (*Plane, error) {
 	}
 
 	pl := &Plane{
+		// The instance id (ADR-023) namespaces this daemon's runtime resources (podman
+		// network + container names) so many rats coexist on one machine. Explicit `name:`
+		// wins; else derive from the plane file's directory (a project is a directory).
+		Instance:      instanceID(orDefault(rp.Name, filepath.Base(filepath.Dir(absPath(path))))),
 		Addr:          orDefault(rp.Addr, defaultAddr),
 		Runtime:       orDefault(rp.Runtime, defaultRuntime),
 		HealthTimeout: defaultHealthTimeout,
@@ -193,6 +203,35 @@ func resolve(dir, path string) string {
 		return path
 	}
 	return filepath.Join(dir, path)
+}
+
+func absPath(path string) string {
+	if abs, err := filepath.Abs(path); err == nil {
+		return abs
+	}
+	return path
+}
+
+// instanceID sanitizes a name into a podman-legal, lowercase resource id (used as a
+// network suffix + container-name prefix). Non-alnum bytes → '-'; empty → "rat".
+func instanceID(name string) string {
+	b := make([]byte, 0, len(name))
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		switch {
+		case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-', c == '_':
+			b = append(b, c)
+		case c >= 'A' && c <= 'Z':
+			b = append(b, c+('a'-'A')) // lowercase
+		default:
+			b = append(b, '-')
+		}
+	}
+	s := strings.Trim(string(b), "-")
+	if s == "" {
+		return "rat"
+	}
+	return s
 }
 
 func orDefault(v, def string) string {

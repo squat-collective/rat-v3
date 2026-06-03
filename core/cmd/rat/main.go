@@ -18,6 +18,8 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -69,7 +71,7 @@ func serve(planePath string) error {
 	if err != nil {
 		return err
 	}
-	rt, err := newRuntime(pl.Runtime)
+	rt, err := newRuntime(pl.Runtime, pl.Instance)
 	if err != nil {
 		return err
 	}
@@ -82,7 +84,7 @@ func serve(planePath string) error {
 
 	srv := grpc.NewServer()
 	corev1.RegisterCapabilityInvokeServiceServer(srv, plane.Gateway)
-	lis, err := net.Listen("tcp", pl.Addr)
+	lis, err := listen(pl.Addr)
 	if err != nil {
 		drain(srv, plane)
 		return fmt.Errorf("listen on %s: %w", pl.Addr, err)
@@ -104,6 +106,29 @@ func serve(planePath string) error {
 		}
 		return nil
 	}
+}
+
+// listen opens the daemon's control listener. A "unix:<path>" address binds a per-project
+// UNIX SOCKET (ADR-023): many rat daemons coexist on one machine with no port war, and
+// filesystem permissions are the access control. Any other address is a TCP host:port
+// (":0" auto-assigns a free port — the collision-free alternative when a network endpoint
+// is actually needed). For a unix socket we ensure the parent dir exists and remove a stale
+// socket a crashed prior daemon may have left.
+func listen(addr string) (net.Listener, error) {
+	if path, ok := strings.CutPrefix(addr, "unix:"); ok {
+		path = strings.TrimPrefix(path, "//") // tolerate unix://<path> and unix:<path>
+		if abs, err := filepath.Abs(path); err == nil {
+			path = abs
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return nil, fmt.Errorf("create socket dir: %w", err)
+		}
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return nil, fmt.Errorf("remove stale socket %s: %w", path, err)
+		}
+		return net.Listen("unix", path) // Go unlinks the socket on Close (SetUnlinkOnClose default)
+	}
+	return net.Listen("tcp", addr)
 }
 
 // runningPlane is the gateway the daemon serves + a teardown func. Both modes — launch
@@ -262,19 +287,22 @@ func selfGatewayAddr(pl *Plane) string {
 }
 
 // newRuntime selects the deployment-runtime axis plugin the plane asks for. Phase A
-// defaults to local-process (the `chmod +x ./rat` runtime); podman is the B/C path.
-func newRuntime(name string) (deploymentruntimev1.DeploymentRuntimeServiceServer, error) {
+// defaults to local-process (the `chmod +x ./rat` runtime); podman is the B/C path. The
+// instance id (ADR-023) namespaces SIBLING-mode runtime resources so many rats coexist.
+func newRuntime(name, instance string) (deploymentruntimev1.DeploymentRuntimeServiceServer, error) {
 	switch name {
 	case "local":
 		return deploymentruntime.NewLocalProcess(), nil
 	case "podman":
-		// $RAT_PODMAN_NETWORK switches the podman runtime to SIBLING mode (ADR-022
-		// socket-mount): rat is itself a container driving the host's podman over a
-		// mounted socket, so it launches plugins onto a shared network and dials them by
-		// name. Unset (rat on the host) → the default host-publish behavior. The SAME
-		// plane file works both ways; only this environment knob differs.
+		// SIBLING mode (ADR-022 socket-mount): rat is itself a container driving the host's
+		// podman over a mounted socket, so it launches plugins onto the shared network
+		// $RAT_PODMAN_NETWORK (the operator gives each rat its own) and dials them by name.
+		// To let MANY rats coexist (ADR-023), container names are prefixed with the instance
+		// id — so two daemons never collide on a name like "rat-state-1" even if they share a
+		// network. Host mode (no network) publishes to ephemeral loopback ports + lets podman
+		// auto-name, which already coexists.
 		if net := os.Getenv("RAT_PODMAN_NETWORK"); net != "" {
-			return deploymentruntime.NewPodmanNetworked(net), nil
+			return deploymentruntime.NewPodmanInstanced(net, instance), nil
 		}
 		return deploymentruntime.NewPodman(), nil
 	default:
