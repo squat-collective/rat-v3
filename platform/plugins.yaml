@@ -19,13 +19,14 @@ plugins:
         # run the `rat apply`'d project (fetched from the state-backend each run); the baked
         # sample is the fallback until something is applied. RAT_GATEWAY/RAT_PLUGIN_NAME injected.
         RAT_PROJECT_KEY: "projects/medallion"
-        # Q2: materialize the medallion into the SHARED DuckLake (Postgres catalog + S3 data)
-        # so other plugins/UI can read the tables. (Creds here for now; secret-plugin is the follow-on.)
-        RAT_LAKE_PG: "dbname=ducklake host=host.containers.internal port=55440 user=ducklake password=ducklake"
+        # Q2: materialize the medallion into the SHARED DuckLake. The creds are REFS the
+        # runner resolves from the secret plugin before running dbt (no creds in this file);
+        # only non-secret config (data path, endpoint) is literal.
+        RAT_LAKE_PG_REF: "ref://lake/pg-dsn"
+        RAT_S3_KEY_REF: "ref://lake/s3-key"
+        RAT_S3_SECRET_REF: "ref://lake/s3-secret"
         RAT_LAKE_DATA: "s3://rat/lake/"
         RAT_S3_ENDPOINT: "host.containers.internal:59010"
-        RAT_S3_KEY: "minioadmin"
-        RAT_S3_SECRET: "minioadmin"
 
   - name: rat-secret
     manifest: ./manifests/secret.plugin.yaml
@@ -35,7 +36,7 @@ plugins:
       env:
         # The platform's secrets live HERE only (tenant -> ref -> value). Consumers hold a ref,
         # never the value. Production swaps this env store for Vault/KMS behind the same Resolve.
-        RAT_SECRETS: '{"acme": {"ref://state/pg-dsn": "host=host.containers.internal port=55440 dbname=ducklake user=ducklake password=ducklake"}}'
+        RAT_SECRETS: '{"acme": {"ref://state/pg-dsn": "host=host.containers.internal port=55440 dbname=ducklake user=ducklake password=ducklake", "ref://lake/pg-dsn": "dbname=ducklake host=host.containers.internal port=55440 user=ducklake password=ducklake", "ref://lake/s3-key": "minioadmin", "ref://lake/s3-secret": "minioadmin"}}'
 
   - name: rat-state
     manifest: ./manifests/state.plugin.yaml
@@ -66,12 +67,13 @@ plugins:
       env:
         RAT_PLUGIN_NAME: "platform-bff"
         # RAT_GATEWAY injected by rat per topology (see rat-scheduler above)
-        # the shared lake (read-only) for the bulk data leg — /api/tables, /api/table/<name> (Q2)
-        RAT_LAKE_PG: "dbname=ducklake host=host.containers.internal port=55440 user=ducklake password=ducklake"
+        # the shared lake (read-only) for the bulk data leg — /api/tables, /api/table/<name> (Q2).
+        # Creds are REFS the bff resolves from the secret plugin (no creds in this file).
+        RAT_LAKE_PG_REF: "ref://lake/pg-dsn"
+        RAT_S3_KEY_REF: "ref://lake/s3-key"
+        RAT_S3_SECRET_REF: "ref://lake/s3-secret"
         RAT_LAKE_DATA: "s3://rat/lake/"
         RAT_S3_ENDPOINT: "host.containers.internal:59010"
-        RAT_S3_KEY: "minioadmin"
-        RAT_S3_SECRET: "minioadmin"
 
   - name: platform-runner
     manifest: ./manifests/runner.plugin.yaml

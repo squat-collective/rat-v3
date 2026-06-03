@@ -21,11 +21,13 @@ import shutil
 import subprocess
 import tarfile
 import threading
+import time
 
 import grpc
 
 from rat.common.v1 import context_pb2, data_pb2
 from rat.core.v1 import invoke_pb2, invoke_pb2_grpc
+from rat.secret.v1 import secret_pb2
 from rat.state.v1 import state_pb2
 from rat.strategy.v1 import strategy_pb2, strategy_pb2_grpc
 
@@ -43,12 +45,46 @@ class DbtRunner:
         self.extract_root = "/tmp/rat-applied-project"
         self._lock = threading.Lock()
         self._applied_rev = None  # the state revision currently extracted (re-extract on change)
+        self._secret_env = None   # resolved *_REF env (cached after the first apply)
 
     def _md(self):
         rc = context_pb2.RequestContext(
             trace=context_pb2.TraceContext(traceparent="00-" + "a" * 32 + "-" + "c" * 16 + "-01", correlation_id="dbt-runner"),
             identity=context_pb2.Identity(caller_plugin=self.caller, tenant=self.tenant))
         return [("rat-callmeta-bin", rc.SerializeToString())]
+
+    def _resolve(self, ref):
+        """Resolve a secret ref (ref://…) to its value via the gateway's secret-backend
+        (rat://secret/v1/resolve — C5-authorized + audited). Retries while the secret plugin
+        finishes wiring at boot."""
+        stub = invoke_pb2_grpc.CapabilityInvokeServiceStub(grpc.insecure_channel(self.gateway))
+        last = "unknown"
+        for _ in range(60):
+            try:
+                r = stub.Invoke(invoke_pb2.InvokeRequest(
+                    capability="rat://secret/v1/resolve",
+                    payload=secret_pb2.ResolveRequest(secret_ref=ref).SerializeToString()), metadata=self._md())
+                resp = secret_pb2.ResolveResponse()
+                resp.ParseFromString(r.result)
+                if resp.found:
+                    return resp.value.decode("utf-8")
+                last = f"secret {ref!r} not found (absent or not authorized)"
+            except grpc.RpcError as e:
+                last = f"{e.code()}: {e.details()}"
+            time.sleep(1)
+        raise RuntimeError(f"could not resolve {ref!r}: {last}")
+
+    def _resolved_secret_env(self):
+        """Every `<NAME>_REF=ref://…` env var becomes `<NAME>=<resolved value>` for the dbt
+        subprocess — so the dbt profile reads plain env_var('<NAME>') while the credential
+        lives only on the secret plugin (no creds in plugins.yaml). Resolved once, cached."""
+        if self._secret_env is None:
+            extra = {}
+            for k, v in os.environ.items():
+                if k.endswith("_REF") and v.startswith("ref://"):
+                    extra[k[:-4]] = self._resolve(v)  # strip the _REF suffix
+            self._secret_env = extra
+        return self._secret_env
 
     def _applied_project(self):
         """The project dir to run: the `rat apply`'d project from the state-backend, or None
@@ -88,13 +124,16 @@ class DbtRunner:
         # older protobuf than the RAT gRPC SDK (7.35), so the two can't share one env —
         # isolating dbt behind a binary boundary is the clean fix.
         dbt = os.environ.get("RAT_DBT_BIN", "dbt")
+        # the dbt profile reads the lake creds via env_var(); resolve any *_REF from the
+        # secret plugin into the subprocess env so no credential lives in plugins.yaml.
+        env = {**os.environ, **self._resolved_secret_env()}
         proc = subprocess.run(
             [dbt, "build",
              "--project-dir", project,
              "--profiles-dir", profiles,
              "--target-path", "/tmp/dbt-target",
              "--log-path", "/tmp/dbt-logs"],
-            capture_output=True, text=True)
+            capture_output=True, text=True, env=env)
         print((proc.stdout or "")[-4000:], flush=True)
         if proc.stderr:
             print((proc.stderr)[-1000:], flush=True)
