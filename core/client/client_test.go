@@ -1,4 +1,4 @@
-package main
+package client
 
 // ratctl_test.go proves the client→orchestrator path end to end: it brings up a real
 // state plane in-process (the stateplugin launched via the local-process runtime),
@@ -48,7 +48,7 @@ func serveStatePlane(t *testing.T) string {
 	t.Helper()
 	bin := filepath.Join(t.TempDir(), "stateplugin")
 	build := exec.Command("go", "build", "-o", bin, "./testplugins/stateplugin")
-	build.Dir = "../.." // the core module root (this test runs in core/cmd/ratctl)
+	build.Dir = ".." // the core module root (this test runs in core/client)
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build stateplugin: %v\n%s", err, out)
 	}
@@ -138,7 +138,7 @@ func TestRatctlCallsThroughGateway(t *testing.T) {
 
 	// (1) Authorized command: rat-caller requires get → routes to the launched plugin.
 	var out bytes.Buffer
-	err := run([]string{"call", "rat://state/v1/get", "--as", "rat-caller", "--data", `{"key":"k1"}`, "--addr", addr}, &out)
+	err := Run([]string{"call", "rat://state/v1/get", "--as", "rat-caller", "--data", `{"key":"k1"}`, "--addr", addr}, &out)
 	if err != nil {
 		t.Fatalf("ratctl call get (authorized): %v", err)
 	}
@@ -153,7 +153,7 @@ func TestRatctlCallsThroughGateway(t *testing.T) {
 	// (2) Undeclared command: rat-caller does NOT require put → C5 deny, surfaced to
 	// the client as a PermissionDenied gRPC status.
 	var out2 bytes.Buffer
-	err = run([]string{"call", "rat://state/v1/put", "--as", "rat-caller", "--data", `{"key":"k1","value":"eA=="}`, "--addr", addr}, &out2)
+	err = Run([]string{"call", "rat://state/v1/put", "--as", "rat-caller", "--data", `{"key":"k1","value":"eA=="}`, "--addr", addr}, &out2)
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("ratctl call put (undeclared) = %v, want PermissionDenied", err)
 	}
