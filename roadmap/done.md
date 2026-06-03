@@ -16,6 +16,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 🎉 PHASE 5 SEALED — `rat/4.0` (plugin authoring & packaging)
+
+Phase 5 — the **plugin authoring toolkit** (ADR-026) — is **sealed at `rat/4.0`** (`phase-5` merged to `main`, annotated tag). rat now has the third pillar an ecosystem needs (**author**, beside **run** and **distribute**): the complete lifecycle **`rat plugin init → check → test → pack → publish`**, all proven live —
+
+- **`init`** — scaffolds a ready-to-build folder per kind (manifest + SDK stub + Dockerfile + README + **portable CI/CD**), poetry-init style;
+- **`check`** — the static gate: manifest schema + per-kind + **dependency coherence** (provides/requires name *real* capabilities; kind matches its axis; cross-axis requires allowed);
+- **`test`** — launches the image under the **real I9 profile** + verifies it **serves** every declared capability (fails on `Unimplemented`);
+- **`pack`** — builds a **verified, manifest-stamped** image (manifest-from-image; `rat add <ref>` can read it);
+- **`publish`** — re-verifies + pushes to a registry (`ghcr.io` or a local `registry:2`), **never shipping a broken plugin**.
+
+Builds on the sealed line: **`rat/2.0`** core · **`rat/2.5`** platform + per-project daemon UX · **`rat/3.0`** multi-surface UI · **`rat/3.5`** distribution · **`rat/4.0`** authoring. Additive throughout — `make breaking` clean, no proto/axis change since `rat/2.0`. **Open follow-ons (ADR-026):** golden-vector conformance in `test` (Q03), `rat add` reading the stamped manifest, the deploy-time satisfiability resolver, the build-backend + template axes, signing + the marketplace index.
+
+---
+
 ## 2026-06-03 — Phase 5 slice 5: `rat plugin check` now validates DEPENDENCIES 🔗
 
 Closed the ADR-026 §3 gap — `check` was syntax-only on deps; now it validates them. `check` verifies (`core/cmd/rat/plugin.go`):
