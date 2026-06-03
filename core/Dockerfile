@@ -19,8 +19,11 @@ COPY core/ ./core/
 COPY contracts/sdks/go/ ./contracts/sdks/go/
 WORKDIR /src/core
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOFLAGS=-mod=mod GOSUMDB=off
+# VERSION is injected at release time (the GHCR pipeline passes --build-arg VERSION=<tag>),
+# so the daemon image's `rat version` reports the release tag. Defaults to "dev".
+ARG VERSION=dev
 # the daemon + the Phase-A demo state plugin (so the image runs without extra mounts)
-RUN go build -trimpath -ldflags="-s -w" -o /out/rat ./cmd/rat \
+RUN go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o /out/rat ./cmd/rat \
  && go build -trimpath -ldflags="-s -w" -o /out/stateplugin ./testplugins/stateplugin
 
 # ---- runtime: minimal alpine, NON-ROOT -----------------------------------------------

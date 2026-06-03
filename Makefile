@@ -15,6 +15,13 @@ BUF_IMAGE ?= docker.io/bufbuild/buf:1.47.2
 GO_IMAGE  ?= docker.io/library/golang:1.25
 PY_IMAGE  ?= docker.io/library/python:3.12
 
+# Release (Phase 4 — the GHCR distribution): VERSION is the git tag; the binary is built
+# static (CGO off) + versioned. RELEASE_OS/RELEASE_ARCH cross-compile. IMAGE is the GHCR ref.
+VERSION      ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+RELEASE_OS   ?= linux
+RELEASE_ARCH ?= amd64
+IMAGE        ?= ghcr.io/rat-dev/rat
+
 # Container runtime detection (podman first).
 RUNTIME := $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null)
 ifeq ($(notdir $(RUNTIME)),podman)
@@ -27,7 +34,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking release-build release-image release-checksums help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -129,6 +136,26 @@ rat-image: ## ADR-019: build the rat control-plane daemon image (run `rat serve`
 	@echo ">> building rat/serve:dev (core/Dockerfile)"
 	@$(RUNTIME) build -f core/Dockerfile -t rat/serve:dev .
 	@echo ">> built rat/serve:dev — run it with:  $(notdir $(RUNTIME)) run --rm -p 7777:7777 rat/serve:dev"
+
+## --- release (Phase 4: the GHCR distribution — ship rat as a binary + image) -----
+# The release pipeline (.github/workflows/release.yml) is a thin wrapper over these two
+# REPRODUCIBLE targets, so a release is exactly what `make release-build`/`release-image`
+# produce locally — no CI-only magic.
+release-build: ## build a static, versioned rat binary → dist/ (set RELEASE_OS/RELEASE_ARCH to cross-compile)
+	@mkdir -p dist
+	@echo ">> rat $(VERSION) → dist/rat-$(VERSION)-$(RELEASE_OS)-$(RELEASE_ARCH) (static, CGO-free)"
+	@$(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e CGO_ENABLED=0 -e GOTOOLCHAIN=local -e GOSUMDB=off -e GOFLAGS=-mod=mod \
+	  -e GOOS=$(RELEASE_OS) -e GOARCH=$(RELEASE_ARCH) \
+	  -v "$(CURDIR):/work:Z" -v rat-gocache:/go/pkg/mod -w /work/core \
+	  $(GO_IMAGE) go build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" -o /work/dist/rat-$(VERSION)-$(RELEASE_OS)-$(RELEASE_ARCH) ./cmd/rat
+	@echo ">> built dist/rat-$(VERSION)-$(RELEASE_OS)-$(RELEASE_ARCH)"
+
+release-image: ## build the rat daemon image tagged for ghcr.io ($(IMAGE):$(VERSION) + :latest)
+	@echo ">> building $(IMAGE):$(VERSION) (core/Dockerfile)"
+	@$(RUNTIME) build -f core/Dockerfile --build-arg VERSION=$(VERSION) -t $(IMAGE):$(VERSION) -t $(IMAGE):latest .
+
+release-checksums: ## sha256 the dist/ binaries (the Release attaches these)
+	@cd dist && sha256sum rat-* > SHA256SUMS && echo ">> dist/SHA256SUMS:" && cat SHA256SUMS
 
 stateplugin-image: ## ADR-022: build a launchable stateplugin image (rat `podman run`s it as a plugin container)
 	@echo ">> building rat/stateplugin:dev"
