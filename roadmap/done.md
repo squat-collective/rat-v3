@@ -16,6 +16,22 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — slice 2c: the daemon lifecycle — `rat up -d` / `down` / `ls` / `status` 🔌
+
+The daemon-lifecycle ergonomics (ADR-023 slice 2c) — and the fix for the backgrounded-kill papercut. `core/cmd/rat/lifecycle.go`:
+- **`rat up -d`** — spawns a **detached** background daemon (its own process group, output → `.rat/daemon.log`), waits until it logs `gateway serving`, prints its pid. Foreground `rat up` is unchanged. Both **refuse** to start a second daemon for a project that already has one (the unix socket would otherwise be silently hijacked).
+- **`rat down`** — SIGTERMs this project's daemon and waits for the drain — so teardown is **owned**, not a stray `kill` that races (the papercut, gone).
+- **`rat status`** — this project's state (running+pid / stopped) + socket + declared plugins.
+- **`rat ls`** — every rat daemon on the machine (the `docker ps` of daemons), from a global registry at `~/.local/state/rat/instances.json`.
+
+The daemon now **registers itself**: on serve it writes `.rat/daemon.pid` + a registry entry (keyed by project dir); on drain it retracts both (`registerDaemon`/`deregisterDaemon`, gated on a project context — no-op for a raw `rat serve --plane`). The registry is *status* (pruned of dead pids on read), never the spec — consistent with ADR-023.
+
+**Proven live:** `rat init`→`add`→**`rat up -d`** (pid 4163550) → **`rat ls`** showed `lifecycle 4163550 /tmp/rat-2c` → **`rat status`** = running + socket + 2 plugins → **`rat call`** routed to the backgrounded daemon (`pid=4163558 key=2c`) → **`rat down`** stopped it cleanly → `rat ls` empty, socket cleaned, **no stray process**. `TestRegistryAndPid` covers pid-liveness + upsert/prune/remove. `make core-test` + `breaking` green; additive (no proto/axis).
+
+The daemon track is now a complete tool: **`rat init` → `rat add` → `rat up -d` → `rat status`/`ls` → `rat apply`/`call` → `rat down`**, many coexisting per machine. Remaining on the track: **2d** (`rat lock` + capability resolver at `add` time + image-embedded manifests to drop `--manifest`) and the **GHCR release pipeline** (`curl … chmod +x ./rat`).
+
+---
+
 ## 2026-06-03 — slice 3: one `rat` binary — `ratctl` folded in as `rat call` / `rat apply` 🧬
 
 Unified the artifact (ADR-023 §7): the client logic moved into a shared **`core/client`** package (exported `Run`), and `rat` grew `call`/`apply` verbs over it. So one `rat` binary now does **`serve` · `up` · `init` · `add` · `call` · `apply`**. The ADR-019 orchestrator/client *boundary* stays real (the client still reaches the daemon only over the gateway, no in-process shortcut) — only the *packaging* unified. `ratctl` becomes a **thin alias** (`main` → `client.Run`) for the transition; its test moved to `core/client` (`build.Dir` + `run→Run` adjusted), `make ratctl-smoke` now targets `./client`.

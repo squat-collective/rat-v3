@@ -107,7 +107,12 @@ func LoadProject(tomlPath string) (*Plane, error) {
 		}
 		rp.Plugins = append(rp.Plugins, rpl)
 	}
-	return planeFromRaw(rp, tomlPath)
+	pl, err := planeFromRaw(rp, tomlPath)
+	if err != nil {
+		return nil, err
+	}
+	pl.RuntimeDir = filepath.Join(dir, ".rat") // the daemon registers itself here (slice 2c)
+	return pl, nil
 }
 
 // --- verbs -----------------------------------------------------------------------------
@@ -220,25 +225,6 @@ func runAdd(args []string, out io.Writer) error {
 	}
 	fmt.Fprintf(out, "added %q (%s) to %s\n", name, kind, projectFile)
 	return nil
-}
-
-// runUp discovers this project's rat.toml (walking up from cwd) and runs its daemon — the
-// poetry `install`+run for the running env. Foreground for now; `-d` background + `rat down`
-// + `rat ls` land next (ADR-023 slice 2c).
-func runUp(args []string) error {
-	fs := flag.NewFlagSet("rat up", flag.ContinueOnError)
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-	tomlPath, _, err := findProject(".")
-	if err != nil {
-		return err
-	}
-	pl, err := LoadProject(tomlPath)
-	if err != nil {
-		return err
-	}
-	return serveResolved(pl)
 }
 
 // multiFlag collects a repeatable string flag (e.g. --env A=1 --env B=2).
