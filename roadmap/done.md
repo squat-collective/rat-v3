@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 🎉 PHASE 8 RE-SEALED — `rat/5.8` (marketplace iteration 4: signed entries)
+
+The marketplace phase iterates to **`rat/5.8`** (`phase-8` merged to `main` again, annotated tag) — slice 4, **signed entries**: detached ed25519 signatures over the index bytes, pinned per source (`keygen`/`sign`/`--pubkey`/`verify`), a tampered index rejected as a hard error, `--require-signed` strict auto-resolve, and trust surfaced in `list`/`search`. The sealed line is now `… rat/5.5` (discover) · `rat/5.6` (auto-resolve) · `rat/5.7` (remote index) · `rat/5.8` (signed entries). Additive — `make breaking` clean, no proto/axis change. **Open marketplace follow-ons:** publish + sign `official.json` on the `rat-dev` Pages site (URL + key are placeholders); `rat remove` symmetry; `rat add` *launching* into a live daemon (RegisterPlugin RPC, ADR-023).
+
+---
+
+## 2026-06-03 — Phase 8 slice 4: signed marketplace entries (ed25519 provenance) 🔑
+
+Gave the marketplace **provenance** — the point of `--with-deps` auto-pulling is trusting what you pull. Detached **ed25519** signatures (the house algo, seeded by D4) over the raw index bytes: a publisher signs, a consumer pins the publisher's public key per source, and rat verifies every fetch (including the cached copy on offline fallback). New verbs: `rat marketplace keygen` (ed25519 keypair), `rat marketplace sign <index> --key` (writes detached `<index>.sig`), `rat marketplace add … --pubkey <key-or-path>` (pins + enforces), `rat marketplace verify <name>` (on-demand re-check). A pinned key with a missing/invalid signature is a **hard error** — the index is rejected, not used. Trust is surfaced: `rat marketplace list` tags `🔑 signature-enforced`; `rat search` gains a `TRUST` column (`signed✓` / `unsigned` / `local`); the `--with-deps` add lines + suggestions carry the label. New strict knob `rat add --with-deps --require-signed` only auto-pulls from verified sources (an unsigned provider is skipped + reported). **Proven live**: keygen → sign → pin → `verify`/`search` show `signed✓`; a one-byte tamper after signing is rejected on `search` (drops the source) and `verify` exits 1; `--require-signed` refuses an unsigned-only provider with `✗ … is unsigned`. Unit test `TestSignVerifyRoundTrip` (happy + tamper + wrong-key + garbage-sig). New files `core/cmd/rat/signing.go` + `signing_test.go`; README signing section. Additive — `make breaking` clean, `make core-test` green (12/12), no proto change.
+
+---
+
 ## 2026-06-03 — 🎉 PHASE 8 RE-SEALED — `rat/5.7` (marketplace iteration 3: remote index)
 
 The marketplace phase iterates to **`rat/5.7`** (`phase-8` merged to `main` again, annotated tag) — slice 3, the **remote/HTTP-hosted official index**: a built-in `official` shorthand, a bounded fetch timeout, an offline cache with graceful fallback, surfaced warnings, and the publishable `marketplace/official.json` + README. The sealed line is now `… rat/5.5` (discover) · `rat/5.6` (auto-resolve) · `rat/5.7` (remote index). Additive — `make breaking` clean, no proto/axis change. **Open marketplace follow-ons:** actually publish `official.json` to the `rat-dev` Pages site (the URL is a placeholder); signed marketplace entries; `rat remove` symmetry; `rat add` *launching* into a live daemon (RegisterPlugin RPC, ADR-023).
