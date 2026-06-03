@@ -16,6 +16,19 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Phase 7 slice 1: the satisfiability resolver — `requires` need a provider 🧩
+
+The deploy-time complement to `rat plugin check` (which validates a *single* plugin's deps are real): a **plane-level** check that every `requires` across the project's plugins is actually **provided** by some plugin in the set (ADR-023 #6, the poetry-resolver). `core/cmd/rat/resolver.go`:
+- `unsatisfiedRequires(manifests)` — collect all `provides`, return every `requires` no manifest provides;
+- `reportUnsatisfied` / `logUnsatisfied` — poetry-style warnings with a suggestion (the axis a provider belongs to);
+- wired into **`rat add`** (warns after each add, as the project fills in) and **`rat up`** (`launchPlane` logs it before launching).
+
+**Proven live:** in a fresh project, `add rat-pipeline` → `⚠ 3 unsatisfied: requires state/get, secret/resolve, state/put (add a state-/secret-axis plugin)`; `add rat-state` → `⚠ 2` (pipeline + state both still need secret/resolve); `add rat-secret` → clean. `TestUnsatisfiedRequires` covers the graph check; `make core-test` + `breaking` green; additive (no proto/axis).
+
+So the two halves of dependency checking are both real now: **coherence** (`rat plugin check` — are a plugin's deps *real* capabilities?) and **satisfiability** (`rat add`/`up` — is there a *provider* for each?). The resolver warns; it doesn't block (a `requires` may be intentionally external, and the gateway errors at invoke time if it's actually called). Follow-on: `rat add` could auto-suggest the exact plugin to add (needs a capability→plugin index, the marketplace).
+
+---
+
 ## 2026-06-03 — 🎉 PHASE 6 SEALED — `rat/4.5` (authoring ↔ runtime integration)
 
 Phase 6 — closing the **authoring→runtime handoff** — is **sealed at `rat/4.5`** (`phase-6` merged to `main`, annotated tag). The single, load-bearing slice: **`rat add` reads the stamped manifest** (ADR-026 Q05), so a packed plugin image is genuinely **self-describing** —
