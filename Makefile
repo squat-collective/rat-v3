@@ -119,11 +119,11 @@ core-serve-smoke: ## ADR-019 Phase A: `rat serve` boots a plugin, routes (C5)+de
 	  -v "$(CURDIR):/work:Z" -v rat-gocache:/go/pkg/mod -w /work/core \
 	  $(GO_IMAGE) sh -c 'go test ./cmd/rat/ -run TestServe -v -count=1'
 
-ratctl-smoke: ## ADR-019: ratctl (standalone client) drives a live `rat serve` gateway — routes + denies
-	@echo ">> ratctl: client → orchestrator (route + C5 deny) smoke (core/cmd/ratctl)"
+ratctl-smoke: ## ADR-019/023: the client (rat call/apply, shared with ratctl) drives a live gateway — routes + denies
+	@echo ">> client: rat call/apply → orchestrator (route + C5 deny) smoke (core/client)"
 	@$(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e GOTOOLCHAIN=local -e GOSUMDB=off -e GOFLAGS=-mod=mod \
 	  -v "$(CURDIR):/work:Z" -v rat-gocache:/go/pkg/mod -w /work/core \
-	  $(GO_IMAGE) sh -c 'go test ./cmd/ratctl/ -run TestRatctl -v -count=1'
+	  $(GO_IMAGE) sh -c 'go test ./client/ -run TestRatctl -v -count=1'
 
 rat-image: ## ADR-019: build the rat control-plane daemon image (run `rat serve` in a container)
 	@echo ">> building rat/serve:dev (core/Dockerfile)"

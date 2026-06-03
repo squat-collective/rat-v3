@@ -16,6 +16,16 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — slice 3: one `rat` binary — `ratctl` folded in as `rat call` / `rat apply` 🧬
+
+Unified the artifact (ADR-023 §7): the client logic moved into a shared **`core/client`** package (exported `Run`), and `rat` grew `call`/`apply` verbs over it. So one `rat` binary now does **`serve` · `up` · `init` · `add` · `call` · `apply`**. The ADR-019 orchestrator/client *boundary* stays real (the client still reaches the daemon only over the gateway, no in-process shortcut) — only the *packaging* unified. `ratctl` becomes a **thin alias** (`main` → `client.Run`) for the transition; its test moved to `core/client` (`build.Dir` + `run→Run` adjusted), `make ratctl-smoke` now targets `./client`.
+
+**Proven live:** built one `bin/rat`; `rat init`→`rat add`→`rat up` brought a project daemon up, then **`rat call` (the same binary)** routed to the launched plugin (`pid=4125480 key=one-binary`), the **`ratctl` alias** hit the same daemon (same pid, `key=via-alias`), and `rat call` of an undeclared `put` was `PermissionDenied` (C5). `make core-test` + `breaking` green; additive (no proto/axis; client logic relocated, behavior identical — `core/client` carries the moved `TestRatctlCallsThroughGateway` + `TestTarProject`).
+
+The daemon track now reads end-to-end as one tool: **`rat init` → `rat add` → `rat up` → `rat apply` → `rat call`**, all `rat`. Remaining: **2c** (`rat up -d` background + `rat down` + `rat ls` + `rat status`), `rat lock` + capability resolver, image-embedded manifests (drop `--manifest`); then the GHCR release pipeline makes `curl … chmod +x ./rat` real.
+
+---
+
 ## 2026-06-03 — slice 2: the poetry verbs — `rat init` / `add` / `up` over `rat.toml` 📜
 
 The ergonomics layer of ADR-023: the platform is now a **command-written `rat.toml`** (the committed spec, never hand-edited — poetry's `pyproject.toml` model) driven by poetry-shaped verbs. `rat` became a **multi-call binary** (`serve` | `up` | `init` | `add`).

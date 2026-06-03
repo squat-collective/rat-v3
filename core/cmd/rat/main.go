@@ -24,6 +24,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rat-dev/rat/core/client"
 	"github.com/rat-dev/rat/core/deploymentruntime"
 	"github.com/rat-dev/rat/core/gateway"
 	"github.com/rat-dev/rat/core/lease"
@@ -67,8 +68,11 @@ func main() {
 		err = runInit(args, os.Stdout)
 	case "add":
 		err = runAdd(args, os.Stdout)
+	case "call", "apply":
+		// the client verbs (the kubectl side), shared with the ratctl alias (ADR-023).
+		err = client.Run(append([]string{cmd}, args...), os.Stdout)
 	default:
-		err = fmt.Errorf("unknown command %q (want: serve | up | init | add)", cmd)
+		err = fmt.Errorf("unknown command %q (want: serve | up | init | add | call | apply)", cmd)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "rat:", err)
