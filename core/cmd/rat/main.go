@@ -161,14 +161,28 @@ func assemble(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServer, 
 // SetProvider's it on the gateway; on crash it relaunches + re-wires (self-healing). It
 // waits for the initial set to come up so the gateway is wired before we serve.
 func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServer, auditor *StdoutAuditor) (*runningPlane, error) {
+	// Tell each launched plugin how to call the gateway BACK (driver plugins like the
+	// scheduler/bff dial rat). The reachable self-address differs by mode — host.containers
+	// .internal (podman on the host), rat's own name on the shared net (sibling/socket-mount),
+	// or loopback (local processes) — so rat computes it and injects RAT_GATEWAY as a DEFAULT
+	// (an explicit plane env still wins). This is why the SAME plugins.yaml runs host-mode and
+	// socket-mounted unchanged: the one address that depends on the topology is supplied here.
+	gwAddr := selfGatewayAddr(pl)
 	manifests := make([]*manifest.Manifest, 0, len(pl.Specs))
 	desired := make([]reconciler.Desired, 0, len(pl.Specs))
 	for _, s := range pl.Specs {
 		manifests = append(manifests, s.Manifest)
 		if s.Launch != nil {
+			if s.Launch.Env == nil {
+				s.Launch.Env = map[string]string{}
+			}
+			if _, set := s.Launch.Env["RAT_GATEWAY"]; !set {
+				s.Launch.Env["RAT_GATEWAY"] = gwAddr
+			}
 			desired = append(desired, reconciler.Desired{Name: s.Manifest.Metadata.Name, Launch: s.Launch})
 		}
 	}
+	log.Printf("plugins dial the gateway back at %s (injected RAT_GATEWAY)", gwAddr)
 	reg, err := registry.New(manifests)
 	if err != nil {
 		return nil, fmt.Errorf("registry: %w", err)
@@ -217,6 +231,30 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 	return &runningPlane{Gateway: gw, shutdown: shutdown}, nil
 }
 
+// selfGatewayAddr computes the address a LAUNCHED plugin uses to call the gateway back,
+// for the current topology. Sibling/socket-mount (rat is itself a container on a shared
+// net): rat's own hostname (== its container name, resolvable via podman DNS). Podman on
+// the host: host.containers.internal (the host gateway, where rat listens on 0.0.0.0).
+// Local processes: loopback. The port is the gateway's own listen port.
+func selfGatewayAddr(pl *Plane) string {
+	_, port, err := net.SplitHostPort(pl.Addr)
+	if err != nil || port == "" {
+		port = "7777"
+	}
+	switch {
+	case os.Getenv("RAT_PODMAN_NETWORK") != "":
+		h, _ := os.Hostname()
+		if h == "" {
+			h = "rat"
+		}
+		return h + ":" + port
+	case pl.Runtime == "podman":
+		return "host.containers.internal:" + port
+	default:
+		return "127.0.0.1:" + port
+	}
+}
+
 // newRuntime selects the deployment-runtime axis plugin the plane asks for. Phase A
 // defaults to local-process (the `chmod +x ./rat` runtime); podman is the B/C path.
 func newRuntime(name string) (deploymentruntimev1.DeploymentRuntimeServiceServer, error) {
@@ -224,6 +262,14 @@ func newRuntime(name string) (deploymentruntimev1.DeploymentRuntimeServiceServer
 	case "local":
 		return deploymentruntime.NewLocalProcess(), nil
 	case "podman":
+		// $RAT_PODMAN_NETWORK switches the podman runtime to SIBLING mode (ADR-022
+		// socket-mount): rat is itself a container driving the host's podman over a
+		// mounted socket, so it launches plugins onto a shared network and dials them by
+		// name. Unset (rat on the host) → the default host-publish behavior. The SAME
+		// plane file works both ways; only this environment knob differs.
+		if net := os.Getenv("RAT_PODMAN_NETWORK"); net != "" {
+			return deploymentruntime.NewPodmanNetworked(net), nil
+		}
 		return deploymentruntime.NewPodman(), nil
 	default:
 		return nil, fmt.Errorf("unknown runtime %q", name)

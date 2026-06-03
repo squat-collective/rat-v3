@@ -162,16 +162,29 @@ described.
 - **Q2 — dependency wiring.** How a launched plugin learns a peer's connection: pure capability
   composition (the plugin calls `needs`' capabilities — e.g. `storage/vend`, a
   `lake/vend-connection`), vs. rat injecting endpoints as env. Lean: capabilities for secrets +
-  connections, env only for static config.
-- **Q3 — socket-mount networking.** Sibling plugin containers must be reachable from rat:
-  a shared user-defined network (dial by name) vs. published host ports (`host.containers.internal`).
-  Lean: a dedicated rat network the runtime attaches every plugin to.
+  connections, env only for static config. **Partially resolved (2026-06-03):** the one
+  topology-dependent address — *how a driver plugin dials the gateway BACK* — is injected by rat
+  as `RAT_GATEWAY` (computed per mode: `host.containers.internal` on the host, rat's own
+  shared-net name when socket-mounted, loopback for local processes), so the SAME `plugins.yaml`
+  runs both topologies unchanged. Peer-to-peer connections still go through capabilities.
+- **Q3 — socket-mount networking. ✅ RESOLVED (2026-06-03) — shared user-defined network, dial
+  by name** (the lean held). The podman runtime gained a SIBLING mode (`NewPodmanNetworked` /
+  `$RAT_PODMAN_NETWORK`): every launched plugin joins a shared `rat-net` under a stable
+  `--name`, and the runtime returns `<name>:50051` as the endpoint — rat resolves it via podman
+  DNS. NOT host-published ports: a containerized rat's `127.0.0.1` is its own netns, so a
+  sibling's host port is unreachable from rat; a name on the shared net is. This is also exactly
+  the k8s pod-to-pod-by-service-name shape (the prod target). I9 holds — a user bridge is still a
+  private netns that drops the 169.254 metadata route. **Built + proven end-to-end:** `rat AS A
+  CONTAINER` (socket-mounted, `--user 0` for the rootless host socket) launched all 4 platform
+  plugins as siblings, they interconnected by name, self-drove, and recorded durable run history
+  — `make platform-socket` / [`platform/run-socket-mount.sh`](../../../platform/run-socket-mount.sh).
 - **Q4 — secret bootstrap.** The per-plugin token the launch hands a plugin so it can
   authenticate to the secret plugin (ties to the cross-cutting "plugin-to-core auth" in
   [plugin-architecture.md](../../../.claude/rules/plugin-architecture.md)).
-- **Q5 — the gateway re-bind.** Specify `gateway.SetProvider`/adopt (concurrency-safe) so the
-  reconciler can re-wire a relaunched plugin — the dependency this ADR makes load-bearing
-  (shared with the Phase-A finding + runtime self-registration).
+- **Q5 — the gateway re-bind. ✅ RESOLVED (2026-06-02).** `gateway.SetProvider`/`RemoveProvider`
+  (concurrency-safe, `-race` clean) + a reconciler `Rewire` Bind/Unbind hook fired on health
+  transitions; the launch-mode daemon (`launchPlane`) wires it so a relaunched plugin re-binds at
+  its new endpoint. The keystone this ADR made load-bearing — now built + tested.
 - **Q6 — image distribution.** Registry vs. local build for dev images; how `plugins.yaml`
   refers to images (tags, digests).
 

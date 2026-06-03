@@ -31,7 +31,7 @@ plugins:
       isolation: i9
       env:
         RAT_PLUGIN_NAME: "rat-scheduler"
-        RAT_GATEWAY: "host.containers.internal:7777"     # calls the gateway back through the host
+        # RAT_GATEWAY is injected by rat per topology (host.containers.internal | <rat>:7777 | loopback)
         RAT_SCHEDULE_INTERVAL: "20"
         RAT_PIPELINE_TARGET: "gold_daily_revenue"
 
@@ -42,7 +42,7 @@ plugins:
       isolation: i9
       env:
         RAT_PLUGIN_NAME: "platform-bff"
-        RAT_GATEWAY: "host.containers.internal:7777"
+        # RAT_GATEWAY injected by rat per topology (see rat-scheduler above)
 
   - name: platform-runner
     manifest: ./manifests/runner.plugin.yaml
