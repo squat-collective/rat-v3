@@ -11,4 +11,5 @@ requires:
   - capability: rat://strategy/v1/apply
   - capability: rat://state/v1/list
   - capability: rat://state/v1/get
+  - capability: rat://state/v1/put         # seeds the platform's own UI contributions (ADR-024)
   - capability: rat://secret/v1/resolve   # resolves the lake creds for the data leg (Q2 + secret)

@@ -29,6 +29,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [021](021-orchestrator-pipelines-as-code.md) | rat is a pure orchestrator — pipelines as code (dbt), the pipeline-runner axis, infra declares only plugins | Proposed | 2026-06-02 |
 | [022](022-plugins-are-launched-not-composed.md) | Plugins are launched, not composed — adding a plugin is one declaration (socket-mount local, k8s prod) | Proposed | 2026-06-02 |
 | [023](023-rat-as-a-per-project-daemon.md) | rat is a per-project daemon — poetry-style hybrid control over an external spec, isolated per instance | Proposed | 2026-06-03 |
+| [024](024-ui-assembled-from-plugin-contributions.md) | The UI is assembled from plugin contributions, not hardcoded (the VSCode `contributes` model) | Proposed | 2026-06-03 |
 
 ## Template
 

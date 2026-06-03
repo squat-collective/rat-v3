@@ -1,0 +1,42 @@
+{
+  "name": "rat-platform",
+  "displayName": "RAT Platform",
+  "description": "A GENERIC shell for a RAT platform — it renders whatever plugins contribute (ADR-024). Hardcodes no view; everything comes from the bff's /api/ui.",
+  "version": "0.1.0",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onView:ratPlatform"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "ratPlatform", "title": "RAT Platform", "icon": "media/rat.svg" }
+      ]
+    },
+    "views": {
+      "ratPlatform": [
+        { "id": "ratPlatform.tree", "name": "Plugins" }
+      ]
+    },
+    "commands": [
+      { "command": "ratPlatform.refresh", "title": "RAT: Refresh UI", "icon": "$(refresh)" }
+    ],
+    "menus": {
+      "view/title": [
+        { "command": "ratPlatform.refresh", "when": "view == ratPlatform.tree", "group": "navigation" }
+      ]
+    },
+    "configuration": {
+      "title": "RAT Platform",
+      "properties": {
+        "ratPlatform.bff": {
+          "type": "string",
+          "default": "http://127.0.0.1:8080",
+          "description": "The platform bff base URL (it serves /api/ui)."
+        }
+      }
+    }
+  },
+  "scripts": { "compile": "tsc -p ./" },
+  "devDependencies": { "@types/vscode": "^1.80.0", "@types/node": "^20.0.0", "typescript": "^5.0.0" }
+}
