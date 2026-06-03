@@ -9,5 +9,8 @@ metadata:
 compatible_core: ["rat/1"]
 provides:
   - capability: rat://strategy/v1/apply
-# The dbt-runner needs no peer capability in this slice — dbt-duckdb + DuckLake are the
-# engine + catalog, in-process. (Dep-composition — vend lake creds via storage — is next.)
+requires:
+  # fetches the `rat apply`'d dbt project from the state-backend on each run (ADR-021).
+  - capability: rat://state/v1/get
+# dbt-duckdb + DuckLake are the engine + catalog, in-process. (Dep-composition — vend lake
+# creds via storage — is next.)

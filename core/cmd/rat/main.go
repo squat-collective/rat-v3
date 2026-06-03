@@ -179,6 +179,12 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 			if _, set := s.Launch.Env["RAT_GATEWAY"]; !set {
 				s.Launch.Env["RAT_GATEWAY"] = gwAddr
 			}
+			// rat knows each plugin's name (its manifest name) — inject it as the caller
+			// identity a plugin presents when IT calls the gateway (e.g. rat-pipeline
+			// fetching its applied project via state/get). A default; an explicit env wins.
+			if _, set := s.Launch.Env["RAT_PLUGIN_NAME"]; !set {
+				s.Launch.Env["RAT_PLUGIN_NAME"] = s.Manifest.Metadata.Name
+			}
 			desired = append(desired, reconciler.Desired{Name: s.Manifest.Metadata.Name, Launch: s.Launch})
 		}
 	}

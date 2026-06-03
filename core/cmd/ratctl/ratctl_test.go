@@ -7,11 +7,16 @@ package main
 // an undeclared one is PERMISSION_DENIED (C5), surfaced as a gRPC status to the client.
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
+	"io"
 	"net"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -71,6 +76,61 @@ func serveStatePlane(t *testing.T) string {
 	go func() { _ = srv.Serve(lis) }()
 	t.Cleanup(srv.Stop)
 	return lis.Addr().String()
+}
+
+// TestTarProject covers `ratctl apply`'s packaging: a project directory becomes a tar.gz
+// of its source, with generated / VCS noise excluded. (The end-to-end ship-to-gateway path
+// is proven live against the real platform; here we pin the packaging contract.)
+func TestTarProject(t *testing.T) {
+	dir := t.TempDir()
+	write := func(rel, content string) {
+		p := filepath.Join(dir, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("dbt_project.yml", "name: demo")
+	write("models/gold.sql", "select 1")
+	write("target/compiled.sql", "GENERATED")     // excluded
+	write("logs/dbt.log", "noise")                // excluded
+	write(".git/config", "vcs")                   // excluded
+	write("dev.duckdb", "binarydb")               // excluded
+
+	blob, n, err := tarProject(dir)
+	if err != nil {
+		t.Fatalf("tarProject: %v", err)
+	}
+	if n != 2 {
+		t.Errorf("file count = %d, want 2 (source only)", n)
+	}
+
+	// Untar and assert exactly the source files survived.
+	gz, err := gzip.NewReader(bytes.NewReader(blob))
+	if err != nil {
+		t.Fatalf("gzip: %v", err)
+	}
+	tr := tar.NewReader(gz)
+	var got []string
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("tar read: %v", err)
+		}
+		if hdr.Typeflag == tar.TypeReg {
+			got = append(got, hdr.Name)
+		}
+	}
+	sort.Strings(got)
+	want := []string{"dbt_project.yml", "models/gold.sql"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("packaged files = %v, want %v (noise excluded)", got, want)
+	}
 }
 
 func TestRatctlCallsThroughGateway(t *testing.T) {
