@@ -16,13 +16,25 @@ plugins:
       image: rat/dbt-runner:dev      # the dbt-runner — runs `dbt build` on its baked project
       isolation: i9
 
+  - name: rat-secret
+    manifest: ./manifests/secret.plugin.yaml
+    launch:
+      image: rat/secret:dev          # the secret-backend — holds the platform's secrets, one trust boundary
+      isolation: i9
+      env:
+        # The platform's secrets live HERE only (tenant -> ref -> value). Consumers hold a ref,
+        # never the value. Production swaps this env store for Vault/KMS behind the same Resolve.
+        RAT_SECRETS: '{"acme": {"ref://state/pg-dsn": "host=host.containers.internal port=55440 dbname=ducklake user=ducklake password=ducklake"}}'
+
   - name: rat-state
     manifest: ./manifests/state.plugin.yaml
     launch:
       image: rat/state:dev           # run history, backed by Postgres (from the infra compose)
       isolation: i9
       env:
-        RAT_STATE_PG: "host=host.containers.internal port=55440 dbname=ducklake user=ducklake password=ducklake"
+        # No credential here — just an opaque ref. rat-state resolves it via rat://secret/v1/resolve
+        # (gateway-routed, C5-authorized, audited) at first use. RAT_GATEWAY is injected by rat.
+        RAT_STATE_PG_REF: "ref://state/pg-dsn"
 
   - name: rat-scheduler
     manifest: ./manifests/scheduler.plugin.yaml

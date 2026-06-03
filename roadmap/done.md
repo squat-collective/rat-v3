@@ -16,6 +16,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — secret plugin: creds out of consumer plugins, resolved through the gateway 🔐
+
+Tom's "store one or 2 secrets on a communicating secret plugin" made real, on the **frozen `secret/v1`** contract (no proto change). A `kind: secret-backend` plugin holds the platform's secrets in **one trust boundary**; consumer plugins hold only an opaque **ref** and resolve it at point of use through the gateway (C5-authorized, audited, tenant-scoped, redacted).
+
+- **`examples/secret/env-py`** — an env-backed secret-backend (`store.py` loads a `{tenant: {ref: value}}` map from `$RAT_SECRETS`; `server.py`/`main.py` serve the frozen `SecretService.Resolve`). Keeps the conformance reference (`inmemory-py`, hardcoded golden map) untouched. Same tenant-scoped anti-enumeration: unknown ref AND cross-tenant ref both → `found=false` (never `PERMISSION_DENIED`); 5-min TTL; `value` is `debug_redact`.
+- **`rat-state` resolves its DSN, lazily** (`examples/state/postgres-py/server.py`): on first state op it dials the gateway (`RAT_GATEWAY`, injected) and calls `rat://secret/v1/resolve` for `$RAT_STATE_PG_REF` (`ref://state/pg-dsn`), retrying until `rat-secret` is wired, then connects Postgres. A literal `$RAT_STATE_PG` is still honored as a fallback. Lazy ⇒ rat-state is Healthy immediately and doesn't race the secret plugin's boot.
+- **Wiring:** `secret/v1` added to the gateway's routable descriptors (`cmd/rat/descriptors.go`); `rat-state` manifest gains `requires: rat://secret/v1/resolve`; `platform/manifests/secret.plugin.yaml`; `plugins.yaml` adds `rat-secret` (the DSN lives in its `$RAT_SECRETS`, one place) and `rat-state`'s env drops the DSN for `RAT_STATE_PG_REF`. `make plugin-images` builds `rat/secret:dev`.
+
+**Proven live** (host mode, `rat serve --plane plugins.yaml`, 5 launched plugins): startup injected `RAT_GATEWAY` + wired all 5 + served; the new audit hop **`rat-state → rat://secret/v1/resolve → rat-secret`** fired (lazy, once, then cached); `rat-state`'s container env carried **no credential** (only `RAT_STATE_PG_REF=ref://state/pg-dsn`, no `RAT_SECRETS`, no password); the platform **self-drove** (ticks 2+ refreshed) and recorded **durable** run history to Postgres (so the DSN resolved + connected); the raw DSN password appeared **0×** in rat's audit log. `make core-test` + `breaking` green; additive (no proto/axis).
+
+So adding the secret plugin is — as Tom asked — one `plugins.yaml` entry + an image, and consumers stop carrying raw credentials. Follow-on: ADR-022 Q4 (a `LaunchSpec` secret channel so even `rat-secret` loads from Vault/a file instead of `$RAT_SECRETS`).
+
+---
+
 ## 2026-06-03 — 2c COMPLETE: socket-mount — rat is ITSELF a container, launching plugins as siblings by name 🔌
 
 The final 2c refinement, and ADR-022's "socket-mount local" made real: **rat runs as a container** that drives the **host's rootless podman** over a mounted socket (Docker-out-of-Docker) and launches each plugin as a **sibling container** on a shared `rat-net`, dialing them **by name** via podman DNS — the exact k8s pod-to-pod-by-service-name shape (the prod target), no host-port publishing.

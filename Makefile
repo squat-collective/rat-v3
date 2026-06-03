@@ -137,12 +137,13 @@ stateplugin-image: ## ADR-022: build a launchable stateplugin image (rat `podman
 plugin-images: ## ADR-022: build the launchable Python plugin images (rat/<name>:dev) — the platform's plugins
 	@echo ">> building the Python plugin images"
 	@$(RUNTIME) build -f examples/state/postgres-py/Dockerfile   -t rat/state:dev .
+	@$(RUNTIME) build -f examples/secret/env-py/Dockerfile       -t rat/secret:dev .
 	@$(RUNTIME) build -f examples/catalog/ducklake-py/Dockerfile -t rat/catalog:dev .
 	@$(RUNTIME) build -f examples/engine/duckdb-ml-py/Dockerfile -t rat/engine:dev .
 	@$(RUNTIME) build -f examples/scheduler/cron-py/Dockerfile   -t rat/scheduler:dev .
 	@$(RUNTIME) build -f examples/runner/dbt-duckdb/Dockerfile   -t rat/dbt-runner:dev .
 	@$(RUNTIME) build -f platform/bff.Dockerfile                 -t rat/bff:dev .
-	@echo ">> built: rat/{state,catalog,engine,scheduler,dbt-runner,bff}:dev"
+	@echo ">> built: rat/{state,secret,catalog,engine,scheduler,dbt-runner,bff}:dev"
 
 ## --- the data platform bundle (ADR-020) --------------------------------------
 platform-up: rat-image ## ADR-020 S1: bring up the always-on data platform stack (Postgres+MinIO+engine+catalog+rat serve)

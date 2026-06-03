@@ -10,3 +10,5 @@ provides:
   - capability: rat://state/v1/get
   - capability: rat://state/v1/put
   - capability: rat://state/v1/list
+requires:
+  - capability: rat://secret/v1/resolve   # resolves its Postgres DSN at first use (ADR-022)
