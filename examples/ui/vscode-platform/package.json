@@ -33,6 +33,11 @@
           "type": "string",
           "default": "http://127.0.0.1:8080",
           "description": "The platform bff base URL (it serves /api/ui)."
+        },
+        "ratPlatform.surface": {
+          "type": "string",
+          "default": "vscode",
+          "description": "The surface this consumer renders (ADR-025) — it fetches /api/ui?surface=<this>. Leave as 'vscode'."
         }
       }
     }

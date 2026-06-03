@@ -16,6 +16,14 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Phase 3 slice 2: the VS Code shell becomes the `vscode` surface consumer 🪟
+
+Pointed the generic shell (`examples/ui/vscode-platform/`) at its surface: it now fetches `GET /api/ui?surface=vscode` (a `surface()` helper + `uiPath()`; a `ratPlatform.surface` setting, default `vscode`) instead of the unscoped `/api/ui`. So the shell renders only the **vscode-targeted** contributions — a plugin's `cli`/`webapp` interfaces never leak in. Compile-verified strict (`tsc`).
+
+The rendering still needs a running VS Code (unprovable headlessly), but the data side is proven: the bff already returns `?surface=vscode` → `{explorer:[run-history,lake-tables], command:[run-pipeline]}` (and `?surface=cli` → `{command:[build]}`), so the shell receives exactly its surface's set, `build` excluded. Two surfaces now consume the same registry independently: the **CLI** (`rat ui`, proven live) and the **VS Code** shell (surface-scoped + compiling). Additive (TS only). Next: a webapp consumer; the ADR-025 follow-ons (per-consumer identity/connection, the webview content protocol, view-data capabilities).
+
+---
+
 ## 2026-06-03 — Phase 3 slice 1: the CLI surface — `rat ui` (surfaces & consumers, ADR-025) 🖥️
 
 First buildable + provable slice of ADR-025 (the surface the CLI lets us prove headlessly): a plugin contributes a **per-surface** interface, and an **out-of-stack consumer** renders only its surface.

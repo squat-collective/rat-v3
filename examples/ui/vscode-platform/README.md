@@ -1,9 +1,11 @@
-# vscode-platform — the generic RAT platform shell (ADR-024)
+# vscode-platform — the `vscode` surface consumer (ADR-024 + ADR-025)
 
-A VS Code extension that **hardcodes no view**. On activation it fetches the bff's
-`GET /api/ui` — the slot-grouped contributions every plugin published — and renders them.
-**A new plugin that contributes a view/command/config appears here with zero change to this
-extension.** This is the VSCode `contributes` model, applied to a data platform.
+A VS Code extension that **hardcodes no view**. It is the **`vscode` surface consumer**
+(ADR-025): on activation it fetches `GET /api/ui?surface=vscode` — the contributions plugins
+targeted at *this* surface — and renders them. A plugin's `cli`/`webapp` interfaces never
+appear here (surface scoping); a new plugin that contributes a *vscode* view/command/config
+appears with **zero change to this extension**. The VSCode `contributes` model, scoped to one
+surface. (Configure the surface via `ratPlatform.surface`, default `vscode`.)
 
 ## How it works
 
