@@ -91,8 +91,11 @@ func main() {
 	case "ui":
 		// the CLI SURFACE consumer (ADR-025): render/run the cli-targeted contributions.
 		err = client.RunUI(args, os.Stdout)
+	case "plugin":
+		// the plugin authoring toolkit (ADR-026): init | check | test | pack | publish.
+		err = runPlugin(args, os.Stdout)
 	default:
-		err = fmt.Errorf("unknown command %q (want: serve | up | down | status | ls | init | add | call | apply | ui | version)", cmd)
+		err = fmt.Errorf("unknown command %q (want: serve | up | down | status | ls | init | add | call | apply | ui | plugin | version)", cmd)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "rat:", err)
