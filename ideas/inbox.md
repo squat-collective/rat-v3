@@ -228,3 +228,36 @@ Status: **PARKED (decided not to build now).** It's a *scale* feature (multi-hos
 ecosystems); the project is solo + pre–Gate-B, and the "many UIs connect to the orchestrator"
 goal is **orthogonal** to it (clients invoke capabilities regardless of how plugins registered
 — proven by `ratctl`). Revisit when the launch-only model actually hurts; write the ADR then.
+
+---
+
+## 2026-06-03 — [distribution, ux] Ship rat as a GHCR binary + image — no make, no git clone
+
+**Surfaced reviewing the "raw install → plugin complete" journey** — Stage 0 today is
+`git clone` + a hand-cranked `podman run golang build`. That's the wrong front door. The
+install story should be **two artifacts, nothing else**:
+- **a prebuilt binary** (`rat` + `ratctl`) downloadable from a **GitHub Release / `ghcr.io`** —
+  `curl -L … -o rat && chmod +x ./rat` (the founding vision's literal `chmod +x ./rat`), and
+- **the daemon container image** on `ghcr.io/rat-dev/rat:<tag>` for the containerized/socket-mount
+  + k8s path.
+
+No `make`, no clone, no in-container Go build for a *user*. `make`/source stay for *contributors*
+only. Plugin images likewise pulled from `ghcr.io` (ties to the marketplace idea above), not
+built locally — so the whole getting-started is: grab `rat`, point it at a `plugins.yaml` whose
+images are GHCR refs, done.
+
+- **What it'd take:** a release pipeline — GitHub Actions building static `rat`/`ratctl` for
+  linux/amd64+arm64 (+ macOS), publishing to Releases; a multi-arch image build → `ghcr.io`;
+  versioned tags matching the `rat/N.M` seal scheme. A one-line install script (`get.rat.dev`-style)
+  is the cherry on top.
+- **Why it matters:** the architecture already *scales* from solo to cloud (same binary, different
+  plugin set) — but the **install UX doesn't yet reflect that**. The binary+image distribution is
+  what makes "solo dev tries rat in 60 seconds" real, and it's the natural home for the eventual
+  signed-release + SBOM + version-pinning story.
+
+Open question: do `rat` and `ratctl` ship as two binaries or one multi-call binary (`rat serve` /
+`rat call` / `rat apply`)? The ADR-019 split says two (orchestrator vs client); but for *distribution*
+a single `rat` binary that's both might be the friendlier front door (Tom keeps saying "`rat apply`",
+not "`ratctl apply`"). Decide alongside the release pipeline.
+Related: the marketplace/distribution idea above (plugin images on GHCR), ADR-019 (rat/ratctl split),
+the founding `chmod +x ./rat` vision (docs/vision.md / CLAUDE.md).
