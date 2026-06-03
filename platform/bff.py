@@ -22,6 +22,7 @@ import grpc
 
 from rat.common.v1 import context_pb2, data_pb2
 from rat.core.v1 import invoke_pb2, invoke_pb2_grpc
+from rat.secret.v1 import secret_pb2
 from rat.state.v1 import state_pb2
 from rat.strategy.v1 import strategy_pb2
 
@@ -38,6 +39,27 @@ _lake_lock = threading.Lock()
 _lake_con = None
 
 
+def _resolve(ref):
+    """Resolve a secret ref via the gateway's secret-backend (C5-authorized + audited)."""
+    stub, md = _stub(), _md()
+    resp = secret_pb2.ResolveResponse()
+    resp.ParseFromString(stub.Invoke(invoke_pb2.InvokeRequest(
+        capability="rat://secret/v1/resolve",
+        payload=secret_pb2.ResolveRequest(secret_ref=ref).SerializeToString()), metadata=md).result)
+    if not resp.found:
+        raise RuntimeError(f"secret {ref!r} not found (absent or not authorized)")
+    return resp.value.decode("utf-8")
+
+
+def _cfg(name, default=None):
+    """A config value: the literal env var, or — if only <name>_REF is set — the secret it
+    resolves to (so lake creds live on the secret plugin, not in plugins.yaml)."""
+    if name in os.environ:
+        return os.environ[name]
+    ref = os.environ.get(name + "_REF")
+    return _resolve(ref) if ref else default
+
+
 def _lake():
     global _lake_con
     if _lake_con is None:
@@ -46,10 +68,10 @@ def _lake():
         for e in ("ducklake", "httpfs", "postgres"):
             c.execute(f"INSTALL {e}; LOAD {e};")
         c.execute("CREATE SECRET s3sec (TYPE S3, KEY_ID '%s', SECRET '%s', ENDPOINT '%s', URL_STYLE 'path', USE_SSL false)" % (
-            os.environ.get("RAT_S3_KEY", "minioadmin"), os.environ.get("RAT_S3_SECRET", "minioadmin"),
-            os.environ.get("RAT_S3_ENDPOINT", "host.containers.internal:59010")))
+            _cfg("RAT_S3_KEY", "minioadmin"), _cfg("RAT_S3_SECRET", "minioadmin"),
+            _cfg("RAT_S3_ENDPOINT", "host.containers.internal:59010")))
         c.execute("ATTACH 'ducklake:postgres:%s' AS lake (DATA_PATH '%s', READ_ONLY)" % (
-            os.environ["RAT_LAKE_PG"], os.environ.get("RAT_LAKE_DATA", "s3://rat/lake/")))
+            _cfg("RAT_LAKE_PG"), _cfg("RAT_LAKE_DATA", "s3://rat/lake/")))
         _lake_con = c
     return _lake_con
 

@@ -16,6 +16,19 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — lake creds → the secret plugin: all platform secrets in ONE place 🔐
+
+Closed the cred gap Q2 left: the lake DSN + S3 creds no longer sit in `plugins.yaml` — every consumer resolves them from `rat-secret` at point of use (the same pattern `rat-state` already used for its DSN). Now **the only place a credential appears is `rat-secret`'s `RAT_SECRETS`**.
+
+- **Generic `*_REF` resolution.** A consumer carries `<NAME>_REF=ref://…` instead of `<NAME>=<secret>`. The dbt-runner (`server.py`) resolves **every** `*_REF` env var via `rat://secret/v1/resolve` (C5-authorized, audited, retry-on-boot) and injects the plain `<NAME>` into the dbt subprocess env — so the dbt profile's `env_var('RAT_LAKE_PG')` reads a resolved value while the credential lives only on the secret plugin. The bff (`bff.py`) does the same via a `_cfg(name)` helper (literal env, else resolve `<name>_REF`). Resolution is cached.
+- **Wiring:** `rat-pipeline` + `platform-bff` manifests gain `requires: rat://secret/v1/resolve`; `rat-secret`'s `RAT_SECRETS` gains `ref://lake/pg-dsn` + `ref://lake/s3-key` + `ref://lake/s3-secret`; `plugins.yaml` swaps the consumers' `RAT_LAKE_PG`/`RAT_S3_KEY`/`RAT_S3_SECRET` for `*_REF` (non-secret `RAT_LAKE_DATA`/`RAT_S3_ENDPOINT` stay literal).
+
+**Proven live:** `grep password platform/plugins.yaml` matches **only** `rat-secret`'s line; the platform self-drove → the medallion built into the shared lake (PASS=7, runner resolved its DSN from the secret plugin); the bff served `/api/table/gold_daily_revenue` (resolved its own creds); audit shows the new hops — `rat-pipeline → secret/resolve → rat-secret` (×3) + `platform-bff → secret/resolve → rat-secret` (×3) + `rat-state` (×1). `make breaking` green; additive (no proto/axis/Go — plugin code + manifests + plane).
+
+So the platform's whole secret surface is centralized + resolved-at-use: `state DSN`, `lake DSN`, `S3 creds` — one trust boundary, every read C5-authorized + audited + redacted. Remaining secret follow-on: ADR-022 Q4 (a `LaunchSpec` secret channel so even `rat-secret` loads from Vault/a file, not `$RAT_SECRETS`).
+
+---
+
 ## 2026-06-03 — Q2: the medallion writes to a SHARED DuckLake — the UI sees pipeline output 🪣
 
 The data-side gap closed (ADR-021 Q2): the pipeline no longer writes a local DuckDB trapped in the runner's tmpfs — it materializes into a **shared DuckLake** (DuckLake catalog on **Postgres**, data as Parquet on **S3/MinIO**), so any plugin/client/UI can read the tables.
