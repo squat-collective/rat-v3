@@ -14,7 +14,9 @@ preview) would attach its own engine to the lake (out of scope for this slice).
 
 import json
 import os
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse, parse_qs
 
 import grpc
 
@@ -26,6 +28,49 @@ from rat.strategy.v1 import strategy_pb2
 GATEWAY = os.environ.get("RAT_GATEWAY", "127.0.0.1:7777")
 CALLER = os.environ.get("RAT_PLUGIN_NAME", "platform-bff")
 TARGET = os.environ.get("RAT_PIPELINE_TARGET", "gold_daily_revenue")
+
+
+# --- the bulk DATA leg (Q2): read the medallion tables straight from the shared DuckLake ---
+# Control (trigger / run history) goes through the gateway above; the bulk data leg attaches
+# the same lake read-only and returns rows. This is the honest F9 split — control mediated,
+# data direct — and it is what lets the UI actually SEE the pipeline's output.
+_lake_lock = threading.Lock()
+_lake_con = None
+
+
+def _lake():
+    global _lake_con
+    if _lake_con is None:
+        import duckdb
+        c = duckdb.connect()
+        for e in ("ducklake", "httpfs", "postgres"):
+            c.execute(f"INSTALL {e}; LOAD {e};")
+        c.execute("CREATE SECRET s3sec (TYPE S3, KEY_ID '%s', SECRET '%s', ENDPOINT '%s', URL_STYLE 'path', USE_SSL false)" % (
+            os.environ.get("RAT_S3_KEY", "minioadmin"), os.environ.get("RAT_S3_SECRET", "minioadmin"),
+            os.environ.get("RAT_S3_ENDPOINT", "host.containers.internal:59010")))
+        c.execute("ATTACH 'ducklake:postgres:%s' AS lake (DATA_PATH '%s', READ_ONLY)" % (
+            os.environ["RAT_LAKE_PG"], os.environ.get("RAT_LAKE_DATA", "s3://rat/lake/")))
+        _lake_con = c
+    return _lake_con
+
+
+def _lake_query(sql):
+    with _lake_lock:
+        cur = _lake().execute(sql)
+        cols = [d[0] for d in cur.description]
+        return cols, cur.fetchall()
+
+
+def _tables():
+    _, rows = _lake_query("SELECT table_name FROM information_schema.tables WHERE table_catalog='lake' ORDER BY 1")
+    return [r[0] for r in rows]
+
+
+def _table(name, limit):
+    if not name.replace("_", "").isalnum():
+        raise ValueError("invalid table name")
+    cols, rows = _lake_query(f"SELECT * FROM lake.main.{name} LIMIT {int(limit)}")
+    return {"columns": cols, "rows": rows}
 
 
 def _md():
@@ -67,7 +112,7 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     def _send(self, code, payload):
-        body = json.dumps(payload).encode()
+        body = json.dumps(payload, default=str).encode()  # default=str: dates/decimals
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
@@ -76,15 +121,24 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        u = urlparse(self.path)
         try:
-            if self.path == "/api/health":
+            if u.path == "/api/health":
                 self._send(200, {"ok": True, "gateway": GATEWAY})
-            elif self.path == "/api/runs":
+            elif u.path == "/api/runs":
                 self._send(200, {"runs": _runs()})
+            elif u.path == "/api/tables":  # the medallion tables in the shared lake (Q2)
+                self._send(200, {"tables": _tables()})
+            elif u.path.startswith("/api/table/"):  # rows of one table (the data leg)
+                name = u.path[len("/api/table/"):]
+                limit = int(parse_qs(u.query).get("limit", ["100"])[0])
+                self._send(200, _table(name, limit))
             else:
                 self._send(404, {"error": "not found"})
         except grpc.RpcError as e:
             self._send(502, {"error": f"{e.code()}: {e.details()}"})
+        except Exception as e:  # lake read errors (bad table, lake down)
+            self._send(500, {"error": f"{type(e).__name__}: {e}"})
 
     def do_POST(self):
         try:

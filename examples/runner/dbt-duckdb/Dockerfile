@@ -5,7 +5,10 @@
 FROM docker.io/library/python:3.12-slim
 ENV PYTHONUNBUFFERED=1 RAT_PLUGIN_ADDR=0.0.0.0:50051 RAT_DBT_BIN=/opt/dbtvenv/bin/dbt \
     DBT_SEND_ANONYMOUS_USAGE_STATS=0 \
-    RAT_DBT_PROJECT=/project RAT_DBT_PROFILES=/project RAT_LANDING=/landing
+    RAT_DBT_PROJECT=/project RAT_DBT_PROFILES=/project RAT_LANDING=/landing \
+    HOME=/tmp
+# HOME=/tmp so DuckDB writes its ~/.duckdb (extensions, secrets) to the I9 tmpfs — the
+# read-only rootfs would otherwise reject /plugin/.duckdb (Q2 DuckLake materialization).
 WORKDIR /plugin
 COPY examples/runner/dbt-duckdb/ /plugin/
 COPY contracts/sdks/python/rat /usr/local/lib/python3.12/site-packages/rat
