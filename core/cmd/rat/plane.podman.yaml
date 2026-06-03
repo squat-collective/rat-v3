@@ -1,0 +1,19 @@
+# plane.podman.yaml — launch mode, podman runtime (ADR-022). `rat serve` LAUNCHES each
+# plugin as its OWN container (here: the rat/stateplugin:dev image) via podman and wires
+# it — the decoupled model where adding a plugin is one entry + an image, not a compose
+# service. Run it (rat on the host launches the plugin container, reaches its host port):
+#   podman build -f core/testplugins/stateplugin/Dockerfile -t rat/stateplugin:dev .
+#   go build -o ./bin/rat ./core/cmd/rat
+#   ( cd core/cmd/rat && /path/to/bin/rat serve --plane plane.podman.yaml )
+addr: 127.0.0.1:7777
+runtime: podman
+health_timeout: 30s
+plugins:
+  - name: rat-state
+    manifest: ./manifests/state.plugin.yaml
+    launch:
+      image: rat/stateplugin:dev      # an OCI image — rat `podman run`s it as a CONTAINER
+      isolation: i9
+  - name: rat-caller
+    manifest: ./manifests/caller.plugin.yaml
+    # register-only driver: requires state/get only (so put is denied).
