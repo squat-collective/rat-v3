@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Phase 5 slice 5: `rat plugin check` now validates DEPENDENCIES 🔗
+
+Closed the ADR-026 §3 gap — `check` was syntax-only on deps; now it validates them. `check` verifies (`core/cmd/rat/plugin.go`):
+- **real capabilities** — every `provides`/`requires` must `resolveMethod` against the linked axis descriptors. A made-up capability in a **linked** axis hard-fails (typo); a capability whose axis isn't compiled into this rat is **noted unverified** (honest — not a false negative);
+- **kind coherence** — a plugin's `provides` must be its own axis (`kindAxis`); `requires` are legitimately **cross-axis** (capability composition), so only their reality is checked, never their axis.
+
+Helpers: `capAxisOf`, `kindAxis`, `linkedAxes`. **Proven live:** `rat-pipeline` passes (1 provides, **3 cross-axis requires all confirmed real**); a made-up `requires` → `✗ not a real capability of axis "state" (typo?)`; a `state-backend` providing a `strategy` cap → `✗ expected "state"-axis capabilities`. `TestPluginCheckDeps` covers it; `make core-test` + `breaking` green; additive. *(Satisfiability — is a provider actually available — stays the deploy-time `rat add`/`up` resolver, the poetry-resolver from ADR-023, not a per-plugin check.)*
+
+So `rat plugin check` answers "are the plugin's deps real + coherent?" — yes, now. The authoring loop **`init → check → test → pack → publish`** is complete and the static gate has teeth on dependencies.
+
+---
+
 ## 2026-06-03 — Phase 5 slice 4: `rat plugin publish` — the lifecycle is complete 🚀
 
 The last verb (ADR-026): ship a verified plugin image to a registry (the team diff). `rat plugin publish` (`core/cmd/rat/plugin.go`):
