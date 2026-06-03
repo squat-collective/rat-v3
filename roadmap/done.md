@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 🎉 PHASE 8 RE-SEALED — `rat/5.6` (marketplace iteration 2: `--with-deps`)
+
+The marketplace phase iterates to **`rat/5.6`** (`phase-8` merged to `main` again, annotated tag) — slice 2, **`rat add --with-deps`**, turns the auto-*suggest* into auto-*resolve*: it transitively pulls the marketplace provider for every unsatisfied `requires` (synthesizing each provider's manifest from its entry; no pull at declare-time). The sealed line is now `… rat/5.5` (marketplace: discover) · `rat/5.6` (marketplace: auto-resolve). Additive — `make breaking` clean, no proto/axis change. **Open marketplace follow-ons:** a remote/HTTP-hosted official index; signed marketplace entries; `rat remove` symmetry; `rat add` *launching* into a live daemon (the RegisterPlugin RPC, ADR-023).
+
+---
+
 ## 2026-06-03 — Phase 8 slice 2: `rat add --with-deps` — auto-run the suggested add 🔗
 
 Turned the auto-*suggest* into auto-*resolve*. `rat add <name> … --with-deps` now, after the primary add, **loops**: compute the project's unsatisfied `requires` → find each one's marketplace provider (`providerFor`) → add it → repeat until everything has a provider or none can be supplied. **Transitive** — a provider added this round has its OWN `requires` resolved next round. The added provider's manifest is **synthesized from the marketplace entry** (`synthManifest`: the entry's kind/provides/requires *are* the manifest), so no image pull at declare-time — the image is fetched at `rat up`/`serve`. Proven live: `add my-scheduler --with-deps` → `+ rat-state + dbt-runner` (round 1) → `+ rat-secret` (round 2, rat-state's own `secret/resolve`) → `✓ all dependencies satisfied`; correctly saw dbt-runner's `state/get` already covered (no duplicate); a `requires` no marketplace provides (`catalog/register`) pulls what it can and reports the remainder with the axis hint. New: `--with-deps` flag, `resolveWithDeps`/`manifestsOf` (project.go), `addMarketEntry`/`synthManifest` (marketplace.go). Additive — `make breaking` clean, `make core-test` green, no proto change.
