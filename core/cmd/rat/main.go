@@ -83,6 +83,9 @@ func main() {
 		err = runInit(args, os.Stdout)
 	case "add":
 		err = runAdd(args, os.Stdout)
+	case "remove", "rm":
+		// poetry-style: drop a plugin from rat.toml (the inverse of `rat add`).
+		err = runRemove(args, os.Stdout)
 	case "call", "apply":
 		// the client verbs (the kubectl side), shared with the ratctl alias (ADR-023).
 		err = client.Run(append([]string{cmd}, args...), os.Stdout)
