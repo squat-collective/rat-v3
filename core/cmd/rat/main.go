@@ -77,8 +77,11 @@ func main() {
 	case "call", "apply":
 		// the client verbs (the kubectl side), shared with the ratctl alias (ADR-023).
 		err = client.Run(append([]string{cmd}, args...), os.Stdout)
+	case "ui":
+		// the CLI SURFACE consumer (ADR-025): render/run the cli-targeted contributions.
+		err = client.RunUI(args, os.Stdout)
 	default:
-		err = fmt.Errorf("unknown command %q (want: serve | up | down | status | ls | init | add | call | apply)", cmd)
+		err = fmt.Errorf("unknown command %q (want: serve | up | down | status | ls | init | add | call | apply | ui)", cmd)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "rat:", err)

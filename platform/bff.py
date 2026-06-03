@@ -168,7 +168,7 @@ def _invoke(capability, data):
 # only its OWN component (Run History); rat-pipeline contributes Lake Tables + Run pipeline
 # itself (via rat.contrib.contribute_ui) — each plugin owns its UI.
 PLATFORM_COMPONENTS = [
-    {"slot": "explorer", "id": "run-history", "title": "Run History", "icon": "history", "data": "/api/runs"},
+    {"slot": "explorer", "surface": "vscode", "id": "run-history", "title": "Run History", "icon": "history", "data": "/api/runs"},
 ]
 
 
@@ -199,10 +199,11 @@ def _seed_platform_ui():
         _state_put(f"ui/components/platform-bff/{c['id']}", json.dumps(c).encode())
 
 
-def _ui():
-    """Aggregate every published contribution into a slot-grouped UI descriptor (ADR-024).
-    The bff hardcodes no view — it seeds the PLATFORM's own components once, then renders
-    whatever any plugin has published under ui/components/."""
+def _ui(surface=None):
+    """Aggregate published contributions into a slot-grouped UI descriptor (ADR-024), for a
+    given SURFACE (ADR-025: vscode|cli|webapp). The bff hardcodes no view — it seeds the
+    platform's own components once, then renders whatever plugins published under
+    ui/components/, filtered to the requested surface (+ surface-agnostic)."""
     if not _state_list("ui/components/platform-bff/"):
         _seed_platform_ui()
     slots = {}
@@ -211,6 +212,8 @@ def _ui():
         if not raw:
             continue
         comp = json.loads(raw.decode())
+        if surface and comp.get("surface", "") not in (surface, "", "*", "generic"):
+            continue
         comp["_source"] = key.split("/")[2] if key.count("/") >= 2 else "?"  # the contributing plugin
         slots.setdefault(comp.get("slot", "explorer"), []).append(comp)
     return {"slots": slots}
@@ -242,8 +245,8 @@ class Handler(BaseHTTPRequestHandler):
                 name = u.path[len("/api/table/"):]
                 limit = int(parse_qs(u.query).get("limit", ["100"])[0])
                 self._send(200, _table(name, limit))
-            elif u.path == "/api/ui":  # the assembled UI: every plugin's contributions (ADR-024)
-                self._send(200, _ui())
+            elif u.path == "/api/ui":  # the assembled UI for a surface (ADR-024/025): ?surface=vscode
+                self._send(200, _ui(parse_qs(u.query).get("surface", [None])[0]))
             else:
                 self._send(404, {"error": "not found"})
         except grpc.RpcError as e:
