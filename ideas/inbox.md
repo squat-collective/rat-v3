@@ -198,7 +198,9 @@ connection-rooted trees). Auth/tenant + gateway-remote-mode are the queued follo
 
 ---
 
-## 2026-06-02 — [core, architecture] runtime plugin self-registration (a `RegisterPlugin` gRPC)
+## 2026-06-02 — [core, architecture] runtime plugin self-registration (a `RegisterPlugin` gRPC) `[promoted → docs/architecture/adrs/023-rat-as-a-per-project-daemon.md]`
+
+> **Promoted into [ADR-023](../docs/architecture/adrs/023-rat-as-a-per-project-daemon.md) (2026-06-03):** runtime registration is now the *user model* (`rat add`, poetry-style — imperative writes the external spec, then hot-registers via the `SetProvider` keystone that this entry said was the blocker, now built). The federated *self*-register-by-dialing-in variant stays a future concern (ADR-023 Q07: quarantined `status`, not canonical). The original note is kept below.
 
 **Surfaced in conversation with Tom while building the `rat serve` orchestrator + the
 `ratctl` client.** Today the plugin set is **declarative**: `rat serve --plane plane.yaml`
