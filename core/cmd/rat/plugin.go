@@ -330,30 +330,32 @@ func launchAndProbe(out io.Writer, img string, m *manifest.Manifest) error {
 // `rat add <ref>` can read the manifest FROM the image — no separate --manifest (ADR-026 Q05).
 const manifestLabel = "dev.rat.manifest.v1.b64"
 
-// readStampedManifest recovers the manifest from a packed image's label (manifest-from-image).
-func readStampedManifest(image string) (*manifest.Manifest, error) {
+// readStampedManifest recovers the manifest from a packed image's label (manifest-from-image),
+// returning both the validated manifest and its raw YAML bytes (so callers can re-materialize it).
+func readStampedManifest(image string) (*manifest.Manifest, []byte, error) {
 	got, err := exec.Command("podman", "inspect", "--format", "{{ index .Config.Labels \""+manifestLabel+"\" }}", image).Output()
 	if err != nil {
-		return nil, fmt.Errorf("inspect %s: %w", image, err)
+		return nil, nil, fmt.Errorf("inspect %s: %w", image, err)
 	}
 	b64 := strings.TrimSpace(string(got))
 	if b64 == "" || b64 == "<no value>" {
-		return nil, fmt.Errorf("%s has no stamped manifest — run `rat plugin pack` first, or pass --manifest", image)
+		return nil, nil, fmt.Errorf("%s has no stamped manifest — run `rat plugin pack` first, or pass --manifest", image)
 	}
 	raw, err := base64.StdEncoding.DecodeString(b64)
 	if err != nil {
-		return nil, fmt.Errorf("decode manifest label: %w", err)
+		return nil, nil, fmt.Errorf("decode manifest label: %w", err)
 	}
 	td, err := os.MkdirTemp("", "rat-mf-")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer os.RemoveAll(td)
 	p := filepath.Join(td, "manifest.yaml")
 	if err := os.WriteFile(p, raw, 0o644); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return manifest.Load(p)
+	m, err := manifest.Load(p)
+	return m, raw, err
 }
 
 // runPluginPublish ships a VERIFIED plugin image to a registry (ADR-026, the team diff). It
@@ -380,7 +382,7 @@ func runPluginPublish(args []string, out io.Writer) error {
 	if *manifestPath != "" {
 		m, err = manifest.Load(*manifestPath)
 	} else {
-		m, err = readStampedManifest(*image)
+		m, _, err = readStampedManifest(*image)
 	}
 	if err != nil {
 		return err
@@ -408,6 +410,19 @@ func runPluginPublish(args []string, out io.Writer) error {
 
 func isLocalRegistry(reg string) bool {
 	return strings.HasPrefix(reg, "localhost") || strings.HasPrefix(reg, "127.0.0.1")
+}
+
+// ensureImagePresent pulls an image ref if it isn't already in the local store (so a stamped
+// manifest can be read from it — `rat add <ghcr-ref>`).
+func ensureImagePresent(out io.Writer, ref string) error {
+	if exec.Command("podman", "image", "exists", ref).Run() == nil {
+		return nil
+	}
+	fmt.Fprintf(out, "pulling %s …\n", ref)
+	if b, err := exec.Command("podman", "pull", ref).CombinedOutput(); err != nil {
+		return fmt.Errorf("pull %s: %v\n%s", ref, err, tailString(string(b), 500))
+	}
+	return nil
 }
 
 func pushImage(out io.Writer, local, remote string, tls bool) error {
