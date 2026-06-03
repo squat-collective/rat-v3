@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 🎉 PHASE 7 SEALED — `rat/5.0` (dependency resolution)
+
+Phase 7 — **dependency resolution** — is **sealed at `rat/5.0`** (`phase-7` merged to `main`, annotated tag). It completes both halves of "does rat check plugin deps?":
+
+- **coherence** (already, `rat plugin check`, ADR-026) — are a *single* plugin's `provides`/`requires` **real** capabilities, and does the kind match its axis?
+- **satisfiability** (this phase, `rat add`/`rat up`, ADR-023 #6) — across the project's plugins, does every `requires` have a **provider**? The poetry-resolver: `unsatisfiedRequires` collects all provides, flags every requires nobody provides, and warns (with a suggested axis) as the project fills in — proven `add rat-pipeline → ⚠3 → add rat-state → ⚠2 → add rat-secret → clean`.
+
+The sealed line: `rat/2.0` core · `rat/2.5` platform+daemon UX · `rat/3.0` multi-surface UI · `rat/3.5` distribution · `rat/4.0` authoring · `rat/4.5` authoring↔runtime · `rat/5.0` dependency resolution. Additive throughout — `make breaking` clean, no proto/axis change since `rat/2.0`. **Open follow-ons:** `rat add` auto-suggesting the *exact* plugin (a capability→plugin index — the marketplace); the remaining ADR-026 (launch-time manifest resolution, golden-vector conformance in `test`, signing, build-backend/template axes) + ADR-025 surface follow-ons.
+
+---
+
 ## 2026-06-03 — Phase 7 slice 1: the satisfiability resolver — `requires` need a provider 🧩
 
 The deploy-time complement to `rat plugin check` (which validates a *single* plugin's deps are real): a **plane-level** check that every `requires` across the project's plugins is actually **provided** by some plugin in the set (ADR-023 #6, the poetry-resolver). `core/cmd/rat/resolver.go`:
