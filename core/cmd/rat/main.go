@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -77,22 +78,51 @@ func serve(planePath string) error {
 	}
 	auditor := NewStdoutAuditor(os.Stdout)
 
+	// Open the listeners BEFORE assembling, so the gateway-callback address (the port a
+	// launched DRIVER plugin dials back on) is known in time to inject RAT_GATEWAY. The
+	// control listener is pl.Addr — a per-project unix socket (ADR-023) or TCP. A unix
+	// socket is unreachable by launched plugins across the container/host boundary, so when
+	// control is a socket we ALSO open an auto-port TCP COMPANION for callbacks (":0" → a
+	// free port, collision-free across instances). When control is already TCP, it doubles
+	// as the callback endpoint.
+	ctlLis, err := listen(pl.Addr)
+	if err != nil {
+		return fmt.Errorf("listen on %s: %w", pl.Addr, err)
+	}
+	var cbLis net.Listener
+	cbPort := tcpPort(ctlLis) // "" when the control listener is a unix socket
+	if cbPort == "" {
+		cbLis, err = net.Listen("tcp", "0.0.0.0:0")
+		if err != nil {
+			_ = ctlLis.Close()
+			return fmt.Errorf("open plugin-callback listener: %w", err)
+		}
+		cbPort = tcpPort(cbLis)
+	}
+	pl.CallbackAddr = gatewayCallbackAddr(pl, cbPort)
+
 	plane, err := assemble(pl, rt, auditor)
 	if err != nil {
+		_ = ctlLis.Close()
+		if cbLis != nil {
+			_ = cbLis.Close()
+		}
 		return err
 	}
 
 	srv := grpc.NewServer()
 	corev1.RegisterCapabilityInvokeServiceServer(srv, plane.Gateway)
-	lis, err := listen(pl.Addr)
-	if err != nil {
-		drain(srv, plane)
-		return fmt.Errorf("listen on %s: %w", pl.Addr, err)
-	}
 
-	serveErr := make(chan error, 1)
-	go func() { serveErr <- srv.Serve(lis) }()
-	log.Printf("gateway serving on %s — %d plugin(s) up; Ctrl-C / SIGTERM to drain", lis.Addr(), len(pl.Specs))
+	// Serve the same gateway on both listeners. GracefulStop in drain() closes both.
+	serveErr := make(chan error, 2)
+	go func() { serveErr <- srv.Serve(ctlLis) }()
+	cbDesc := "(same as control)"
+	if cbLis != nil {
+		go func() { serveErr <- srv.Serve(cbLis) }()
+		cbDesc = cbLis.Addr().String()
+	}
+	log.Printf("gateway serving — control %s · plugin-callbacks %s — %d plugin(s) up; Ctrl-C / SIGTERM to drain",
+		ctlLis.Addr(), cbDesc, len(pl.Specs))
 
 	select {
 	case <-ctx.Done():
@@ -106,6 +136,15 @@ func serve(planePath string) error {
 		}
 		return nil
 	}
+}
+
+// tcpPort returns the port of a TCP listener as a string, or "" for a non-TCP (unix)
+// listener.
+func tcpPort(lis net.Listener) string {
+	if a, ok := lis.Addr().(*net.TCPAddr); ok {
+		return strconv.Itoa(a.Port)
+	}
+	return ""
 }
 
 // listen opens the daemon's control listener. A "unix:<path>" address binds a per-project
@@ -192,7 +231,10 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 	// or loopback (local processes) — so rat computes it and injects RAT_GATEWAY as a DEFAULT
 	// (an explicit plane env still wins). This is why the SAME plugins.yaml runs host-mode and
 	// socket-mounted unchanged: the one address that depends on the topology is supplied here.
-	gwAddr := selfGatewayAddr(pl)
+	gwAddr := pl.CallbackAddr
+	if gwAddr == "" {
+		gwAddr = selfGatewayAddr(pl) // fallback (e.g. a direct launchPlane in a test)
+	}
 	manifests := make([]*manifest.Manifest, 0, len(pl.Specs))
 	desired := make([]reconciler.Desired, 0, len(pl.Specs))
 	for _, s := range pl.Specs {
@@ -262,16 +304,12 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 	return &runningPlane{Gateway: gw, shutdown: shutdown}, nil
 }
 
-// selfGatewayAddr computes the address a LAUNCHED plugin uses to call the gateway back,
-// for the current topology. Sibling/socket-mount (rat is itself a container on a shared
-// net): rat's own hostname (== its container name, resolvable via podman DNS). Podman on
-// the host: host.containers.internal (the host gateway, where rat listens on 0.0.0.0).
-// Local processes: loopback. The port is the gateway's own listen port.
-func selfGatewayAddr(pl *Plane) string {
-	_, port, err := net.SplitHostPort(pl.Addr)
-	if err != nil || port == "" {
-		port = "7777"
-	}
+// gatewayCallbackAddr computes the address a LAUNCHED plugin uses to call the gateway back,
+// for the current topology, at the given callback port. Sibling/socket-mount (rat is itself
+// a container on a shared net): rat's own hostname (== its container name, resolvable via
+// podman DNS). Podman on the host: host.containers.internal (the host gateway, where the
+// callback listener binds 0.0.0.0). Local processes: loopback.
+func gatewayCallbackAddr(pl *Plane, port string) string {
 	switch {
 	case os.Getenv("RAT_PODMAN_NETWORK") != "":
 		h, _ := os.Hostname()
@@ -284,6 +322,16 @@ func selfGatewayAddr(pl *Plane) string {
 	default:
 		return "127.0.0.1:" + port
 	}
+}
+
+// selfGatewayAddr is the fallback callback address derived from pl.Addr's port (used when
+// serve() hasn't set pl.CallbackAddr precisely — e.g. a direct launchPlane in a test).
+func selfGatewayAddr(pl *Plane) string {
+	_, port, err := net.SplitHostPort(pl.Addr)
+	if err != nil || port == "" {
+		port = "7777"
+	}
+	return gatewayCallbackAddr(pl, port)
 }
 
 // newRuntime selects the deployment-runtime axis plugin the plane asks for. Phase A

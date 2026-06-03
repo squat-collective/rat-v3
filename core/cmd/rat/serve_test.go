@@ -89,7 +89,7 @@ func callerCtx(ctx context.Context, caller string) context.Context {
 	return metadata.AppendToOutgoingContext(ctx, "rat-callmeta-bin", string(b))
 }
 
-var servingRe = regexp.MustCompile(`serving on (\S+)`)
+var servingRe = regexp.MustCompile(`control (\S+)`)
 
 // TestServeRoutesDeniesAndDrains is the Phase-A end-to-end proof (see file header).
 func TestServeRoutesDeniesAndDrains(t *testing.T) {
