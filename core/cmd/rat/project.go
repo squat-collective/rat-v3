@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	manifestpkg "github.com/rat-dev/rat/core/manifest"
@@ -263,6 +264,121 @@ func runAdd(args []string, out io.Writer) error {
 		reportUnsatisfiedSuggesting(out, unsatisfiedRequires(manifestsOf(pl)))
 	}
 	return nil
+}
+
+// runRemove deletes a plugin from rat.toml (poetry remove) — the symmetric inverse of
+// runAdd. It strips the named [[plugin]] block (preserving the file's comments + the other
+// blocks), deletes the rat-managed manifest under manifests/ (unless --keep-manifest), and
+// re-runs the resolver so a now-unsatisfied `requires` surfaces. Declarative, like add:
+// `rat up` materializes the change against a live daemon.
+func runRemove(args []string, out io.Writer) error {
+	var name string
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		name, args = args[0], args[1:]
+	}
+	fs := flag.NewFlagSet("rat remove", flag.ContinueOnError)
+	keepManifest := fs.Bool("keep-manifest", false, "do not delete the plugin's manifest file under manifests/")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if name == "" {
+		return fmt.Errorf("usage: rat remove <name> [--keep-manifest]")
+	}
+	tomlPath, dir, err := findProject(".")
+	if err != nil {
+		return err
+	}
+	rt, err := parseProject(tomlPath)
+	if err != nil {
+		return err
+	}
+	var manifestRel string
+	found := false
+	for i := range rt.Plugins {
+		if rt.Plugins[i].Name == name {
+			manifestRel, found = rt.Plugins[i].Manifest, true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("plugin %q is not in %s (`rat list` to see what is)", name, projectFile)
+	}
+
+	if err := removePluginBlock(tomlPath, name); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "removed %q from %s\n", name, projectFile)
+
+	// delete the rat-managed manifest — but ONLY if it lives under the project's manifests/
+	// (a user-supplied --manifest pointing elsewhere is left alone).
+	if !*keepManifest && manifestRel != "" {
+		abs := manifestRel
+		if !filepath.IsAbs(abs) {
+			abs = filepath.Join(dir, manifestRel)
+		}
+		if managedManifest(dir, abs) {
+			if err := os.Remove(abs); err == nil {
+				fmt.Fprintf(out, "  - deleted %s\n", manifestRel)
+			}
+		}
+	}
+
+	// symmetry with add: surface any `requires` the removal now leaves unsatisfied (e.g. you
+	// removed the only provider of a capability another plugin still needs).
+	if pl, err := LoadProject(tomlPath); err == nil {
+		reportUnsatisfiedSuggesting(out, unsatisfiedRequires(manifestsOf(pl)))
+	}
+	return nil
+}
+
+// managedManifest reports whether abs is a rat-written manifest inside <dir>/manifests/ (so
+// `rat remove` only deletes files it created, never a user's manifest elsewhere).
+func managedManifest(dir, abs string) bool {
+	rel, err := filepath.Rel(filepath.Join(dir, "manifests"), abs)
+	return err == nil && rel != "." && !strings.HasPrefix(rel, "..")
+}
+
+// removePluginBlock strips the [[plugin]] block whose name == name from rat.toml at the text
+// level (so the file's comments + the other blocks survive verbatim — the inverse of runAdd's
+// append). A block runs from a `[[plugin]]` header to the next header (or EOF), so its
+// `[plugin.env]` sub-table is included.
+func removePluginBlock(tomlPath, name string) error {
+	data, err := os.ReadFile(tomlPath)
+	if err != nil {
+		return err
+	}
+	lines := strings.Split(string(data), "\n")
+	isHdr := func(s string) bool { return strings.TrimSpace(s) == "[[plugin]]" }
+	nameRe := regexp.MustCompile(`^\s*name\s*=\s*"` + regexp.QuoteMeta(name) + `"\s*$`)
+	for i := 0; i < len(lines); i++ {
+		if !isHdr(lines[i]) {
+			continue
+		}
+		end := len(lines)
+		for j := i + 1; j < len(lines); j++ {
+			if isHdr(lines[j]) {
+				end = j
+				break
+			}
+		}
+		match := false
+		for k := i; k < end; k++ {
+			if nameRe.MatchString(lines[k]) {
+				match = true
+				break
+			}
+		}
+		if match {
+			rmStart := i
+			if rmStart > 0 && strings.TrimSpace(lines[rmStart-1]) == "" {
+				rmStart-- // also drop the blank separator runAdd wrote before the block
+			}
+			kept := append(append([]string{}, lines[:rmStart]...), lines[end:]...)
+			return os.WriteFile(tomlPath, []byte(strings.Join(kept, "\n")), 0o644)
+		}
+		i = end - 1
+	}
+	return fmt.Errorf("could not locate the [[plugin]] block for %q in %s", name, projectFile)
 }
 
 // manifestsOf flattens a loaded plane's specs to their manifests (the resolver's input).
