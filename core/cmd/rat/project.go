@@ -170,6 +170,7 @@ func runAdd(args []string, out io.Writer) error {
 	isolation := fs.String("isolation", "i9", "isolation profile")
 	withDeps := fs.Bool("with-deps", false, "auto-add marketplace providers for any unsatisfied `requires` (transitive)")
 	requireSigned := fs.Bool("require-signed", false, "with --with-deps, only auto-add providers from signature-verified marketplaces")
+	noLive := fs.Bool("no-live", false, "edit rat.toml only; do NOT materialize against a running daemon (ADR-027)")
 	var envs multiFlag
 	fs.Var(&envs, "env", "env var KEY=VALUE (repeatable; NEVER secrets)")
 	if err := fs.Parse(args); err != nil {
@@ -254,6 +255,17 @@ func runAdd(args []string, out io.Writer) error {
 	}
 	fmt.Fprintf(out, "added %q (%s) to %s\n", name, kind, projectFile)
 
+	// Live control (ADR-027): if a daemon is running for this project, materialize the add
+	// against it now — no restart. --with-deps stays declarative (a bulk setup op; the deps
+	// go live on `rat up`). rat.toml is already written, so the file + the live plane agree.
+	if !*withDeps && !*noLive {
+		if addr, running := projectDaemonAddr(tomlPath, dir); running {
+			if err := materializeAdd(out, addr, dir, name, *manifest, *image, *isolation, envs); err != nil {
+				fmt.Fprintf(out, "  ⚠ live register failed: %v (the daemon will pick it up on `rat up`)\n", err)
+			}
+		}
+	}
+
 	// poetry-style: after adding, resolve the project's `requires`.
 	//   --with-deps  → auto-add the marketplace provider for each (transitively).
 	//   otherwise    → just surface what's now unsatisfied, with a suggestion.
@@ -278,11 +290,12 @@ func runRemove(args []string, out io.Writer) error {
 	}
 	fs := flag.NewFlagSet("rat remove", flag.ContinueOnError)
 	keepManifest := fs.Bool("keep-manifest", false, "do not delete the plugin's manifest file under manifests/")
+	noLive := fs.Bool("no-live", false, "edit rat.toml only; do NOT deregister from a running daemon (ADR-027)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if name == "" {
-		return fmt.Errorf("usage: rat remove <name> [--keep-manifest]")
+		return fmt.Errorf("usage: rat remove <name> [--keep-manifest] [--no-live]")
 	}
 	tomlPath, dir, err := findProject(".")
 	if err != nil {
@@ -319,6 +332,17 @@ func runRemove(args []string, out io.Writer) error {
 		if managedManifest(dir, abs) {
 			if err := os.Remove(abs); err == nil {
 				fmt.Fprintf(out, "  - deleted %s\n", manifestRel)
+			}
+		}
+	}
+
+	// Live control (ADR-027): if a daemon is running, deregister it now — no restart.
+	// (Read the addr BEFORE this so the still-present rat.toml resolves it; the block is
+	// already removed from the file, but Addr/runtime come from the project header.)
+	if !*noLive {
+		if addr, running := projectDaemonAddr(tomlPath, dir); running {
+			if err := materializeRemove(out, addr, name); err != nil {
+				fmt.Fprintf(out, "  ⚠ live deregister failed: %v (the daemon will drop it on `rat up`)\n", err)
 			}
 		}
 	}
