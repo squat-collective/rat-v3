@@ -1,0 +1,16 @@
+# Build context for the rat daemon image (core/Dockerfile → core + contracts) AND the
+# plugin images (examples/<plugin>/Dockerfile, platform/bff → examples/platform + the
+# python SDK). Allow those trees; aggressively exclude the heavy junk (examples/ alone is
+# ~59M of node_modules/__pycache__ otherwise).
+*
+!core
+!contracts
+!examples
+!platform
+examples/**/node_modules
+examples/**/__pycache__
+examples/**/*.vsix
+platform/**/__pycache__
+**/target
+**/logs
+**/.git

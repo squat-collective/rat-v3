@@ -1,0 +1,16 @@
+# plane.container.yaml — the plane baked into the rat daemon image (core/Dockerfile).
+# Copied to /etc/rat/plane.yaml; the daemon's default --plane. Paths are container-
+# absolute (the stateplugin binary) / relative to /etc/rat (the manifests). It is the
+# Phase-A demo plane, so `docker run rat/serve:dev` serves a working gateway on :7777.
+# Override by mounting your own file at /etc/rat/plane.yaml.
+addr: 0.0.0.0:7777
+runtime: local
+health_timeout: 10s
+plugins:
+  - name: rat-state
+    manifest: ./manifests/state.plugin.yaml
+    launch:
+      image: /usr/local/bin/stateplugin
+      isolation: i9
+  - name: rat-caller
+    manifest: ./manifests/caller.plugin.yaml

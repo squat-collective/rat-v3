@@ -4,39 +4,39 @@
 pub struct AuthenticateRequest {
     /// Opaque credential (bearer token, client-cert chain, etc.). Never logged;
     /// `debug_redact` makes that structural (reviews/06 SEC-8).
-    #[prost(bytes="vec", tag="2")]
+    #[prost(bytes = "vec", tag = "2")]
     pub credential: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AuthenticateResponse {
-    #[prost(bool, tag="1")]
+    #[prost(bool, tag = "1")]
     pub authenticated: bool,
     /// The resolved subject to stamp onto downstream RequestContext.subject.
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub subject: ::prost::alloc::string::String,
     /// The tenant this subject belongs to (stamped onto RequestContext.tenant).
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub tenant: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AuthorizeRequest {
     /// Action being attempted, e.g. "pipeline.run", "plane.create".
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub action: ::prost::alloc::string::String,
     /// Optional resource the action targets.
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub resource: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AuthorizeResponse {
-    #[prost(bool, tag="1")]
+    #[prost(bool, tag = "1")]
     pub allowed: bool,
     /// Machine-readable deny reason when allowed=false. UNSPECIFIED when allowed.
-    #[prost(enumeration="DenyCode", tag="2")]
+    #[prost(enumeration = "DenyCode", tag = "2")]
     pub deny_code: i32,
     /// Human-readable reason — LOG/AUDIT-ONLY, never returned to drive caller logic
     /// (enumeration-oracle risk). Callers branch on deny_code.
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub reason: ::prost::alloc::string::String,
 }
 /// Machine-readable deny reason for Authorize. Callers branch on this, never on

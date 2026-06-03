@@ -170,3 +170,96 @@ Leaning **(a)** — it preserves the central-enforcement property ADR-005 is bui
 
 Open question: pick (a)/(b)/(c) before `runtime/v1` (or any streaming axis) routes through the gateway — and before `invoke.proto` freezes.
 Related: [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md), [ADR-007](../docs/architecture/adrs/007-call-context-transport.md) (same "0d reveals the gap" pattern), `contracts/proto/rat/core/v1/invoke.proto`, `contracts/proto/rat/runtime/v1/runtime.proto`, `examples/runtime/inmemory-go/harness_test.go` (the direct-dial workaround + its header note).
+
+## 2026-06-02 — [experiment, ui] vscode-rat as a multi-environment RAT explorer (many connections)
+
+**Surfaced while building the data-dev plane VS Code UI (step 6).** The extension should
+manage **many named RAT connections** — like DBeaver/DataGrip for data planes — each
+pointing at a RAT platform endpoint (a gateway today; a real core API gateway later).
+One editor, N planes: `local`, `staging`, `prod`, per-tenant, per-region. This is the
+"one UI, many planes" scalability story made concrete, and it's the natural shape once a
+connection is just a URL.
+
+- **Connection model:** `{ name, url }` (forward-room for `tenant`, `token`/auth, TLS).
+  Persisted in the `ratDataDev.connections` setting (discoverable, Settings-Sync-able).
+- **Tree:** connection-rooted (multi-root explorer) — connection → tables → snapshots;
+  health view connection → plugins. Per-connection actions (run pipeline / query / search)
+  via the connection's context menu; unreachable connections degrade gracefully.
+- **Remote envs:** each remote RAT env runs its own gateway (or core); the extension just
+  needs the URL. Follow-on: a **gateway "remote mode"** (point app.py at a remote
+  S3+Postgres stack instead of the local in-proc DuckLake — the run-remote.py plumbing
+  already exists) so a connection can target a genuinely remote plane, not just localhost.
+- **Auth/tenant (next):** connections carry a tenant + token; the extension stamps them
+  (the gateway/core honors identity per ADR-007). Ties into C5/C7 once the real core
+  fronts the UI.
+
+Status: **multi-connection model being built now** (connection store + add/remove/edit +
+connection-rooted trees). Auth/tenant + gateway-remote-mode are the queued follow-ons.
+
+---
+
+## 2026-06-02 — [core, architecture] runtime plugin self-registration (a `RegisterPlugin` gRPC) `[promoted → docs/architecture/adrs/023-rat-as-a-per-project-daemon.md]`
+
+> **Promoted into [ADR-023](../docs/architecture/adrs/023-rat-as-a-per-project-daemon.md) (2026-06-03):** runtime registration is now the *user model* (`rat add`, poetry-style — imperative writes the external spec, then hot-registers via the `SetProvider` keystone that this entry said was the blocker, now built). The federated *self*-register-by-dialing-in variant stays a future concern (ADR-023 Q07: quarantined `status`, not canonical). The original note is kept below.
+
+**Surfaced in conversation with Tom while building the `rat serve` orchestrator + the
+`ratctl` client.** Today the plugin set is **declarative**: `rat serve --plane plane.yaml`
+lists the plugins and `rat` launches them (k8s-style desired-state, via the
+deployment-runtime + reconciler). Tom floated the inverse model: **plugins register
+themselves at runtime** by calling a gRPC command on a running `rat`
+(`rat serve --config rat.yaml --port X`, no plugin list up front) — so `rat` is a pure
+broker that *everything connects to* (plugins connect up to register; clients connect in
+to issue commands). No DinD, plugins can live anywhere.
+
+- **What it'd take (additive to the frozen wire — a new service is not breaking):** a
+  `RegisterPlugin(manifest, endpoint) -> ok` gRPC on the core, making the **Registry**
+  (one of the six core things) runtime-writable.
+- **The blocking core gap — SAME as the Phase-A reconciler-rewire finding:** `gateway.New`
+  fixes its provider-connection map at construction; there is no way to add a provider
+  while serving. Runtime registration needs a **mutable, concurrency-safe** provider/route
+  path (`AddProvider`/`Register`). That one change unlocks BOTH self-registration AND the
+  deferred hot reconcile-restart. (See backlog: "wire the reconciler crash-restart loop.")
+- **Trust shift:** a launched image is implicitly trusted; a self-registering plugin must
+  be authenticated (C2 channel-auth / per-plugin token) before `rat` believes its declared
+  capabilities. Localhost-accept for a dev plane; matters for shared planes.
+- **Discipline:** touches a core thing → wants an **ADR** before building (CLAUDE.md #2/#3).
+  Can **complement** the plane model (declarative for launched plugins + registration for
+  external ones) rather than replace it.
+
+Status: **PARKED (decided not to build now).** It's a *scale* feature (multi-host / dynamic
+ecosystems); the project is solo + pre–Gate-B, and the "many UIs connect to the orchestrator"
+goal is **orthogonal** to it (clients invoke capabilities regardless of how plugins registered
+— proven by `ratctl`). Revisit when the launch-only model actually hurts; write the ADR then.
+
+---
+
+## 2026-06-03 — [distribution, ux] Ship rat as a GHCR binary + image — no make, no git clone
+
+**Surfaced reviewing the "raw install → plugin complete" journey** — Stage 0 today is
+`git clone` + a hand-cranked `podman run golang build`. That's the wrong front door. The
+install story should be **two artifacts, nothing else**:
+- **a prebuilt binary** (`rat` + `ratctl`) downloadable from a **GitHub Release / `ghcr.io`** —
+  `curl -L … -o rat && chmod +x ./rat` (the founding vision's literal `chmod +x ./rat`), and
+- **the daemon container image** on `ghcr.io/rat-dev/rat:<tag>` for the containerized/socket-mount
+  + k8s path.
+
+No `make`, no clone, no in-container Go build for a *user*. `make`/source stay for *contributors*
+only. Plugin images likewise pulled from `ghcr.io` (ties to the marketplace idea above), not
+built locally — so the whole getting-started is: grab `rat`, point it at a `plugins.yaml` whose
+images are GHCR refs, done.
+
+- **What it'd take:** a release pipeline — GitHub Actions building static `rat`/`ratctl` for
+  linux/amd64+arm64 (+ macOS), publishing to Releases; a multi-arch image build → `ghcr.io`;
+  versioned tags matching the `rat/N.M` seal scheme. A one-line install script (`get.rat.dev`-style)
+  is the cherry on top.
+- **Why it matters:** the architecture already *scales* from solo to cloud (same binary, different
+  plugin set) — but the **install UX doesn't yet reflect that**. The binary+image distribution is
+  what makes "solo dev tries rat in 60 seconds" real, and it's the natural home for the eventual
+  signed-release + SBOM + version-pinning story.
+
+Open question: do `rat` and `ratctl` ship as two binaries or one multi-call binary (`rat serve` /
+`rat call` / `rat apply`)? The ADR-019 split says two (orchestrator vs client); but for *distribution*
+a single `rat` binary that's both might be the friendlier front door (Tom keeps saying "`rat apply`",
+not "`ratctl apply`"). Decide alongside the release pipeline.
+Related: the marketplace/distribution idea above (plugin images on GHCR), ADR-019 (rat/ratctl split),
+the founding `chmod +x ./rat` vision (docs/vision.md / CLAUDE.md).

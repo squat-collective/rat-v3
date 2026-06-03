@@ -16,6 +16,561 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 🎉 PHASE 2 SEALED — `rat/2.5` (the v2-on-v3 platform + the daemon UX)
+
+Phase 2 — the data platform bundle (ADR-020) reimagined as the orchestrator + plugin model — is **sealed at `rat/2.5`** (`phase-2` merged to `main`, annotated tag). What landed across the phase, all proven running:
+
+- **The platform (v2 on v3):** landing → medallion (bronze/silver/gold) as **your dbt code** (`rat apply`'d, ADR-021) → quality-gated tests → **self-driving** scheduled refresh → **run history** → output in a **shared DuckLake** (Postgres catalog + S3 Parquet) → the bff serves it. Six plugins behind one gateway (scheduler · pipeline/dbt · state/Postgres · secret · bff · runner), every hop C5-authorized + audited, **DuckLake as the catalog** — the v2→v3 mapping, complete.
+- **Launch, not compose (ADR-022):** rat launches plugins from a plane; the infra is just Postgres + MinIO; **socket-mount** lets rat run as a container launching siblings by name (k8s-shaped).
+- **The daemon UX (ADR-023):** rat is a **per-project, poetry-style daemon** — `rat init`/`add`/`up -d`/`down`/`ls`/`status`/`call`/`apply`, one binary, many coexisting per machine (per-project unix socket + auto-port callback companion + instance-namespaced runtime).
+- **Secrets centralized:** every credential (state DSN, lake DSN, S3) lives only in the secret plugin; consumers hold refs and resolve at use (C5 + audit + redaction).
+- **An extensible UI (ADR-024/025):** the UI is **assembled from plugin contributions** — a generic shell renders `/api/ui`; `contribute_ui` lets a plugin add a view/command/config in one call; ADR-025 captures the **surfaces & consumers** model (per-surface interfaces; vscode/cli/webapp as out-of-stack consumers).
+
+ADRs 019–025 land the thinking; `make breaking` held clean across the phase (additive only — no proto/axis change since `rat/2.0`). The frozen contract surface is untouched; Phase 2 is all core-daemon + reference plugins + platform + UX on top of the sealed `rat/2.0` wire. **Next: Phase 3 — build the surfaces & consumers model (ADR-025), starting with the CLI surface (the one provable headlessly).**
+
+---
+
+## 2026-06-03 — `contribute_ui` SDK helper: a plugin adds UI in one call 🧩
+
+Made ADR-024's "a plugin contributes UI" a **one-liner**. New hand-written SDK module **`contracts/sdks/python/rat/contrib.py`** (`rat/contrib`, not generated — codegen only writes `rat/<axis>/v1`; named `contrib` to avoid the `rat/ui/` axis package): `contribute_ui(gateway, caller, components, retries=…)` publishes a plugin's UI components to `ui/components/<caller>/<id>` in the state-backend (via the gateway — C5-authorized + audited), riding out the state plugin's boot wiring with retries.
+
+Migrated the platform to the proper pattern — **each plugin owns its UI**:
+- **`rat-pipeline`** (dbt-runner) now self-contributes its `Lake Tables` view + `Run pipeline` command (`main.py` spawns a background `contribute_ui` once at startup); its manifest gains `requires: state/v1/put` + the declarative `contributes.slots` binding (`rat://ui/v1/explorer`→lake-tables, `rat://ui/v1/command`→run-pipeline).
+- **the bff** drops those from its seed and keeps only its OWN `Run History`.
+
+**Proven live:** the dbt-runner logged `contributed 2 UI components`; `/api/ui` shows `lake-tables` + `run-pipeline` **sourced from `rat-pipeline`** and `run-history` from `platform-bff` — the contributions come from the owning plugins, not a central seed. `make breaking` green; `contrib.py` parses clean; additive (no proto/axis/Go). So a plugin adds UI by: declare `contributes.slots`, `requires state/put`, call `contribute_ui(...)` once. Follow-ons unchanged: registry-introspection (read `contributes` from manifests), contribution trust.
+
+---
+
+## 2026-06-03 — the UI is assembled from plugin contributions (ADR-024) — plugins extend the UI 🧩
+
+Made the VS Code UI **scalable by plugins**: it hardcodes no view; plugins *contribute* views/commands/config and the UI renders them — the VSCode `contributes` model, which the **frozen manifest already carries** (`contributes.slots: [{target, component}]`). **[ADR-024](../docs/architecture/adrs/024-ui-assembled-from-plugin-contributions.md) (Proposed)** defines the runtime mechanism; no contract change (uses `contributes.slots` + `state/v1`).
+
+- **Contribution = manifest binding + runtime spec.** The manifest declares the slot binding; the rich component spec (`title`, `data` endpoint / `capability` / `schema`) is published to the **state-backend** at `ui/components/<plugin>/<id>` — the state-backend is the contribution registry (as it is the project store, ADR-021). No core change.
+- **bff aggregates** (`platform/bff.py`): `GET /api/ui` does `state/list ui/components/` + get-each → a slot-grouped descriptor (`explorer`/`command`/`config`); it **hardcodes no view** (seeds only the platform's *own* components once). `POST /api/invoke {capability, data}` is the **generic action path** — any contributed command resolves its capability via the protobuf descriptor pool (json↔proto) and routes through the gateway (C5 + audit). bff manifest gains `state/v1/put`.
+- **Generic shell** (`examples/ui/vscode-platform/`): a VS Code extension that fetches `/api/ui`, renders each slot (explorer→tree with table/row drill-in, command→VS Code command, config→form), and fires actions via `/api/invoke`. **Compile-verified strict** (`tsc`, reusing vscode-rat's toolchain); the rendering needs a running VS Code (only the aggregation is headlessly provable — and is).
+
+**Proven live:** the platform's seeded contributions showed in `/api/ui` (explorer: Lake Tables, Run History; command: Run pipeline); then a **brand-new "cooltool" plugin** published a **config form + a command** to `ui/components/cooltool/*` (via `state/put`) and **both appeared in `/api/ui` with the bff + shell unchanged** (`from cooltool`); `/api/invoke` fired a contributed command generically → `{rowsAffected:0, snapshotId:ui-test}`, audited as `platform-bff → strategy/apply` through the gateway. `make breaking` green; additive (no proto/axis/Go).
+
+So **adding a plugin can add UI** — a view, a command, a config form — by publishing a contribution; the shell + bff never change. The last visible mile (a human opening the VS Code shell) is the only unprovable-here part; the extensibility mechanism beneath it is real + tested. Follow-ons: a `contribute_ui` SDK helper (one-call publish); a registry-introspection capability so the bff reads `contributes` from manifests directly; contribution trust (ties to the marketplace idea).
+
+---
+
+## 2026-06-03 — lake creds → the secret plugin: all platform secrets in ONE place 🔐
+
+Closed the cred gap Q2 left: the lake DSN + S3 creds no longer sit in `plugins.yaml` — every consumer resolves them from `rat-secret` at point of use (the same pattern `rat-state` already used for its DSN). Now **the only place a credential appears is `rat-secret`'s `RAT_SECRETS`**.
+
+- **Generic `*_REF` resolution.** A consumer carries `<NAME>_REF=ref://…` instead of `<NAME>=<secret>`. The dbt-runner (`server.py`) resolves **every** `*_REF` env var via `rat://secret/v1/resolve` (C5-authorized, audited, retry-on-boot) and injects the plain `<NAME>` into the dbt subprocess env — so the dbt profile's `env_var('RAT_LAKE_PG')` reads a resolved value while the credential lives only on the secret plugin. The bff (`bff.py`) does the same via a `_cfg(name)` helper (literal env, else resolve `<name>_REF`). Resolution is cached.
+- **Wiring:** `rat-pipeline` + `platform-bff` manifests gain `requires: rat://secret/v1/resolve`; `rat-secret`'s `RAT_SECRETS` gains `ref://lake/pg-dsn` + `ref://lake/s3-key` + `ref://lake/s3-secret`; `plugins.yaml` swaps the consumers' `RAT_LAKE_PG`/`RAT_S3_KEY`/`RAT_S3_SECRET` for `*_REF` (non-secret `RAT_LAKE_DATA`/`RAT_S3_ENDPOINT` stay literal).
+
+**Proven live:** `grep password platform/plugins.yaml` matches **only** `rat-secret`'s line; the platform self-drove → the medallion built into the shared lake (PASS=7, runner resolved its DSN from the secret plugin); the bff served `/api/table/gold_daily_revenue` (resolved its own creds); audit shows the new hops — `rat-pipeline → secret/resolve → rat-secret` (×3) + `platform-bff → secret/resolve → rat-secret` (×3) + `rat-state` (×1). `make breaking` green; additive (no proto/axis/Go — plugin code + manifests + plane).
+
+So the platform's whole secret surface is centralized + resolved-at-use: `state DSN`, `lake DSN`, `S3 creds` — one trust boundary, every read C5-authorized + audited + redacted. Remaining secret follow-on: ADR-022 Q4 (a `LaunchSpec` secret channel so even `rat-secret` loads from Vault/a file, not `$RAT_SECRETS`).
+
+---
+
+## 2026-06-03 — Q2: the medallion writes to a SHARED DuckLake — the UI sees pipeline output 🪣
+
+The data-side gap closed (ADR-021 Q2): the pipeline no longer writes a local DuckDB trapped in the runner's tmpfs — it materializes into a **shared DuckLake** (DuckLake catalog on **Postgres**, data as Parquet on **S3/MinIO**), so any plugin/client/UI can read the tables.
+
+**The blocker was always dbt** (the engine plugin already did remote DuckLake). Root cause + fix found empirically: **dbt-duckdb 1.9.4 attaches DuckLake natively** — its `Attachment` has an `options` dict, so `attach: [{path: "ducklake:postgres:…", alias: lake, options: {data_path: "s3://…"}}]` emits exactly `ATTACH 'ducklake:postgres:…' AS lake (DATA_PATH 's3://…')`, plus a `TYPE S3` secret for MinIO. Models materialize with `+database: lake`.
+
+- **Write side** (`platform/dbt-project/`): `profiles.yml` attaches the shared lake via env vars rat injects (`RAT_LAKE_PG` / `RAT_LAKE_DATA` / `RAT_S3_*` — no creds committed); `dbt_project.yml` sets `+database: lake`. `plugins.yaml` gives `rat-pipeline` the lake connection. The dbt-runner image gained `HOME=/tmp` so DuckDB's `~/.duckdb` lands on the I9 tmpfs (read-only rootfs otherwise rejected `/plugin/.duckdb`).
+- **Read side / the UI's view** (`platform/bff.py` + `bff.Dockerfile`): the bff gained the **bulk DATA leg** — `GET /api/tables` and `GET /api/table/<name>` attach the same lake **read-only** and return JSON. This is the honest **F9 split**: control (trigger / run history) through the gateway, the bulk data leg **direct** (the lake read never appears in the audit). `+duckdb` in the image, `HOME=/tmp`.
+
+**Proven live:** the full platform self-drove → `dbt build` created `lake.main.{bronze_orders, silver_orders, gold_daily_revenue}` (PASS=7) **in the shared lake**; a **separate** client (a throwaway DuckDB attaching the same lake) read `gold_daily_revenue` → `2026-05-01: 2 orders $59.98`, `2026-05-03: 2 orders $179.49`; and the **bff served it** — `/api/tables` → `[bronze_orders, gold_daily_revenue, silver_orders]`, `/api/table/gold_daily_revenue` → the rows as JSON. Control still flows through the gateway (run history, 15 runs; audit shows `platform-bff → state/get/list`, `rat-scheduler → apply/put`, `rat-state → secret/resolve`) — the lake read is **not** in the audit, confirming the data leg is direct. `make breaking` green; additive (no proto/axis/Go — config + images + bff.py).
+
+So the v2 picture is whole on v3: **landing → medallion (bronze/silver/gold) → quality-gated → self-driving refresh → run history → and now the OUTPUT is in a shared DuckLake the UI reads.** Follow-ons: resolve `RAT_LAKE_PG` via the secret plugin (creds out of `plugins.yaml`); DuckLake snapshots/time-travel for read-isolation; a real VS Code UI pointed at these bff endpoints.
+
+---
+
+## 2026-06-03 — slice 2c: the daemon lifecycle — `rat up -d` / `down` / `ls` / `status` 🔌
+
+The daemon-lifecycle ergonomics (ADR-023 slice 2c) — and the fix for the backgrounded-kill papercut. `core/cmd/rat/lifecycle.go`:
+- **`rat up -d`** — spawns a **detached** background daemon (its own process group, output → `.rat/daemon.log`), waits until it logs `gateway serving`, prints its pid. Foreground `rat up` is unchanged. Both **refuse** to start a second daemon for a project that already has one (the unix socket would otherwise be silently hijacked).
+- **`rat down`** — SIGTERMs this project's daemon and waits for the drain — so teardown is **owned**, not a stray `kill` that races (the papercut, gone).
+- **`rat status`** — this project's state (running+pid / stopped) + socket + declared plugins.
+- **`rat ls`** — every rat daemon on the machine (the `docker ps` of daemons), from a global registry at `~/.local/state/rat/instances.json`.
+
+The daemon now **registers itself**: on serve it writes `.rat/daemon.pid` + a registry entry (keyed by project dir); on drain it retracts both (`registerDaemon`/`deregisterDaemon`, gated on a project context — no-op for a raw `rat serve --plane`). The registry is *status* (pruned of dead pids on read), never the spec — consistent with ADR-023.
+
+**Proven live:** `rat init`→`add`→**`rat up -d`** (pid 4163550) → **`rat ls`** showed `lifecycle 4163550 /tmp/rat-2c` → **`rat status`** = running + socket + 2 plugins → **`rat call`** routed to the backgrounded daemon (`pid=4163558 key=2c`) → **`rat down`** stopped it cleanly → `rat ls` empty, socket cleaned, **no stray process**. `TestRegistryAndPid` covers pid-liveness + upsert/prune/remove. `make core-test` + `breaking` green; additive (no proto/axis).
+
+The daemon track is now a complete tool: **`rat init` → `rat add` → `rat up -d` → `rat status`/`ls` → `rat apply`/`call` → `rat down`**, many coexisting per machine. Remaining on the track: **2d** (`rat lock` + capability resolver at `add` time + image-embedded manifests to drop `--manifest`) and the **GHCR release pipeline** (`curl … chmod +x ./rat`).
+
+---
+
+## 2026-06-03 — slice 3: one `rat` binary — `ratctl` folded in as `rat call` / `rat apply` 🧬
+
+Unified the artifact (ADR-023 §7): the client logic moved into a shared **`core/client`** package (exported `Run`), and `rat` grew `call`/`apply` verbs over it. So one `rat` binary now does **`serve` · `up` · `init` · `add` · `call` · `apply`**. The ADR-019 orchestrator/client *boundary* stays real (the client still reaches the daemon only over the gateway, no in-process shortcut) — only the *packaging* unified. `ratctl` becomes a **thin alias** (`main` → `client.Run`) for the transition; its test moved to `core/client` (`build.Dir` + `run→Run` adjusted), `make ratctl-smoke` now targets `./client`.
+
+**Proven live:** built one `bin/rat`; `rat init`→`rat add`→`rat up` brought a project daemon up, then **`rat call` (the same binary)** routed to the launched plugin (`pid=4125480 key=one-binary`), the **`ratctl` alias** hit the same daemon (same pid, `key=via-alias`), and `rat call` of an undeclared `put` was `PermissionDenied` (C5). `make core-test` + `breaking` green; additive (no proto/axis; client logic relocated, behavior identical — `core/client` carries the moved `TestRatctlCallsThroughGateway` + `TestTarProject`).
+
+The daemon track now reads end-to-end as one tool: **`rat init` → `rat add` → `rat up` → `rat apply` → `rat call`**, all `rat`. Remaining: **2c** (`rat up -d` background + `rat down` + `rat ls` + `rat status`), `rat lock` + capability resolver, image-embedded manifests (drop `--manifest`); then the GHCR release pipeline makes `curl … chmod +x ./rat` real.
+
+---
+
+## 2026-06-03 — slice 2: the poetry verbs — `rat init` / `add` / `up` over `rat.toml` 📜
+
+The ergonomics layer of ADR-023: the platform is now a **command-written `rat.toml`** (the committed spec, never hand-edited — poetry's `pyproject.toml` model) driven by poetry-shaped verbs. `rat` became a **multi-call binary** (`serve` | `up` | `init` | `add`).
+
+- **`rat.toml`** (TOML, via `github.com/pelletier/go-toml/v2`): `name` + `runtime` + `addr` + `[[plugin]]` tables. Reduces to the same internal `Plane` as a YAML plane (`planeFromRaw` is now shared by `LoadPlane`/`LoadProject`), so the daemon's bring-up path is unchanged. Default `addr` = this project's **per-project unix socket** (`.rat/daemon.sock`).
+- **`rat init`** — writes a commented `rat.toml` SHELL (name + runtime, no plugins) + a `.rat/.gitignore` (runtime junk is ignored, like `.venv`); refuses to clobber.
+- **`rat add <name> --image <ref> --manifest <path> [--env K=V]`** — **appends** a `[[plugin]]` (preserves the file's comments/order), with a duplicate-name check; no `--image` ⇒ a register-only driver. (Live hot-register lands with the `RegisterPlugin` RPC; for now `rat up` materializes the spec.)
+- **`rat up`** — walks up from cwd to find `rat.toml` (git/poetry/cargo-style), loads it, and runs the daemon (`serveResolved`, shared with `rat serve`). Foreground for now.
+
+**Proven live:** in `/tmp/rat-poetry-demo`, `rat init --name demo` → `rat add rat-state --image … --manifest …` + `rat add rat-caller` wrote a clean `rat.toml`; `rat up` discovered it and served on `/tmp/rat-poetry-demo/.rat/daemon.sock` (+ companion `[::]:37135`); `ratctl … --addr unix:…/.rat/daemon.sock` routed to the launched plugin (`pid=4069897 key=poetry`). `TestProjectInitAddLoad` covers the init→add→load round-trip (incl. dup-add + clobber refusal). `make core-test` + `breaking` green; additive (no proto/axis; +`go-toml/v2` dep).
+
+So the real flow is now `rat init` → `rat add` → `rat up`, over a committed `rat.toml`. Remaining on the daemon track: **2c** (`rat up -d` background + `rat down` + `rat ls` global registry + `rat status`), `rat lock` + the capability resolver at add-time, image-embedded manifests (drop the `--manifest` path), and **slice 3** (fold `ratctl` into the one `rat` binary so it's `rat call`/`rat apply`). *(Papercut still open: a backgrounded daemon's kill occasionally misses in the test harness — the daemon drains fine on real SIGTERM.)*
+
+---
+
+## 2026-06-03 — slice 1.5: the dual-listener daemon — unix control socket + auto-port TCP callback companion 🔁
+
+Closed the gap slice 1 deferred: a unix-socket-only gateway can't be dialed *back* by launched **driver** plugins (scheduler/bff) that need a network endpoint. The daemon now serves the **same gateway on two listeners** (`core/cmd/rat`):
+- **control** = `pl.Addr` — a per-project **unix socket** (ADR-023, collision-free) or TCP;
+- **plugin-callbacks** = when control is a unix socket, an **auto-port TCP companion** (`0.0.0.0:0` → a free port, so it never collides across instances either); when control is already TCP, that doubles as the callback endpoint.
+
+Listeners open **before** assembly so the companion's actual port is known in time to inject `RAT_GATEWAY` (now `host.containers.internal:<companion-port>` / `<rat-hostname>:<port>` / loopback, per topology — `gatewayCallbackAddr(pl, port)`). `GracefulStop` closes both; the socket unlinks on drain.
+
+**Proven live — the FULL platform under the per-project model:** `rat serve` with `addr: unix:/tmp/rat-platform.sock` (podman, host mode) logged `control /tmp/rat-platform.sock · plugin-callbacks [::]:38673`; the **scheduler self-drove through the companion** (`firing … → host.containers.internal:38673`, ticks refreshed) and recorded **durable** run history to Postgres; **`ratctl` read that history over the UNIX SOCKET** simultaneously (`platform-runner → state/list`); audit shows both paths through **one gateway** (drivers via companion: `rat-scheduler → apply/put`, `rat-state → resolve`; CLI via socket: `→ list`); socket cleaned on drain. `make core-test` + `breaking` green; additive (no proto/axis). The full self-driving platform now runs per-project, collision-free on both the control and callback channels — two such platforms can coexist (distinct sockets + distinct auto-ports). Next: the poetry verbs (`init`/`add`/`install`/`lock`) + `.rat/` layout + `rat ls`, then fold `ratctl` into one `rat`.
+
+---
+
+## 2026-06-03 — ADR-023 + slice 1: rat is a per-project daemon — two rats coexist on one machine 🏠
+
+Decided the *shape of the daemon* (the question Phase 2 left open) and built the load-bearing half. **[ADR-023](../docs/architecture/adrs/023-rat-as-a-per-project-daemon.md) (Proposed):** rat is a small, **disposable per-project daemon** (a venv with a heartbeat) whose desired state lives in an **external, git-committed spec** (`rat.toml`+`rat.lock`); control is **hybrid, poetry-style** (imperative `rat add` writes the spec *then* reconciles; declarative `rat install` rebuilds from it); the running registry is **status, never the source of truth** (k8s spec/status — sidesteps the snowflake-server failure mode of a living broker). Ships as a GHCR binary (`chmod +x ./rat`) **and** image; one multi-call `rat` (refines ADR-019's two-binary split — boundary kept, artifact unified). Many rats per machine ⇒ per-instance isolation is mandatory. Promotes the parked runtime-self-registration idea (its `SetProvider` keystone is now built).
+
+**Slice 1 built + proven** (`phase-2-rat-per-project-daemon`) — the two pieces that touch existing code and make coexistence real:
+- **Per-project unix socket.** The daemon's `listen()` now binds a `unix:<path>` address (parent dir created, stale socket removed, unlinked on drain) instead of only `tcp` — so many daemons coexist with **no port war** (the old fixed `:7777` made the 2nd daemon fail). `ratctl --addr unix:<path>` dials it (gRPC's native `unix:` target).
+- **Instance-namespaced deployment-runtime.** A plane `name:` (or the plane-dir basename) becomes the **instance id**; the podman runtime (`NewPodmanInstanced`) prefixes SIBLING-mode container names with it (`<instance>-rat-state-1`), so two daemons never collide on a name even if they share a network. `TestContainerName` covers it.
+
+**Proven live:** two daemons (`alpha`, `beta`) started on `/tmp/rat-A/daemon.sock` and `/tmp/rat-B/daemon.sock` — both `gateway serving` at once; `ratctl` against each socket routed to a **distinct** stateplugin process (`pid=3924413` vs `pid=3924406`); C5 still enforced per-instance (undeclared `put` → `PermissionDenied`); both sockets cleaned on drain. `make core-test` + `breaking` green; additive (no proto/axis).
+
+**Deferred within slice 1 (noted):** a unix-only gateway can't be dialed *back* by launched **driver** plugins (scheduler/bff) that need a network endpoint — so the proof used serve-only plugins. The driver-callback endpoint (an auto-port TCP companion, or mounting the socket into plugin containers) is the next sub-step, before the poetry verbs (`init`/`add`/`install`/`lock`) + `.rat/` layout + `rat ls`.
+
+---
+
+## 2026-06-03 — `rat apply`: your pipeline is code you submit (not baked) 📦
+
+ADR-021's headline made real: the dbt project is no longer baked into the runner image — you **submit** it to the running orchestrator, and the next run executes YOUR code. Crucially, this needed **no new axis and no proto change**: the **state-backend IS the project store**.
+
+- **`ratctl apply --project <dir> --name <name>`** (`core/cmd/ratctl`): tar.gz's the project client-side (generated/VCS noise excluded — `tarProject` + `TestTarProject`), then ships it to `projects/<name>` via `rat://state/v1/put` — the same C5-authorized, audited gateway path as any command. `ratctl` grew a subcommand dispatcher (`call` | `apply`); `apply` builds a `state.PutRequest` directly (binary tarball, not protojson). Default caller `--as platform-runner`.
+- **The dbt-runner fetches the applied project** (`examples/runner/dbt-duckdb/server.py`): on each `strategy/apply` it `rat://state/v1/get`s `projects/<name>`, extracts it (py3.12 `filter="data"` safe untar), and runs `dbt build` on it — re-extracting **only when the stored revision changed** (revision-cached). The baked sample project is the fallback until something is applied.
+- **Wiring:** `rat-pipeline` manifest `requires rat://state/v1/get`; `platform-runner` `requires rat://state/v1/put` (the operator identity `ratctl apply` uses); rat now **injects `RAT_PLUGIN_NAME`** (each plugin's manifest name → its caller identity) alongside `RAT_GATEWAY` in `launchPlane`, so the runner can identify itself when it calls `state/get`; `plugins.yaml` sets `RAT_PROJECT_KEY: projects/medallion`.
+
+**Proven live** (host mode): the **baked** run was `PASS=7` (no `applied_marker`); `ratctl apply` of a modified project returned `applied … → projects/medallion (8 files, revision 1)`; the runner logged `extracted applied project 'projects/medallion' rev 1` and the next run built `1 of 8 OK created sql table model main.applied_marker` → `PASS=8`, with DuckDB ground-truth `('applied-via-rat-apply', 42)`. **Re-apply** of a further-changed project bumped to **rev 2**, re-extracted, and the value propagated `42 → 99`. Audit shows the full path: `platform-runner → state/put → rat-state` (the apply) + `rat-pipeline → state/get → rat-state` (the fetch). `make core-test` + `breaking` + `ratctl-smoke` green; additive (no proto/axis).
+
+So adding/updating a pipeline is now `ratctl apply` — your code, submitted to the always-on orchestrator, picked up on the next run. (Known nit: the host-mode SIGTERM drain occasionally races and leaves plugin containers up — a teardown-robustness follow-on; manual cleanup is one line.) Follow-ons: Q2 (dbt→shared-DuckLake so the UI sees the tables), per-project cron, the dedicated `pipeline/v1/run` axis.
+
+---
+
+## 2026-06-03 — secret plugin: creds out of consumer plugins, resolved through the gateway 🔐
+
+Tom's "store one or 2 secrets on a communicating secret plugin" made real, on the **frozen `secret/v1`** contract (no proto change). A `kind: secret-backend` plugin holds the platform's secrets in **one trust boundary**; consumer plugins hold only an opaque **ref** and resolve it at point of use through the gateway (C5-authorized, audited, tenant-scoped, redacted).
+
+- **`examples/secret/env-py`** — an env-backed secret-backend (`store.py` loads a `{tenant: {ref: value}}` map from `$RAT_SECRETS`; `server.py`/`main.py` serve the frozen `SecretService.Resolve`). Keeps the conformance reference (`inmemory-py`, hardcoded golden map) untouched. Same tenant-scoped anti-enumeration: unknown ref AND cross-tenant ref both → `found=false` (never `PERMISSION_DENIED`); 5-min TTL; `value` is `debug_redact`.
+- **`rat-state` resolves its DSN, lazily** (`examples/state/postgres-py/server.py`): on first state op it dials the gateway (`RAT_GATEWAY`, injected) and calls `rat://secret/v1/resolve` for `$RAT_STATE_PG_REF` (`ref://state/pg-dsn`), retrying until `rat-secret` is wired, then connects Postgres. A literal `$RAT_STATE_PG` is still honored as a fallback. Lazy ⇒ rat-state is Healthy immediately and doesn't race the secret plugin's boot.
+- **Wiring:** `secret/v1` added to the gateway's routable descriptors (`cmd/rat/descriptors.go`); `rat-state` manifest gains `requires: rat://secret/v1/resolve`; `platform/manifests/secret.plugin.yaml`; `plugins.yaml` adds `rat-secret` (the DSN lives in its `$RAT_SECRETS`, one place) and `rat-state`'s env drops the DSN for `RAT_STATE_PG_REF`. `make plugin-images` builds `rat/secret:dev`.
+
+**Proven live** (host mode, `rat serve --plane plugins.yaml`, 5 launched plugins): startup injected `RAT_GATEWAY` + wired all 5 + served; the new audit hop **`rat-state → rat://secret/v1/resolve → rat-secret`** fired (lazy, once, then cached); `rat-state`'s container env carried **no credential** (only `RAT_STATE_PG_REF=ref://state/pg-dsn`, no `RAT_SECRETS`, no password); the platform **self-drove** (ticks 2+ refreshed) and recorded **durable** run history to Postgres (so the DSN resolved + connected); the raw DSN password appeared **0×** in rat's audit log. `make core-test` + `breaking` green; additive (no proto/axis).
+
+So adding the secret plugin is — as Tom asked — one `plugins.yaml` entry + an image, and consumers stop carrying raw credentials. Follow-on: ADR-022 Q4 (a `LaunchSpec` secret channel so even `rat-secret` loads from Vault/a file instead of `$RAT_SECRETS`).
+
+---
+
+## 2026-06-03 — 2c COMPLETE: socket-mount — rat is ITSELF a container, launching plugins as siblings by name 🔌
+
+The final 2c refinement, and ADR-022's "socket-mount local" made real: **rat runs as a container** that drives the **host's rootless podman** over a mounted socket (Docker-out-of-Docker) and launches each plugin as a **sibling container** on a shared `rat-net`, dialing them **by name** via podman DNS — the exact k8s pod-to-pod-by-service-name shape (the prod target), no host-port publishing.
+
+**Core change — the podman runtime's SIBLING mode** (`core/deploymentruntime/podman.go`): `NewPodmanNetworked(net)` (selected by `$RAT_PODMAN_NETWORK`) launches each plugin with `--network=<net> --name <plugin>-<seq> --replace`, returns `<name>:50051` as the endpoint (no `-p` publish; a containerized rat's own `127.0.0.1` can't reach a sibling's host port, but a name on the shared net resolves), and `--add-host=host.containers.internal:host-gateway` so plugins still reach host-published backends (Postgres). Empty network ⇒ the original host-publish mode, unchanged. **I9 holds in both** — a user bridge is still a private netns that drops the 169.254 metadata route. `TestPodmanSiblingNetwork` proves a peer container resolves the sibling by name and connects (`make core-test-podman` green); `TestContainerName` covers the naming. `$RAT_PODMAN_BIN` lets the runtime use `podman-remote`.
+
+**Same plane, both topologies** — rat now **injects `RAT_GATEWAY`** into each launched plugin per mode (`host.containers.internal` on the host · rat's own shared-net name when socket-mounted · loopback for local processes), so `plugins.yaml` runs host-mode AND socket-mounted **unchanged** (the hardcoded `RAT_GATEWAY` came out of the file). `core/Dockerfile` now installs the podman client + a `podman-remote` wrapper, and splits ENTRYPOINT/CMD so the plane path is overridable.
+
+**Proven end-to-end** (`make platform-socket` / `platform/run-socket-mount.sh`): `rat AS A CONTAINER` (`--user 0` for the rootless host socket, on `rat-net`, socket mounted) → `launching 4 plugin(s) via podman` → `wired rat-pipeline-1 / rat-state-2 / rat-scheduler-3 / platform-bff-4` (all siblings, by name) → serving on `:7777`. The platform **self-drove**: ticks 2–10 each `refreshed` (real `dbt build` inside `rat-pipeline-1`), recorded durable run history to the **host** Postgres via `host.containers.internal` (verified in `rat_state`), the scheduler dialed the gateway at rat's injected shared-net name, and the **bff served `/api/runs` reached BY NAME from a peer** (no host port). Audit shows every hop through the *containerized* gateway: `rat-scheduler → strategy/apply → rat-pipeline`, `→ state/put → rat-state`, `platform-bff → state/list+get → rat-state`. Drain + `run-socket-mount.sh down` tore down rat + every sibling + `rat-net`; Tom's kinora/kinori stacks untouched.
+
+**ADR-022 Q3 (sibling networking) + Q5 (gateway re-bind) RESOLVED; Q2 partially** (RAT_GATEWAY injection). `make core-test` + `core-test-podman` + `breaking` green; additive (no proto/axis). **The launch-mode arc is complete:** rat launches the whole self-driving platform, whether on the host or as a container itself; adding a plugin is one `plugins.yaml` entry + an image; the infra is two backends. Orthogonal follow-ons remain: secret plugin (creds out of env), Q2 (dbt→shared-DuckLake), `rat apply` (project upload), and a `k8s` deployment-runtime for the prod profile.
+
+---
+
+## 2026-06-03 — 2c: the FULL launch-mode platform self-drives — rat launches all 4 plugins, infra is just Postgres+MinIO 🚀
+
+The payoff in full: **rat-on-host launched the entire platform — 4 plugin containers from one `plugins.yaml` — and it ran itself.** `platform/plugins.yaml` now declares `rat-pipeline` (dbt-runner), `rat-state` (Postgres-backed run history), `rat-scheduler` (self-driving clock), `platform-bff` (UI control-path), plus a register-only `platform-runner` driver. The infra shrank to `platform/compose.infra.yaml` = **just Postgres + MinIO** (no per-plugin service — adding a plugin never touches it). The two *drivers* (scheduler, bff — they call the gateway, serve no capability) got a trivial TCP health-port so the reconciler can launch + supervise them like any plugin (`_serve_health` in `cron-py/main.py`; the bff binds `RAT_PLUGIN_ADDR`). Plugins reach the host (Postgres at `:55440`, the gateway at `:7777`) via `host.containers.internal`. **Proven live** (`rat serve --plane plugins.yaml`, podman runtime):
+- `launching 4 plugin(s) via podman` → `wired rat-pipeline/rat-state/rat-scheduler/platform-bff` → `gateway serving on :7777 — 5 plugin(s) up`; 4 `rat/{dbt-runner,state,scheduler,bff}:dev` containers running, all launched by rat;
+- the platform **self-drove**: ticks 2–10 each `refreshed` (a real `dbt build` in the dbt-runner container) **and** recorded to run-history via `rat-state → Postgres` (tick 1 lost the cold-start race to the gateway bind, retried next tick);
+- **durable**: 9 `success` rows verified directly in Postgres (`rat_state` table, `runs/000002…000010`);
+- the **launched bff** served `/api/runs` reading that history back through the gateway;
+- audit confirms the launched plugins talk *only* through the gateway: `rat-scheduler → strategy/apply → rat-pipeline`, `rat-scheduler → state/put → rat-state`;
+- drain tore down every launched container (reconciler-managed); Tom's kinora/kinori stacks untouched.
+
+So **the whole self-driving, run-history, UI-backed platform runs entirely rat-launched; the infra is two backends; adding a plugin = one `plugins.yaml` entry + an image.** ADR-022's headline, end to end. `make breaking` clean; additive (no proto/axis change). **Remaining in 2c:** **socket-mount** (containerize rat: podman CLI + host socket + in-network endpoint) as the final refinement. (Project delivery via `rat apply` and dbt→shared-DuckLake (Q2) remain orthogonal follow-ons.)
+
+---
+
+## 2026-06-03 — 2c: the slim launch-mode platform — the medallion runs through a rat-LAUNCHED stack 🎛️
+
+The payoff: **rat launches the dbt-runner as its own container and the medallion runs inside it** — no per-plugin compose service. `platform/plugins.yaml` (a `runtime: podman` launch plane — one entry per plugin → its image) + the dbt-runner image now bakes a demo dbt project + landing data (a DEMO shortcut; real projects arrive via `rat apply`, ADR-021 Q1) and is read-only-rootfs-safe (`DBT_SEND_ANONYMOUS_USAGE_STATS=0`, dbt writes only to the I9 `/tmp` tmpfs). **Proven live** (rat on the host + the proven podman runtime): `rat serve --plane plugins.yaml` →
+- `launching 1 plugin(s) via podman` → `wired rat-pipeline -> 127.0.0.1:44587` → serving;
+- a `rat/dbt-runner:dev` **container** is running, launched by rat;
+- `ratctl call rat://strategy/v1/apply` → routes to it → it runs `dbt build` on the baked project → `bronze_orders → silver_orders → gold_daily_revenue` + tests → **`Completed successfully, PASS=7 ERROR=0`** (the medallion ran *inside the launched container*);
+- SIGTERM → `unwired rat-pipeline` → drained.
+
+So **the medallion runs through a rat-launched stack; the infra carries no per-plugin service; adding a plugin = one `plugins.yaml` entry + an image** — ADR-022's headline, real. `make breaking` clean; additive. **Remaining in 2c:** add the other plugins to `plugins.yaml` (state → Postgres via `host.containers.internal`; scheduler/bff are drivers that need a trivial health port so the reconciler can launch+supervise them) with a slim `compose` = **rat + Postgres + MinIO**; then **socket-mount** (containerize rat: podman CLI + host socket + the in-network endpoint tweak) as the final refinement. (Project delivery via `rat apply` and the dbt→shared-DuckLake (Q2) remain orthogonal follow-ons.)
+
+---
+
+## 2026-06-03 — 2c: the Python plugin images are baked 🐳
+
+The launchable images for every platform plugin (ADR-022) — so rat can `podman run` each as its own container (no per-plugin compose service). A `Dockerfile` per plugin (build context = repo root; `.dockerignore` loosened to allow `examples/` + `platform/`, junk excluded) + `make plugin-images`:
+- `rat/state:dev` (161M) · `rat/catalog:dev` (214M) · `rat/engine:dev` (443M) · `rat/scheduler:dev` (153M) · `rat/dbt-runner:dev` (324M) · `rat/bff:dev` (153M) — each `FROM python:3.12-slim`, copies the python SDK into site-packages + the plugin code, pip-installs its `requirements.txt`, `CMD python main.py`.
+- The **dbt-runner** is special: dbt lives in its **own venv** (`/opt/dbtvenv`, `$RAT_DBT_BIN`) because dbt-core pins an older protobuf than the RAT SDK's 7.35 — verified live: the gRPC side runs **protobuf 7.35.0** + imports the SDK, AND **dbt 1.11.11** runs from the venv. The Go `rat/stateplugin:dev` (19M) from the prior step rounds out the set.
+
+Verified **functional** (not just built): `rat/engine:dev` imports duckdb/pyarrow/numpy + the SDK + its plugin code; `rat/dbt-runner:dev` runs both sides. `make breaking` clean; additive (Dockerfiles + `.dockerignore` + a make target). **Next:** the slim launch-mode platform — a `plugins.yaml` (one entry per plugin → these images) + a compose that drops to **rat + Postgres + MinIO** (rat launches the rest); the scheduler/bff (drivers, no served port) get a trivial health port so the reconciler can launch+supervise them; prove the medallion runs through the launched stack. Then **socket-mount** (containerize rat) as the refinement.
+
+---
+
+## 2026-06-02 — 2c (first step): rat launches a SEPARATE plugin container — the decoupled loop, proven 📦
+
+The reliable, decoupled-launch proof (the path chosen over a blind socket-mount): **rat launches a plugin as its own container** from a plane. `core/testplugins/stateplugin/Dockerfile` bakes a launchable `rat/stateplugin:dev` image (a static Go binary, alpine, runs under the podman runtime's I9 profile); `core/cmd/rat/plane.podman.yaml` is a `runtime: podman` plane that launches it. Proven live (rat on the host, the proven podman runtime — no socket-in-container yet): `rat serve --plane plane.podman.yaml` →
+- `launching 1 plugin(s) via the "podman" runtime` → `wired rat-state -> 127.0.0.1:45043` → `gateway serving`;
+- a **separate container** (`localhost/rat/stateplugin:dev`) is running, launched by rat;
+- `ratctl call rat://state/v1/get` → routes to it; the value decodes to `pid=1 key=k1` — **pid 1 proves it ran inside the container**, not as a host process;
+- `put` → `PermissionDenied` (C5); SIGTERM → drained → the container terminated.
+
+So **adding a plugin = one plane entry + an image; rat launches it as its own container; the infra carries no per-plugin service** — the ADR-022 model, decoupled + reconciler-driven (self-healing), reached *reliably* (uses the already-proven podman runtime; `make stateplugin-image`). `make breaking` clean; additive (no proto/axis). **Next:** bake the Python plugin images (engine/catalog/dbt-runner/…) + a slim `plugins.yaml`/compose so the *platform* stack drops to rat + Postgres + MinIO; then **socket-mount** (containerize rat: podman CLI + the host socket + the in-network endpoint tweak) as the focused final refinement.
+
+---
+
+## 2026-06-02 — 2b: the launch-mode daemon — `rat serve` launches + supervises + self-heals 🚀
+
+`rat serve`'s launch path is now **reconciler-driven** (ADR-022): rat is the **sole launcher**, not a static one-shot. `core/cmd/rat`:
+- **`rewire.go`** — `gatewayRewire` implements `reconciler.Rewire`: `Bind` dials the plugin's endpoint + `gateway.SetProvider` (closing any prior conn); `Unbind` → `RemoveProvider` + close; `Close` for shutdown.
+- **`main.go`** — `assemble` now returns a mode-agnostic `runningPlane` (gateway + teardown). The launch branch is **`launchPlane`**: build the registry + an **empty** gateway → run the **reconciler** over the desired set with the `gatewayRewire` → the reconciler launches each plugin and, on Healthy, dials + wires it; on crash it relaunches + re-wires (self-healing). It waits for the initial set to be Healthy so the gateway is wired before serving (same "ready when serving" semantics). `BringUp`'s static launch is **replaced** (no double-launch); attach mode is untouched.
+
+**Proven:** `make core-serve-smoke` — the daemon boots the stateplugin **via the reconciler**, routes a C5-authorized call, denies an undeclared one, and SIGTERM drains (stop loop → terminate instance → GracefulStop). Full `make core-test` green (cmd/rat, ratctl, gateway, reconciler, supervisor) + `breaking` clean; gofmt clean; additive (no proto/axis). Self-heal-on-crash is unit-proven (`TestRewireOnRelaunch`) + now wired into the live daemon.
+
+So `rat serve` launches plugins, keeps them healthy, and re-wires routing when one relaunches — a real orchestrator. **Next:** apply this to the *platform* — a `plugins.yaml` + the **socket-mount** deployment-runtime so the compose stack drops the per-plugin services to just **rat + Postgres + MinIO** (ADR-022's "adding a plugin = one line"), then the **secret plugin**.
+
+---
+
+## 2026-06-02 — reconciler re-wire hook — a relaunched plugin self-heals routing 🔁
+
+The launch-mode wiring's core mechanism: the reconciler now drives the gateway re-bind across a crash. `core/reconciler`: a `Rewire` interface (`Bind(name, endpoint)` / `Unbind(name)`) + an optional `Config.Rewire`; the reconciler calls **`Bind` when a plugin goes Healthy** (initial launch OR a crash-relaunch on a *new* endpoint) and **`Unbind` when a Healthy plugin is lost** — keeping the reconciler decoupled from the gateway (the daemon wires `Rewire` → `gateway.SetProvider`/`RemoveProvider`). Test `TestRewireOnRelaunch`: a healthy plugin is Bound at ep1 → crashes → Unbound → relaunches → Bound at ep2 (ep1 ≠ ep2) — routing self-heals automatically. `make core-test` (reconciler + gateway green; an unrelated `arrowticket` timing flake passes on re-run) + `breaking` clean; gofmt clean; additive (no proto/axis).
+
+With `gateway.SetProvider` (done) + this hook, the **self-healing re-wire path is complete + tested**. **Next (the launch-mode daemon assembly):** wire `cmd/rat` to run the reconciler with a `gatewayRewire` adapter (Bind = dial + `SetProvider`; Unbind = `RemoveProvider` + close) as the **sole launcher** (replacing `BringUp`'s static launch — avoiding the Phase-A double-launch), so `rat serve` launches plugins, keeps them healthy, and re-wires on crash — then a `plugins.yaml` + the socket-mount runtime ([ADR-022](../docs/architecture/adrs/022-plugins-are-launched-not-composed.md)).
+
+---
+
+## 2026-06-02 — `gateway.SetProvider` re-bind DONE — the keystone three threads waited on 🔑
+
+The provider-connection gap I first flagged in Phase A (and parked twice) is closed. `core/gateway/gateway.go`: the `providers` map is now guarded by a `sync.RWMutex`; `New` **owns** (copies) the map; new **`SetProvider(name, conn)`** (bind/re-bind, returns the previous conn to close) + **`RemoveProvider(name)`**; `openCall` reads via a read-locked `provider()` accessor. So the gateway can **re-wire a provider's live connection at runtime** — concurrency-safe against in-flight Invoke/relay. Test `TestSetProviderRebind` (core/gateway): a call routes to conn A → `SetProvider` swaps to conn B → the same call routes to B → `RemoveProvider` → Unavailable. `make core-test` + **`go test -race ./gateway`** + `breaking` green; gofmt clean; additive (no proto/axis, `rat/2.0` untouched).
+
+This single change **unblocks three threads at once**: (1) the reconciler **hot-restart re-wire** (Phase-A sre#-adjacent finding — a relaunched plugin's new endpoint), (2) **launch-with-lifecycle** ([ADR-022](../docs/architecture/adrs/022-plugins-are-launched-not-composed.md) Q5), and (3) **runtime plugin self-registration** ([ideas/inbox.md](../ideas/inbox.md) — add a provider while serving). The gateway is now mutable; wiring the supervisor/reconciler to call `SetProvider` on (re)launch is the next step toward the launch-mode platform.
+
+---
+
+## 2026-06-02 — ADR-022 PROPOSED: plugins are launched, not composed 🔌
+
+The second architectural trigger from Tom: *adding a plugin should be almost nothing* — no compose service per plugin. [ADR-022](../docs/architecture/adrs/022-plugins-are-launched-not-composed.md) (Proposed): the ADR-019/020 platform was built in **attach mode** (compose starts every plugin, rat connects), so the **infra grows one ~15-line compose service per plugin** — backwards. Fix: rat **launches** plugins (it already can — [ADR-016](../docs/architecture/adrs/016-plugin-provisioning-via-deployment-runtime.md): "the core launches"). **Adding a plugin = one entry in `plugins.yaml`** (`name`, `image`, `needs`, `secrets`, `config`); rat does launch → inject config → fetch secrets (from a **secret plugin**) → wire deps → healthcheck → connect → register. The deployment-runtime is **socket-mount locally** (rat-in-a-container drives the host container socket — the docker/k8s-daemon model Tom pointed at) and **Kubernetes in prod** (rat → the API; no socket, no DinD). The infra shrinks to a fixed bootstrap (**rat + Postgres + MinIO + secret plugin**) that does *not* grow per plugin; secrets live in the secret plugin, never in the infra. **Surfaces a load-bearing dependency (Q5):** launch-with-lifecycle needs a concurrency-safe `gateway.SetProvider` re-bind (the Phase-A reconciler-rewire finding + the parked runtime self-registration idea). Design only. **Next: ratify ADR-022 (+021), then rebuild the platform to launch mode + the secret plugin + the gateway re-bind.**
+
+---
+
+## 2026-06-02 — ADR-021 PROVEN (experiment): real dbt, orchestrated by rat 🧪✅
+
+First working slice of the [ADR-021](../docs/architecture/adrs/021-orchestrator-pipelines-as-code.md) vision — **rat orchestrates a real dbt project**, on `phase-2-dbt-runner`:
+- **`examples/runner/dbt-duckdb`** — a **dbt-runner plugin** (reuses the frozen `strategy/v1/apply` axis for the experiment). On Apply it runs `dbt build` on a project — **dbt owns the DAG, `ref()`, Jinja, materializations AND tests; rat reinvents none of it.** dbt runs as a subprocess from its **own venv** (dbt-core pins an older protobuf than the RAT SDK's 7.35 — isolated behind a binary boundary).
+- **`platform/dbt-project/`** — a standard dbt project (the user's *code*): `dbt_project.yml`, `models/{bronze,silver,gold}.sql` with `{{ ref() }}`, `models/schema.yml` native tests (not_null/unique), and one `rat.yaml` (`kind: pipeline, runner: dbt, schedule`).
+- Wired into the stack (the `pipeline` service → the dbt-runner; its manifest now requires nothing — dbt-duckdb + DuckLake are the engine+catalog, in-proc).
+- **Proven live:** the scheduler fired `strategy/apply` into the dbt-runner; `dbt build` ran the medallion — `bronze_orders → silver_orders → gold_daily_revenue` + 4 tests — **`PASS=7 ERROR=0, Completed successfully`**. Every fire audited (`rat-scheduler → strategy/apply → rat-pipeline`); run history recorded the failed early runs (the "lake" errors → `status: failed` — the quality/error path) and the successful ones (`status: success`).
+
+This validates the core ADR-021 model: **rat orchestrates capabilities and a schedule; the pipeline is a dbt project (code); the language is a plugin.** `make breaking` clean (the dbt-runner reuses the strategy axis — no proto change). **Known limit (Q2):** the experiment materializes to a *local* DuckDB (`dbt-duckdb`'s `attach` can't pass DuckLake's `DATA_PATH`, and `on-run-start` runs after relation-binding) — wiring dbt's output into the *shared remote DuckLake* (so other plugins/UI see the tables, via a lake-connection capability) is the next step. Other follow-ons: the dedicated `pipeline/v1/run` axis; `rat apply` (project upload) instead of a mount; per-project cron from `rat.yaml`.
+
+---
+
+## 2026-06-02 — ADR-021 PROPOSED: rat as a pure orchestrator — pipelines as code (dbt) 🧭
+
+A fundamental rethink with Tom after the ADR-020 first build felt "shitty vs. v2." The diagnosis: ADR-020 S1–S4 proved the v3 *plumbing* (plugins through the gateway, self-driving, quality-gated, run history) but **baked the pipeline into the infra** (a hardcoded medallion, the model list in a compose env, one global interval) — not the *code-driven* platform v2 was (project-as-code: dbt-shaped models + config + tests + per-pipeline cron; you edit files, the platform runs them). [ADR-021](../docs/architecture/adrs/021-orchestrator-pipelines-as-code.md) (Proposed) redirects the pipeline/project model: **rat orchestrates *capabilities* and never knows what a "pipeline" is; your data work is a dbt project (code) you `rat apply`; the infra declares only plugins.** Key moves: the **pipeline *language* is a plugin** (a `pipeline-runner` axis — `dbt-runner` first, `python-runner` later — so rat reinvents no DAG/`ref()`/Jinja/tests; dbt does); **plugin deps = capability composition** (`requires`→`provides`, no new core magic); three KISS schemas (plane = plugins only · a project = standard dbt + one `rat.yaml` · the manifest's provides/requires). Keeps ADR-020's decoupled stack/scheduler/state/gateway; **replaces** its bespoke "model-list strategy" (Q02). Design only — no build yet; open questions Q1–Q5 (project delivery via `rat apply` vs git-watch; a lake-connection capability; the `pipeline/v1/run` contract; the python metadata SDK; project-as-desired-state). **Next: ratify ADR-021, then build the `dbt-runner` reference.**
+
+---
+
+## 2026-06-02 — ADR-020 S4b (UI control-path) DONE: the UI's backend routes through the real gateway 🖥️
+
+The portal-replacement's backend is now the **real orchestrator**. New [`platform/bff.py`](../platform/bff.py): a thin JSON-over-HTTP backend (a `kind: ui` driver, `platform-bff`) that a VS Code / web UI talks to, and that issues every **control** call to `rat serve` as a capability invocation (C5 + audit) — the honest minimum of the F9 split (control through the gateway; the bulk data-leg/row-preview would attach its own engine, out of scope here):
+- `GET /api/health` → `{ ok, gateway }` · `GET /api/runs` → the run history (`rat://state/v1/list` + `get`) · `POST /api/run` → trigger a refresh (`rat://strategy/v1/apply`).
+- Wired into the compose stack (`bff` service on host `:8088`). **Proven live via curl:** `/api/runs` returned `runs/000001/2` and `/api/run` triggered a refresh (`snap-12`) — every hop audited as caller `platform-bff` (`→ state/get`, `→ state/list`, `→ strategy/apply`).
+
+`make breaking` clean; no Go/proto change. **What this IS:** the UI's control path now flows through the real gateway (the ADR-019 Phase-B-step-4 / ADR-020 S4 intent), proven without the VS Code UI (which can't run headlessly). **What remains (follow-on):** the **VS Code extension UI itself** — the existing `examples/ui/vscode-rat` is experiment-shaped (semantic search over reviews), so a platform UX (medallion layers + run history) pointed at this BFF, run interactively, is the next step; the bulk data-leg (table/row preview) is the F9 follow-on.
+
+**🎉 ADR-020 S1–S4 complete (core + backends):** v2's platform, rebuilt on the v3 plugin core with DuckLake as catalog — **decoupled stack · self-driving scheduled refresh · quality-gated commits · run history · a UI control-path through the gateway** — every hop authorized + audited, CLI/BFF not a portal. From a sealed library to a running, self-driving, quality-gated data platform.
+
+---
+
+## 2026-06-02 — ADR-020 S4 (state-backend) DONE: the platform has run history 📋
+
+The platform now records + serves its own metadata — v2's `runs` table, as a **state-backend plugin** behind the gateway (on `phase-2-state`). New [`examples/state/postgres-py`](../examples/state/postgres-py/): a Postgres-backed `kind: state-backend` plugin implementing the frozen state/v1 **Get/Put/List** (monotonic revisions + single-key CAS via `if_revision`), reusing the stack's Postgres (a `rat_state` KV table). Wired into the platform:
+- the **scheduler** records a run record per fire — `rat://state/v1/put` `runs/<tick>` = `{tick, status, snapshot, error}` (Q04 resolved: reuse the stack's Postgres);
+- the **runner** reads the history back through the gateway — `rat://state/v1/list` (prefix `runs/`) + `get`.
+- **Proven live:** `make platform-up` → the scheduler self-drives and records runs; `make platform-run` lists them: `3 run(s) recorded; runs/000001 {"status":"success","snapshot":"snap-4"} …`. Every state hop audited (`rat-scheduler → state/put`, `platform-runner → state/list/get → rat-state`).
+
+`make breaking` clean; no Go/proto change (S4 is a plugin + wiring). **Remaining in S4 (S4b):** repoint **`vscode-rat`** at the live `rat serve` gateway (browse the medallion layers + run history, edit models, run/observe) — the bigger TS effort (the control path via the gateway's Connect SDK; the F9 data-leg/row-preview stays on the BFF). With S1–S4 the platform is **v2's core, on v3 plugins, DuckLake catalog**: decoupled stack · self-driving scheduled refresh · quality-gated commits · run history — all through the gateway, audited.
+
+---
+
+## 2026-06-02 — ADR-020 S3 (quality gates) DONE: tests block the commit ✅🚦
+
+The pipeline strategy now runs **data-quality tests** that gate the catalog commit — v2's "tests block the merge", on DuckLake (on `phase-2-quality`). After building the layers + flushing, [`sql-pipeline-py`](../examples/strategy/sql-pipeline-py/) runs each `project/tests/*.sql`; a test that returns rows is a violation, and **any violation blocks the commit** (the strategy raises `FAILED_PRECONDITION` *before* `catalog.commit-table`, so the published snapshot pointer stays at the last good one).
+- **The F9 dodge:** each test runs as `CREATE OR REPLACE TEMP TABLE _rat_qt AS <test>` — so `rows_affected` **is** the violation count, needing no Arrow row-pull (the in-proc data leg, F9, never enters the picture).
+- **Proven live:** the self-driving stack passes both tests each tick and commits (`quality …: pass (0 violation(s))`); injecting a deliberately-failing test gated the very next tick — `rat-pipeline: quality _demo_failing.sql: FAIL (2 violation(s))` → `scheduler tick → error: FAILED_PRECONDITION quality gate failed`, **no commit**. Demo test removed after.
+
+`make breaking` clean; no Go/proto change. **Remaining in S3 (follow-ons):** (a) **merge strategies** beyond full_refresh — incremental on a `unique_key`+watermark (the incremental-embed strategy already shows the shape); (b) **read-isolation** — v2's Nessie branch-on-failure-discard so readers never see un-passed data; DuckLake's model is snapshots/time-travel (not git branches), so this needs a DuckLake-branching investigation. S3 today delivers quality-GATED COMMITS; full read-isolation is the richer form. **Next: those S3 follow-ons, or S4 — state-backend + VS Code.**
+
+---
+
+## 2026-06-02 — ADR-020 S2 DONE: the platform is SELF-DRIVING — scheduled refresh through rat ⏰
+
+The always-on stack now refreshes **on its own**, no command needed — v2's `ratd` scheduler→runner, decoupled into v3 plugins behind the gateway. Two pieces (both proven live on `phase-2-scheduler`):
+- **S2a — the pipeline as a capability** ([`examples/strategy/sql-pipeline-py`](../examples/strategy/sql-pipeline-py/)): the medallion runner promoted to a `strategy` plugin (Q02). On `rat://strategy/v1/apply` it runs bronze→silver→gold via `rat://engine/v1/execute` and commits the gold snapshot via `rat://catalog/v1/{register,commit}-table` — **all back through the gateway** (it dials `RAT_GATEWAY`, names no concrete plugin). The audited chain: `platform-runner → strategy/apply → rat-pipeline → engine/catalog` — exactly v2's `ratd → runner → engine`, now per-hop C5-enforced. `run.py` is now just the manual trigger (one `strategy.apply`).
+- **S2b — the self-driving clock** ([`examples/scheduler/cron-py`](../examples/scheduler/cron-py/)): a `kind: scheduler-backend` driver that fires `rat://strategy/v1/apply` on an interval (demo: every 20s; a real plane: hourly). Proven: `make platform-up` → the scheduler fires on its own — tick 1 → snap-4, tick 2 → snap-8, tick 3 → snap-12 (a fresh DuckLake snapshot each refresh, 3 gold Parquet snapshots on S3), every fire audited as caller `rat-scheduler`. *(A minimal active trigger; the full scheduler-backend axis — `Schedule`/`Cancel`/`WatchDue`, a clock the orchestrator watches — is the richer form, noted as a follow-on.)*
+
+Plus a `minio-setup` one-shot in `compose.yaml` (provisions the lake bucket at stack-up, so the pipeline writes whether triggered by the scheduler or the manual runner). `make breaking` clean; no Go/proto change (S2 is all plugins + compose). **Next: S3 — merge strategies + quality gates (branch-on-failure-discard).**
+
+---
+
+## 2026-06-02 — ADR-020 S1 DONE: the decoupled platform runs the medallion through rat serve 🥉🥈🥇
+
+The always-on stack runs **for real**. `make platform-up` brings up the data platform via `podman compose`: **Postgres** (DuckLake metadata) + **MinIO** (S3 data) + the **DuckDB engine** + the **DuckLake catalog** (each a sibling container) + **`rat serve`** — which runs in its own container and **attaches** to the plugins by service name (the S1a attach mode; **no docker-in-docker**). `make platform-run` then runs the medallion through the **real gateway**:
+- `bronze/orders.sql` (read_csv the landing zone) → 9 rows · `silver/orders.sql` (lowercase status, drop null-key rows, dedupe, completed-sales only) → 4 rows · `gold/daily_revenue.sql` → 2 rows (2026-05-01 = 59.98, 2026-05-03 = 179.49). All correct.
+- Every layer issued as `rat://engine/v1/execute` **through the gateway** (C5-authorized + audited); the gold snapshot committed to the **DuckLake catalog** via `rat://catalog/v1/{register,commit}-table` — **6 audited control hops** in `rat serve`'s log.
+- **Parquet for all three layers landed on MinIO/S3** (`/data/rat/platform/main/{bronze,silver,gold}_*`); metadata on Postgres. Verified by reading the gold mart back from the lake.
+
+This is **v2's pipeline, rebuilt on v3 plugins, with DuckLake as the catalog** — exactly the ADR-020 S1 proof. New: `platform/compose.yaml` (the always-on stack), the attach-mode `platform/plane.yaml`, env-driven `platform/run.py` (the medallion runner over the gateway), small additive entrypoint tweaks to the engine (S3 secret from `RAT_S3_*` env, before lake attach) + catalog (`RAT_DUCKLAKE_EXTENSIONS` for the remote httpfs/postgres/ducklake set), `make platform-{up,run,down}`. `make core-test` + `breaking` green; the proto/axis surface is untouched. **Next: S2 — the scheduler plugin (self-driving cron refresh).**
+
+---
+
+## 2026-06-02 — ADR-020 RE-AIMED: v2 rebuilt on v3 — always-on, scheduled, DuckLake catalog 🎯
+
+After studying `ratatouille-v2` carefully with Tom, ADR-020 was sharpened (same-day, pre-implementation) from the initial *local one-shot* framing to the correct one: **rebuild v2's data platform on the v3 plugin core** — same behavior (landing → medallion → quality-gated **scheduled** refreshes), every responsibility **decoupled into a v3 plugin** behind the gateway, **DuckLake as the catalog** (replacing v2's Nessie/Iceberg), **VS Code + `ratctl`** replacing the portal. **Always-on + self-driving:** `rat serve` 24/7 + a **scheduler plugin** firing hourly refreshes; state remote (DuckLake-on-Postgres + S3). The ADR now carries the **v2→v3 component mapping** as its spine (`ratd`→`rat serve`, scheduler→scheduler plugin, runner→engine+pipeline-strategy, ratq→engine query, portal→vscode-rat+ratctl, postgres→state-backend, minio→storage, **nessie→DuckLake**) and a re-aimed **S1–S4** build order (S1 decoupled remote stack via attach mode · S2 scheduler · S3 merge strategies + quality · S4 state-backend + VS Code). Q02 resolved (the runner becomes a **pipeline strategy plugin**, capability-invocable so the scheduler can fire it). Roadmap synced. **Next: S1a — attach mode** (`supervisor.Attach` + the `endpoint:` path), the keystone for the always-on stack.
+
+---
+
+## 2026-06-02 — ADR-020 ACCEPTED: the data platform bundle — Phase 2 starts 🎯
+
+[ADR-020](../docs/architecture/adrs/020-data-platform-bundle.md) (Accepted). Tom set the Phase-2 vision: a single `platform/` folder = a generic, batteries-included data platform — a **landing zone** (raw CSV) → **medallion** (bronze→silver→gold) of editable SQL/Python models → **data-quality tests**, run through `rat serve`, edited via `vscode-rat` + `ratctl`. The v2 product (`ratatouille-v2`: portal + landing-zones/merge-strategies/query-service) rebuilt on the v3 plugin core, **web portal replaced by VS Code + CLI**. Decision: the folder + conventions (medallion, models-as-files, gateway-executed pipelines, `project/tests` quality), built in four working slices — **M1** scaffold + local medallion demo → **M2** containerize (attach-mode `compose up` + Postgres/MinIO) → **M3** data-quality → **M4** VS Code. Core stays six things (all conventions are project/plugin-level — no temptation logged). Recorded the F9 (in-proc Arrow leg) + cross-container-sharing constraints that order the build, and Q01–Q03 (dbt timing, runner home, quality-as-axis-vs-convention). Branches: `phase-2` (integration, off `phase-1`) + `phase-2-platform-bundle` (topic). **Next: build M1.**
+
+---
+
+## 2026-06-02 — `ratctl` — a client connects to the orchestrator (the kubectl to `rat serve`) 🐀🎛️
+
+On `phase-1-adr-019-phase-b` (off `phase-1`). A conversation with Tom reframed the goal: `rat` is an **orchestrator service** that many UIs (CLI, VS Code, webapp) connect to and drive — and a client connecting is **orthogonal** to how plugins got registered, so it needs no plugin-pipeline work. Built the first real client, as a **separate binary** (clients are not subcommands of `rat` — the orchestrator is one thing, clients another):
+- **`core/cmd/ratctl/main.go`** — `ratctl call <capability> --as <caller> [--data '<protojson>'] [--addr host:port]`. Fully generic: resolves capability→method+request/response types from the linked axis descriptors (`protoregistry.GlobalFiles`), builds the request from protojson, dials the gateway and issues the command with the call-context envelope (traceparent C1 + caller identity C5), prints the response as protojson. Surfaces a C5 deny as a `PermissionDenied` status.
+- **`core/cmd/ratctl/ratctl_test.go`** (`make ratctl-smoke`) — brings up a state plane in-process, serves the gateway over TCP, drives it with `ratctl`'s `run()`: authorized `get` routes to the launched plugin (response decodes, value pid-tagged); undeclared `put` → `PermissionDenied`. The **client→orchestrator** path proven end to end.
+
+`make core-test` + `core-serve-smoke` + `ratctl-smoke` + `breaking` green; gofmt clean; additive, no proto/axis. **Decision recorded:** kept the declarative `rat serve --plane` model (not the runtime self-register model Tom floated) — parked self-registration in [`ideas/inbox.md`](../ideas/inbox.md) (needs an ADR + the same mutable-provider core change as the Phase-A reconciler-rewire gap; a scale feature, premature pre–Gate-B).
+
+---
+
+## 2026-06-02 — ADR-019: `rat` runs in a container — the control-plane daemon image 🐀📦
+
+On `phase-1-adr-019-rat-serve`. Tom's steer: the control plane should run **in a containerized environment** (the same `rat` binary runs bare-metal *or* in a container — the k8s/docker-daemon shape). So the ADR-019 **Phase-C daemon-image** piece was pulled forward (architecture unchanged — just packaging):
+- **`core/Dockerfile`** — multi-stage: a `golang:1.25` builder produces a **static, CGO-free** `rat` binary (+ the Phase-A `stateplugin`), copied into a minimal **non-root** `alpine:3.20` runtime (non-root is mandatory — the local-process runtime refuses root per I9). Builds from the repo root (the core module's `replace` target is `contracts/sdks/go`); `.dockerignore` scopes the context to `core` + `contracts` (excludes the ~59M `examples/`).
+- **`core/cmd/rat/plane.container.yaml`** — the Phase-A demo plane baked at `/etc/rat/plane.yaml`, so `podman run -p 7777:7777 rat/serve:dev` serves a working gateway out of the box; override by mounting your own plane.
+- **`make rat-image`** target.
+
+**Proven now:** `make rat-image` builds; `podman run` boots the daemon in-container (the launched stateplugin comes up via local-process *inside* the container, non-root, the gateway serves on `:7777`), and `podman stop` (SIGTERM) drains cleanly ("signal received — draining" → "drained"). `make core-test` + `core-serve-smoke` + `breaking` still green; additive, no proto/axis. **Note:** this is the *daemon-image* slice; the rest of Phase B (the data-dev Python plugins mediated by the gateway) and the full Phase-C compose stack (attach mode + MinIO/Postgres) remain — deferred per Tom's "keep current architecture, just containerize rat" steer.
+
+---
+
+## 2026-06-02 — ADR-019 Phase A BUILT: `rat serve` — the core runs as a server 🐀🛰️
+
+On `phase-1-adr-019-rat-serve` (off `phase-1-data-dev-plane`). **The first time the sealed Phase-1 core runs as a daemon a client can connect to** — not a library wired up in a test. New `core/cmd/rat/` (a `main` package, **additive** — touches no sealed/tested package, doesn't move `rat/2.0`):
+- **`main.go`** — `rat serve --plane plane.yaml`: parse the plane → pick the deployment-runtime (`local` default / `podman`) → `supervisor.BringUp` (launch + healthcheck + dial + register + gateway, the blessed one-call assembly) → `grpc.NewServer` + `corev1.RegisterCapabilityInvokeServiceServer` + `net.Listen("tcp", addr)` + `Serve` → block on SIGINT/SIGTERM → `GracefulStop` (drain in-flight) → `plane.Shutdown` (close conns + kill instances).
+- **`plane.go`** — the `plane.yaml` schema + `LoadPlane`: `addr`/`runtime`/`health_timeout`/`plugins[]`; per-plugin **launch** (→ `LaunchSpec` with the full I9 profile) | **endpoint** (attach — accepted in schema, fails loudly as "Phase C") | **neither** (a register-only driver, the `Launch==nil` path, so C5 can authorize the calls it makes). Name must equal `manifest.metadata.name`; manifest/image paths resolve relative to the plane file.
+- **`auditor.go`** — `StdoutAuditor` implements `gateway.Auditor`: one mutex-serialized JSON line per decision (allow/deny) + per stream-close → the ADR-001 mandatory-audit invariant holds with no audit-log plugin installed.
+- **`descriptors.go`** — the union of axis `File_*` descriptors the gateway routes (state/catalog/engine/format/storage/strategy).
+- **manifests + `plane.example.yaml`** — `rat-state` (the `stateplugin` as a launched provider, get+put) + `rat-caller` (register-only, requires get only).
+
+**Exit criteria PROVEN** by `core/cmd/rat/serve_test.go` (`make core-serve-smoke`) — builds the daemon + plugin, runs the **real binary** over TCP, drives it with a real gRPC client: ✅ authorized `rat://state/v1/get` routes to the launched plugin (C5 allow + audit line) · ✅ undeclared `rat://state/v1/put` → `PERMISSION_DENIED` (C5 deny + audit line) · ✅ **SIGTERM drains cleanly** (exit 0, "drained" logged, no leak). `make core-test` + `make core-serve-smoke` + `make breaking` all green; gofmt clean; no proto/axis touched.
+
+**Finding (Phase-A surfaced, deferred to backlog):** the ADR's step-5 reconciler crash-restart loop is **not** wired into the daemon. `supervisor.BringUp` constructs the gateway with a **fixed** provider-conn map (`gateway.New` has no provider re-bind setter), so a reconciler restart would relaunch a plugin on a *new* endpoint the gateway can't re-dial — and running the reconciler over the same desired set would **double-launch** (BringUp already brought them up). Phase A is therefore boot-once + serve + drain (exactly what the exit criteria test); hot crash-restart needs a small additive `gateway`/supervisor change (a `SetProvider`/adopt path) — captured in backlog, out of Phase-A scope (sealed package). **Next: ADR-019 Phase B** (containerize the data-dev Python plugins; run them through the real gateway).
+
+---
+
+## 2026-06-02 — ADR-019 ACCEPTED: `rat serve` daemon + beginner compose stack (Phase 2 kickoff)
+
+[ADR-019](../docs/architecture/adrs/019-rat-serve-daemon.md) finalized **Accepted** and rewritten to be **executed cold by a fresh session** — Implementation map (exact APIs: `supervisor.BringUp`, `manifest.Load`, `gateway.Auditor`, the `File_rat_*` descriptors, `corev1.RegisterCapabilityInvokeServiceServer`), a per-phase runbook, and a kickoff checklist. Closes the gap the data-dev experiment surfaced (F9 / "why not the core gateway?"): the sealed core is a **library, not a server**. Resolves all 7 prior open questions into firm decisions (local→podman; containerize Python plugins **image-only, no proto change**; stdout auditor; binary at `core/cmd/rat/`; build now as **Phase 2 kickoff**, not Gate-B-blocked; attach-mode health-checks-not-restarts; compose stack at `deploy/data-dev-starter/`). Two runtime modes — **launch** (solo) vs **attach** (compose orchestrates → no docker-in-docker). Build order **A** (daemon vs Go test plugins — core first runs) → **B** (data-dev plugins via the real gateway) → **C** (`compose up` beginner stack). Roadmap threaded: phases.md (Phase 2 kickoff), current.md (active next = Phase A), backlog promoted. **Next: build Phase A.**
+
+---
+
+## 2026-06-02 — vscode-rat v0.2.0: multi-environment RAT explorer (many connections)
+
+On `phase-1-data-dev-plane`. The VS Code extension now manages **many named RAT connections** (like a DB explorer manages many servers) — `{name, url, tenant?}` persisted in the `ratDataDev.connections` setting, the tree **connection-rooted** (connection → tables → snapshots; health → plugins), with per-connection Run Pipeline / Query / Search and Add/Edit/Remove. One editor, N planes (local / staging / prod / per-tenant / remote); unreachable planes degrade gracefully. Each connection is just a URL → point it at a **remote** gateway/core. The "one UI, many planes" scalability story made concrete. New `src/connections.ts`; compiles clean; repackaged → `vscode-rat-0.2.0.vsix` (`make data-dev-vsix`). Idea + follow-ons (gateway *remote mode* to target a real remote S3+Postgres plane; per-connection auth/tenant identity) captured in [`ideas/inbox.md`](../ideas/inbox.md).
+
+---
+
+## 2026-06-02 — Data-dev plane build step 6 DONE: the VS Code UI — the experiment is END-TO-END
+
+On `phase-1-data-dev-plane`. Build-order §11 step 6 — a VS Code extension as a UI client of the data-dev plane, closing the multi-UI vision (CLI / web-portal / **VS Code**). With this the experiment spans **storage → catalog → engine+ML → strategy → UI**, local AND remote. EXPLORATORY + **ADDITIVE**: `make breaking` clean, conformance unchanged (34/34), sealed `rat/2.0` surface untouched.
+
+- **[`examples/ui/vscode-rat`](../examples/ui/vscode-rat/)** — TypeScript VS Code extension: DuckLake catalog tree (tables→snapshots, click-to-preview), **Run Pipeline** (incremental-embed strategy), SQL query grid, **🔍 semantic search**, plugin-health view. Compiles clean under strict `tsc` (verified in a node:22 container → `out/*.js`).
+- **[`gateway/app.py`](../examples/ui/vscode-rat/gateway/)** + **`make data-dev-gateway`** ([`scripts/data-dev-gateway.sh`](../scripts/data-dev-gateway.sh)) — a stdlib-only Python BFF that owns the in-proc engine+catalog+strategy, seeds + runs the strategy at boot, and serves a JSON API (`/api/{health,tables,snapshots,query,search,pipeline/run}`). Its `selftest.py` exercises every endpoint over HTTP; verified host-facing over the published port (curl: health/tables/search/pipeline all correct, incremental 12→15).
+- **Finding F9 (README §10):** the bytes/control split means a UI needs a data-leg helper — `engine.Query` returns an out-of-band `ArrowStream` and the reference engine's leg is in-proc (a Flight stand-in), so an external client can't pull rows over the wire. Hence the gateway BFF. The frozen **control** capabilities are exactly what the connectionless Connect TS SDK (ADR-018) calls directly; a real Flight engine would retire the BFF. Honest deployment reality, not a contract gap.
+- **🎉 The data-dev plane experiment is now end-to-end** — 5 new plugins (`minio-s3`, `ducklake-py`, `duckdb-ml-py`, `incremental-embed-py`, `vscode-rat`) + a gateway, composing a real scalable ML lakehouse on the sealed `rat/2.0` core **without changing one byte of the frozen wire**. Steps 2/3/4/6 done; step 5 (full compose) is covered by the `make data-dev-{local,remote,strategy,gateway}` targets. The practical Q02 substitute (principle #8) has produced its findings (F1–F9). **Next: a synthesis writeup of what held / what bent, and decide which findings feed back into the contracts or a future ADR.**
+
+---
+
+## 2026-06-02 — Data-dev plane build step 4 DONE: a real incremental-embed ELT strategy
+
+On `phase-1-data-dev-plane`. Build-order §11 step 4 — a genuine incremental ELT as a `kind: strategy` plugin, composing capabilities through the invoke gateway (names no concrete plugin). EXPLORATORY + **ADDITIVE**: `make breaking` clean, conformance unchanged (34/34 — the strategy, like fullrefresh/scd2, has no `harness_test.py`; it's exercised by its runner), sealed `rat/2.0` surface untouched.
+
+- **[`examples/strategy/incremental-embed-py`](../examples/strategy/incremental-embed-py/)** — the §5.4 pattern: register/own target → CTAS schema-from-source → **server-side watermark** stage (only-new rows, no Arrow round-trip) → **MERGE** upsert → **embed only `embedding IS NULL`** → `ducklake_flush_inlined_data` → `commit-table` (idempotency_key = run id). `REQUIRES = (get-table, register-table, engine.execute, commit-table)` — **no `format` capability** (the engine writes the lake directly).
+- **[`run-strategy.py`](../experiments/data-dev-plane/run-strategy.py)** + **`make data-dev-strategy`** ([`scripts/data-dev-strategy.sh`](../scripts/data-dev-strategy.sh)) — strategy→gateway→engine+catalog over gRPC, 3 runs: **run 1 embeds 12** (full load), **run 2 embeds 3** (only the newly-landed delta — incrementality), **run 2 replay embeds 0 / already_applied** (C1 idempotency). New batch-2 rows rank top in search (#15 "weekend trip", #13 "fingerprint sensor"), confirming the incremental embed landed. Assertion-bearing.
+- **Finding F8 (README §10):** a strategy in a DuckLake world writes through the **engine** (not a format plugin) and addresses tables by lake-qualified name — plugin-agnostic in *binding*, DuckLake-aware in *addressing*. The watermark is server-side, so the strategy is pure `execute` + a final snapshot. **Next: §11 step 6 — `vscode-rat` (the VS Code UI via the connectionless TS SDK).** (Step 5, the full compose/`make data-dev-plane`, is largely covered by the local/remote/strategy runners + their make targets.)
+
+---
+
+## 2026-06-02 — Data-dev plane build step 3 DONE: the pipeline goes REMOTE (S3 + Postgres)
+
+On `phase-1-data-dev-plane`. Build-order §11 step 3 — data moves to **S3/MinIO**, DuckLake metadata to **Postgres**, and the engine's S3 creds are **vended by a storage plugin**. The same pipeline runs distributed with **search distances byte-identical to local** — the data plane is unchanged when storage goes remote (the "swap a plugin, the rest holds" thesis). EXPLORATORY + **ADDITIVE**: conformance **34/34** (minio-s3 joined), `make breaking` clean, sealed `rat/2.0` surface untouched.
+
+- **[`examples/storage/minio-s3`](../examples/storage/minio-s3/)** (`ca13589`) — `kind: storage` plugin, **first impl of the Q02 5c read/write split**. Two minters ([`creds.py`](../examples/storage/minio-s3/creds.py)): `ScopeReceiptMinter` (offline, passes `storage-v1` golden vectors) + `MinioSTSMinter` (real `AssumeRole` with an inline policy scoped to `s3://bucket/<tenant>/<prefix>/*`). Tenant from `rat-callmeta-bin` (ADR-007, C7 anti-forgery). Verified against live MinIO: read creds read `acme/*`, denied cross-tenant `globex` + denied writes (least-privilege).
+- **[`run-remote.py`](../experiments/data-dev-plane/run-remote.py)** + **`make data-dev-remote`** ([`scripts/data-dev-remote.sh`](../scripts/data-dev-remote.sh), [`compose/compose.yaml`](../experiments/data-dev-plane/compose/compose.yaml)) — boots MinIO + Postgres, vends WRITE creds → engine `CREATE SECRET S3` + `ATTACH ducklake:postgres (DATA_PATH s3://…)` → create→register→transform→embed→**flush(Parquet→S3)**→snapshot→commit→🔍search→idempotent-replay→D3-isolation. Assertion-bearing; Parquet verified on S3; D3 cross-tenant denial verified.
+- **Enabling edits (additive, defaults unchanged):** engine `_EXTENSIONS` += `postgres`; engine `Engine(secret_sql=…)` runs `CREATE SECRET` before ATTACH; catalog `Catalog(extensions=…, secret_sql=…)` for the remote lake.
+- **Findings (README §10):** F3 ✅ resolved by Postgres (real concurrent writers); F4 ✅ resolved by `ducklake_flush_inlined_data`; **F6** the catalog needs **no S3 creds** (metadata-only — bytes/metadata split falls out cleanly, sharper least-privilege); **F7** STS isolation is real object-store policy, not just the RAT capability layer. **Next: §11 step 4 — `incremental-embed-py` strategy (watermark→merge→embed-only-new→index→snapshot).**
+
+---
+
+## 2026-06-02 — Data-dev plane build step 2 DONE: the DuckDB heart runs local end-to-end
+
+On `phase-1-data-dev-plane`. Build-order §11 step 2 complete — the DuckLake catalog + DuckDB-ML engine, with a **local end-to-end transform→embed→search running green over real gRPC**. EXPLORATORY + **ADDITIVE**: `make breaking` clean, conformance **33/33** (was 32; the new engine joined), the sealed `rat/2.0` surface untouched — **no proto, no new axis** (the "ML is an engine extension" thesis, README §3, proven in code).
+
+- **[`examples/engine/duckdb-ml-py`](../examples/engine/duckdb-ml-py/)** — the `duckdb-py` engine extended with `vss`/`ducklake`/`httpfs` (best-effort load) + an **`embed(text, model) → FLOAT[]`** UDF ([`embed.py`](../examples/engine/duckdb-ml-py/embed.py): pluggable `hash-256` default / `minilm` / `ollama:*` seam). `Execute` now surfaces the DuckLake snapshot in `WriteResult.snapshot_id`. Still a conformant engine: passes **engine-real-v1** AND a new **[`engine-embed-v1.json`](../contracts/conformance/engine-embed-v1.json)** deterministic embed golden (dim 256 + exact nonzero buckets + L2-norm).
+- **[`examples/catalog/ducklake-py`](../examples/catalog/ducklake-py/)** — a DuckLake-backed `catalog/v1`: `GetTable`/`CommitTable` resolve+record the **real** lake snapshot; branches are a thin tracker (the §10 Q2 spike). On a `selftest.py` (frozen catalog-v1 parity deferred), not yet in the auto-conformance matrix.
+- **[`experiments/data-dev-plane/run-local.py`](../experiments/data-dev-plane/run-local.py)** / **`make data-dev-local`** — boots both plugins over gRPC sharing one DuckLake; runs create→register→transform→`embed()`→snapshot→commit→🔍 semantic-search→idempotent-replay on a 12-row real corpus; **assertion-bearing** (search ranking checked). Resolves the **§4/§10(b) catalog/engine-boundary tension** (engine writes, catalog records the snapshot).
+- **Findings folded into README §10:** F1 DuckLake rejects fixed `FLOAT[N]` → embeddings as `FLOAT[]`, HNSW needs a derived non-lake table (brute-force cosine on the lake); F2 list UDFs need numpy; F3 DuckLake sqlite metadata is single-writer → catalog uses short-lived read connections (Postgres at scale); F4 DuckLake inlines small writes (flush for Parquet); F5 `snapshot_time` pulls pytz (avoided). **Next: §11 step 3 — `minio-s3` + S3 wiring (data goes remote).**
+
+---
+
+## 2026-06-02 — Data-dev plane experiment KICKED OFF (exploratory) — design doc
+
+[`experiments/data-dev-plane/README.md`](../experiments/data-dev-plane/README.md) on `phase-1-data-dev-plane` (`5d55371`). The **practical substitute** for the (impractical-for-a-solo-dev) Q02 external review: prove the platform by composing a real, scalable, **end-to-end ML lakehouse** workflow from plugins (principle #8 — "test the deployment topology"). EXPLORATORY + changeable; **ADDITIVE** (no new axis, no contract change, `make breaking` untouched). Stack: `minio-s3` (remote S3) · `ducklake-py` ([DuckLake](https://ducklake.select/docs/stable/) catalog, subsumes format) · `duckdb-ml-py` (engine **+ ML as DuckDB extensions** — `embed()` UDF + `vss`, **NO new proto**) · `incremental-embed-py` (a real ELT strategy) · `vscode-rat` (VS Code UI via the connectionless TS SDK). The doc documents every plugin + manifests + schemas + the exact SQL composition + the pluggable embed backend (hash-256 / minilm / ollama-on-HAL-9000) + scalability + the catalog/engine-boundary tension & open questions + the build order. **Next (fresh session): build the DuckLake catalog + DuckDB-ML engine heart (build order in the doc §11).**
+
+---
+
+## 2026-06-02 — PU-2 DONE: keystone context-carriage two-reference conformance → punch-list COMPLETE
+
+`c0508a6` on `phase-1-pu2-keystone-conformance` — the last pre-unfreeze gate item (ADR-017 PU-2). The keystone context-carriage contract (`common/v1/context.proto` + ADR-007 gateway stamping — the carrier for C1/C2/C3/C5/C7/C8, the most-irreversible frozen surface) had the **weakest** conformance of the freeze: one impl (the spike Go gateway); the ADR-003 two-reference rule never reached it (architect F1, maintainer-conceded). PU-2 applies that forcing function:
+- **[`contracts/conformance/context-carriage/context-carriage-v1.json`](../contracts/conformance/context-carriage/context-carriage-v1.json)** — 12 portable golden vectors: C1 (missing/ill-formed traceparent, missing correlation → reject); `caller_plugin` **re-derived** not propagated (the C3 namespace guarantee); trace **verbatim**; `SubjectAssertion` verification (bad signature / unknown key_id / wrong `bound_correlation_id` / expired); and the **M4 bare-mirror cross-check** (tenant + principal mismatch → reject, by reconstructing the signed bytes from the bare mirrors).
+- **`go/` + `py/`** — two clean-room, technologically-divergent reference impls (no shared code; neither shares code with `core/gateway`). **`make context-carriage`** cross-runs both → **12/12 each, identical accept/reject + reason on every vector.** The keystone is now two-impl-conformed; the contract is implementable from the prose alone, in two languages.
+
+🎉 **With PU-2, the ENTIRE ADR-017 pre-unfreeze punch-list is COMPLETE** (PU-1 + PU-2 + PU-3 + PU-4 + the 5a/5b/5c seams — all landed + verified, `make breaking` clean throughout). The **sole remaining condition** before the freeze can leave local/unpushed is the **real Q02 external human review** (ADR-013 Q02). ADR-017 stays Proposed pending that.
+
+---
+
+## 2026-06-02 — ADR-018 COMPLETE: Python connectionless (protoc-35 hybrid) — all 4 SDKs BSR-free
+
+Resolved the python blocker (Tom chose the protoc-35 hybrid) — `2ee749e` on `phase-1-adr-018-python`. `contracts/codegen/Dockerfile.python` pairs **standalone protoc v35.0** (the MESSAGES → `ValidateProtobufRuntimeVersion(7,35,0)`, matching buf's `protocolbuffers/python` and the refs' `protobuf==7.35.0` — **no downgrade**) with **grpcio-tools 1.80.0** (the gRPC stubs → `GRPC_GENERATED_VERSION 1.80.0`, matching the refs' `grpcio==1.80.0`). `gen-python.sh` runs both; `gen-sdks.sh` special-cases python (no standalone `protoc-gen-python` — messages are a protoc builtin).
+
+The one-time migration (48 files) is benign — protoc-35 omits default `json_name`s buf serialized explicitly (protobuf computes the same defaults at runtime; `json_name` only affects JSON, not the binary wire) + the grpc stubs gain a version guard. **VERIFIED: `make conformance` 32/32 references conform** — every python ref runs on the hybrid SDK.
+
+🎉 **ADR-018 rollout COMPLETE: Go + TypeScript + Rust + Python all generate connectionless — codegen is fully BSR-free.** The rate-limit friction that bit the ADR-017 cut is gone for every language.
+
+---
+
+## 2026-06-02 — ADR-018 rollout: Rust connectionless + 5c closed; Python blocked on version-skew
+
+Continued the ADR-018 rollout on `phase-1-adr-018-rust-python`:
+- **Rust ✅** (`9eeb014`) — `contracts/codegen/Dockerfile.rust` (rust:1-bookworm + buf + cargo-built `protoc-gen-prost`/`protoc-gen-tonic`). The latest protoc-gen-prost defaults to the **nested layout** (matching the committed structure) and keeps the **selective `Eq,Hash` derives**, so the one-time migration churn is just cosmetic attribute formatting (`x="y"` → `x = "y"`) — and the regen **closes the pending ADR-017 5c rust-storage gap** (`VendReadCredentials`/`VendWriteCredentials` now present). Rust has no Cargo project / no reference plugins (an unused artifact), so zero-risk. Rust codegen is now BSR-free.
+- **Python ⏸️ BLOCKED (decision needed)** — the `grpc_tools.protoc` path (ADR-018 Alternative #3) works offline, BUT the latest **grpcio-tools 1.81.0 bundles protobuf 6.33.5**, while buf's `protocolbuffers/python` (the committed gencode), all **13 python refs** (`requirements.txt: protobuf==7.35.0`), and `scripts/conformance.sh` are pinned to **protobuf 7.35.0** — a *major*-version skew (6 vs 7). So `grpc_tools.protoc` produces a refs-INCOMPATIBLE SDK (a downgraded `ValidateProtobufRuntimeVersion(6,33,5)` guard). Connectionless python needs a **tradeoff**: (a) downgrade the whole pinned python stack (13 refs + conformance) to 6.33.5 + re-verify conformance, (b) a **protoc-35 + grpc-plugin hybrid** to match 7.35.0 connectionless, or (c) keep python on remote until grpcio-tools catches up to protoc 35. The attempt was reverted; python stays on **remote**.
+
+Net: **Go + TypeScript + Rust connectionless** (3/4, all BSR-free); python is the one remaining, blocked on a real grpcio-tools-vs-buf version skew that's a tradeoff call.
+
+---
+
+## 2026-06-02 — ADR-018 connectionless codegen: Go + TypeScript landed (Rust/Python staged)
+
+[ADR-018](../docs/architecture/adrs/018-connectionless-codegen-local-plugins.md) on `phase-1-adr-018-connectionless-codegen` — switch SDK codegen from **remote BSR plugins** (the ADR-017 rate-limit friction) to **LOCAL plugins** in pinned per-language toolchain images. `scripts/gen-sdks.sh` now dispatches per language (a local `rat-codegen-<lang>` image if `contracts/codegen/Dockerfile.<lang>` exists, else the stock buf image + remote plugins); `make gen-images` pre-builds them.
+- **Go ✅** (`6e32223`) — `Dockerfile.go` (buf + protoc-gen-go v1.36.11 + protoc-gen-go-grpc v1.6.2, pinned to the committed headers). A connectionless `buf generate` reproduces the Go SDK **byte-for-byte — ZERO churn**.
+- **TypeScript ✅** (`ec947ef`) — `Dockerfile.typescript` (node + protoc-gen-es v2.12.0 + protoc-gen-connect-es v1.6.1). **Zero churn**.
+- **Rust ⏸️ staged** — the cargo plugins build fine, but bare `protoc-gen-prost@0.4.0` differs from the committed output in BOTH **layout** (flat `rat.<axis>.v1.rs` vs the committed nested `rat/<axis>/v1/…`) AND **content** (the committed adds `Eq, Hash` derives) → neoeinstein's buf-plugin config must be replicated before it's a clean swap. Rust has **no reference plugins** (unused), so deferred rather than forcing a messy diff. Follow-on: match the neoeinstein prost/tonic config (derives + nested layout), flip, and complete the pending 5c rust-storage regen.
+- **Python ⏸️ staged** — ADR-018 **Open Q01**: no standalone `protoc-gen-python` (it's a protoc builtin); the `grpc_tools.protoc` fallback (Alternative #3) is the path.
+
+Go + TS are now **BSR-free**; rust + python stay on remote plugins until their follow-ons. ADR-006's remote-plugin *mechanism* is superseded (layout unchanged).
+
+---
+
+## 2026-06-02 — Additive pre-publish cut LANDED (ADR-017 §Migration step 2)
+
+Executed the ADR-017 additive cut on `phase-1-q02-additive-cut` (3 commits), **all verified additive** (`make breaking` clean vs sealed `main`; `make lint` / `compile-sdks` / `validate-manifests` 32/32; `make core-test` green for the demos; generation deterministic):
+- **Cut 1 (`51234e6`)** — PU-1 (`ArrowStream.ticket` producer-channel-auth MUST), PU-4 (tenancy ISOLATION-ONLY; `DECISION_KIND_SHARING` advisory-not-enforced), 5b (`Event.signature`+`key_id`), PU-3 (`Listing.conformance_expires_unix_ms`+`revoked_capabilities`), 5a (`capabilityRef.revision`/`min_revision`). All SDKs regenerated.
+- **Enforcement demos (`360cef1`, `make core-test` green, no ripple)** — PU-3 core: `Attestation.ExpiresAtUnixMs` (signed/tamper-evident) + `Authority.Revoke/IsRevoked` + `NewVerified` refuses revoked/expired conformance without rotating the key. PU-1 core: an **mTLS channel-auth conformance vector** proving a leaked ticket presented over the wrong authenticated channel with spoofed `X-RAT-*` headers is REFUSED (403, no bytes), + a contrast test characterizing the header-trusting stand-in being fooled.
+- **5c (`a764155`)** — storage `VendReadCredentials`/`VendWriteCredentials` (mode-scoped capability URIs `…/vend-credentials-read|write`) so C5 authorizes read-vs-write; refs auto-compile via the `Unimplemented` embed. Additive.
+
+**Known transient gap: the RUST storage SDK regen for 5c is PENDING** — buf.build's anonymous BSR rate-limit (the toolchain runs *remote* codegen plugins → 8 BSR calls per `gen-sdks` run) is exhausted, and the rust community plugins are remote-only. Go/Python/TypeScript regenerated; **rust has no reference plugins (an unused artifact)**. Complete with one `make gen-sdks` (or a `buf login`) when the window resets — also fixes the pre-existing python `class X(object)`→`class X` cosmetic drift Cut 1 folded in.
+
+**Remaining for the pre-unfreeze gate:** finish the rust regen · **PU-2** (keystone context-envelope two-reference conformance — the separate larger piece) · then the **real Q02** external review → re-seal `rat/2.x`. (`ADR-017` stays Proposed until the real Q02.)
+
+---
+
+## 2026-06-02 — PU-4 ratified: v1 tenancy is isolation-only (ADR-017 Q01 resolved)
+
+Tom's call on the one open fork in [ADR-017](../docs/architecture/adrs/017-pre-unfreeze-contract-amendment-gate.md): **v1 tenancy = isolation-only.** `DECISION_KIND_SHARING` becomes *advisory-not-enforced* in v1 (the axis stops advertising an un-actionable verb); actioned cross-tenant sharing + hierarchical tenancy defer to a future `v2` delegation primitive (its own ADR, only if a user pulls for it). The sharing-capable alternative (a pre-publish delegation primitive in `rat/1`) was rejected for v1 — Gate B unmet, no user pulling. **With Q01 resolved, the punch-list has no open forks left — only an all-additive pre-publish cut + the real Q02.** ADR-017 stays **Proposed** (its one remaining condition for Accepted = the real Q02 external review confirms/extends the gate).
+
+---
+
+## 2026-06-02 — ADR-017 (Proposed): pre-unfreeze contract-amendment gate
+
+[ADR-017](../docs/architecture/adrs/017-pre-unfreeze-contract-amendment-gate.md), on `phase-1-q02-dryrun` — operationalizes the Q02 dry-run synthesis into the explicit gate the freeze must pass **before it ever leaves local/unpushed**: publish only after **(a)** the punch-list resolves **AND (b)** the real Q02 external review runs. Punch-list: **PU-1** bytes-leg producer channel-auth MUST (+ vector), **PU-2** keystone context-envelope two-reference conformance (*qualifies ADR-015's "freeze validated" claim*), **PU-3** attestation expiry/revocation, **PU-4** tenancy isolation-only-vs-sharing (**a DECISION for Tom — Q01**), + 3 decide-now additive seams (semantic-skew negotiation, `Event` signing, vend read/write split). Status **Proposed** → Accepted once PU-4 is ratified + the real Q02 confirms/extends it. Explicitly scopes **OUT** the availability cluster (AV-*) + ecosystem (EC-*) — those gate multi-tenant-production / adoption, not freeze-publish.
+
+---
+
+## 2026-06-02 — Q02 SIMULATED dry-run: 5-agent deliberating panel → synthesis + pre-publish punch-list
+
+Ran the Q02 review brief end-to-end as a **simulated** panel using the Claude Code agent-team feature (a `q02-panel` team of named teammates with `SendMessage` cross-talk) — 4 lens-reviewers (architect/security/sre/ecosystem) **+ a defending maintainer**; AI personas, *not* humans, on `phase-1`. Reviewers verified claims against the real `core/`+`contracts/` code (`file:line` cites), cross-examined each other and the maintainer live, then each filed `reviews/11-q02-<lens>.md`; the maintainer filed a defense log. Chaired the synthesis into [`reviews/Q02-tracker.md`](../reviews/Q02-tracker.md) (new "Synthesis — SIMULATED dry-run" section).
+
+- **30 raw findings → ~26 deduped.** Tallies: architect 9, security 7, sre 7, ecosystem 7; maintainer **12/13 conceded, 1 mixed, 0 bluffs** ([defense log](../reviews/11-q02-maintainer-defense-log.md) — incl. an explicit net-new-vs-already-tracked triage).
+- **Freeze-reopen verdict: 0 hard · 3 soft** (all additive, all fixable in the still-local window) — **PU-1** bytes-leg producer-channel-auth MUST (filed by security **and** architect, 2 lenses), **PU-3** attestation expiry/revocation, **PU-4** tenancy sharing scope-or-delegate. Plus **PU-2** (the keystone context-envelope has the *weakest* conformance of the frozen surface → qualifies ADR-015's "freeze validated" claim) + 3 decide-the-additive-now seams (semantic-skew negotiation, Event signing, vend read/write split).
+- **Strongest positives:** the **security** lens *validated the sealed enforcement spine* (C5/C4/D4/D1 "real, not theater"); the **ecosystem** lens retired reviews/02's core fear ("the contracts don't exist") — "most author-respectful surface in the space." The **SRE** headline — *"the wire is right; the run-lifecycle code around it is where the 3am risk lives"* — re-confirms the reviews/09 dissent ("green certifies shapes, not obligations") with line-level evidence (incl. a 🔴 Critical: `core/lease` has no error channel → backend-blip step-down storm; free to fix now).
+- **Net read (feeds Q01): GO / adjust-before-unfreeze** — no reviewer demanded a hard wire break or a reconsider-the-bet.
+- **HONESTY:** every artifact carries a `SIMULATED` banner. This does **NOT** discharge Q02 — real external humans are still owed before the freeze leaves local/unpushed; the dry-run is a *baseline for them to falsify* + a *pre-publish punch-list*, weighted like reviews/00–08. The recruitment table in the tracker stays "not started."
+
+Findings grouped into the backlog ([backlog.md](backlog.md) → "Q02 simulated dry-run findings"); the maintainer's net-new list is the authoritative triage. Next concrete artifact: a **pre-unfreeze punch-list ADR** (PU-1..4 + the decide-now seams).
+
+---
+
+## 2026-06-02 — front-door refresh: README + CLAUDE.md now reflect the sealed core
+
+`README.md` + `CLAUDE.md`, on `phase-1-frontdoor-refresh`. Both still said *"architecture-only / not yet any product code"* — false since the Phase-1 seal. The entry point now states the real status (Phase 0 + 1 sealed, `rat/1.5` / `rat/2.0`; what the core enforces; Q02 the next gate), adds a "what's here" map (core/contracts/examples/…), and puts [`roadmap/current.md`](current.md) first in the reading order. A project is only as well-structured as its front door is accurate; the internals were already disciplined (ADRs, fresh roadmap, sealed+tagged git) — this fixes the one piece that lied. (No new structure added — the standing risk is meta-process accumulation, not under-structure.)
+
+---
+
+## 2026-06-02 — Q02 recruiting prep — shortlist + cover-note variants + findings tracker
+
+Everything around running Q02 except the human step (recruiting), on `phase-1-q02-recruiting`:
+- **[`reviews/Q02-reviewer-shortlist.md`](../reviews/Q02-reviewer-shortlist.md)** — by-lens **profiles + sourcing pools** (not a contacts list), a selection checklist ("scars, not enthusiasm"; willing to disagree; no conflict), and how many/which (minimum viable = architect + security; + SRE comfortable; ecosystem only if adoption is the worry).
+- **Per-lens cover-note variants** appended to [`Q02-outreach-note.md`](../reviews/Q02-outreach-note.md) — a tuned "try to break X" opener per lens, each pointing at the matching brief.
+- **[`reviews/Q02-tracker.md`](../reviews/Q02-tracker.md)** — a reviewer status table + a findings-doc template (→ `reviews/11-q02-<name>.md`) + a synthesis section that feeds the **Q01** v2-vs-v3 call (incl. a freeze-reopen-trigger check).
+
+**Q02 is now fully teed up; the only remaining step is human — recruit the reviewer(s) + run it.** Freeze stays local/unpushed until the synthesis lands.
+
+---
+
+## 2026-06-02 — Q02 kit COMPLETE: tailored SRE + ecosystem + architect briefs (all 5 internal lenses covered)
+
+Three more lens-tailored companions (parallel to the security one), each front-loading a real-vs-paper / settled-vs-open section + a lens-specific question set so the reviewer models the right system. With these the kit covers **all five internal review lenses** (security, SRE, ecosystem, architect/contracts) plus the general brief + outreach note.
+- **[`reviews/Q02-brief-sre.md`](../reviews/Q02-brief-sre.md)** (`phase-1-q02-sre`) — SRE/operability: the tier-0 **state-backend SPOF**, **diagnosability** across polyglot plugins (`rat diagnose`), **native `/metrics` + SLOs** (still paper — sre#8), single-leader **reconcile-loop capacity** + fairness, **upgrade/version-skew**, **DR/backup**, **resource-limit enforcement**, and a failure-mode catalog. Real-vs-paper: sre#4's crash-loop backoff + lease-thrash guard are DONE; most of [reviews/03](../reviews/03-operations-sre.md) remains open.
+- **[`reviews/Q02-brief-ecosystem.md`](../reviews/Q02-brief-ecosystem.md)** (`phase-1-q02-ecosystem`) — ecosystem/plugin-author: the existential **cold-start** problem (zero third-party plugins), **author DX** (the contract triple + conformance bar), **capability-negotiation as the differentiator**, **marketplace** as compatibility oracle + supply-chain trust, **versioning/skew** + **governance** of the `rat://` namespace, and author incentives. Real-vs-paper: contracts frozen + 30+ refs + D4-enforced conformance are real; the ecosystem itself + marketplace + signing + DX tooling + governance are paper. Don't re-flag what ADR-003 + D4 settled.
+- **[`reviews/Q02-brief-architect.md`](../reviews/Q02-brief-architect.md)** (`phase-1-q02-architect`) — architect/contracts: the **premise** soundness, six-thing-core **minimality + completeness**, **tier-0 honesty**, the **contract triple** + capability as the unit of composition, **frozen-wire regret** (which message/field forces a v2 — ArrowStream / RequestContext-in-metadata / the additive commit-linkage seam / the error model), capability-model **algebra** (provider selection, composition, granularity), and the cross-cutting **enforcement-layer** layering. Settled-vs-open: the wire is frozen (regret = a v2 break) + the premise is committed (Q02 is the gate to challenge it); ADR-003's two-refs + reviews/06–08 caught the obvious freeze-blockers — find the premise flaw + the *subtle* regret.
+
+**Q02 kit COMPLETE (5 briefs + outreach):** [general](../reviews/Q02-external-review-brief.md) · [outreach note](../reviews/Q02-outreach-note.md) · tailored [security](../reviews/Q02-brief-security.md) / [SRE](../reviews/Q02-brief-sre.md) / [ecosystem](../reviews/Q02-brief-ecosystem.md) / [architect](../reviews/Q02-brief-architect.md). All five internal review lenses now have a front-loaded variant. **The only remaining Q02 step is the human one: recruit the reviewer(s) + run it** (freeze stays local/unpushed until then).
+
+---
+
+## 2026-06-01 — Q02 external-review kit drafted (brief + outreach note + security-focused brief)
+
+[`reviews/Q02-external-review-brief.md`](../reviews/Q02-external-review-brief.md) + [`reviews/Q02-outreach-note.md`](../reviews/Q02-outreach-note.md) + [`reviews/Q02-brief-security.md`](../reviews/Q02-brief-security.md), on `phase-1-q02-{brief,outreach,security}`. The recruiting kit for the owed **Q02 external peer review** ([ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) / [reviews/09](../reviews/09-phase-1-gate-review.md) dissent: zero external human review so far). The **brief** frames the premise, states what internal review already covered (so reviewers don't re-derive it), lists the load-bearing questions we most want challenged (premise / contracts-freeze / data-plane / operability / ecosystem / prior-art), the already-acknowledged residuals, a reading order, and a findings template + severity scale. The **outreach note** is the short, personalize-and-send recruiting message. The **security-focused brief** is a tailored companion that front-loads the trust model + a threat-model question set (the C2 channel-auth gap, I9 sandbox containment, the core-bypassing bytes-leg ticket, credential vending/tenancy, supply-chain + audit-signing) for a security reviewer. **Next on Q02: recruit reviewers** (OSGi/K8s/VSCode/Temporal-class practitioners) and run it; freeze stays local/unpushed until then.
+
+---
+
 ## 2026-06-01 — 🎉🎉 PHASE 1 SEALED — `rat/2.0`
 
 `phase-1` → `main`, tagged `rat/2.0` (annotated). All 9 board exit criteria met (C1, C3, C4, C5, D1, D2, D3, D4, sre#4 — see the entries below), each proven **against real launched plugins**, with the frozen wire intact (`make breaking` green throughout). The spike core grew into a real control plane: registry (+ conformance-verified `NewVerified`) · capability-invoke gateway (C5 authz + C4 audit + C3 deadline/idle) · two deployment-runtimes (local-process + podman full-I9) · supervisor · reconciler + leader-election lease · arrow-ticket bulk-leg gate · storage-cred isolation.

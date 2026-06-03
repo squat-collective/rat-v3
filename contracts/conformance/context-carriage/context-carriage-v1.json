@@ -1,0 +1,110 @@
+{
+  "suite": "context-carriage/v1",
+  "description": "PU-2 (ADR-017) — portable conformance vectors for the KEYSTONE context-carriage contract (common/v1/context.proto + ADR-007 gateway stamping). The most-irreversible frozen surface (the carrier for C1/C2/C3/C5/C7/C8) gets the ADR-003 two-reference forcing function it skipped at freeze: two technologically-divergent reference implementations (Go + Python) cross-run these vectors. Each impl is a pure reference of the contract a core gateway / consuming hop MUST apply on each hop: read the inbound RequestContext, REJECT an ill-formed envelope, else RE-STAMP a fresh downstream RequestContext (trace verbatim; identity server-controlled).",
+  "signing": {
+    "alg": "ed25519",
+    "seed_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+    "key_id": "core-k1",
+    "canonical": "principal \\x00 tenant \\x00 bound_correlation_id \\x00 decimal(expires_unix_ms) \\x00 key_id (NUL-separated; the bytes the core signs and a hop reconstructs FROM THE BARE MIRRORS to verify — so M4 is enforced structurally: a bare value the signature does not cover fails verification)"
+  },
+  "contract": [
+    "C1: traceparent MUST be present + well-formed (00-<32hex>-<16hex>-<2hex>) and correlation_id MUST be present, else reject.",
+    "RE-STAMP: trace is propagated VERBATIM; identity.caller_plugin is RE-DERIVED from this hop's authenticated channel (channel_caller) and NEVER propagated from the inbound envelope; tenant is server-stamped (propagated); deadline propagated.",
+    "SUBJECT (if present): verify the ed25519 signature over the canonical bytes reconstructed from the BARE mirrors (SubjectAssertion.principal + Identity.tenant) + bound + expires + key_id by the key_id's key; bound_correlation_id MUST equal trace.correlation_id (anti-stockpile); now <= expires_unix_ms; M4 = reconstruct-from-bare, so a tampered bare principal/tenant fails the signature.",
+    "An absent subject is valid only for pre-auth/bootstrap; downstream subject_principal is empty."
+  ],
+  "cases": [
+    {
+      "name": "reject-missing-traceparent",
+      "desc": "C1: no traceparent -> reject.",
+      "channel_caller": "rat-format", "now_unix_ms": 1000,
+      "inbound": { "traceparent": "", "tracestate": "", "correlation_id": "op-1", "caller_plugin": "rat-strategy", "tenant": "tenantA", "deadline_unix_ms": 0, "subject": null },
+      "expect": { "outcome": "reject", "reason": "traceparent" }
+    },
+    {
+      "name": "reject-illformed-traceparent",
+      "desc": "C1: malformed traceparent -> reject.",
+      "channel_caller": "rat-format", "now_unix_ms": 1000,
+      "inbound": { "traceparent": "00-tooshort-01", "tracestate": "", "correlation_id": "op-1", "caller_plugin": "rat-strategy", "tenant": "tenantA", "deadline_unix_ms": 0, "subject": null },
+      "expect": { "outcome": "reject", "reason": "traceparent" }
+    },
+    {
+      "name": "reject-missing-correlation-id",
+      "desc": "C1: well-formed traceparent but no correlation_id -> reject.",
+      "channel_caller": "rat-format", "now_unix_ms": 1000,
+      "inbound": { "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "tracestate": "", "correlation_id": "", "caller_plugin": "rat-strategy", "tenant": "tenantA", "deadline_unix_ms": 0, "subject": null },
+      "expect": { "outcome": "reject", "reason": "correlation" }
+    },
+    {
+      "name": "accept-bootstrap-no-subject",
+      "desc": "Valid trace, no subject (pre-auth bootstrap): accept; caller re-derived, no subject principal downstream.",
+      "channel_caller": "rat-identity", "now_unix_ms": 1000,
+      "inbound": { "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "tracestate": "vendor=x", "correlation_id": "op-3", "caller_plugin": "rat-strategy", "tenant": "", "deadline_unix_ms": 0, "subject": null },
+      "expect": { "outcome": "accept", "downstream": { "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "tracestate": "vendor=x", "correlation_id": "op-3", "caller_plugin": "rat-identity", "tenant": "", "subject_principal": "" } }
+    },
+    {
+      "name": "restamp-caller-rederived-not-propagated",
+      "desc": "The inbound envelope CLAIMS caller_plugin=rat-evil; the gateway IGNORES it and re-derives from the authenticated channel (rat-format). This is the C3 cross-plugin-namespace guarantee.",
+      "channel_caller": "rat-format", "now_unix_ms": 1000,
+      "inbound": { "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "tracestate": "", "correlation_id": "op-4", "caller_plugin": "rat-evil", "tenant": "tenantA", "deadline_unix_ms": 0,
+        "subject": { "signed": { "principal": "user-1", "tenant": "tenantA", "bound_correlation_id": "op-4", "expires_unix_ms": 9999, "key_id": "core-k1" }, "bare_principal": "user-1", "signature": "valid" } },
+      "expect": { "outcome": "accept", "downstream": { "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "tracestate": "", "correlation_id": "op-4", "caller_plugin": "rat-format", "tenant": "tenantA", "subject_principal": "user-1" } }
+    },
+    {
+      "name": "accept-valid-subject-trace-verbatim",
+      "desc": "A fully-valid signed subject: accept; trace propagated verbatim; subject principal carried downstream.",
+      "channel_caller": "rat-format", "now_unix_ms": 5000,
+      "inbound": { "traceparent": "00-11111111111111111111111111111111-2222222222222222-01", "tracestate": "a=b,c=d", "correlation_id": "op-5", "caller_plugin": "rat-strategy", "tenant": "tenantB", "deadline_unix_ms": 123456,
+        "subject": { "signed": { "principal": "user-9", "tenant": "tenantB", "bound_correlation_id": "op-5", "expires_unix_ms": 9999, "key_id": "core-k1" }, "bare_principal": "user-9", "signature": "valid" } },
+      "expect": { "outcome": "accept", "downstream": { "traceparent": "00-11111111111111111111111111111111-2222222222222222-01", "tracestate": "a=b,c=d", "correlation_id": "op-5", "caller_plugin": "rat-format", "tenant": "tenantB", "subject_principal": "user-9" } }
+    },
+    {
+      "name": "reject-subject-bad-signature",
+      "desc": "Subject signature tampered -> reject (never trust principal without a valid signature).",
+      "channel_caller": "rat-format", "now_unix_ms": 1000,
+      "inbound": { "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "tracestate": "", "correlation_id": "op-6", "caller_plugin": "rat-strategy", "tenant": "tenantA", "deadline_unix_ms": 0,
+        "subject": { "signed": { "principal": "user-1", "tenant": "tenantA", "bound_correlation_id": "op-6", "expires_unix_ms": 9999, "key_id": "core-k1" }, "bare_principal": "user-1", "signature": "tampered" } },
+      "expect": { "outcome": "reject", "reason": "subject-signature" }
+    },
+    {
+      "name": "reject-subject-unknown-keyid",
+      "desc": "key_id not in the core keyring -> reject (no key to verify against).",
+      "channel_caller": "rat-format", "now_unix_ms": 1000,
+      "inbound": { "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "tracestate": "", "correlation_id": "op-7", "caller_plugin": "rat-strategy", "tenant": "tenantA", "deadline_unix_ms": 0,
+        "subject": { "signed": { "principal": "user-1", "tenant": "tenantA", "bound_correlation_id": "op-7", "expires_unix_ms": 9999, "key_id": "core-unknown" }, "bare_principal": "user-1", "signature": "valid" } },
+      "expect": { "outcome": "reject", "reason": "subject-signature" }
+    },
+    {
+      "name": "reject-subject-wrong-bound-correlation",
+      "desc": "bound_correlation_id != inbound correlation_id (a stockpiled assertion reused for another op) -> reject.",
+      "channel_caller": "rat-format", "now_unix_ms": 1000,
+      "inbound": { "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "tracestate": "", "correlation_id": "op-8", "caller_plugin": "rat-strategy", "tenant": "tenantA", "deadline_unix_ms": 0,
+        "subject": { "signed": { "principal": "user-1", "tenant": "tenantA", "bound_correlation_id": "op-OTHER", "expires_unix_ms": 9999, "key_id": "core-k1" }, "bare_principal": "user-1", "signature": "valid" } },
+      "expect": { "outcome": "reject", "reason": "subject-bound" }
+    },
+    {
+      "name": "reject-subject-expired",
+      "desc": "now > expires_unix_ms -> reject (short-TTL).",
+      "channel_caller": "rat-format", "now_unix_ms": 10000,
+      "inbound": { "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "tracestate": "", "correlation_id": "op-9", "caller_plugin": "rat-strategy", "tenant": "tenantA", "deadline_unix_ms": 0,
+        "subject": { "signed": { "principal": "user-1", "tenant": "tenantA", "bound_correlation_id": "op-9", "expires_unix_ms": 5000, "key_id": "core-k1" }, "bare_principal": "user-1", "signature": "valid" } },
+      "expect": { "outcome": "reject", "reason": "subject-expired" }
+    },
+    {
+      "name": "reject-m4-tenant-mirror-mismatch",
+      "desc": "M4: signature was minted over tenant=tenantA, but the bare Identity.tenant is tenantB. Reconstructing the signed bytes from the bare mirror fails the signature -> reject. (A hop reading the bare tenant must not be handed a value the signature does not cover.)",
+      "channel_caller": "rat-format", "now_unix_ms": 1000,
+      "inbound": { "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "tracestate": "", "correlation_id": "op-10", "caller_plugin": "rat-strategy", "tenant": "tenantB", "deadline_unix_ms": 0,
+        "subject": { "signed": { "principal": "user-1", "tenant": "tenantA", "bound_correlation_id": "op-10", "expires_unix_ms": 9999, "key_id": "core-k1" }, "bare_principal": "user-1", "signature": "valid" } },
+      "expect": { "outcome": "reject", "reason": "subject-signature" }
+    },
+    {
+      "name": "reject-m4-principal-mirror-mismatch",
+      "desc": "M4: signature was minted over principal=user-1, but the bare SubjectAssertion.principal is user-2. Reconstruct-from-bare fails the signature -> reject.",
+      "channel_caller": "rat-format", "now_unix_ms": 1000,
+      "inbound": { "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "tracestate": "", "correlation_id": "op-11", "caller_plugin": "rat-strategy", "tenant": "tenantA", "deadline_unix_ms": 0,
+        "subject": { "signed": { "principal": "user-1", "tenant": "tenantA", "bound_correlation_id": "op-11", "expires_unix_ms": 9999, "key_id": "core-k1" }, "bare_principal": "user-2", "signature": "valid" } },
+      "expect": { "outcome": "reject", "reason": "subject-signature" }
+    }
+  ]
+}

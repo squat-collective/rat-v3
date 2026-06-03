@@ -1,0 +1,4 @@
+# Runtime deps for rat-scheduler (cron-py). Just the gRPC runtime + the generated SDK
+# (on PYTHONPATH) — it only fires a capability through the gateway on an interval.
+grpcio==1.80.0
+protobuf==7.35.0

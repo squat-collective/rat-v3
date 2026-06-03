@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1crat/storage/v1/storage.proto\x12\x0erat.storage.v1\x1a\x1frat/common/v1/annotations.proto\"f\n\x16VendCredentialsRequest\x12\x16\n\x06prefix\x18\x02 \x01(\tR\x06prefix\x12.\n\x04mode\x18\x03 \x01(\x0e\x32\x1a.rat.storage.v1.AccessModeR\x04modeJ\x04\x08\x01\x10\x02\"h\n\x17VendCredentialsResponse\x12%\n\x0b\x63redentials\x18\x01 \x01(\x0c\x42\x03\x80\x01\x01R\x0b\x63redentials\x12&\n\x0f\x65xpires_unix_ms\x18\x02 \x01(\x03R\rexpiresUnixMs*r\n\nAccessMode\x12\x1b\n\x17\x41\x43\x43\x45SS_MODE_UNSPECIFIED\x10\x00\x12\x14\n\x10\x41\x43\x43\x45SS_MODE_READ\x10\x01\x12\x15\n\x11\x41\x43\x43\x45SS_MODE_WRITE\x10\x02\x12\x1a\n\x16\x41\x43\x43\x45SS_MODE_READ_WRITE\x10\x03\x32\x9c\x01\n\x0eStorageService\x12\x89\x01\n\x0fVendCredentials\x12&.rat.storage.v1.VendCredentialsRequest\x1a\'.rat.storage.v1.VendCredentialsResponse\"%\x8a\x97\"!rat://storage/v1/vend-credentialsB5Z3github.com/rat-dev/rat/gen/rat/storage/v1;storagev1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1crat/storage/v1/storage.proto\x12\x0erat.storage.v1\x1a\x1frat/common/v1/annotations.proto\"X\n\x16VendCredentialsRequest\x12\x0e\n\x06prefix\x18\x02 \x01(\t\x12(\n\x04mode\x18\x03 \x01(\x0e\x32\x1a.rat.storage.v1.AccessModeJ\x04\x08\x01\x10\x02\"L\n\x17VendCredentialsResponse\x12\x18\n\x0b\x63redentials\x18\x01 \x01(\x0c\x42\x03\x80\x01\x01\x12\x17\n\x0f\x65xpires_unix_ms\x18\x02 \x01(\x03\"2\n\x1aVendReadCredentialsRequest\x12\x0e\n\x06prefix\x18\x02 \x01(\tJ\x04\x08\x01\x10\x02\"P\n\x1bVendReadCredentialsResponse\x12\x18\n\x0b\x63redentials\x18\x01 \x01(\x0c\x42\x03\x80\x01\x01\x12\x17\n\x0f\x65xpires_unix_ms\x18\x02 \x01(\x03\"3\n\x1bVendWriteCredentialsRequest\x12\x0e\n\x06prefix\x18\x02 \x01(\tJ\x04\x08\x01\x10\x02\"Q\n\x1cVendWriteCredentialsResponse\x12\x18\n\x0b\x63redentials\x18\x01 \x01(\x0c\x42\x03\x80\x01\x01\x12\x17\n\x0f\x65xpires_unix_ms\x18\x02 \x01(\x03*r\n\nAccessMode\x12\x1b\n\x17\x41\x43\x43\x45SS_MODE_UNSPECIFIED\x10\x00\x12\x14\n\x10\x41\x43\x43\x45SS_MODE_READ\x10\x01\x12\x15\n\x11\x41\x43\x43\x45SS_MODE_WRITE\x10\x02\x12\x1a\n\x16\x41\x43\x43\x45SS_MODE_READ_WRITE\x10\x03\x32\xda\x03\n\x0eStorageService\x12\x89\x01\n\x0fVendCredentials\x12&.rat.storage.v1.VendCredentialsRequest\x1a\'.rat.storage.v1.VendCredentialsResponse\"%\x8a\x97\"!rat://storage/v1/vend-credentials\x12\x9a\x01\n\x13VendReadCredentials\x12*.rat.storage.v1.VendReadCredentialsRequest\x1a+.rat.storage.v1.VendReadCredentialsResponse\"*\x8a\x97\"&rat://storage/v1/vend-credentials-read\x12\x9e\x01\n\x14VendWriteCredentials\x12+.rat.storage.v1.VendWriteCredentialsRequest\x1a,.rat.storage.v1.VendWriteCredentialsResponse\"+\x8a\x97\"\'rat://storage/v1/vend-credentials-writeB5Z3github.com/rat-dev/rat/gen/rat/storage/v1;storagev1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,14 +35,30 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z3github.com/rat-dev/rat/gen/rat/storage/v1;storagev1'
   _globals['_VENDCREDENTIALSRESPONSE'].fields_by_name['credentials']._loaded_options = None
   _globals['_VENDCREDENTIALSRESPONSE'].fields_by_name['credentials']._serialized_options = b'\200\001\001'
+  _globals['_VENDREADCREDENTIALSRESPONSE'].fields_by_name['credentials']._loaded_options = None
+  _globals['_VENDREADCREDENTIALSRESPONSE'].fields_by_name['credentials']._serialized_options = b'\200\001\001'
+  _globals['_VENDWRITECREDENTIALSRESPONSE'].fields_by_name['credentials']._loaded_options = None
+  _globals['_VENDWRITECREDENTIALSRESPONSE'].fields_by_name['credentials']._serialized_options = b'\200\001\001'
   _globals['_STORAGESERVICE'].methods_by_name['VendCredentials']._loaded_options = None
   _globals['_STORAGESERVICE'].methods_by_name['VendCredentials']._serialized_options = b'\212\227\"!rat://storage/v1/vend-credentials'
-  _globals['_ACCESSMODE']._serialized_start=291
-  _globals['_ACCESSMODE']._serialized_end=405
+  _globals['_STORAGESERVICE'].methods_by_name['VendReadCredentials']._loaded_options = None
+  _globals['_STORAGESERVICE'].methods_by_name['VendReadCredentials']._serialized_options = b'\212\227\"&rat://storage/v1/vend-credentials-read'
+  _globals['_STORAGESERVICE'].methods_by_name['VendWriteCredentials']._loaded_options = None
+  _globals['_STORAGESERVICE'].methods_by_name['VendWriteCredentials']._serialized_options = b'\212\227\"\'rat://storage/v1/vend-credentials-write'
+  _globals['_ACCESSMODE']._serialized_start=519
+  _globals['_ACCESSMODE']._serialized_end=633
   _globals['_VENDCREDENTIALSREQUEST']._serialized_start=81
-  _globals['_VENDCREDENTIALSREQUEST']._serialized_end=183
-  _globals['_VENDCREDENTIALSRESPONSE']._serialized_start=185
-  _globals['_VENDCREDENTIALSRESPONSE']._serialized_end=289
-  _globals['_STORAGESERVICE']._serialized_start=408
-  _globals['_STORAGESERVICE']._serialized_end=564
+  _globals['_VENDCREDENTIALSREQUEST']._serialized_end=169
+  _globals['_VENDCREDENTIALSRESPONSE']._serialized_start=171
+  _globals['_VENDCREDENTIALSRESPONSE']._serialized_end=247
+  _globals['_VENDREADCREDENTIALSREQUEST']._serialized_start=249
+  _globals['_VENDREADCREDENTIALSREQUEST']._serialized_end=299
+  _globals['_VENDREADCREDENTIALSRESPONSE']._serialized_start=301
+  _globals['_VENDREADCREDENTIALSRESPONSE']._serialized_end=381
+  _globals['_VENDWRITECREDENTIALSREQUEST']._serialized_start=383
+  _globals['_VENDWRITECREDENTIALSREQUEST']._serialized_end=434
+  _globals['_VENDWRITECREDENTIALSRESPONSE']._serialized_start=436
+  _globals['_VENDWRITECREDENTIALSRESPONSE']._serialized_end=517
+  _globals['_STORAGESERVICE']._serialized_start=636
+  _globals['_STORAGESERVICE']._serialized_end=1110
 # @@protoc_insertion_point(module_scope)

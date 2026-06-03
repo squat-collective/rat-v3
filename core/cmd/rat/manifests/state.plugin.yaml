@@ -1,0 +1,12 @@
+# rat-state — the Phase-A test provider: the core's stateplugin
+# (core/testplugins/stateplugin) as a launched state-backend. Minimal manifest —
+# only the fields the registry's C5 authorization is derived from (ADR-019 Phase A).
+api_version: rat/1
+kind: state-backend
+metadata:
+  name: rat-state
+  version: 0.1.0
+compatible_core: ["rat/1"]
+provides:
+  - capability: rat://state/v1/get
+  - capability: rat://state/v1/put

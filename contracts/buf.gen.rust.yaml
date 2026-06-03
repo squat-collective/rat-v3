@@ -1,9 +1,9 @@
-# Rust SDK codegen (ADR-006 D1/D3). Generated into sdks/rust/, committed,
-# regenerated via scripts/gen-sdks.sh — never hand-edited.
-# prost (messages) + tonic (gRPC services), via the community remote plugins.
+# Rust SDK codegen (ADR-006 D1/D3; ADR-018 connectionless). LOCAL plugins — buf runs
+# protoc-gen-prost + protoc-gen-tonic from PATH (no BSR call), pinned in
+# contracts/codegen/Dockerfile.rust. prost (messages) + tonic (gRPC services).
 version: v2
 plugins:
-  - remote: buf.build/community/neoeinstein-prost
+  - local: protoc-gen-prost
     out: sdks/rust
-  - remote: buf.build/community/neoeinstein-tonic
+  - local: protoc-gen-tonic
     out: sdks/rust

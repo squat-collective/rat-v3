@@ -1,0 +1,10 @@
+api_version: rat/1
+kind: catalog
+metadata:
+  name: rat-catalog
+  version: 0.1.0
+compatible_core: ["rat/1"]
+provides:
+  - capability: rat://catalog/v1/get-table
+  - capability: rat://catalog/v1/register-table
+  - capability: rat://catalog/v1/commit-table

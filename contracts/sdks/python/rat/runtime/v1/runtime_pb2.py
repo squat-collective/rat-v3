@@ -26,7 +26,7 @@ from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotatio
 from rat.common.v1 import data_pb2 as rat_dot_common_dot_v1_dot_data__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1crat/runtime/v1/runtime.proto\x12\x0erat.runtime.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"g\n\x0e\x45xecuteRequest\x12\x1b\n\twork_spec\x18\x02 \x01(\x0cR\x08workSpec\x12\x32\n\x06inputs\x18\x03 \x03(\x0b\x32\x1a.rat.common.v1.ArrowStreamR\x06inputsJ\x04\x08\x01\x10\x02\"Y\n\x0f\x45xecuteProgress\x12\x1f\n\x08\x66raction\x18\x01 \x01(\x01H\x00R\x08\x66raction\x88\x01\x01\x12\x18\n\x07message\x18\x02 \x01(\tR\x07messageB\x0b\n\t_fraction\"v\n\x10\x45xecuteCompleted\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\x12\x14\n\x05\x65rror\x18\x02 \x01(\tR\x05\x65rror\x12\x32\n\x06result\x18\x03 \x01(\x0b\x32\x1a.rat.common.v1.WriteResultR\x06result\"\x9b\x01\n\x0f\x45xecuteResponse\x12=\n\x08progress\x18\x01 \x01(\x0b\x32\x1f.rat.runtime.v1.ExecuteProgressH\x00R\x08progress\x12@\n\tcompleted\x18\x02 \x01(\x0b\x32 .rat.runtime.v1.ExecuteCompletedH\x00R\tcompletedB\x07\n\x05\x65vent2|\n\x0eRuntimeService\x12j\n\x07\x45xecute\x12\x1e.rat.runtime.v1.ExecuteRequest\x1a\x1f.rat.runtime.v1.ExecuteResponse\"\x1c\x8a\x97\"\x18rat://runtime/v1/execute0\x01\x42\x35Z3github.com/rat-dev/rat/gen/rat/runtime/v1;runtimev1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1crat/runtime/v1/runtime.proto\x12\x0erat.runtime.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"U\n\x0e\x45xecuteRequest\x12\x11\n\twork_spec\x18\x02 \x01(\x0c\x12*\n\x06inputs\x18\x03 \x03(\x0b\x32\x1a.rat.common.v1.ArrowStreamJ\x04\x08\x01\x10\x02\"F\n\x0f\x45xecuteProgress\x12\x15\n\x08\x66raction\x18\x01 \x01(\x01H\x00\x88\x01\x01\x12\x0f\n\x07message\x18\x02 \x01(\tB\x0b\n\t_fraction\"^\n\x10\x45xecuteCompleted\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\r\n\x05\x65rror\x18\x02 \x01(\t\x12*\n\x06result\x18\x03 \x01(\x0b\x32\x1a.rat.common.v1.WriteResult\"\x86\x01\n\x0f\x45xecuteResponse\x12\x33\n\x08progress\x18\x01 \x01(\x0b\x32\x1f.rat.runtime.v1.ExecuteProgressH\x00\x12\x35\n\tcompleted\x18\x02 \x01(\x0b\x32 .rat.runtime.v1.ExecuteCompletedH\x00\x42\x07\n\x05\x65vent2|\n\x0eRuntimeService\x12j\n\x07\x45xecute\x12\x1e.rat.runtime.v1.ExecuteRequest\x1a\x1f.rat.runtime.v1.ExecuteResponse\"\x1c\x8a\x97\"\x18rat://runtime/v1/execute0\x01\x42\x35Z3github.com/rat-dev/rat/gen/rat/runtime/v1;runtimev1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -37,13 +37,13 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_RUNTIMESERVICE'].methods_by_name['Execute']._loaded_options = None
   _globals['_RUNTIMESERVICE'].methods_by_name['Execute']._serialized_options = b'\212\227\"\030rat://runtime/v1/execute'
   _globals['_EXECUTEREQUEST']._serialized_start=107
-  _globals['_EXECUTEREQUEST']._serialized_end=210
-  _globals['_EXECUTEPROGRESS']._serialized_start=212
-  _globals['_EXECUTEPROGRESS']._serialized_end=301
-  _globals['_EXECUTECOMPLETED']._serialized_start=303
-  _globals['_EXECUTECOMPLETED']._serialized_end=421
-  _globals['_EXECUTERESPONSE']._serialized_start=424
-  _globals['_EXECUTERESPONSE']._serialized_end=579
-  _globals['_RUNTIMESERVICE']._serialized_start=581
-  _globals['_RUNTIMESERVICE']._serialized_end=705
+  _globals['_EXECUTEREQUEST']._serialized_end=192
+  _globals['_EXECUTEPROGRESS']._serialized_start=194
+  _globals['_EXECUTEPROGRESS']._serialized_end=264
+  _globals['_EXECUTECOMPLETED']._serialized_start=266
+  _globals['_EXECUTECOMPLETED']._serialized_end=360
+  _globals['_EXECUTERESPONSE']._serialized_start=363
+  _globals['_EXECUTERESPONSE']._serialized_end=497
+  _globals['_RUNTIMESERVICE']._serialized_start=499
+  _globals['_RUNTIMESERVICE']._serialized_end=623
 # @@protoc_insertion_point(module_scope)

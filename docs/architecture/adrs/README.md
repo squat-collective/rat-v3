@@ -22,6 +22,15 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [014](014-spike-core-registry-and-invoke-gateway.md) | The spike core — a manifest-driven registry + capability-invoke gateway (C5 made real) | Accepted | 2026-06-01 |
 | [015](015-phase-1-commitment-gate-cleared.md) | Phase-1 commitment gate CLEARED — commit to the full core build | Accepted | 2026-06-01 |
 | [016](016-plugin-provisioning-via-deployment-runtime.md) | Plugin provisioning via the deployment-runtime axis — the core launches, it doesn't dial (D1) | Accepted | 2026-06-01 |
+| [017](017-pre-unfreeze-contract-amendment-gate.md) | Pre-unfreeze contract-amendment gate (the Q02 dry-run punch-list) | Proposed | 2026-06-02 |
+| [018](018-connectionless-codegen-local-plugins.md) | Connectionless codegen via local plugins | Accepted | 2026-06-02 |
+| [019](019-rat-serve-daemon.md) | `rat serve` — the runnable core daemon + the beginner compose stack | Accepted | 2026-06-02 |
+| [020](020-data-platform-bundle.md) | The data platform bundle — `platform/`, medallion conventions, VS Code + CLI (Phase 2) | Accepted | 2026-06-02 |
+| [021](021-orchestrator-pipelines-as-code.md) | rat is a pure orchestrator — pipelines as code (dbt), the pipeline-runner axis, infra declares only plugins | Proposed | 2026-06-02 |
+| [022](022-plugins-are-launched-not-composed.md) | Plugins are launched, not composed — adding a plugin is one declaration (socket-mount local, k8s prod) | Proposed | 2026-06-02 |
+| [023](023-rat-as-a-per-project-daemon.md) | rat is a per-project daemon — poetry-style hybrid control over an external spec, isolated per instance | Proposed | 2026-06-03 |
+| [024](024-ui-assembled-from-plugin-contributions.md) | The UI is assembled from plugin contributions, not hardcoded (the VSCode `contributes` model) | Proposed | 2026-06-03 |
+| [025](025-surfaces-and-consumers.md) | Surfaces & consumers — plugins contribute per-surface interfaces; consumers are out-of-stack renderers | Proposed | 2026-06-03 |
 
 ## Template
 

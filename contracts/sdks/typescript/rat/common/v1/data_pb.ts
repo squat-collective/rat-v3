@@ -77,9 +77,22 @@ export type ArrowStream = Message<"rat.common.v1.ArrowStream"> & {
    * SEC-14): a conformant producer MUST issue tickets that are short-TTL,
    * single-use, and bound to {caller_plugin, tenant, this stream} so a
    * leaked/guessed ticket can't be replayed for cross-tenant data access. (The
-   * bytes leg bypasses the core, so the ticket is the only gate.) The detailed
-   * ticket-format spec is enforcement-layer (GA); the field is here so it's in
-   * the frozen shape.
+   * bytes leg bypasses the core, so the ticket is the only gate.)
+   *
+   * PRODUCER CHANNEL-AUTH IS MANDATORY (Q02 PU-1, ADR-017 — the bytes-leg twin of
+   * the control-plane C2 identity fix): because the bytes leg bypasses the core, the
+   * ticket binding above is only as strong as the channel the producer checks it
+   * against. A conformant ArrowStream producer MUST verify that the PRESENTING
+   * CHANNEL'S AUTHENTICATED identity (the mTLS peer, or a token the core vended
+   * alongside the ticket) equals the ticket-bound {caller_plugin, tenant} BEFORE
+   * serving bytes. Transport/application-layer headers (e.g. an "X-RAT-Tenant"
+   * header) are NOT sufficient: an attacker presenting a leaked ticket can set them
+   * to the bound values. The producer-conformance suite MUST include a
+   * wrong-channel/right-header vector and require it to be REFUSED. SDKs ship
+   * channel-auth as the default so a producer cannot omit it by accident.
+   *
+   * The detailed ticket-format spec is enforcement-layer (GA); the field is here so
+   * it's in the frozen shape.
    *
    * @generated from field: bytes ticket = 2;
    */

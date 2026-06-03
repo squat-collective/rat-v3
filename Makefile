@@ -27,7 +27,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-check compile-sdks conformance composition validate-manifests bench core-test core-test-podman breaking help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -47,8 +47,15 @@ build: ## buf build (compile the proto module graph)
 	@echo ">> buf build"
 	@$(BUF) build
 
-gen-sdks: ## Regenerate contracts/sdks/<lang>/ from contracts/proto
+gen-sdks: ## Regenerate contracts/sdks/<lang>/ from contracts/proto (ADR-018: local plugins where available)
 	@scripts/gen-sdks.sh
+
+gen-images: ## Build the local connectionless codegen toolchain images (ADR-018)
+	@for df in $(CONTRACTS)/codegen/Dockerfile.*; do \
+	  lang=$${df##*.}; \
+	  echo ">> building rat-codegen-$$lang"; \
+	  $(RUNTIME) build -t rat-codegen-$$lang -f $$df $(CONTRACTS)/codegen; \
+	done
 
 gen-check: ## Fail if committed SDKs are stale vs contracts/proto
 	@scripts/gen-sdks.sh --check
@@ -67,6 +74,29 @@ conformance: ## Run EVERY reference plugin against its golden vectors → pass/f
 composition: ## Boot catalog+engine+format together; run the strategy across 4 ADR-003 combos
 	@scripts/composition.sh
 
+## --- keystone context-carriage conformance (PU-2, ADR-017) --------------------
+context-carriage: ## Cross-run the 2 context-carriage references (Go + Python) on shared vectors
+	@scripts/context-carriage.sh
+
+## --- data-dev plane local end-to-end (EXPLORATORY, experiments/data-dev-plane) ---
+data-dev-local: ## Boot DuckLake catalog + DuckDB-ML engine; run transform→embed→search locally
+	@scripts/data-dev-local.sh
+
+data-dev-remote: ## Boot MinIO+Postgres; run the pipeline remote (S3 data, Postgres metadata, vended creds)
+	@scripts/data-dev-remote.sh
+
+data-dev-remote-down: ## Tear down the MinIO+Postgres data-dev remote stack
+	@scripts/data-dev-remote.sh --down
+
+data-dev-strategy: ## Run the incremental-embed ELT strategy (2 runs + idempotent replay)
+	@scripts/data-dev-strategy.sh
+
+data-dev-gateway: ## Serve the data-dev gateway (the VS Code extension's backend) on :8787
+	@scripts/data-dev-gateway.sh
+
+data-dev-vsix: ## Package the vscode-rat extension into an installable .vsix
+	@scripts/data-dev-vsix.sh
+
 ## --- manifest validation (ADR-011 / the static half of `rat plugin validate`) -
 validate-manifests: ## Validate example manifests vs envelope + per-kind schemas; assert the INVALID corpus is rejected
 	@$(RUNTIME) run --rm -v "$(CURDIR)":/work:Z -v rat-pipcache:/root/.cache/pip -w /work \
@@ -82,6 +112,55 @@ core-test: ## Build + vet + test the spike core (core/) in a container
 	@$(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e GOTOOLCHAIN=local -e GOSUMDB=off -e GOFLAGS=-mod=mod \
 	  -v "$(CURDIR):/work:Z" -v rat-gocache:/go/pkg/mod -w /work/core \
 	  $(GO_IMAGE) sh -c 'go build ./... && go vet ./... && go test ./...'
+
+core-serve-smoke: ## ADR-019 Phase A: `rat serve` boots a plugin, routes (C5)+denies+drains (containerized)
+	@echo ">> rat serve: route + deny + SIGTERM-drain smoke (core/cmd/rat)"
+	@$(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e GOTOOLCHAIN=local -e GOSUMDB=off -e GOFLAGS=-mod=mod \
+	  -v "$(CURDIR):/work:Z" -v rat-gocache:/go/pkg/mod -w /work/core \
+	  $(GO_IMAGE) sh -c 'go test ./cmd/rat/ -run TestServe -v -count=1'
+
+ratctl-smoke: ## ADR-019/023: the client (rat call/apply, shared with ratctl) drives a live gateway — routes + denies
+	@echo ">> client: rat call/apply → orchestrator (route + C5 deny) smoke (core/client)"
+	@$(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e GOTOOLCHAIN=local -e GOSUMDB=off -e GOFLAGS=-mod=mod \
+	  -v "$(CURDIR):/work:Z" -v rat-gocache:/go/pkg/mod -w /work/core \
+	  $(GO_IMAGE) sh -c 'go test ./client/ -run TestRatctl -v -count=1'
+
+rat-image: ## ADR-019: build the rat control-plane daemon image (run `rat serve` in a container)
+	@echo ">> building rat/serve:dev (core/Dockerfile)"
+	@$(RUNTIME) build -f core/Dockerfile -t rat/serve:dev .
+	@echo ">> built rat/serve:dev — run it with:  $(notdir $(RUNTIME)) run --rm -p 7777:7777 rat/serve:dev"
+
+stateplugin-image: ## ADR-022: build a launchable stateplugin image (rat `podman run`s it as a plugin container)
+	@echo ">> building rat/stateplugin:dev"
+	@$(RUNTIME) build -f core/testplugins/stateplugin/Dockerfile -t rat/stateplugin:dev .
+
+plugin-images: ## ADR-022: build the launchable Python plugin images (rat/<name>:dev) — the platform's plugins
+	@echo ">> building the Python plugin images"
+	@$(RUNTIME) build -f examples/state/postgres-py/Dockerfile   -t rat/state:dev .
+	@$(RUNTIME) build -f examples/secret/env-py/Dockerfile       -t rat/secret:dev .
+	@$(RUNTIME) build -f examples/catalog/ducklake-py/Dockerfile -t rat/catalog:dev .
+	@$(RUNTIME) build -f examples/engine/duckdb-ml-py/Dockerfile -t rat/engine:dev .
+	@$(RUNTIME) build -f examples/scheduler/cron-py/Dockerfile   -t rat/scheduler:dev .
+	@$(RUNTIME) build -f examples/runner/dbt-duckdb/Dockerfile   -t rat/dbt-runner:dev .
+	@$(RUNTIME) build -f platform/bff.Dockerfile                 -t rat/bff:dev .
+	@echo ">> built: rat/{state,secret,catalog,engine,scheduler,dbt-runner,bff}:dev"
+
+## --- the data platform bundle (ADR-020) --------------------------------------
+platform-up: rat-image ## ADR-020 S1: bring up the always-on data platform stack (Postgres+MinIO+engine+catalog+rat serve)
+	@echo ">> platform: $(notdir $(RUNTIME)) compose up — the always-on stack (rat serve attaches to the plugins)"
+	@$(RUNTIME) compose -f platform/compose.yaml up -d
+
+platform-run: ## ADR-020 S1: run the medallion once through the rat serve gateway (bronze→silver→gold)
+	@$(RUNTIME) compose -f platform/compose.yaml run --rm runner
+
+platform-down: ## tear the data platform stack down (and its volumes)
+	@$(RUNTIME) compose -f platform/compose.yaml down -v
+
+platform-socket: ## ADR-022 socket-mount: rat AS A CONTAINER launches the plugins as siblings (infra = Postgres+MinIO only)
+	@./platform/run-socket-mount.sh up
+
+platform-socket-down: ## tear the socket-mount platform down
+	@./platform/run-socket-mount.sh down
 
 ## --- podman deployment-runtime LIVE full-profile proof (D1 / ADR-016 §4) ------
 # Drives a REAL `podman run` (nested) under the full I9 profile and asserts the kernel

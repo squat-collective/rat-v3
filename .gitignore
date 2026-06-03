@@ -29,3 +29,6 @@ __pycache__/
 # Do NOT ignore *.pb.go / *_pb2.py here — they are the deliverable, not scratch.
 # (contracts/.gitignore handles the only proto-related exclusion: sdks/go/go.sum.)
 gen/
+
+# host-built rat/ratctl binaries (ADR-022 launch demo)
+/bin/

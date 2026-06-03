@@ -12,13 +12,13 @@ pub struct InvokeRequest {
     /// rat://<axis>/v<major>/<capability> grammar. The core resolves this to a
     /// concrete provider + method via the registry + the (rat.common.v1.capability)
     /// method annotation, and checks the caller's manifest `requires` it.
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub capability: ::prost::alloc::string::String,
     /// The serialized request message for the target axis method (e.g. an encoded
     /// rat.format.v1.MergeRequest). Opaque to the core — routed, not interpreted.
     /// The target method is determined by `capability`, so the message type is
     /// implied by the capability, not carried here.
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes = "vec", tag = "3")]
     pub payload: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -32,7 +32,7 @@ pub struct InvokeResponse {
     /// (PERMISSION_DENIED), provider-unavailable (UNAVAILABLE), and unauthenticated
     /// caller (UNAUTHENTICATED) are core-side enforcement failures returned as those
     /// gRPC status codes, not as a field here.
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub result: ::prost::alloc::vec::Vec<u8>,
 }
 // --- server-streaming variant (ADR-008) ---
@@ -41,11 +41,11 @@ pub struct InvokeResponse {
 pub struct InvokeServerStreamRequest {
     /// The capability being invoked; same grammar + resolution as InvokeRequest. Must
     /// resolve to a server-streaming provider method.
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub capability: ::prost::alloc::string::String,
     /// The serialized request message for the target method (e.g. an encoded
     /// rat.runtime.v1.ExecuteRequest). Opaque to the core.
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes = "vec", tag = "3")]
     pub payload: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -53,7 +53,7 @@ pub struct InvokeServerStreamResponse {
     /// One serialized axis response frame (e.g. an encoded
     /// rat.runtime.v1.ExecuteResponse). Opaque to the core; relayed verbatim.
     /// Failures surface via gRPC status, not a field here.
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub result: ::prost::alloc::vec::Vec<u8>,
 }
 // --- bidirectional variant (ADR-008; also serves client-streaming) ---
@@ -65,16 +65,16 @@ pub struct InvokeBidiStreamRequest {
     /// protocol violation — the core ABORTS the stream with INVALID_ARGUMENT (S2,
     /// reviews/07: "ignored" would let a client attempt a silent mid-stream capability
     /// switch; reject it, never tolerate it).
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub capability: ::prost::alloc::string::String,
     /// One serialized axis request frame. Opaque to the core.
-    #[prost(bytes="vec", tag="3")]
+    #[prost(bytes = "vec", tag = "3")]
     pub payload: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct InvokeBidiStreamResponse {
     /// One serialized axis response frame. Opaque to the core; relayed verbatim.
-    #[prost(bytes="vec", tag="1")]
+    #[prost(bytes = "vec", tag = "1")]
     pub result: ::prost::alloc::vec::Vec<u8>,
 }
 include!("rat.core.v1.tonic.rs");

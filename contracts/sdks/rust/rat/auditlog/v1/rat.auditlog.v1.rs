@@ -3,19 +3,19 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AppendRequest {
     /// Core-authored, core-signed records to append, in chain order.
-    #[prost(message, repeated, tag="2")]
+    #[prost(message, repeated, tag = "2")]
     pub records: ::prost::alloc::vec::Vec<super::super::common::v1::AuditRecord>,
 }
 /// Ack for one record in the request; acks\[i\] corresponds to records\[i\].
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RecordAck {
     /// The core-assigned id this ack refers to (mirrors records\[i\].id).
-    #[prost(string, tag="1")]
+    #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
-    #[prost(enumeration="AppendStatus", tag="2")]
+    #[prost(enumeration = "AppendStatus", tag = "2")]
     pub status: i32,
     /// Set only when status == APPEND_STATUS_REJECTED.
-    #[prost(enumeration="RejectCode", tag="3")]
+    #[prost(enumeration = "RejectCode", tag = "3")]
     pub reject_code: i32,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -24,15 +24,15 @@ pub struct AppendResponse {
     /// REJECTED, all later records in the request are uncommitted (never acked
     /// COMMITTED), so the committed set is always a contiguous prefix — the chain
     /// can't fork on partial failure.
-    #[prost(message, repeated, tag="1")]
+    #[prost(message, repeated, tag = "1")]
     pub acks: ::prost::alloc::vec::Vec<RecordAck>,
     /// Chain head after this append: the id + canonical-hash of the last durably
     /// committed record. A reconnecting emitter resumes deterministically from here
     /// with no gap/fork; also distinguishes "dropped" (absent from the chain) from
     /// "in-flight".
-    #[prost(string, tag="2")]
+    #[prost(string, tag = "2")]
     pub last_committed_id: ::prost::alloc::string::String,
-    #[prost(string, tag="3")]
+    #[prost(string, tag = "3")]
     pub last_committed_hash: ::prost::alloc::string::String,
 }
 /// Per-record disposition of an Append.

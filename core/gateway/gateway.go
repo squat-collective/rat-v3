@@ -97,6 +97,7 @@ const defaultStreamIdleTimeout = 5 * time.Minute
 type Gateway struct {
 	corev1.UnimplementedCapabilityInvokeServiceServer
 	reg       *registry.Registry
+	provMu    sync.RWMutex                // guards providers for runtime re-bind (ADR-022)
 	providers map[string]*grpc.ClientConn // plugin name -> live connection
 	routes    map[string]string           // capability URI -> "/<svc.Full>/<Method>"
 	auditor   Auditor
@@ -114,13 +115,50 @@ func New(reg *registry.Registry, providers map[string]*grpc.ClientConn, auditor 
 	if auditor == nil {
 		auditor = noopAuditor{}
 	}
+	// Own the map (copy it) so SetProvider can mutate it under the lock without racing a
+	// caller that still holds the passed-in map.
+	owned := make(map[string]*grpc.ClientConn, len(providers))
+	for k, v := range providers {
+		owned[k] = v
+	}
 	return &Gateway{
 		reg:               reg,
-		providers:         providers,
+		providers:         owned,
 		routes:            buildRoutes(descriptors),
 		auditor:           auditor,
 		StreamIdleTimeout: defaultStreamIdleTimeout,
 	}
+}
+
+// SetProvider binds (or re-binds) the live connection for a provider by name. This is the
+// runtime re-wire the reconciler needs when a relaunched plugin comes up on a NEW endpoint,
+// and the hook a runtime-registration path uses to add a provider (ADR-022). It is
+// concurrency-safe against in-flight Invoke/relay reads. It returns the previous connection
+// (nil if none) so the caller can Close() it after draining.
+func (g *Gateway) SetProvider(name string, conn *grpc.ClientConn) *grpc.ClientConn {
+	g.provMu.Lock()
+	defer g.provMu.Unlock()
+	prev := g.providers[name]
+	g.providers[name] = conn
+	return prev
+}
+
+// RemoveProvider drops a provider (e.g. one the reconciler marked Degraded). It returns the
+// removed connection (nil if none) so the caller can Close() it.
+func (g *Gateway) RemoveProvider(name string) *grpc.ClientConn {
+	g.provMu.Lock()
+	defer g.provMu.Unlock()
+	prev := g.providers[name]
+	delete(g.providers, name)
+	return prev
+}
+
+// provider returns the live connection for name (nil if unbound), read-locked so a
+// concurrent SetProvider/RemoveProvider can't tear the map mid-read.
+func (g *Gateway) provider(name string) *grpc.ClientConn {
+	g.provMu.RLock()
+	defer g.provMu.RUnlock()
+	return g.providers[name]
 }
 
 // idleTimeout is the effective server-stream idle backstop (guards a zero value).
@@ -217,7 +255,7 @@ func (g *Gateway) openCall(ctx context.Context, capURI string) (*openedCall, err
 		// wiring gap in the core's setup, not a caller error.
 		return nil, status.Errorf(codes.Internal, "no route for capability %q (descriptor not loaded)", capURI)
 	}
-	conn := g.providers[d.Provider]
+	conn := g.provider(d.Provider)
 	if conn == nil {
 		return nil, status.Errorf(codes.Unavailable, "provider %q for %q is not connected", d.Provider, capURI)
 	}

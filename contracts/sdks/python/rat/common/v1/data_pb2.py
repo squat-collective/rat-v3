@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18rat/common/v1/data.proto\x12\rrat.common.v1\"T\n\x08TableRef\x12\x1e\n\nidentifier\x18\x01 \x01(\tR\nidentifier\x12\x10\n\x03uri\x18\x02 \x01(\tR\x03uri\x12\x16\n\x06\x62ranch\x18\x03 \x01(\tR\x06\x62ranch\"\xd7\x02\n\x0b\x41rrowStream\x12\x1a\n\x08\x65ndpoint\x18\x01 \x01(\tR\x08\x65ndpoint\x12\x1b\n\x06ticket\x18\x02 \x01(\x0c\x42\x03\x80\x01\x01R\x06ticket\x12\x1d\n\nipc_schema\x18\x03 \x01(\x0cR\tipcSchema\x12;\n\ttransport\x18\x04 \x01(\x0e\x32\x1d.rat.common.v1.ArrowTransportR\ttransport\x12\x32\n\x04role\x18\x05 \x01(\x0e\x32\x1e.rat.common.v1.ArrowStreamRoleR\x04role\x12(\n\rexpected_rows\x18\x06 \x01(\x03H\x00R\x0c\x65xpectedRows\x88\x01\x01\x12.\n\x10\x65xpected_batches\x18\x07 \x01(\x03H\x01R\x0f\x65xpectedBatches\x88\x01\x01\x42\x10\n\x0e_expected_rowsB\x13\n\x11_expected_batches\"\xa8\x01\n\x0bWriteResult\x12(\n\rrows_affected\x18\x01 \x01(\x03H\x00R\x0crowsAffected\x88\x01\x01\x12$\n\x0bsnapshot_id\x18\x02 \x01(\tH\x01R\nsnapshotId\x88\x01\x01\x12\'\n\x0f\x61lready_applied\x18\x03 \x01(\x08R\x0e\x61lreadyAppliedB\x10\n\x0e_rows_affectedB\x0e\n\x0c_snapshot_id*M\n\x0e\x41rrowTransport\x12\x1f\n\x1b\x41RROW_TRANSPORT_UNSPECIFIED\x10\x00\x12\x1a\n\x16\x41RROW_TRANSPORT_FLIGHT\x10\x01*\x82\x01\n\x0f\x41rrowStreamRole\x12!\n\x1d\x41RROW_STREAM_ROLE_UNSPECIFIED\x10\x00\x12%\n!ARROW_STREAM_ROLE_PRODUCER_HOSTED\x10\x01\x12%\n!ARROW_STREAM_ROLE_CONSUMER_HOSTED\x10\x02\x42\x33Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18rat/common/v1/data.proto\x12\rrat.common.v1\";\n\x08TableRef\x12\x12\n\nidentifier\x18\x01 \x01(\t\x12\x0b\n\x03uri\x18\x02 \x01(\t\x12\x0e\n\x06\x62ranch\x18\x03 \x01(\t\"\x8a\x02\n\x0b\x41rrowStream\x12\x10\n\x08\x65ndpoint\x18\x01 \x01(\t\x12\x13\n\x06ticket\x18\x02 \x01(\x0c\x42\x03\x80\x01\x01\x12\x12\n\nipc_schema\x18\x03 \x01(\x0c\x12\x30\n\ttransport\x18\x04 \x01(\x0e\x32\x1d.rat.common.v1.ArrowTransport\x12,\n\x04role\x18\x05 \x01(\x0e\x32\x1e.rat.common.v1.ArrowStreamRole\x12\x1a\n\rexpected_rows\x18\x06 \x01(\x03H\x00\x88\x01\x01\x12\x1d\n\x10\x65xpected_batches\x18\x07 \x01(\x03H\x01\x88\x01\x01\x42\x10\n\x0e_expected_rowsB\x13\n\x11_expected_batches\"~\n\x0bWriteResult\x12\x1a\n\rrows_affected\x18\x01 \x01(\x03H\x00\x88\x01\x01\x12\x18\n\x0bsnapshot_id\x18\x02 \x01(\tH\x01\x88\x01\x01\x12\x17\n\x0f\x61lready_applied\x18\x03 \x01(\x08\x42\x10\n\x0e_rows_affectedB\x0e\n\x0c_snapshot_id*M\n\x0e\x41rrowTransport\x12\x1f\n\x1b\x41RROW_TRANSPORT_UNSPECIFIED\x10\x00\x12\x1a\n\x16\x41RROW_TRANSPORT_FLIGHT\x10\x01*\x82\x01\n\x0f\x41rrowStreamRole\x12!\n\x1d\x41RROW_STREAM_ROLE_UNSPECIFIED\x10\x00\x12%\n!ARROW_STREAM_ROLE_PRODUCER_HOSTED\x10\x01\x12%\n!ARROW_STREAM_ROLE_CONSUMER_HOSTED\x10\x02\x42\x33Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,14 +34,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z1github.com/rat-dev/rat/gen/rat/common/v1;commonv1'
   _globals['_ARROWSTREAM'].fields_by_name['ticket']._loaded_options = None
   _globals['_ARROWSTREAM'].fields_by_name['ticket']._serialized_options = b'\200\001\001'
-  _globals['_ARROWTRANSPORT']._serialized_start=646
-  _globals['_ARROWTRANSPORT']._serialized_end=723
-  _globals['_ARROWSTREAMROLE']._serialized_start=726
-  _globals['_ARROWSTREAMROLE']._serialized_end=856
+  _globals['_ARROWTRANSPORT']._serialized_start=501
+  _globals['_ARROWTRANSPORT']._serialized_end=578
+  _globals['_ARROWSTREAMROLE']._serialized_start=581
+  _globals['_ARROWSTREAMROLE']._serialized_end=711
   _globals['_TABLEREF']._serialized_start=43
-  _globals['_TABLEREF']._serialized_end=127
-  _globals['_ARROWSTREAM']._serialized_start=130
-  _globals['_ARROWSTREAM']._serialized_end=473
-  _globals['_WRITERESULT']._serialized_start=476
-  _globals['_WRITERESULT']._serialized_end=644
+  _globals['_TABLEREF']._serialized_end=102
+  _globals['_ARROWSTREAM']._serialized_start=105
+  _globals['_ARROWSTREAM']._serialized_end=371
+  _globals['_WRITERESULT']._serialized_start=373
+  _globals['_WRITERESULT']._serialized_end=499
 # @@protoc_insertion_point(module_scope)

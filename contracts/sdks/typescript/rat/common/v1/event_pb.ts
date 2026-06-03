@@ -39,7 +39,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/common/v1/event.proto.
  */
 export const file_rat_common_v1_event: GenFile = /*@__PURE__*/
-  fileDesc("ChlyYXQvY29tbW9uL3YxL2V2ZW50LnByb3RvEg1yYXQuY29tbW9uLnYxIqoBCgVFdmVudBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBIQCghldmVudF9pZBgCIAEoCRIMCgR0eXBlGAMgASgJEhkKEXRpbWVzdGFtcF91bml4X21zGAQgASgDEg4KBnNvdXJjZRgFIAEoCRIPCgdwYXlsb2FkGAYgASgMEhUKDXBhcnRpdGlvbl9rZXkYByABKAlCM1oxZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L2NvbW1vbi92MTtjb21tb252MWIGcHJvdG8z", [file_rat_common_v1_context]);
+  fileDesc("ChlyYXQvY29tbW9uL3YxL2V2ZW50LnByb3RvEg1yYXQuY29tbW9uLnYxIs0BCgVFdmVudBIuCgdjb250ZXh0GAEgASgLMh0ucmF0LmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBIQCghldmVudF9pZBgCIAEoCRIMCgR0eXBlGAMgASgJEhkKEXRpbWVzdGFtcF91bml4X21zGAQgASgDEg4KBnNvdXJjZRgFIAEoCRIPCgdwYXlsb2FkGAYgASgMEhUKDXBhcnRpdGlvbl9rZXkYByABKAkSEQoJc2lnbmF0dXJlGAggASgMEg4KBmtleV9pZBgJIAEoCUIzWjFnaXRodWIuY29tL3JhdC1kZXYvcmF0L2dlbi9yYXQvY29tbW9uL3YxO2NvbW1vbnYxYgZwcm90bzM", [file_rat_common_v1_context]);
 
 /**
  * One event on the bus. Published by the core (or a core-mediated plugin),
@@ -119,6 +119,44 @@ export type Event = Message<"rat.common.v1.Event"> & {
    * @generated from field: string partition_key = 7;
    */
   partitionKey: string;
+
+  /**
+   * TAMPER-EVIDENCE (Q02 5b, ADR-017): `context.identity` is core-stamped at emit,
+   * but the bus TRANSPORT is a plugin (ADR-002 D2) — a third party — and an unsigned
+   * envelope means a compromised/buggy transport, or anyone able to publish to a
+   * subject, could inject an Event with a forged context.tenant that a fan-out
+   * subscriber has no way to detect (the async plane has no per-hop re-stamp, unlike
+   * the sync gateway). This mirrors the signed + hash-chained AuditRecord
+   * (audit.proto): the CORE signs the canonical Event bytes at emit; a subscriber
+   * verifies against the core's PUBLISHED keyring and rejects any Event whose
+   * signature does not verify BEFORE trusting context.identity / tenant for routing
+   * or logic. (SubjectAssertion in context already self-verifies; this adds the same
+   * integrity to the rest of the envelope.)
+   *
+   * CANONICAL SERIALIZATION (same rule as AuditRecord): the proto3 wire encoding of
+   * all fields EXCEPT `signature` (field 8), in ascending field-number order, each
+   * field present at most once, no unknown fields, varints minimal, default-valued
+   * fields omitted. `key_id` (field 9) IS included in these signed bytes, so the
+   * signature commits to which key it claims to be from (defeats key-substitution).
+   *
+   * Core signature over the canonical bytes above. Empty is permitted ONLY for a
+   * transport whose integrity is otherwise guaranteed (e.g. an in-process bus); on
+   * any pluggable/remote transport a conformant emitter sets it and subscribers
+   * verify before trust.
+   *
+   * @generated from field: bytes signature = 8;
+   */
+  signature: Uint8Array;
+
+  /**
+   * Identifier of the core key that signed this Event — resolves in the core's
+   * published keyring to {public key, signature algorithm}, enabling key ROTATION and
+   * algorithm AGILITY on new key_ids exactly as AuditRecord.key_id (audit.proto).
+   * Empty only for a single-key deployment that never rotates.
+   *
+   * @generated from field: string key_id = 9;
+   */
+  keyId: string;
 };
 
 /**
