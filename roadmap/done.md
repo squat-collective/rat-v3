@@ -16,6 +16,17 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Phase 8 slice 1: the marketplace — discovery + `rat add` auto-suggest 🛒
+
+Built the **marketplace axis** (`kind: marketplace`, ADR-001) — closes the Phase-7 follow-on "`rat add` auto-suggesting the *exact* plugin." A marketplace is a **source of plugin entries**; rat reads several at once:
+
+- **local** — plugin images on this machine, discovered by their stamped manifest (ADR-026 OCI label `dev.rat.manifest.v1.b64` → name/kind/provides/requires). No index file needed; a `rat plugin pack`'d image *is* a marketplace entry.
+- **added** — index files / URLs the operator registers (`marketplace/rat-official.json` is the reference: 5 plugins, capability→image). Config at `~/.config/rat/marketplaces.json` (XDG_CONFIG_HOME).
+
+New verbs (`core/cmd/rat/marketplace.go`): `rat search [query]` (name/kind/description **and capability** match, across local+added), `rat list` (plugins installed in this project's `rat.toml`), `rat marketplace add <name> <src> | list`. And the headline: the `rat add` satisfiability resolver now **auto-suggests** — each unsatisfied `requires` prints the exact provider + a ready-to-run `rat add --image <ref>  (<name>, from <source>)` line (`reportUnsatisfiedSuggesting`), falling back to the axis hint when no marketplace has a provider. Proven live: `marketplace add official → search (capability `state` surfaces the scheduler+dbt-runner that *require* it) → add my-scheduler ⚠2 unsatisfied → each names the exact ghcr.io image + source → list`. Additive — `make breaking` clean, no proto change.
+
+---
+
 ## 2026-06-03 — 🎉 PHASE 7 SEALED — `rat/5.0` (dependency resolution)
 
 Phase 7 — **dependency resolution** — is **sealed at `rat/5.0`** (`phase-7` merged to `main`, annotated tag). It completes both halves of "does rat check plugin deps?":

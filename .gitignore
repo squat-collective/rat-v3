@@ -32,3 +32,4 @@ gen/
 
 # host-built rat/ratctl binaries (ADR-022 launch demo)
 /bin/
+core/bin/
