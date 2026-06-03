@@ -1,0 +1,21 @@
+# plugins.yaml — the launch-mode platform plane (ADR-022). rat LAUNCHES each plugin as
+# its own container from these one-line entries; the infra (compose) carries no per-plugin
+# service. Adding a plugin = adding an entry + its image.
+#
+# Run it (rat on the host, the proven podman runtime, launches the plugin containers):
+#   make plugin-images
+#   go build -o ./bin/rat ./core/cmd/rat   (or use ./bin/rat)
+#   ( cd platform && /path/to/bin/rat serve --plane plugins.yaml )
+addr: 0.0.0.0:7777
+runtime: podman
+health_timeout: 90s
+plugins:
+  - name: rat-pipeline
+    manifest: ./manifests/pipeline.plugin.yaml
+    launch:
+      image: rat/dbt-runner:dev      # the dbt-runner — runs `dbt build` on its baked project
+      isolation: i9
+
+  - name: platform-runner
+    manifest: ./manifests/runner.plugin.yaml
+    # register-only driver — the trigger identity (requires strategy/apply).

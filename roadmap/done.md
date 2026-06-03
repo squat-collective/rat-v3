@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 2c: the slim launch-mode platform — the medallion runs through a rat-LAUNCHED stack 🎛️
+
+The payoff: **rat launches the dbt-runner as its own container and the medallion runs inside it** — no per-plugin compose service. `platform/plugins.yaml` (a `runtime: podman` launch plane — one entry per plugin → its image) + the dbt-runner image now bakes a demo dbt project + landing data (a DEMO shortcut; real projects arrive via `rat apply`, ADR-021 Q1) and is read-only-rootfs-safe (`DBT_SEND_ANONYMOUS_USAGE_STATS=0`, dbt writes only to the I9 `/tmp` tmpfs). **Proven live** (rat on the host + the proven podman runtime): `rat serve --plane plugins.yaml` →
+- `launching 1 plugin(s) via podman` → `wired rat-pipeline -> 127.0.0.1:44587` → serving;
+- a `rat/dbt-runner:dev` **container** is running, launched by rat;
+- `ratctl call rat://strategy/v1/apply` → routes to it → it runs `dbt build` on the baked project → `bronze_orders → silver_orders → gold_daily_revenue` + tests → **`Completed successfully, PASS=7 ERROR=0`** (the medallion ran *inside the launched container*);
+- SIGTERM → `unwired rat-pipeline` → drained.
+
+So **the medallion runs through a rat-launched stack; the infra carries no per-plugin service; adding a plugin = one `plugins.yaml` entry + an image** — ADR-022's headline, real. `make breaking` clean; additive. **Remaining in 2c:** add the other plugins to `plugins.yaml` (state → Postgres via `host.containers.internal`; scheduler/bff are drivers that need a trivial health port so the reconciler can launch+supervise them) with a slim `compose` = **rat + Postgres + MinIO**; then **socket-mount** (containerize rat: podman CLI + host socket + the in-network endpoint tweak) as the final refinement. (Project delivery via `rat apply` and the dbt→shared-DuckLake (Q2) remain orthogonal follow-ons.)
+
+---
+
 ## 2026-06-03 — 2c: the Python plugin images are baked 🐳
 
 The launchable images for every platform plugin (ADR-022) — so rat can `podman run` each as its own container (no per-plugin compose service). A `Dockerfile` per plugin (build context = repo root; `.dockerignore` loosened to allow `examples/` + `platform/`, junk excluded) + `make plugin-images`:
