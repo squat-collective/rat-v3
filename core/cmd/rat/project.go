@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	manifestpkg "github.com/rat-dev/rat/core/manifest"
 	toml "github.com/pelletier/go-toml/v2"
 )
 
@@ -249,6 +250,15 @@ func runAdd(args []string, out io.Writer) error {
 		kind = *image
 	}
 	fmt.Fprintf(out, "added %q (%s) to %s\n", name, kind, projectFile)
+
+	// poetry-style: after adding, surface any `requires` the project now leaves unsatisfied.
+	if pl, err := LoadProject(tomlPath); err == nil {
+		ms := make([]*manifestpkg.Manifest, 0, len(pl.Specs))
+		for _, s := range pl.Specs {
+			ms = append(ms, s.Manifest)
+		}
+		reportUnsatisfied(out, unsatisfiedRequires(ms))
+	}
 	return nil
 }
 

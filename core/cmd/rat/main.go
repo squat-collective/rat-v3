@@ -312,6 +312,7 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 		}
 	}
 	log.Printf("plugins dial the gateway back at %s (injected RAT_GATEWAY)", gwAddr)
+	logUnsatisfied(manifests) // poetry-style: warn about any `requires` no plugin provides
 	reg, err := registry.New(manifests)
 	if err != nil {
 		return nil, fmt.Errorf("registry: %w", err)
