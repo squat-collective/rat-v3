@@ -1,0 +1,99 @@
+# Release — RAT v3 (Phase 4: the GHCR distribution).
+#
+# On a phase-seal tag (rat/N.M) this ships rat two ways, so getting started is
+# `curl … && chmod +x ./rat` (no clone, no make):
+#   1. a STATIC, versioned `rat` binary per OS/arch → a GitHub Release (+ SHA256SUMS + install.sh)
+#   2. the multi-arch DAEMON IMAGE → ghcr.io/<owner>/rat:<version> (+ :latest)
+#
+# The build steps mirror `make release-build` / `make release-image` (reproducible locally),
+# only run directly on the runner here for speed (the runner's job is to host toolchains).
+name: release
+
+on:
+  push:
+    tags:
+      - 'rat/*'      # rat/1.5, rat/2.0, … the phase-seal tags
+  workflow_dispatch: # manual re-cut
+
+permissions:
+  contents: write    # create the Release + upload assets
+  packages: write    # push the image to ghcr.io
+
+jobs:
+  binaries:
+    name: rat ${{ matrix.os }}/${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { os: linux,  arch: amd64 }
+          - { os: linux,  arch: arm64 }
+          - { os: darwin, arch: amd64 }
+          - { os: darwin, arch: arm64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.25' }
+      - name: Build static rat
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: '0'
+          GOFLAGS: -mod=mod
+          GOSUMDB: off
+        run: |
+          VERSION="${GITHUB_REF##*/}"            # rat/3.0 → 3.0
+          OUT="rat-${VERSION}-${GOOS}-${GOARCH}"
+          mkdir -p dist
+          (cd core && go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o "../dist/${OUT}" ./cmd/rat)
+          (cd dist && sha256sum "${OUT}" > "${OUT}.sha256")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rat-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/*
+
+  release:
+    name: GitHub Release
+    needs: binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: dist, merge-multiple: true }
+      - name: Aggregate checksums
+        run: (cd dist && cat *.sha256 > SHA256SUMS && rm -f *.sha256)
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/rat-*
+            dist/SHA256SUMS
+            scripts/install.sh
+          body: |
+            RAT ${{ github.ref_name }} — `curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/install.sh | sh`
+            or grab the right `rat-<version>-<os>-<arch>` below, `chmod +x`, and `./rat version`.
+
+  image:
+    name: ghcr.io image
+    needs: binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3   # for arm64
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build + push the daemon image (multi-arch)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: core/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          build-args: VERSION=${{ github.ref_name }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/rat:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/rat:latest
