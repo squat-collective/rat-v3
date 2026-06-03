@@ -1,8 +1,10 @@
-// The GENERIC RAT platform shell (ADR-024). It hardcodes NO platform view: on activation it
-// fetches the bff's /api/ui — the slot-grouped contributions every plugin published — and
-// renders them. A new plugin that contributes a view/command/config appears here with ZERO
-// change to this extension. Actions route back through the bff's /api/invoke (→ the gateway,
-// C5-authorized + audited). This is the VSCode `contributes` model, for a data platform.
+// The GENERIC RAT platform shell — the `vscode` SURFACE consumer (ADR-024 + ADR-025). It
+// hardcodes NO platform view: on activation it fetches /api/ui?surface=vscode — the
+// contributions every plugin targeted at the vscode surface — and renders them. A plugin's
+// cli/webapp interfaces never appear here (surface scoping); a new plugin that contributes a
+// vscode view/command/config appears with ZERO change to this extension. Actions route back
+// through /api/invoke (→ the gateway, C5-authorized + audited). The VSCode `contributes`
+// model, for a data platform, scoped to one surface.
 
 import * as http from "http";
 import { URL } from "url";
@@ -10,6 +12,16 @@ import * as vscode from "vscode";
 
 function base(): string {
   return vscode.workspace.getConfiguration("ratPlatform").get<string>("bff", "http://127.0.0.1:8080");
+}
+
+// This extension IS the `vscode` surface consumer (ADR-025): it asks the bff only for the
+// contributions targeted at its surface, so a plugin's cli/webapp interfaces never appear here.
+function surface(): string {
+  return vscode.workspace.getConfiguration("ratPlatform").get<string>("surface", "vscode");
+}
+
+function uiPath(): string {
+  return `/api/ui?surface=${encodeURIComponent(surface())}`;
 }
 
 function req(method: string, path: string, body?: unknown): Promise<any> {
@@ -72,7 +84,7 @@ class PlatformTree implements vscode.TreeDataProvider<Node> {
   private ui: { slots: Record<string, Component[]> } = { slots: {} };
 
   async refresh(): Promise<void> {
-    this.ui = await req("GET", "/api/ui");
+    this.ui = await req("GET", uiPath());
     this._onDidChange.fire();
   }
 
@@ -164,7 +176,7 @@ const registered = new Set<string>();
 async function registerAndRefresh(ctx: vscode.ExtensionContext, tree: PlatformTree): Promise<void> {
   let ui: { slots: Record<string, Component[]> };
   try {
-    ui = await req("GET", "/api/ui");
+    ui = await req("GET", uiPath());
   } catch (e) {
     vscode.window.showWarningMessage(`RAT platform: cannot reach the bff at ${base()} (${e})`);
     return;
