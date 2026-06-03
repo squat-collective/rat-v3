@@ -16,6 +16,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 2c: the FULL launch-mode platform self-drives — rat launches all 4 plugins, infra is just Postgres+MinIO 🚀
+
+The payoff in full: **rat-on-host launched the entire platform — 4 plugin containers from one `plugins.yaml` — and it ran itself.** `platform/plugins.yaml` now declares `rat-pipeline` (dbt-runner), `rat-state` (Postgres-backed run history), `rat-scheduler` (self-driving clock), `platform-bff` (UI control-path), plus a register-only `platform-runner` driver. The infra shrank to `platform/compose.infra.yaml` = **just Postgres + MinIO** (no per-plugin service — adding a plugin never touches it). The two *drivers* (scheduler, bff — they call the gateway, serve no capability) got a trivial TCP health-port so the reconciler can launch + supervise them like any plugin (`_serve_health` in `cron-py/main.py`; the bff binds `RAT_PLUGIN_ADDR`). Plugins reach the host (Postgres at `:55440`, the gateway at `:7777`) via `host.containers.internal`. **Proven live** (`rat serve --plane plugins.yaml`, podman runtime):
+- `launching 4 plugin(s) via podman` → `wired rat-pipeline/rat-state/rat-scheduler/platform-bff` → `gateway serving on :7777 — 5 plugin(s) up`; 4 `rat/{dbt-runner,state,scheduler,bff}:dev` containers running, all launched by rat;
+- the platform **self-drove**: ticks 2–10 each `refreshed` (a real `dbt build` in the dbt-runner container) **and** recorded to run-history via `rat-state → Postgres` (tick 1 lost the cold-start race to the gateway bind, retried next tick);
+- **durable**: 9 `success` rows verified directly in Postgres (`rat_state` table, `runs/000002…000010`);
+- the **launched bff** served `/api/runs` reading that history back through the gateway;
+- audit confirms the launched plugins talk *only* through the gateway: `rat-scheduler → strategy/apply → rat-pipeline`, `rat-scheduler → state/put → rat-state`;
+- drain tore down every launched container (reconciler-managed); Tom's kinora/kinori stacks untouched.
+
+So **the whole self-driving, run-history, UI-backed platform runs entirely rat-launched; the infra is two backends; adding a plugin = one `plugins.yaml` entry + an image.** ADR-022's headline, end to end. `make breaking` clean; additive (no proto/axis change). **Remaining in 2c:** **socket-mount** (containerize rat: podman CLI + host socket + in-network endpoint) as the final refinement. (Project delivery via `rat apply` and dbt→shared-DuckLake (Q2) remain orthogonal follow-ons.)
+
+---
+
 ## 2026-06-03 — 2c: the slim launch-mode platform — the medallion runs through a rat-LAUNCHED stack 🎛️
 
 The payoff: **rat launches the dbt-runner as its own container and the medallion runs inside it** — no per-plugin compose service. `platform/plugins.yaml` (a `runtime: podman` launch plane — one entry per plugin → its image) + the dbt-runner image now bakes a demo dbt project + landing data (a DEMO shortcut; real projects arrive via `rat apply`, ADR-021 Q1) and is read-only-rootfs-safe (`DBT_SEND_ANONYMOUS_USAGE_STATS=0`, dbt writes only to the I9 `/tmp` tmpfs). **Proven live** (rat on the host + the proven podman runtime): `rat serve --plane plugins.yaml` →

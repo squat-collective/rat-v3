@@ -97,8 +97,11 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    host, port = os.environ.get("BFF_ADDR", "0.0.0.0:8080").split(":")
-    print(f"platform-bff on {host}:{port} → gateway {GATEWAY}", flush=True)
+    # When rat LAUNCHES the bff (ADR-022) it sets RAT_PLUGIN_ADDR; serving the HTTP API on
+    # that port lets the deployment-runtime's readiness check pass (a TCP connect succeeds).
+    addr = os.environ.get("RAT_PLUGIN_ADDR") or os.environ.get("BFF_ADDR", "0.0.0.0:8080")
+    host, _, port = addr.rpartition(":")
+    print(f"platform-bff on {addr} → gateway {GATEWAY}", flush=True)
     ThreadingHTTPServer((host, int(port)), Handler).serve_forever()
 
 

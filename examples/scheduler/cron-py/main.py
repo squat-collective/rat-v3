@@ -20,7 +20,9 @@ Env:
 
 import json
 import os
+import socket
 import sys
+import threading
 import time
 
 import grpc
@@ -29,6 +31,23 @@ from rat.common.v1 import context_pb2, data_pb2
 from rat.core.v1 import invoke_pb2, invoke_pb2_grpc
 from rat.state.v1 import state_pb2
 from rat.strategy.v1 import strategy_pb2
+
+
+def _serve_health(addr):
+    """A trivial TCP listener on $RAT_PLUGIN_ADDR so the deployment-runtime's readiness
+    check passes — the scheduler is a driver (it calls the gateway; it serves no capability),
+    but rat launches+supervises it like any plugin (ADR-022), and that needs a port to poke."""
+    host, _, port = addr.rpartition(":")
+    s = socket.socket()
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(("" if host in ("0.0.0.0", "") else host, int(port)))
+    s.listen(16)
+    while True:
+        try:
+            conn, _ = s.accept()
+            conn.close()  # drain each readiness probe
+        except OSError:
+            return
 
 
 def _record_run(stub, md, tick, status, snapshot, error):
@@ -47,6 +66,9 @@ def main():
     interval = float(os.environ.get("RAT_SCHEDULE_INTERVAL", "60"))
     target = os.environ.get("RAT_PIPELINE_TARGET", "gold_daily_revenue")
     caller = os.environ.get("RAT_PLUGIN_NAME", "rat-scheduler")
+
+    # readiness port so rat can launch + supervise this driver (ADR-022)
+    threading.Thread(target=_serve_health, args=(os.environ.get("RAT_PLUGIN_ADDR", "0.0.0.0:50051"),), daemon=True).start()
 
     rc = context_pb2.RequestContext(
         trace=context_pb2.TraceContext(traceparent="00-" + "c" * 32 + "-" + "d" * 16 + "-01", correlation_id="scheduler"),
