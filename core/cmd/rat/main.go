@@ -41,6 +41,11 @@ import (
 // plane tears down provider conns + kills launched instances.
 const shutdownGrace = 15 * time.Second
 
+// version is the build version, injected at release time via
+// -ldflags "-X main.version=<tag>" (the GHCR release pipeline, Phase 4). "dev" for a
+// local build.
+var version = "dev"
+
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)
 
@@ -49,8 +54,12 @@ func main() {
 	// (no subcommand) still serves.
 	args := os.Args[1:]
 	cmd := ""
-	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-		cmd, args = args[0], args[1:]
+	if len(args) > 0 {
+		if args[0] == "--version" || args[0] == "-v" {
+			cmd, args = "version", args[1:]
+		} else if !strings.HasPrefix(args[0], "-") {
+			cmd, args = args[0], args[1:]
+		}
 	}
 
 	var err error
@@ -77,11 +86,13 @@ func main() {
 	case "call", "apply":
 		// the client verbs (the kubectl side), shared with the ratctl alias (ADR-023).
 		err = client.Run(append([]string{cmd}, args...), os.Stdout)
+	case "version":
+		fmt.Printf("rat %s\n", version)
 	case "ui":
 		// the CLI SURFACE consumer (ADR-025): render/run the cli-targeted contributions.
 		err = client.RunUI(args, os.Stdout)
 	default:
-		err = fmt.Errorf("unknown command %q (want: serve | up | down | status | ls | init | add | call | apply | ui)", cmd)
+		err = fmt.Errorf("unknown command %q (want: serve | up | down | status | ls | init | add | call | apply | ui | version)", cmd)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "rat:", err)

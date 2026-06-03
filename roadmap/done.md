@@ -16,6 +16,21 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Phase 4 slice 1: the GHCR release pipeline — `curl … && chmod +x ./rat` 📦
+
+The distribution front door (the inbox idea, ADR-023): ship rat as a **`ghcr.io` binary + image** so a user never clones or `make`s. Built as **reproducible `make` targets** with a thin CI wrapper, so a release is exactly what builds locally.
+
+- **`rat version`** (+ `--version`/`-v`): a `var version` injected at build time via `-ldflags "-X main.version=<tag>"`; defaults to `dev`.
+- **`make release-build`** → a **static, CGO-free, versioned** `rat` binary into `dist/rat-<ver>-<os>-<arch>` (override `RELEASE_OS`/`RELEASE_ARCH` to cross-compile). **`make release-image`** → the daemon image `ghcr.io/rat-dev/rat:<ver>` (+ `:latest`), version baked via `ARG VERSION` in `core/Dockerfile`. **`make release-checksums`** → `SHA256SUMS`.
+- **`.github/workflows/release.yml`**: on a `rat/*` tag → matrix-build the static binaries (linux/darwin × amd64/arm64) → a **GitHub Release** (binaries + SHA256SUMS + install.sh); + buildx the **multi-arch image** → `ghcr.io`. A thin wrapper over the make targets.
+- **`scripts/install.sh`**: `curl -fsSL …/install.sh | sh` — detects os/arch, resolves the latest release, downloads the right `rat-<ver>-<os>-<arch>`, verifies its sha256, drops a `./rat`.
+
+**Proven live (the reproducible build):** `make release-build VERSION=3.0` → a **statically-linked** ELF that runs (`rat version` → `rat 3.0`; `rat init` creates a `rat.toml`); `make release-image VERSION=3.0` built `ghcr.io/rat-dev/rat:3.0` and **the image's `rat version` reports `3.0`** too; `SHA256SUMS` generated. The CI workflow + the `curl|sh` download can't run in-sandbox (no GitHub/remote), but the build logic — the part that defines the artifacts — is fully verified. `make core-test` + `breaking` green; additive (no proto/axis).
+
+So getting started becomes: `curl …/install.sh | sh && ./rat version` (binary) or `podman run ghcr.io/rat-dev/rat:<ver>` (daemon image) — the founding `chmod +x ./rat` vision, real. Follow-ons: wire `rat add` to pull plugin images from GHCR (so `plugins.yaml`/`rat.toml` refs resolve); signed releases + SBOM; a `get.rat.dev` short URL.
+
+---
+
 ## 2026-06-03 — 🎉 PHASE 3 SEALED — `rat/3.0` (surfaces & consumers)
 
 Phase 3 — the **surfaces & consumers** model (ADR-024/025) — is **sealed at `rat/3.0`** (`phase-3` merged to `main`, annotated tag). The UI is assembled from plugin contributions, and a plugin presents **per-surface** interfaces that **out-of-stack consumers** render — demonstrated across all three surfaces:
