@@ -94,6 +94,15 @@ func main() {
 	case "plugin":
 		// the plugin authoring toolkit (ADR-026): init | check | test | pack | publish.
 		err = runPlugin(args, os.Stdout)
+	case "search":
+		// discover plugins across local + added marketplaces (the marketplace axis).
+		err = runSearch(args, os.Stdout)
+	case "list":
+		// the plugins installed in this project (rat.toml).
+		err = runList(args, os.Stdout)
+	case "marketplace", "market":
+		// manage the added marketplaces (add | list).
+		err = runMarketplace(args, os.Stdout)
 	default:
 		err = fmt.Errorf("unknown command %q (want: serve | up | down | status | ls | init | add | call | apply | ui | plugin | version)", cmd)
 	}
