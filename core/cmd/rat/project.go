@@ -278,7 +278,10 @@ func manifestsOf(pl *Plane) []*manifestpkg.Manifest {
 // one. Transitive: a provider added this round has its OWN `requires` resolved next round
 // (e.g. add rat-scheduler → pulls rat-state + dbt-runner → rat-state pulls rat-secret).
 func resolveWithDeps(out io.Writer, tomlPath, dir string) error {
-	entries := allMarketEntries()
+	entries, warns := allMarketEntries()
+	for _, w := range warns {
+		fmt.Fprintln(out, w)
+	}
 	for {
 		pl, err := LoadProject(tomlPath)
 		if err != nil {

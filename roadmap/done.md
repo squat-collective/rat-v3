@@ -16,6 +16,18 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — 🎉 PHASE 8 RE-SEALED — `rat/5.7` (marketplace iteration 3: remote index)
+
+The marketplace phase iterates to **`rat/5.7`** (`phase-8` merged to `main` again, annotated tag) — slice 3, the **remote/HTTP-hosted official index**: a built-in `official` shorthand, a bounded fetch timeout, an offline cache with graceful fallback, surfaced warnings, and the publishable `marketplace/official.json` + README. The sealed line is now `… rat/5.5` (discover) · `rat/5.6` (auto-resolve) · `rat/5.7` (remote index). Additive — `make breaking` clean, no proto/axis change. **Open marketplace follow-ons:** actually publish `official.json` to the `rat-dev` Pages site (the URL is a placeholder); signed marketplace entries; `rat remove` symmetry; `rat add` *launching* into a live daemon (RegisterPlugin RPC, ADR-023).
+
+---
+
+## 2026-06-03 — Phase 8 slice 3: the remote/HTTP-hosted official index 🌐
+
+Made the **added** marketplace source production-grade for *remote* indexes (it already accepted http(s) URLs, but only as a bare `http.Get` — untested live, silent-skip on failure). Now: a **built-in `official` shorthand** (`rat marketplace add official` registers the canonical `officialIndexURL` — no URL to type; `marketplace list` advertises built-ins not yet added), a **bounded 10 s fetch timeout** (a hung host can't wedge `rat search`), an **offline cache** (`~/.cache/rat/marketplaces/<name>.json` — a failed fetch falls back to the last-good copy with a `⚠ … using cached copy` note), and **surfaced warnings** (a bad URL / malformed index warns instead of vanishing). The reference index is now also published-shaped as `marketplace/official.json` + a `marketplace/README.md` documenting the format, hosting, and remote behaviour. **Proven live** against a containerized HTTP server: `marketplace add` a remote URL → `search` over HTTP → cache written → **stop the server** → `search` + `add --with-deps` both keep working from cache (warning shown), resolving a full transitive plane offline. New: `officialIndexURL`/`wellKnownMarketplaces`, `fetchSource`/`marketCacheDir`/`marketHTTP`, warnings threaded through `addedEntries`/`allMarketEntries`. Additive — `make breaking` clean, `make core-test` green, no proto change.
+
+---
+
 ## 2026-06-03 — 🎉 PHASE 8 RE-SEALED — `rat/5.6` (marketplace iteration 2: `--with-deps`)
 
 The marketplace phase iterates to **`rat/5.6`** (`phase-8` merged to `main` again, annotated tag) — slice 2, **`rat add --with-deps`**, turns the auto-*suggest* into auto-*resolve*: it transitively pulls the marketplace provider for every unsatisfied `requires` (synthesizing each provider's manifest from its entry; no pull at declare-time). The sealed line is now `… rat/5.5` (marketplace: discover) · `rat/5.6` (marketplace: auto-resolve). Additive — `make breaking` clean, no proto/axis change. **Open marketplace follow-ons:** a remote/HTTP-hosted official index; signed marketplace entries; `rat remove` symmetry; `rat add` *launching* into a live daemon (the RegisterPlugin RPC, ADR-023).
