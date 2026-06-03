@@ -16,6 +16,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-03 — Phase 3 slice 1: the CLI surface — `rat ui` (surfaces & consumers, ADR-025) 🖥️
+
+First buildable + provable slice of ADR-025 (the surface the CLI lets us prove headlessly): a plugin contributes a **per-surface** interface, and an **out-of-stack consumer** renders only its surface.
+
+- **Surface dimension.** Component specs carry a `surface` (`vscode`|`cli`|`webapp`|agnostic); `contribute_ui` gained a `surface=` default; the bff's `/api/ui?surface=X` filters; the CLI consumer filters `surface == cli` (+ agnostic). `matchesSurface` unit-tested.
+- **`rat ui` — the CLI surface consumer** (`core/client/ui.go`, a new `rat` verb): a **direct-to-gateway** client (nothing of it in the daemon) that reads `ui/components/*` from the state-backend, renders the cli-targeted contributions, and `rat ui run <id>` invokes a command's capability through the gateway. Identity via `--as` (C5 bounds it — ADR-025 #6).
+- **`rat-pipeline` now contributes per-surface** (`main.py`): a **vscode** interface (Lake Tables view + Run pipeline command) AND a **cli** interface (a `build` command) — same capabilities, two surfaces.
+
+**Proven live:** `rat ui` (cli) showed only `build` (from rat-pipeline); `rat ui run build` fired `strategy/apply` → `{snapshotId: cli-build}`; `rat ui --surface vscode` showed the *same registry's* vscode interface (`run-pipeline` + `lake-tables`) with `build` invisible; the bff filtered identically (`?surface=cli` → `{command:[build]}`, `?surface=vscode` → the vscode set); audit shows the cli consumer's command routed through the gateway (C5). `make core-test` + `breaking` green; additive (no proto/axis).
+
+So ADR-025 is real for the CLI surface: one plugin, multiple surface-tailored interfaces; consumers are out-of-stack renderers that pull only their surface; absence of a surface is inert. Next on Phase 3: the vscode shell reads `?surface=vscode` (the generic shell already exists — point it at the surface); a webapp consumer; ADR-025 follow-ons (consumer identity/connection, the webview content protocol, view-data capabilities).
+
+---
+
 ## 2026-06-03 — 🎉 PHASE 2 SEALED — `rat/2.5` (the v2-on-v3 platform + the daemon UX)
 
 Phase 2 — the data platform bundle (ADR-020) reimagined as the orchestrator + plugin model — is **sealed at `rat/2.5`** (`phase-2` merged to `main`, annotated tag). What landed across the phase, all proven running:
