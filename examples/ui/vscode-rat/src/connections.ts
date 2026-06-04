@@ -18,7 +18,12 @@ export interface RatConnection {
   workspace?: string; // which federated workspace this connection mounts
   token?: string;     // bearer credential for an authenticating hub (--token)
   cacert?: string;    // path to the hub's TLS cert/CA (--cacert); omit for a plaintext localhost hub
-  caller?: string;    // the `--as` plugin identity that `requires` state/* (default "s3-storage")
+  caller?: string;    // the `--as` plugin identity that `requires` the fs capability (default "s3-storage")
+  // The filesystem CONTRIBUTION descriptor (mirrors the contributor's manifest `contributes`):
+  // which filesystem-capability family to render + the mount root. Lets RatFS mount ANY fs plugin
+  // (code-fs over state/v1 today; a future fs-git over fs/v1) without surface-side changes. Default:
+  // state/v1 at root. (Auto-discovery of this from the plane is owed — see ratfs.ts.)
+  fs?: { capability?: string; prefix?: string };
 }
 
 const SECTION = "ratDataDev";

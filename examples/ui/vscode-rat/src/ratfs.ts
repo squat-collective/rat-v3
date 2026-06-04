@@ -1,24 +1,56 @@
-// RatFS — a VS Code FileSystemProvider that mounts a RAT workspace's code-fs as a native folder.
+// RatFS — a GENERIC, contribution-driven FileSystemProvider that mounts a RAT workspace's
+// filesystem-contributing plugin as a native VS Code folder, via the federation hub (ADR-033/034).
 //
-// Maps the `rat://<connection>/<path>` URI scheme onto the FROZEN state axis through the federation
-// hub (ADR-033) — get/put/list = read/write/list a path→bytes namespace (code-fs, the collaborative
-// remote code filesystem). Once registered, the VS Code Explorer, editor, save, and search all work
-// natively on `rat://…` because VS Code treats it as a real filesystem.
+// CONTRIBUTION MODEL (the push, not the pull): a plugin DECLARES it is a filesystem in its manifest
+// (`contributes.slots[].target: rat://ui/v1/filesystem` — see code-fs). The surface renders that
+// contribution GENERICALLY — it holds NO knowledge of "code-fs" or its backend. It speaks whatever
+// filesystem-capability FAMILY the contributor provides, selected by the connection's `fs.capability`
+// descriptor (which mirrors the plugin's declaration). So code-fs (over state/v1, S3-backed) and a
+// future fs-git / fs-local (over fs/v1, or any backend) mount identically — the surface is decoupled
+// from both the plugin and its storage. code-fs's S3-ness is invisible here (it always was: the
+// surface calls get/put/list; code-fs does S3 internally, over any S3-compatible storage plugin).
 //
-// TRANSPORT: it shells out to the `rat` binary (`rat call …`) — the exact, already-proven hub path
-// (TLS via --cacert, auth via --token, routing via --workspace; ADR-034). This reuses the verified
-// CLI rather than re-implementing gRPC + the binary call-context metadata in Node; a native
-// Connect-ES transport (no shell-out) is a clean future refinement. Pattern: like the built-in Git
-// extension shelling `git`. Requires `rat` on PATH (or set `ratDataDev.ratPath`).
+// OWED (the last mile): AUTO-discovery of which plugins contribute a filesystem. Today the descriptor
+// is configured per-connection (sourced from the plugin's declaration). Auto-discovery needs the hub
+// to forward `ListPlugins` AND `ListPlugins` to surface `contributes` (an additive amendment to the
+// frozen control.proto) — ADR-pending; until then the connection names the contribution explicitly.
+//
+// TRANSPORT: shells the proven `rat call` path (TLS --cacert, auth --token, routing --workspace).
 
 import * as vscode from "vscode";
 import { execFile } from "child_process";
 import { getConnections, RatConnection } from "./connections";
 
+/** A read/write/list adapter for one filesystem-capability FAMILY (e.g. state/v1, later fs/v1). */
+interface FsAdapter {
+  get(key: string): { cap: string; data: unknown };
+  parseGet(r: any): { found: boolean; valueB64: string; rev: number };
+  put(key: string, valueB64: string): { cap: string; data: unknown };
+  parsePut(r: any): string; // outcome ("" / PUT_OUTCOME_COMMITTED == ok)
+  list(prefix: string): { cap: string; data: unknown };
+  parseList(r: any): string[];
+}
+
+// The known filesystem-capability families. code-fs (and any state-backed fs) uses state/v1; a real
+// `fs/v1` axis (ADR-032) is added here when it lands — RatFS itself does not change.
+const ADAPTERS: Record<string, FsAdapter> = {
+  "rat://state/v1": {
+    get: (key) => ({ cap: "rat://state/v1/get", data: { key } }),
+    parseGet: (r) => ({ found: !!r.found, valueB64: (r.value as string) ?? "", rev: Number(r.revision ?? 0) }),
+    put: (key, valueB64) => ({ cap: "rat://state/v1/put", data: { key, value: valueB64 } }),
+    parsePut: (r) => (r.outcome as string) ?? "PUT_OUTCOME_COMMITTED",
+    list: (prefix) => ({ cap: "rat://state/v1/list", data: { prefix } }),
+    parseList: (r) => ((r.keys as string[]) ?? []),
+  },
+  // "rat://fs/v1": { ... read/write/list/stat/delete ... }  ← add when ADR-032's fs axis lands
+};
+
+interface Mount { adapter: FsAdapter; prefix: string; conn: RatConnection; }
+
 /** Run one `rat call` against the connection's hub and return the parsed protojson response. */
 function ratCall(conn: RatConnection, capability: string, data: unknown): Promise<any> {
   const hub = conn.hub ?? conn.url ?? "127.0.0.1:7700";
-  const caller = conn.caller ?? "s3-storage"; // must `require` state/* (C5); s3-storage does
+  const caller = conn.caller ?? "s3-storage"; // must `require` the fs capability (C5)
   const args = ["call", capability, "--as", caller, "--addr", hub, "--data", JSON.stringify(data ?? {})];
   if (conn.workspace) { args.push("--workspace", conn.workspace); }
   if (conn.token) { args.push("--token", conn.token); }
@@ -37,37 +69,51 @@ export class RatFS implements vscode.FileSystemProvider {
   private readonly _emitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
   readonly onDidChangeFile = this._emitter.event;
 
-  // uri.authority = the connection name; uri.path = the code-fs key (a path→bytes namespace).
-  private conn(uri: vscode.Uri): RatConnection {
-    const c = getConnections().find((x) => x.name === uri.authority);
-    if (!c) { throw vscode.FileSystemError.FileNotFound(`no RAT connection "${uri.authority}"`); }
-    return c;
+  // uri.authority = the connection name; uri.path = the path within the mount root.
+  private mount(uri: vscode.Uri): Mount {
+    const conn = getConnections().find((x) => x.name === uri.authority);
+    if (!conn) { throw vscode.FileSystemError.FileNotFound(`no RAT connection "${uri.authority}"`); }
+    const family = conn.fs?.capability ?? "rat://state/v1";
+    const adapter = ADAPTERS[family];
+    if (!adapter) {
+      throw vscode.FileSystemError.Unavailable(
+        `RatFS: no adapter for filesystem capability "${family}" (known: ${Object.keys(ADAPTERS).join(", ")})`);
+    }
+    return { adapter, prefix: conn.fs?.prefix ?? "", conn };
   }
-  private key(uri: vscode.Uri): string { return uri.path.replace(/^\/+/, ""); }
+  // map a mount-relative path to the contributor's namespace key (applying the mount prefix).
+  private key(m: Mount, uri: vscode.Uri): string {
+    const rel = uri.path.replace(/^\/+/, "");
+    return m.prefix ? m.prefix.replace(/\/?$/, "/") + rel : rel;
+  }
 
   async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
-    const key = this.key(uri);
-    if (key === "") { return { type: vscode.FileType.Directory, ctime: 0, mtime: 0, size: 0 }; }
-    const got = await ratCall(this.conn(uri), "rat://state/v1/get", { key });
-    if (got.found) {
-      const size = got.value ? Buffer.from(got.value, "base64").length : 0;
-      return { type: vscode.FileType.File, ctime: 0, mtime: Number(got.revision ?? 0), size };
+    const m = this.mount(uri);
+    if (uri.path.replace(/^\/+/, "") === "") { // the mount root is always a directory
+      return { type: vscode.FileType.Directory, ctime: 0, mtime: 0, size: 0 };
     }
-    // not a file — a directory if any key lives under "<key>/"
-    const listed = await ratCall(this.conn(uri), "rat://state/v1/list", { prefix: key + "/" });
-    if (((listed.keys as string[]) ?? []).length > 0) {
+    const key = this.key(m, uri);
+    const g = m.adapter.get(key);
+    const got = m.adapter.parseGet(await ratCall(m.conn, g.cap, g.data));
+    if (got.found) {
+      const size = got.valueB64 ? Buffer.from(got.valueB64, "base64").length : 0;
+      return { type: vscode.FileType.File, ctime: 0, mtime: got.rev, size };
+    }
+    const l = m.adapter.list(key + "/");
+    if (m.adapter.parseList(await ratCall(m.conn, l.cap, l.data)).length > 0) {
       return { type: vscode.FileType.Directory, ctime: 0, mtime: 0, size: 0 };
     }
     throw vscode.FileSystemError.FileNotFound(uri);
   }
 
   async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
-    const base = this.key(uri);
-    const prefix = base === "" ? "" : base.replace(/\/?$/, "/");
-    const listed = await ratCall(this.conn(uri), "rat://state/v1/list", { prefix });
-    // collapse full keys into immediate children: an exact key is a File, a deeper one a Directory.
+    const m = this.mount(uri);
+    const base = this.key(m, uri);
+    const prefix = base === "" ? (m.prefix ? m.prefix.replace(/\/?$/, "/") : "") : base.replace(/\/?$/, "/");
+    const l = m.adapter.list(prefix);
+    const keys = m.adapter.parseList(await ratCall(m.conn, l.cap, l.data));
     const children = new Map<string, vscode.FileType>();
-    for (const full of ((listed.keys as string[]) ?? [])) {
+    for (const full of keys) {
       if (!full.startsWith(prefix)) { continue; }
       const rest = full.slice(prefix.length);
       if (rest === "") { continue; }
@@ -79,27 +125,30 @@ export class RatFS implements vscode.FileSystemProvider {
   }
 
   async readFile(uri: vscode.Uri): Promise<Uint8Array> {
-    const got = await ratCall(this.conn(uri), "rat://state/v1/get", { key: this.key(uri) });
+    const m = this.mount(uri);
+    const g = m.adapter.get(this.key(m, uri));
+    const got = m.adapter.parseGet(await ratCall(m.conn, g.cap, g.data));
     if (!got.found) { throw vscode.FileSystemError.FileNotFound(uri); }
-    return new Uint8Array(Buffer.from((got.value as string) ?? "", "base64"));
+    return new Uint8Array(Buffer.from(got.valueB64, "base64"));
   }
 
   async writeFile(uri: vscode.Uri, content: Uint8Array, _opts: { create: boolean; overwrite: boolean }): Promise<void> {
-    const value = Buffer.from(content).toString("base64");
-    const res = await ratCall(this.conn(uri), "rat://state/v1/put", { key: this.key(uri), value });
-    if (res.outcome && res.outcome !== "PUT_OUTCOME_COMMITTED") {
+    const m = this.mount(uri);
+    const p = m.adapter.put(this.key(m, uri), Buffer.from(content).toString("base64"));
+    const outcome = m.adapter.parsePut(await ratCall(m.conn, p.cap, p.data));
+    if (outcome && outcome !== "PUT_OUTCOME_COMMITTED") {
       // CAS conflict = a concurrent edit landed first (collaborative safety, ADR-032).
-      throw vscode.FileSystemError.Unavailable(`write rejected (${res.outcome}) — code-fs detected a concurrent edit`);
+      throw vscode.FileSystemError.Unavailable(`write rejected (${outcome}) — a concurrent edit landed first`);
     }
     this._emitter.fire([{ type: vscode.FileChangeType.Changed, uri }]);
   }
 
-  // code-fs is the frozen state axis: get/put/list only. No delete/rename in the contract.
+  // Most filesystem-capability families (state/v1) are get/put/list — no delete/rename in the contract.
   async delete(): Promise<void> {
-    throw vscode.FileSystemError.NoPermissions("code-fs has no delete capability (state/v1 is get/put/list)");
+    throw vscode.FileSystemError.NoPermissions("this filesystem has no delete capability");
   }
   async rename(): Promise<void> {
-    throw vscode.FileSystemError.NoPermissions("code-fs has no rename capability (copy via read+write instead)");
+    throw vscode.FileSystemError.NoPermissions("this filesystem has no rename capability (copy via read+write)");
   }
   createDirectory(_uri: vscode.Uri): void { /* directories are implicit in the path namespace */ }
   watch(_uri: vscode.Uri): vscode.Disposable { return new vscode.Disposable(() => { /* no server push yet */ }); }

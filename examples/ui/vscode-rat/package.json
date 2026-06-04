@@ -84,7 +84,16 @@
               "workspace": { "type": "string", "description": "code-fs: which federated workspace this connection mounts" },
               "token": { "type": "string", "description": "code-fs: bearer credential for an authenticating hub" },
               "cacert": { "type": "string", "description": "code-fs: path to the hub's TLS cert/CA (omit for a plaintext localhost hub)" },
-              "caller": { "type": "string", "description": "code-fs: the `--as` plugin identity that requires state/* (default s3-storage)" }
+              "caller": { "type": "string", "description": "code-fs: the `--as` plugin identity that requires the fs capability (default s3-storage)" },
+              "fs": {
+                "type": "object",
+                "description": "Filesystem CONTRIBUTION descriptor (mirrors the contributor's manifest): which capability family to mount + the root prefix. Default: state/v1 at root.",
+                "additionalProperties": false,
+                "properties": {
+                  "capability": { "type": "string", "description": "filesystem-capability family, e.g. rat://state/v1 (code-fs) — later rat://fs/v1" },
+                  "prefix": { "type": "string", "description": "mount root within the contributor's namespace (default empty)" }
+                }
+              }
             }
           }
         },
