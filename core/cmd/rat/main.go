@@ -191,7 +191,13 @@ func serveResolved(pl *Plane) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	rt, err := newRuntime(pl.Runtime, pl.Instance)
+	// Durable local storage (ADR-031): a project gets a persistent per-plugin /data mount under
+	// .rat/data/ (survives restart, gitignored). No project (raw `rat serve --plane`) → ephemeral.
+	dataRoot := ""
+	if pl.RuntimeDir != "" {
+		dataRoot = filepath.Join(pl.RuntimeDir, "data")
+	}
+	rt, err := newRuntime(pl.Runtime, pl.Instance, dataRoot)
 	if err != nil {
 		return err
 	}
@@ -463,7 +469,7 @@ func selfGatewayAddr(pl *Plane) string {
 // newRuntime selects the deployment-runtime axis plugin the plane asks for. Phase A
 // defaults to local-process (the `chmod +x ./rat` runtime); podman is the B/C path. The
 // instance id (ADR-023) namespaces SIBLING-mode runtime resources so many rats coexist.
-func newRuntime(name, instance string) (deploymentruntimev1.DeploymentRuntimeServiceServer, error) {
+func newRuntime(name, instance, dataRoot string) (deploymentruntimev1.DeploymentRuntimeServiceServer, error) {
 	switch name {
 	case "local":
 		return deploymentruntime.NewLocalProcess(), nil
@@ -475,10 +481,14 @@ func newRuntime(name, instance string) (deploymentruntimev1.DeploymentRuntimeSer
 		// id — so two daemons never collide on a name like "rat-state-1" even if they share a
 		// network. Host mode (no network) publishes to ephemeral loopback ports + lets podman
 		// auto-name, which already coexists.
+		var p *deploymentruntime.Podman
 		if net := os.Getenv("RAT_PODMAN_NETWORK"); net != "" {
-			return deploymentruntime.NewPodmanInstanced(net, instance), nil
+			p = deploymentruntime.NewPodmanInstanced(net, instance)
+		} else {
+			p = deploymentruntime.NewPodman()
 		}
-		return deploymentruntime.NewPodman(), nil
+		p.DataRoot = dataRoot // durable per-plugin /data mount (ADR-031); "" = ephemeral
+		return p, nil
 	default:
 		return nil, fmt.Errorf("unknown runtime %q", name)
 	}
