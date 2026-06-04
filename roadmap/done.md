@@ -2326,3 +2326,11 @@ dbdcde5 docs(review): adversarial architect review
 - Research scaffold present (prior art + competitors)
 - Roadmap structure operational; this file is the proof
 - **No code yet.** Awaiting Tom's commitment decision before Phase 0 starts.
+
+## 2026-06-04 — state/v1 `Delete` ([ADR-035](../docs/architecture/adrs/035-state-axis-delete.md)) — RatFS delete/rename unblocked
+
+A VS Code filesystem-op audit of RatFS found delete-file, delete-folder, rename and move all blocked by **one gap: the state axis had no `Delete`** (a KV store with Get/Put/List/Watch but no delete). Fixed the contract + the full chain:
+- **[ADR-035](../docs/architecture/adrs/035-state-axis-delete.md)** (Accepted) + `rat://state/v1/delete` added to `state.proto` — additive (`buf breaking` clean), idempotent, CAS-aware, **optional per backend** (UNIMPLEMENTED allowed). SDKs regenerated; `rat` rebuilt (gateway routes it).
+- **code-fs** implements `Delete` (S3 `RemoveObject`) + declares `provides: state/v1/delete`; **s3-storage** declares `requires: state/v1/delete` (it prunes its connection registry) so it's a valid C5 caller. Both repacked; plugin-base-go rebuilt with the fresh SDK.
+- **RatFS** (vscode-rat v0.5.0): `delete` (file / recursive dir) + `rename`/move (copy + delete). Also fixed in the audit: `createDirectory` (empty folders via a `.ratkeep` marker) + `writeFile` create/overwrite flags.
+- **Proven live** through the secure hub: put→delete→`found:true`, idempotent re-delete, markers cleaned, 0 leftovers, C5-gated.
