@@ -29,6 +29,7 @@ interface FsAdapter {
   parsePut(r: any): string; // outcome ("" / PUT_OUTCOME_COMMITTED == ok)
   list(prefix: string): { cap: string; data: unknown };
   parseList(r: any): string[];
+  del(key: string): { cap: string; data: unknown }; // ADR-035
 }
 
 // The known filesystem-capability families. code-fs (and any state-backed fs) uses state/v1; a real
@@ -41,6 +42,7 @@ const ADAPTERS: Record<string, FsAdapter> = {
     parsePut: (r) => (r.outcome as string) ?? "PUT_OUTCOME_COMMITTED",
     list: (prefix) => ({ cap: "rat://state/v1/list", data: { prefix } }),
     parseList: (r) => ((r.keys as string[]) ?? []),
+    del: (key) => ({ cap: "rat://state/v1/delete", data: { key } }),
   },
   // "rat://fs/v1": { ... read/write/list/stat/delete ... }  ← add when ADR-032's fs axis lands
 };
@@ -165,16 +167,48 @@ export class RatFS implements vscode.FileSystemProvider {
     this._emitter.fire([{ type: vscode.FileChangeType.Created, uri }]);
   }
 
-  // delete / rename / move need a DELETE on the filesystem capability. state/v1 has none — so these
-  // are honestly unsupported until `Delete` lands on state/v1 (or the fs axis, ADR-032). Clear error
-  // (not a crash) so VS Code surfaces it as "operation not supported".
-  async delete(_uri: vscode.Uri): Promise<void> {
-    throw vscode.FileSystemError.NoPermissions(
-      "Delete isn't supported yet: this filesystem is backed by the state axis (get/put/list), which has no delete. Pending a `Delete` on state/v1 (or the fs axis).");
+  // delete a file, or a directory recursively (state/v1/delete — ADR-035).
+  async delete(uri: vscode.Uri, _opts: { recursive: boolean }): Promise<void> {
+    const m = this.mount(uri);
+    const key = this.key(m, uri);
+    const l = m.adapter.list(key.replace(/\/?$/, "/"));
+    const children = m.adapter.parseList(await ratCall(m.conn, l.cap, l.data));
+    const targets = children.length > 0 ? children : [key]; // dir → all its keys; else the file
+    for (const t of targets) {
+      const d = m.adapter.del(t);
+      await ratCall(m.conn, d.cap, d.data);
+    }
+    this._emitter.fire([{ type: vscode.FileChangeType.Deleted, uri }]);
   }
-  async rename(_old: vscode.Uri, _new: vscode.Uri): Promise<void> {
-    throw vscode.FileSystemError.NoPermissions(
-      "Rename/move isn't supported yet: it needs delete (rename = copy + delete), and state/v1 has no delete. Pending a `Delete` on state/v1 (or the fs axis).");
+
+  // rename/move = copy (read+write) then delete the source — for a file or a whole subtree.
+  async rename(oldUri: vscode.Uri, newUri: vscode.Uri, _opts: { overwrite: boolean }): Promise<void> {
+    const src = this.mount(oldUri);
+    const dst = this.mount(newUri);
+    const oldKey = this.key(src, oldUri);
+    const newKey = this.key(dst, newUri);
+    const moveOne = async (fromKey: string, toKey: string) => {
+      const g = src.adapter.get(fromKey);
+      const got = src.adapter.parseGet(await ratCall(src.conn, g.cap, g.data));
+      const p = dst.adapter.put(toKey, got.valueB64);
+      await ratCall(dst.conn, p.cap, p.data);
+      const d = src.adapter.del(fromKey);
+      await ratCall(src.conn, d.cap, d.data);
+    };
+    const oldDir = oldKey.replace(/\/?$/, "/");
+    const l = src.adapter.list(oldDir);
+    const children = src.adapter.parseList(await ratCall(src.conn, l.cap, l.data));
+    if (children.length > 0) {
+      const newDir = newKey.replace(/\/?$/, "/");
+      for (const child of children) { await moveOne(child, newDir + child.slice(oldDir.length)); }
+    } else {
+      await moveOne(oldKey, newKey);
+    }
+    this._emitter.fire([
+      { type: vscode.FileChangeType.Deleted, uri: oldUri },
+      { type: vscode.FileChangeType.Created, uri: newUri },
+    ]);
   }
+
   watch(_uri: vscode.Uri): vscode.Disposable { return new vscode.Disposable(() => { /* no server push yet */ }); }
 }
