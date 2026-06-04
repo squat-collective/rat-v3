@@ -263,3 +263,60 @@ a single `rat` binary that's both might be the friendlier front door (Tom keeps 
 not "`ratctl apply`"). Decide alongside the release pipeline.
 Related: the marketplace/distribution idea above (plugin images on GHCR), ADR-019 (rat/ratctl split),
 the founding `chmod +x ./rat` vision (docs/vision.md / CLAUDE.md).
+
+---
+
+## `code-fs` — a remote, collaborative code store as a PURE plugin (plug any storage) — 2026-06-04
+
+**What Tom wants:** a thing that stores *code* and behaves like a **remote filesystem**, so work
+becomes collaborative — and crucially, **a plugin you can plug *any* storage behind** (minio today,
+another S3, "why not fs tomorrow"). It must be **just a plugin** — no new proto, no core change.
+
+**The realization that killed the fs-axis attempt:** a *new axis* (`fs`) needs a new proto **and a
+core recompile** (the gateway's `routableDescriptors()` is hardcoded). That's not "just a plugin."
+So `fs` is **deferred** ([ADR-032](../docs/architecture/adrs/032-filesystem-axis.md) → Deferred).
+
+**The plan (pure plugin, no proto):**
+
+```
+┌─ consumer (an app, an editor) ─┐
+│  get/put/list  code/app/main.py│   ← the "filesystem" = the EXISTING state axis
+└───────────────┬────────────────┘
+                ▼  rat://state/v1/{get,put,list}      (PROVIDES — no new proto)
+        ┌───────────────┐
+        │   code-fs      │  the plugin we build
+        └───────┬────────┘
+                ▼  rat://storage/v1/vend-credentials  (REQUIRES — pluggable backend)
+        ┌───────────────┐
+        │ s3-storage     │  ← minio today; swap for gcs/anything; code-fs UNCHANGED
+        └───────┬────────┘
+                ▼  reads/writes one object per path in the bucket
+            (shared S3 = collaborative; CAS via if_revision = no clobber)
+```
+
+- **PROVIDES** the existing `rat://state/v1/{get,put,list}` — `put code/x = bytes` (write a file),
+  `get code/x` (read), `list code/` (list a dir). The path→bytes namespace *is* a filesystem.
+- **REQUIRES** `rat://storage/v1/vend-credentials-{read,write}` — so the backend is **any storage
+  plugin**. That's the "plug any storage" Tom asked for: swap `s3-storage`→`gcs-storage`, `code-fs`
+  doesn't change. Same composition trick already proven (keyring↔vault swap under s3-storage).
+- **Collaborative:** code lives in **shared** storage; CAS (`if_revision`) detects concurrent edits.
+- **Pure plugin:** reuses two frozen axes (state + storage). **No proto, no `routableDescriptors`
+  change, no core rebuild.** This is the whole point.
+
+**The one honest caveat:** providing `state/*` makes `code-fs` a **state-backend**, and a plane has
+**one** state provider (registry rejects duplicates). So in a code-focused plane, `code-fs` IS the
+state-backend (code under `code/`, everything else under its own prefixes). If a plane ever needs a
+*separate* fast local state-backend too, that's the duplicate-provider limit — and the real fix is
+the **dynamic-descriptor gap** below (which lets `code-fs` provide a distinct `fs` axis cleanly).
+
+**Two things this surfaced, parked for later:**
+1. **Dynamic descriptors (the important one).** The gateway should learn axis protos from plugins at
+   **runtime**, not from a hardcoded `routableDescriptors()`. Until then, "community can add axes
+   without core changes" (ADR-001) is **aspirational** — a new axis = a core rebuild. Closing this
+   makes the deferred `fs` axis (and any community axis) a *pure plugin*. This is the unlock.
+2. **The `fs` axis itself** (ADR-032) — richer semantics (stat/delete/real dirs, **git-backing** =
+   branches/history/merge) — revisit *after* #1, when KV-over-state isn't enough.
+
+**Next step when we build:** `rat plugin init code-fs --kind state-backend --lang go`, implement
+get/put/list over storage-vended S3 objects, pack, add to the kitchen plane behind `s3-storage`,
+prove a `consumer → code-fs → s3-storage → keyring` write+read chain (all ALLOW + audited).

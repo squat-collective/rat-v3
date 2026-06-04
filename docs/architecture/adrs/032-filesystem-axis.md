@@ -1,6 +1,18 @@
 # ADR-032: The filesystem axis (`rat://fs/v1/…`) — a pluggable remote filesystem for collaborative code
 
-## Status: Accepted (2026-06-04) — contract + S3 reference built (Phase 10)
+## Status: Deferred (2026-06-04)
+
+> **Deferral note (2026-06-04).** Started, then reverted. Adding a *new axis* today requires a new
+> proto **and recompiling the core** (the gateway's `routableDescriptors()` is hardcoded) — which
+> contradicts "axes are plugins, the core doesn't change." For the immediate need (a collaborative
+> remote code store), we use a **pure-plugin** approach instead: a plugin that **reuses the existing
+> `state` axis** (`get`/`put`/`list` = read/write/list a path→bytes namespace) and **requires the
+> `storage` axis** (so any storage backend — minio, S3, … — plugs in). No proto, no core change. See
+> [`ideas/inbox.md`](../../ideas/inbox.md) → "code-fs (plugin-only)". **Revisit this fs axis** when
+> richer semantics (stat/delete/real dirs, git-backing) are wanted — and ideally *after* the
+> **dynamic-descriptor gap** is closed (so a new axis is a pure plugin, not a core recompile).
+
+## ~~Status: Accepted — built~~ (reverted; see the deferral note above)
 
 ## Context
 
