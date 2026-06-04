@@ -2,7 +2,7 @@
   "name": "vscode-rat",
   "displayName": "RAT Data-Dev",
   "description": "A VS Code window into RAT v3 planes — manage many RAT connections, mount a workspace's code-fs as a native folder (RatFS), browse the DuckLake catalog, run pipelines, query, and 🔍 semantic-search. EXPLORATORY (experiments/data-dev-plane).",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "publisher": "rat-data-dev",
   "license": "Apache-2.0",
   "engines": { "vscode": "^1.85.0" },
@@ -29,10 +29,12 @@
     "viewsWelcome": [
       {
         "view": "ratDataDev.catalog",
+        "when": "!ratDataDev.hasConnections",
         "contents": "No RAT connections yet.\n[Mount Filesystem](command:ratDataDev.mountFs)\nDiscover + mount a workspace's filesystem as a native folder through the federation hub.\n[Add Connection](command:ratDataDev.addConnection)\nOr a data-dev gateway connection (http://localhost:8787)."
       },
       {
         "view": "ratDataDev.health",
+        "when": "!ratDataDev.hasConnections",
         "contents": "No RAT connections yet.\n[Add Connection](command:ratDataDev.addConnection)"
       }
     ],

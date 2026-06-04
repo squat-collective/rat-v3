@@ -90,7 +90,13 @@ async function promptNewConnection(): Promise<RatConnection | undefined> {
 export function activate(context: vscode.ExtensionContext): void {
   const catalog = new CatalogProvider();
   const health = new HealthProvider();
-  const refresh = () => { catalog.refresh(); health.refresh(); };
+  const refresh = () => {
+    catalog.refresh();
+    health.refresh();
+    // Drive the empty-view "welcome" deterministically (avoids it sticking until reload when the
+    // first connection is added — VS Code doesn't reliably yield the welcome to the tree otherwise).
+    void vscode.commands.executeCommand("setContext", "ratDataDev.hasConnections", getConnections().length > 0);
+  };
 
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("ratDataDev.catalog", catalog),
