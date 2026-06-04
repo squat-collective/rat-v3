@@ -770,9 +770,10 @@ func main() {
 }
 `, name, kind)
 
-	dockerfile := `# __NAME__ plugin image (Go) — a static binary on scratch; no SDK base image (the rat SDK is a
-# Go module dependency, compiled in). rat launches it under the I9 profile.
-FROM docker.io/library/golang:1.25 AS build
+	dockerfile := `# __NAME__ plugin image (Go) — built FROM the rat Go SDK base (the gen SDK at /sdk, replace'd
+# in go.mod); ships a static binary on scratch (the SDK is compiled in, none at runtime).
+# Build the base once: ` + "`make plugin-base-go`" + ` in the rat repo (a published module later).
+FROM localhost/rat/plugin-base-go:dev AS build
 ENV CGO_ENABLED=0 GOFLAGS=-mod=mod GOTOOLCHAIN=local
 WORKDIR /src
 COPY . .
@@ -782,9 +783,19 @@ ENV RAT_PLUGIN_ADDR=0.0.0.0:50051
 COPY --from=build /plugin /plugin
 ENTRYPOINT ["/plugin"]
 `
+	gomod := `module __NAME__
+
+go 1.25
+
+require google.golang.org/grpc v1.81.1
+
+// the rat Go SDK — provided at /sdk by the plugin-base-go build image. Import the axis stubs
+// you need, e.g. secretv1 "github.com/rat-dev/rat/gen/rat/secret/v1"; ` + "`rat plugin pack`" + ` resolves it.
+replace github.com/rat-dev/rat/gen => /sdk
+`
 	return map[string]string{
 		"main.go":    main,
-		"go.mod":     fill("module __NAME__\n\ngo 1.25\n\nrequire google.golang.org/grpc v1.81.1\n", name, kind),
+		"go.mod":     fill(gomod, name, kind),
 		"Dockerfile": fill(dockerfile, name, kind),
 		".gitignore": "/plugin\n",
 	}
