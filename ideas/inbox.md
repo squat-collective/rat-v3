@@ -320,3 +320,39 @@ the **dynamic-descriptor gap** below (which lets `code-fs` provide a distinct `f
 **Next step when we build:** `rat plugin init code-fs --kind state-backend --lang go`, implement
 get/put/list over storage-vended S3 objects, pack, add to the kitchen plane behind `s3-storage`,
 prove a `consumer → code-fs → s3-storage → keyring` write+read chain (all ALLOW + audited).
+
+---
+
+## code-fs spaces + per-user permissions (deferred — KISS for now) — 2026-06-04
+
+**Idea:** evolve code-fs from one namespace into a **multi-space, permission-aware filesystem
+manager** (the same shape s3-storage already has for connections). Register N **spaces** into
+code-fs; each space = a named prefix on a storage backend + a per-user ACL; access depends on the
+authenticated subject; perms map to scoped S3 creds.
+
+**Decision (2026-06-04): defer — keep code-fs simple now (one space, no per-user authz, proxy in
+the path). The door stays open; it's all additive.** Captured so it's not lost.
+
+**The shape that formed (for when we pick it up):**
+- **code-fs = a permissioned PROXY** (does the I/O → central CAS + audit + authz). This is *why*
+  code-fs exists vs the raw storage axis, which is already a *broker* (vend creds, talk S3 directly).
+  Model: **code-fs = permissioned proxy for code; storage axis = broker for bulk.** A broker
+  escape-hatch (vend a scoped cred for large files) is an open option.
+- **A space = a named prefix on a backend** (not its own bucket) — many spaces share infra.
+- **code-fs ENFORCES, identity DECIDES:** code-fs owns only the space→backend *registry*; the
+  space→user→permission *policy* lives in the **identity axis** (`Authorize(subject, action,
+  resource=space)`), so it's swappable (OIDC claims / RBAC / LDAP) and granting access is an
+  *identity* operation code-fs never sees. (Don't make code-fs an authz engine — scope creep.)
+- **Permissions shape DISCOVERY, not just access:** "my spaces" is an authz-filtered list — the
+  check happens at *discovery* (which spaces appear in the RatFS tree) AND at *access* (open/write).
+- **Don't reinvent tenancy:** per-tenant isolation is automatic (C3); spaces are the finer,
+  *shareable, per-user* layer **within** a tenant. Cross-tenant shared spaces = a separate,
+  deliberate, harder feature.
+
+**Dependencies:** the hub stamping the authenticated **subject** into the forwarded envelope (owed
+follow-on, backlog #2 area) — per-user authz needs the subject to reach code-fs.
+
+**Why additive (no rewrite):** spaces = key prefixes + a registry; authz = a new `requires` +
+an Authorize call; scoped creds = existing storage vending; surface = already generic. Layers on
+the current code-fs without touching contracts or RatFS. This is the multi-tenant SaaS code-platform
+endgame the federation/hub work points at. Worth its own ADR when picked up.
