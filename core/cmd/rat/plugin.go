@@ -77,7 +77,7 @@ func runPlugin(argv []string, out io.Writer) error {
 func runPluginInit(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("rat plugin init", flag.ContinueOnError)
 	kind := fs.String("kind", "", "plugin kind (one of the 18 axes, e.g. state-backend, strategy)")
-	lang := fs.String("lang", "python", "plugin language (python in v1)")
+	lang := fs.String("lang", "python", "plugin language: python | go | typescript | rust")
 	dir := fs.String("dir", "", "target directory (default: ./<name>)")
 	var name string
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
@@ -87,13 +87,14 @@ func runPluginInit(args []string, out io.Writer) error {
 		return err
 	}
 	if name == "" || *kind == "" {
-		return fmt.Errorf("usage: rat plugin init <name> --kind <kind> [--lang python] [--dir <path>]")
+		return fmt.Errorf("usage: rat plugin init <name> --kind <kind> [--lang python|go|typescript|rust] [--dir <path>]")
 	}
 	if !knownKinds[*kind] {
 		return fmt.Errorf("unknown kind %q (must be one of the 18 axes — see plugin-architecture.md)", *kind)
 	}
-	if *lang != "python" {
-		return fmt.Errorf("--lang %q not supported yet (python only in v1)", *lang)
+	canonLang, ok := canonicalLang(*lang)
+	if !ok {
+		return fmt.Errorf("--lang %q not supported (use: python | go | typescript | rust)", *lang)
 	}
 	target := *dir
 	if target == "" {
@@ -103,7 +104,7 @@ func runPluginInit(args []string, out io.Writer) error {
 		return fmt.Errorf("%s/manifest.yaml already exists", target)
 	}
 
-	files := scaffold(name, *kind)
+	files := scaffold(name, *kind, canonLang)
 	for rel, content := range files {
 		p := filepath.Join(target, rel)
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
@@ -117,8 +118,23 @@ func runPluginInit(args []string, out io.Writer) error {
 			return fmt.Errorf("write %s: %w", p, err)
 		}
 	}
-	fmt.Fprintf(out, "scaffolded %s/ (kind %s, %d files) — next: cd %s && rat plugin check\n", target, *kind, len(files), target)
+	fmt.Fprintf(out, "scaffolded %s/ (kind %s, %s, %d files) — next: cd %s && rat plugin check\n", target, *kind, canonLang, len(files), target)
 	return nil
+}
+
+// canonicalLang normalizes a --lang value (with aliases) to one of the supported languages.
+func canonicalLang(s string) (string, bool) {
+	switch strings.ToLower(s) {
+	case "py", "python":
+		return "python", true
+	case "go", "golang":
+		return "go", true
+	case "ts", "typescript":
+		return "typescript", true
+	case "rs", "rust":
+		return "rust", true
+	}
+	return "", false
 }
 
 // runPluginCheck is the fast STATIC gate (ADR-026): load + validate the manifest (schema-subset
@@ -548,8 +564,18 @@ func resolveMethod(capURI string) (path string, in, out protoreflect.MessageDesc
 	return path, in, out, nil
 }
 
-// scaffold returns the generated files (relative path → content) for a plugin.
-func scaffold(name, kind string) map[string]string {
+// fill substitutes the __NAME__/__KIND__ placeholders in a raw stub template (avoids %-escaping
+// hell with the languages' own format verbs/braces).
+func fill(tmpl, name, kind string) string {
+	return strings.NewReplacer("__NAME__", name, "__KIND__", kind).Replace(tmpl)
+}
+
+// scaffold returns the generated files (relative path → content) for a plugin in `lang`. The
+// manifest + CI are language-independent; langFiles supplies the server stub, build manifest,
+// Dockerfile, and .gitignore. Every stub binds RAT_PLUGIN_ADDR and serves a gRPC server (so the
+// folder builds + launches HEALTHY); you implement the servicer to pass `rat plugin pack`'s
+// serves-gate.
+func scaffold(name, kind, lang string) map[string]string {
 	var provides strings.Builder
 	caps := kindProvides[kind]
 	if len(caps) == 0 {
@@ -561,16 +587,80 @@ func scaffold(name, kind string) map[string]string {
 		}
 	}
 
-	m := fmt.Sprintf(`# %s — a rat %s plugin. Scaffolded by `+"`rat plugin init`"+` (ADR-026).
+	m := fmt.Sprintf(`# %s — a rat %s plugin (%s). Scaffolded by `+"`rat plugin init`"+` (ADR-026).
 api_version: rat/1
 kind: %s
 metadata:
   name: %s
   version: 0.1.0
 compatible_core: ["rat/1"]
-%s`, name, kind, kind, name, provides.String())
+%s`, name, kind, lang, kind, name, provides.String())
 
-	server := fmt.Sprintf(`"""%s — a rat %s plugin (scaffold). Implement the servicer for your kind's
+	readme := fmt.Sprintf("# %s\n\nA rat **%s** plugin in **%s** (scaffolded by `rat plugin init`, ADR-026).\n\n"+
+		"```sh\nrat plugin check     # validate the manifest (static gate)\nrat plugin pack      # build + verify (launches under I9, must SERVE its declared capability)\nrat plugin publish   # push to ghcr.io\n```\n\n"+
+		"Implement your servicer (see `examples/` for a reference of the same kind), then `rat plugin pack`.\n", name, kind, lang)
+
+	ci := `#!/bin/sh
+# ci.sh — the portable plugin CI/CD steps (ADR-026). The logic lives in rat verbs, so this
+# runs unchanged on GitHub Actions, GitLab CI, or anywhere that can install rat + run shell.
+set -eu
+curl -fsSL https://github.com/rat-dev/rat/releases/latest/download/install.sh | sh
+./rat plugin check
+./rat plugin pack
+# CD (on a tag): ./rat plugin publish
+`
+
+	workflow := `# Plugin CI/CD (ADR-026) — a thin wrapper over the portable rat verbs (see ci.sh).
+name: plugin
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install rat
+        run: curl -fsSL https://github.com/rat-dev/rat/releases/latest/download/install.sh | sh
+      - name: check + pack
+        run: ./rat plugin check && ./rat plugin pack
+      - name: publish (tag → ghcr.io)            # CD: only on a version tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: ./rat plugin publish --registry ghcr.io/${{ github.repository_owner }}
+`
+
+	files := map[string]string{
+		"manifest.yaml":                m,
+		"README.md":                    readme,
+		"ci.sh":                        ci,
+		".github/workflows/plugin.yml": workflow,
+	}
+	for rel, content := range langFiles(name, kind, lang) {
+		files[rel] = content
+	}
+	return files
+}
+
+// langFiles returns the language-specific scaffold (server stub + build manifest + Dockerfile +
+// .gitignore). Compiled languages (Go, Rust) link the rat SDK in and ship a tiny static-ish
+// binary — no SDK base image; interpreted ones (Python, TS) get the SDK from a base / npm.
+func langFiles(name, kind, lang string) map[string]string {
+	switch lang {
+	case "go":
+		return goFiles(name, kind)
+	case "typescript":
+		return tsFiles(name, kind)
+	case "rust":
+		return rustFiles(name, kind)
+	default:
+		return pyFiles(name, kind)
+	}
+}
+
+func pyFiles(name, kind string) map[string]string {
+	server := fill(`"""__NAME__ — a rat __KIND__ plugin (scaffold). Implement the servicer for your kind's
 capabilities; see examples/ for a reference of the same kind."""
 
 import os
@@ -589,71 +679,195 @@ def serve() -> None:
     # TODO: <axis>_pb2_grpc.add_<Service>Servicer_to_server(MyServicer(), server)
     server.add_insecure_port(addr)
     server.start()
-    print(f"%s listening on {addr}", flush=True)
+    print("__NAME__ listening on " + addr, flush=True)
     server.wait_for_termination()
 
 
 if __name__ == "__main__":
     serve()
-`, name, kind, name)
+`, name, kind)
 
-	dockerfile := fmt.Sprintf(`# %s plugin image — FROM the rat python base (the rat SDK + grpc are baked in, ADR-026).
+	dockerfile := `# __NAME__ plugin image — FROM the rat python base (the rat SDK + grpc are baked in, ADR-026).
 # Your plugin repo carries only its OWN code; the SDK arrives via the base image, not vendored.
-# Build the base once: `+"`make plugin-base-py`"+` in the rat repo (a published ghcr image later).
+# Build the base once: ` + "`make plugin-base-py`" + ` in the rat repo (a published ghcr image later).
 FROM localhost/rat/plugin-base-py:dev
 WORKDIR /plugin
 COPY . /plugin/
 # your plugin's OWN extra deps (duckdb, boto3, …) go in requirements.txt; the rat SDK is already present.
 RUN pip install --no-cache-dir -r requirements.txt
 CMD ["python", "main.py"]
-`, name)
-
-	readme := fmt.Sprintf("# %s\n\nA rat **%s** plugin (scaffolded by `rat plugin init`, ADR-026).\n\n"+
-		"```sh\nrat plugin check     # validate the manifest (static gate)\nrat plugin test      # launch + conformance (coming)\n"+
-		"rat plugin pack      # build a verified image (coming)\nrat plugin publish   # push to ghcr.io (coming)\n```\n\n"+
-		"Implement your servicer in `server.py` (see `examples/` for a reference of the same kind), then `rat plugin pack`.\n", name, kind)
-
-	ci := `#!/bin/sh
-# ci.sh — the portable plugin CI/CD steps (ADR-026). The logic lives in rat verbs, so this
-# runs unchanged on GitHub Actions, GitLab CI, or anywhere that can install rat + run shell.
-set -eu
-curl -fsSL https://github.com/rat-dev/rat/releases/latest/download/install.sh | sh
-./rat plugin check
-./rat plugin test
-./rat plugin pack
-# CD (on a tag): ./rat plugin publish
 `
-
-	workflow := fmt.Sprintf(`# Plugin CI/CD (ADR-026) — a thin wrapper over the portable rat verbs (see ci.sh).
-name: plugin
-on:
-  push:
-    branches: [main]
-    tags: ['v*']
-  pull_request:
-jobs:
-  ci:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: install rat
-        run: curl -fsSL https://github.com/rat-dev/rat/releases/latest/download/install.sh | sh
-      - name: check + test + pack
-        run: ./rat plugin check && ./rat plugin test && ./rat plugin pack
-      - name: publish (tag → ghcr.io)            # CD: only on a version tag
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: ./rat plugin publish --registry ghcr.io/${{ github.repository_owner }}
-`)
-
 	return map[string]string{
-		"manifest.yaml":               m,
-		"server.py":                   server,
-		"main.py":                     "from server import serve\n\nif __name__ == \"__main__\":\n    serve()\n",
-		"requirements.txt":            "# your plugin's own Python deps (the rat SDK + grpc come from the base image)\n",
-		"Dockerfile":                  dockerfile,
-		"README.md":                   readme,
-		".gitignore":                  "__pycache__/\n*.pyc\n",
-		"ci.sh":                       ci,
-		".github/workflows/plugin.yml": workflow,
+		"server.py":        server,
+		"main.py":          "from server import serve\n\nif __name__ == \"__main__\":\n    serve()\n",
+		"requirements.txt": "# your plugin's own Python deps (the rat SDK + grpc come from the base image)\n",
+		"Dockerfile":       fill(dockerfile, name, kind),
+		".gitignore":       "__pycache__/\n*.pyc\n",
+	}
+}
+
+func goFiles(name, kind string) map[string]string {
+	main := fill(`// __NAME__ — a rat __KIND__ plugin (Go). Implement the servicer for your kind's capabilities;
+// see examples/ for a reference. A Go plugin compiles the rat SDK in (a Go module dependency)
+// — no SDK base image; a tiny static binary on scratch.
+package main
+
+import (
+	"log"
+	"net"
+	"os"
+
+	"google.golang.org/grpc"
+	// TODO: import your axis stubs, e.g. enginev1 "github.com/rat-dev/rat/gen/rat/engine/v1"
+)
+
+func main() {
+	addr := os.Getenv("RAT_PLUGIN_ADDR")
+	if addr == "" {
+		addr = "0.0.0.0:50051"
+	}
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatalf("__NAME__: listen %s: %v", addr, err)
+	}
+	s := grpc.NewServer()
+	// TODO: <axis>v1.Register<Service>Server(s, &server{})
+	log.Printf("__NAME__ listening on %s", addr)
+	if err := s.Serve(lis); err != nil {
+		log.Fatal(err)
+	}
+}
+`, name, kind)
+
+	dockerfile := `# __NAME__ plugin image (Go) — a static binary on scratch; no SDK base image (the rat SDK is a
+# Go module dependency, compiled in). rat launches it under the I9 profile.
+FROM docker.io/library/golang:1.25 AS build
+ENV CGO_ENABLED=0 GOFLAGS=-mod=mod GOTOOLCHAIN=local
+WORKDIR /src
+COPY . .
+RUN go mod tidy && go build -trimpath -o /plugin .
+FROM scratch
+ENV RAT_PLUGIN_ADDR=0.0.0.0:50051
+COPY --from=build /plugin /plugin
+ENTRYPOINT ["/plugin"]
+`
+	return map[string]string{
+		"main.go":    main,
+		"go.mod":     fill("module __NAME__\n\ngo 1.25\n\nrequire google.golang.org/grpc v1.81.1\n", name, kind),
+		"Dockerfile": fill(dockerfile, name, kind),
+		".gitignore": "/plugin\n",
+	}
+}
+
+func tsFiles(name, kind string) map[string]string {
+	main := fill(`// __NAME__ — a rat __KIND__ plugin (TypeScript). Implement the servicer for your kind's
+// capabilities; see examples/ for a reference of the same kind.
+import * as grpc from "@grpc/grpc-js";
+
+const addr = process.env.RAT_PLUGIN_ADDR ?? "0.0.0.0:50051";
+const server = new grpc.Server();
+// TODO: server.addService(<service>Definition, new MyServicer());
+server.bindAsync(addr, grpc.ServerCredentials.createInsecure(), (err) => {
+  if (err) throw err;
+  console.log("__NAME__ listening on " + addr);
+});
+`, name, kind)
+
+	pkg := fill(`{
+  "name": "__NAME__",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "tsc" },
+  "dependencies": { "@grpc/grpc-js": "^1.12.0" },
+  "devDependencies": { "typescript": "^5.6.0", "@types/node": "^22.0.0" }
+}
+`, name, kind)
+
+	tsconfig := `{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["*.ts"]
+}
+`
+	dockerfile := `# __NAME__ plugin image (TypeScript) — Node + @grpc/grpc-js. rat launches it under the I9 profile.
+FROM docker.io/library/node:22-slim
+ENV RAT_PLUGIN_ADDR=0.0.0.0:50051
+WORKDIR /plugin
+COPY package.json tsconfig.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+CMD ["node", "dist/main.js"]
+`
+	return map[string]string{
+		"main.ts":       main,
+		"package.json":  pkg,
+		"tsconfig.json": tsconfig,
+		"Dockerfile":    fill(dockerfile, name, kind),
+		".gitignore":    "node_modules/\ndist/\n",
+	}
+}
+
+func rustFiles(name, kind string) map[string]string {
+	main := fill(`// __NAME__ — a rat __KIND__ plugin (Rust, tonic). Implement the servicer for your kind's
+// capabilities; see examples/ for a reference. The stub serves a health service so it launches
+// HEALTHY; add your axis service below.
+use std::env;
+
+use tonic::transport::Server;
+use tonic_health::server::health_reporter;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let addr = env::var("RAT_PLUGIN_ADDR").unwrap_or_else(|_| "0.0.0.0:50051".into());
+    let (_reporter, health_service) = health_reporter();
+    println!("__NAME__ listening on {addr}");
+    Server::builder()
+        // TODO: .add_service(<Axis>Server::new(MyServicer::default()))
+        .add_service(health_service)
+        .serve(addr.parse()?)
+        .await?;
+    Ok(())
+}
+`, name, kind)
+
+	cargo := fill(`[package]
+name = "__NAME__"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "plugin"
+path = "src/main.rs"
+
+[dependencies]
+tonic = "0.12"
+tonic-health = "0.12"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+`, name, kind)
+
+	dockerfile := `# __NAME__ plugin image (Rust) — tonic on distroless/cc. rat launches it under the I9 profile.
+FROM docker.io/library/rust:1-slim AS build
+WORKDIR /src
+COPY . .
+RUN cargo build --release
+FROM gcr.io/distroless/cc-debian12
+ENV RAT_PLUGIN_ADDR=0.0.0.0:50051
+COPY --from=build /src/target/release/plugin /plugin
+ENTRYPOINT ["/plugin"]
+`
+	return map[string]string{
+		"src/main.rs": main,
+		"Cargo.toml":  cargo,
+		"Dockerfile":  fill(dockerfile, name, kind),
+		".gitignore":  "/target\n",
 	}
 }
