@@ -16,6 +16,12 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-04 — RatFS: code-fs as a native VS Code folder (`examples/ui/vscode-rat`)
+
+Commit `1c66b17` on `phase-10-workspace-federation`. A `vscode.FileSystemProvider` for the `rat://<connection>/<path>` scheme, backed by the frozen **state axis through the federation hub** ([ADR-033](../docs/architecture/adrs/033-workspace-federation-hub.md)/[034](../docs/architecture/adrs/034-security-responsibility-model.md)): `readFile→state/get`, `writeFile→state/put` (CAS conflict surfaced as a write error), `readDirectory/stat→state/list`. Registered, the **Explorer/editor/save/search work natively on `rat://` URIs** — code-fs becomes an editable remote folder, **authenticated + multi-workspace + collaborative**. Transport: shells the proven `rat call` path (TLS `--cacert` · auth `--token` · routing `--workspace`) — reuses the verified CLI rather than re-implementing gRPC + binary call-context metadata in Node (like the Git extension shelling `git`); native Connect-ES transport is a future refinement. Extended `RatConnection` (hub/workspace/token/cacert/caller), added the *Open code-fs Folder* command + `onFileSystem:rat` activation. **Compiles (tsc) clean; backend verified live** — `readDirectory`/`readFile` against the secured hub (kitchen) return the code-fs tree + file bytes. v0.2.1→0.3.0.
+
+---
+
 ## 2026-06-04 — Identity at the edge: `identity-token` plugin + hub TLS + secure-by-default guardrail ([ADR-034](../docs/architecture/adrs/034-security-responsibility-model.md))
 
 Built ADR-034 Q01/Q02 + [ADR-033](../docs/architecture/adrs/033-workspace-federation-hub.md) Q03 on `phase-10-workspace-federation` (commit `2ece0c4`):
