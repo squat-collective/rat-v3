@@ -691,27 +691,21 @@ func langFiles(name, kind, lang string) map[string]string {
 }
 
 func pyFiles(name, kind string) map[string]string {
-	server := fill(`"""__NAME__ — a rat __KIND__ plugin (scaffold). Implement the servicer for your kind's
-capabilities; see examples/ for a reference of the same kind."""
+	server := fill(`"""__NAME__ — a rat __KIND__ plugin (Python). Implement your servicer + register it.
+The rat SDK (gen stubs + the rat.plugin runtime) is provided by the plugin-base-py image.
+See ADR-029 for rat.plugin."""
 
-import os
-from concurrent import futures
-
-import grpc
-
-# TODO: import your axis's generated grpc stubs, e.g.:
-#   from rat.state.v1 import state_pb2_grpc
-# and register your servicer below.
+from rat import plugin
+# TODO: from rat.<axis>.v1 import <axis>_pb2_grpc
 
 
-def serve() -> None:
-    addr = os.environ.get("RAT_PLUGIN_ADDR", "0.0.0.0:50051")
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=8))
+def register(server):
     # TODO: <axis>_pb2_grpc.add_<Service>Servicer_to_server(MyServicer(), server)
-    server.add_insecure_port(addr)
-    server.start()
-    print("__NAME__ listening on " + addr, flush=True)
-    server.wait_for_termination()
+    pass
+
+
+def serve():
+    plugin.serve(register)
 
 
 if __name__ == "__main__":
@@ -738,35 +732,22 @@ CMD ["python", "main.py"]
 }
 
 func goFiles(name, kind string) map[string]string {
-	main := fill(`// __NAME__ — a rat __KIND__ plugin (Go). Implement the servicer for your kind's capabilities;
-// see examples/ for a reference. A Go plugin compiles the rat SDK in (a Go module dependency)
-// — no SDK base image; a tiny static binary on scratch.
+	main := fill(`// __NAME__ — a rat __KIND__ plugin (Go). Implement your servicer + register it in Serve.
+// The rat SDK (gen stubs + the ratplugin runtime) is at /sdk via the build base; ships a tiny
+// static binary on scratch (the SDK is compiled in). See ADR-029 for ratplugin.
 package main
 
 import (
-	"log"
-	"net"
-	"os"
-
+	"github.com/rat-dev/rat/gen/ratplugin"
 	"google.golang.org/grpc"
-	// TODO: import your axis stubs, e.g. enginev1 "github.com/rat-dev/rat/gen/rat/engine/v1"
+	// TODO: import your axis stubs, e.g. secretv1 "github.com/rat-dev/rat/gen/rat/secret/v1"
 )
 
 func main() {
-	addr := os.Getenv("RAT_PLUGIN_ADDR")
-	if addr == "" {
-		addr = "0.0.0.0:50051"
-	}
-	lis, err := net.Listen("tcp", addr)
-	if err != nil {
-		log.Fatalf("__NAME__: listen %s: %v", addr, err)
-	}
-	s := grpc.NewServer()
-	// TODO: <axis>v1.Register<Service>Server(s, &server{})
-	log.Printf("__NAME__ listening on %s", addr)
-	if err := s.Serve(lis); err != nil {
-		log.Fatal(err)
-	}
+	ratplugin.Serve(func(s grpc.ServiceRegistrar) {
+		// TODO: register your servicer, e.g.
+		//   secretv1.RegisterSecretServiceServer(s, &keyring{})
+	})
 }
 `, name, kind)
 
