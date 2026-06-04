@@ -47,7 +47,11 @@ var kindProvides = map[string][]string{
 	"secret-backend": {"rat://secret/v1/resolve"},
 	"strategy":       {"rat://strategy/v1/apply"},
 	"engine":         {"rat://engine/v1/execute"},
-	"storage":        {"rat://storage/v1/vend"},
+	"storage": {
+		"rat://storage/v1/vend-credentials",
+		"rat://storage/v1/vend-credentials-read",
+		"rat://storage/v1/vend-credentials-write",
+	},
 }
 
 // runPlugin dispatches the `rat plugin` subcommands.
