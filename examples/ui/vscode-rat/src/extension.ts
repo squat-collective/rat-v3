@@ -41,6 +41,46 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // --- code-fs as a native folder (RatFS FileSystemProvider, ADR-033/034) --------
     vscode.workspace.registerFileSystemProvider("rat", new RatFS(), { isCaseSensitive: true }),
+
+    // Add a code-fs connection via prompts (no settings.json editing) + mount it.
+    vscode.commands.registerCommand("ratDataDev.addCodeFs", async () => {
+      const ask = (prompt: string, value = "", password = false) =>
+        vscode.window.showInputBox({ prompt, value, password, ignoreFocusOut: true });
+
+      const name = await ask("Connection name (e.g. kitchen)");
+      if (!name) { return; }
+      if (getConnections().some((c) => c.name === name)) {
+        vscode.window.showErrorMessage(`A connection named "${name}" already exists.`); return;
+      }
+      const hub = await ask("Hub address (gRPC federation hub)", "127.0.0.1:7700");
+      if (hub === undefined) { return; }
+      const workspace = await ask("Workspace to mount (e.g. kitchen)", name);
+      if (workspace === undefined) { return; }
+      const token = await ask("Bearer token (empty for a plaintext localhost hub)", "", true);
+      if (token === undefined) { return; }
+      const cacert = await ask("Path to the hub's TLS cert/CA (empty for plaintext)");
+      if (cacert === undefined) { return; }
+      const caller = await ask("Caller identity (--as) — must require the fs capability", "s3-storage");
+      if (caller === undefined) { return; }
+
+      const conn: RatConnection = {
+        name, url: hub, hub,
+        workspace: workspace || undefined,
+        token: token || undefined,
+        cacert: cacert || undefined,
+        caller: caller || undefined,
+        fs: { capability: "rat://state/v1", prefix: "" },
+      };
+      try { await addConnection(conn); }
+      catch (e: any) { vscode.window.showErrorMessage(`Add failed: ${e?.message ?? e}`); return; }
+
+      const uri = vscode.Uri.parse(`rat://${name}/`);
+      const at = vscode.workspace.workspaceFolders?.length ?? 0;
+      vscode.workspace.updateWorkspaceFolders(at, 0, { uri, name: `code-fs · ${name}` });
+      vscode.window.showInformationMessage(`Mounted code-fs · ${name}`);
+      refresh();
+    }),
+
     vscode.commands.registerCommand("ratDataDev.openCodeFs", async (arg?: unknown) => {
       const conn = await resolve(arg);
       if (!conn) { return; }

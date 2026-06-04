@@ -2,7 +2,7 @@
   "name": "vscode-rat",
   "displayName": "RAT Data-Dev",
   "description": "A VS Code window into RAT v3 planes — manage many RAT connections, mount a workspace's code-fs as a native folder (RatFS), browse the DuckLake catalog, run pipelines, query, and 🔍 semantic-search. EXPLORATORY (experiments/data-dev-plane).",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "rat-data-dev",
   "license": "Apache-2.0",
   "engines": { "vscode": "^1.85.0" },
@@ -29,7 +29,7 @@
     "viewsWelcome": [
       {
         "view": "ratDataDev.catalog",
-        "contents": "No RAT connections yet.\n[Add Connection](command:ratDataDev.addConnection)\nEach connection points at a RAT gateway — run `make data-dev-gateway` for a local one (http://localhost:8787)."
+        "contents": "No RAT connections yet.\n[Add code-fs Folder](command:ratDataDev.addCodeFs)\nMount a workspace's code-fs as a native folder through the federation hub.\n[Add Connection](command:ratDataDev.addConnection)\nOr a data-dev gateway connection (http://localhost:8787)."
       },
       {
         "view": "ratDataDev.health",
@@ -45,10 +45,12 @@
       { "command": "ratDataDev.query", "title": "RAT: Run SQL Query", "icon": "$(database)" },
       { "command": "ratDataDev.search", "title": "RAT: Semantic Search", "icon": "$(search)" },
       { "command": "ratDataDev.previewTable", "title": "RAT: Preview Table" },
-      { "command": "ratDataDev.openCodeFs", "title": "RAT: Open code-fs Folder", "icon": "$(folder-opened)" }
+      { "command": "ratDataDev.openCodeFs", "title": "RAT: Open code-fs Folder", "icon": "$(folder-opened)" },
+      { "command": "ratDataDev.addCodeFs", "title": "RAT: Add code-fs Folder…", "icon": "$(new-folder)" }
     ],
     "menus": {
       "view/title": [
+        { "command": "ratDataDev.addCodeFs", "when": "view == ratDataDev.catalog", "group": "navigation@0" },
         { "command": "ratDataDev.addConnection", "when": "view == ratDataDev.catalog", "group": "navigation@1" },
         { "command": "ratDataDev.refresh", "when": "view == ratDataDev.catalog", "group": "navigation@9" },
         { "command": "ratDataDev.refresh", "when": "view == ratDataDev.health", "group": "navigation@9" }
