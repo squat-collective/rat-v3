@@ -53,10 +53,14 @@ var kindProvides = map[string][]string{
 // runPlugin dispatches the `rat plugin` subcommands.
 func runPlugin(argv []string, out io.Writer) error {
 	if len(argv) == 0 {
-		return fmt.Errorf("usage: rat plugin <init|check|test|pack|publish> …")
+		printPluginHelp(out)
+		return nil
 	}
 	sub, rest := argv[0], argv[1:]
 	switch sub {
+	case "-h", "--help", "help":
+		printPluginHelp(out)
+		return nil
 	case "init":
 		return runPluginInit(rest, out)
 	case "check":
@@ -68,8 +72,31 @@ func runPlugin(argv []string, out io.Writer) error {
 	case "publish":
 		return runPluginPublish(rest, out)
 	default:
-		return fmt.Errorf("unknown `rat plugin %s` (want: init | check | test | pack | publish)", sub)
+		return fmt.Errorf("unknown `rat plugin %s` — run `rat plugin help`", sub)
 	}
+}
+
+// printPluginHelp is what `rat plugin` (bare) / `rat plugin -h` shows.
+func printPluginHelp(out io.Writer) {
+	fmt.Fprint(out, `rat plugin — author, verify, and publish a plugin (ADR-026).
+
+  init      scaffold a ready-to-build plugin folder
+            rat plugin init <name> --kind <axis> --lang go|python|typescript|rust [--dir <path>]
+  check     validate the manifest (static gate: schema + per-kind + dep coherence)
+            rat plugin check [<dir>]
+  test      launch the plugin + run its conformance vectors
+            rat plugin test [<dir>] [--image <ref>]
+  pack      build the image, STAMP the manifest in, verify it serves what it declares
+            rat plugin pack [<dir>] [--image <ref>] [--tag <ref>]
+  publish   push the verified image to a registry
+            rat plugin publish [<dir>] [--registry <host/org>]
+
+axes for --kind: engine runtime format strategy catalog storage deployment-runtime
+  state-backend secret-backend scheduler-backend identity tenancy billing
+  observability audit-log ui notifications marketplace
+
+Each subcommand: `+"`rat plugin <sub> -h`"+` for its flags.
+`)
 }
 
 // runPluginInit scaffolds a ready-to-build plugin folder (ADR-026): manifest + server stub +
