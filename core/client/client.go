@@ -21,6 +21,8 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -34,6 +36,7 @@ import (
 	corev1 "github.com/rat-dev/rat/gen/rat/core/v1"
 	statev1 "github.com/rat-dev/rat/gen/rat/state/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -88,6 +91,9 @@ func runCall(argv []string, out io.Writer) error {
 	tenant := fs.String("tenant", "", "optional tenant identity")
 	data := fs.String("data", "{}", "request body as protojson")
 	workspace := fs.String("workspace", "", "route via a hub to this workspace (use with --addr <hub>); ADR-033")
+	token := fs.String("token", "", "bearer credential for an authenticating hub (sent as rat-token); ADR-034")
+	caCert := fs.String("cacert", "", "trust this PEM cert/CA when connecting over TLS")
+	tlsSkip := fs.Bool("tls-skip-verify", false, "skip TLS cert verification (DEV ONLY)")
 	timeout := fs.Duration("timeout", 10*time.Second, "call timeout")
 	if err := fs.Parse(argv[2:]); err != nil {
 		return err
@@ -116,8 +122,26 @@ func runCall(argv []string, out io.Writer) error {
 	}
 
 	// 3. dial the gateway + issue the command, carrying the call-context envelope the
-	//    gateway reads (traceparent for C1, caller identity for C5).
-	conn, err := grpc.NewClient(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	//    gateway reads (traceparent for C1, caller identity for C5). TLS when reaching an
+	//    authenticating hub (ADR-034): --cacert trusts a (self-signed) cert, --tls-skip-verify
+	//    is the dev escape hatch; otherwise plaintext (localhost).
+	dialCreds := insecure.NewCredentials()
+	if *caCert != "" || *tlsSkip {
+		tc := &tls.Config{InsecureSkipVerify: *tlsSkip}
+		if *caCert != "" {
+			pem, rerr := os.ReadFile(*caCert)
+			if rerr != nil {
+				return fmt.Errorf("read --cacert %s: %w", *caCert, rerr)
+			}
+			pool := x509.NewCertPool()
+			if !pool.AppendCertsFromPEM(pem) {
+				return fmt.Errorf("--cacert %s: no PEM certificates found", *caCert)
+			}
+			tc.RootCAs = pool
+		}
+		dialCreds = credentials.NewTLS(tc)
+	}
+	conn, err := grpc.NewClient(*addr, grpc.WithTransportCredentials(dialCreds))
 	if err != nil {
 		return fmt.Errorf("dial %s: %w", *addr, err)
 	}
@@ -129,6 +153,10 @@ func runCall(argv []string, out io.Writer) error {
 	if *workspace != "" {
 		// route through a hub (ADR-033): the hub reads this header and forwards to that workspace.
 		ctx = metadata.AppendToOutgoingContext(ctx, "rat-workspace", *workspace)
+	}
+	if *token != "" {
+		// the bearer credential an authenticating hub validates via its identity plugin (ADR-034).
+		ctx = metadata.AppendToOutgoingContext(ctx, "rat-token", *token)
 	}
 
 	resp, err := corev1.NewCapabilityInvokeServiceClient(conn).Invoke(ctx, &corev1.InvokeRequest{Capability: capURI, Payload: payload})
