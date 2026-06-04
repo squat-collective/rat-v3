@@ -174,6 +174,11 @@ func serveResolved(pl *Plane) error {
 
 	srv := grpc.NewServer()
 	corev1.RegisterCapabilityInvokeServiceServer(srv, plane.Gateway)
+	// The live control plane (ADR-027): register/deregister plugins against the running
+	// daemon. Launch mode only — rat must be the launcher to materialize a live add.
+	if plane.Control != nil {
+		corev1.RegisterControlServiceServer(srv, plane.Control)
+	}
 
 	// Publish this daemon's pid + global registry entry (slice 2c) so `rat down`/`ls`/
 	// `status` can find it; retract both on drain. No-op when the plane has no project
@@ -243,6 +248,7 @@ func listen(addr string) (net.Listener, error) {
 // mode-agnostic.
 type runningPlane struct {
 	Gateway  *gateway.Gateway
+	Control  corev1.ControlServiceServer // the live admin API (ADR-027); nil in attach mode
 	shutdown func(context.Context)
 }
 
@@ -308,18 +314,9 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 	for _, s := range pl.Specs {
 		manifests = append(manifests, s.Manifest)
 		if s.Launch != nil {
-			if s.Launch.Env == nil {
-				s.Launch.Env = map[string]string{}
-			}
-			if _, set := s.Launch.Env["RAT_GATEWAY"]; !set {
-				s.Launch.Env["RAT_GATEWAY"] = gwAddr
-			}
-			// rat knows each plugin's name (its manifest name) — inject it as the caller
-			// identity a plugin presents when IT calls the gateway (e.g. rat-pipeline
-			// fetching its applied project via state/get). A default; an explicit env wins.
-			if _, set := s.Launch.Env["RAT_PLUGIN_NAME"]; !set {
-				s.Launch.Env["RAT_PLUGIN_NAME"] = s.Manifest.Metadata.Name
-			}
+			// Inject the topology-dependent gateway-callback env (RAT_GATEWAY) + the caller
+			// identity (RAT_PLUGIN_NAME) the SAME way the live RegisterPlugin path does.
+			injectLaunchEnv(s.Launch, s.Manifest.Metadata.Name, gwAddr)
 			desired = append(desired, reconciler.Desired{Name: s.Manifest.Metadata.Name, Launch: s.Launch})
 		}
 	}
@@ -370,7 +367,10 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 		rec.Shutdown(ctx) // terminate launched instances
 		rewire.Close()    // close the gateway provider conns
 	}
-	return &runningPlane{Gateway: gw, shutdown: shutdown}, nil
+	// The live control plane (ADR-027): drives the mutable registry + reconciler so a
+	// client can register/deregister a plugin against this running daemon — no restart.
+	control := &controlService{reg: reg, rec: rec, gwAddr: gwAddr, readyTO: pl.HealthTimeout}
+	return &runningPlane{Gateway: gw, Control: control, shutdown: shutdown}, nil
 }
 
 // gatewayCallbackAddr computes the address a LAUNCHED plugin uses to call the gateway back,
