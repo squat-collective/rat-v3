@@ -87,6 +87,7 @@ func runCall(argv []string, out io.Writer) error {
 	caller := fs.String("as", "", "caller plugin identity (must `requires` the capability — C5)")
 	tenant := fs.String("tenant", "", "optional tenant identity")
 	data := fs.String("data", "{}", "request body as protojson")
+	workspace := fs.String("workspace", "", "route via a hub to this workspace (use with --addr <hub>); ADR-033")
 	timeout := fs.Duration("timeout", 10*time.Second, "call timeout")
 	if err := fs.Parse(argv[2:]); err != nil {
 		return err
@@ -125,6 +126,10 @@ func runCall(argv []string, out io.Writer) error {
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 	ctx = metadata.AppendToOutgoingContext(ctx, callMetaHeader, callMeta(*caller, *tenant))
+	if *workspace != "" {
+		// route through a hub (ADR-033): the hub reads this header and forwards to that workspace.
+		ctx = metadata.AppendToOutgoingContext(ctx, "rat-workspace", *workspace)
+	}
 
 	resp, err := corev1.NewCapabilityInvokeServiceClient(conn).Invoke(ctx, &corev1.InvokeRequest{Capability: capURI, Payload: payload})
 	if err != nil {

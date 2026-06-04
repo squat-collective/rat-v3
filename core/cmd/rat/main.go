@@ -89,6 +89,10 @@ func main() {
 		err = runDown(args, os.Stdout)
 	case "status":
 		err = runStatus(args, os.Stdout)
+	case "hub":
+		// federation front door (ADR-033): one endpoint fanning out to many workspace daemons.
+		log.SetPrefix("rat hub: ")
+		err = runHub(args, os.Stdout)
 	case "ls":
 		err = runLs(args, os.Stdout)
 	case "init":
@@ -149,6 +153,7 @@ DAEMON  (run the project's plane)
   down        stop this project's daemon
   status      this project's daemon + its plugins
   ls          every rat daemon running on this machine
+  hub         federate many workspaces behind one endpoint (ADR-033)
   serve       run a daemon directly from a plane.yaml (low-level)
 
 AUTHOR  (build a plugin)
