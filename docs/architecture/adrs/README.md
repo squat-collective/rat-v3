@@ -35,7 +35,8 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [027](027-live-plugin-control-rpc.md) | Live plugin control — the daemon's `ControlService` (Register/Deregister/List); live `rat add`/`remove` | Accepted | 2026-06-03 |
 | [029](029-plugin-runtime-sdk.md) | The plugin runtime SDK — `ratplugin` (Serve · Call · CallerTenant) | Accepted | 2026-06-04 |
 | [031](031-durable-local-storage.md) | Durable local storage — the per-project `/data` mount (configurable volumes later) | Accepted | 2026-06-04 |
-| [032](032-filesystem-axis.md) | The filesystem axis (`rat://fs/v1/…`) — a pluggable remote filesystem for collaborative code | Accepted | 2026-06-04 |
+| [032](032-filesystem-axis.md) | The filesystem axis (`rat://fs/v1/…`) — a pluggable remote filesystem for collaborative code | Deferred | 2026-06-04 |
+| [033](033-workspace-federation-hub.md) | Workspace federation — the `rat hub` (a gateway-of-gateways) | Accepted | 2026-06-04 |
 
 ## Template
 
