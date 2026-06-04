@@ -16,7 +16,13 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
-## 2026-06-03 — Phase 9 BUILT (unsealed): live plugin control — the `ControlService` RPC ⚡ ([ADR-027](../docs/architecture/adrs/027-live-plugin-control-rpc.md))
+## 2026-06-04 — 🎉 PHASE 9 SEALED — `rat/6.0` (live plugin control)
+
+Phase 9 — **live plugin control** ([ADR-027](../docs/architecture/adrs/027-live-plugin-control-rpc.md)) — is **sealed at `rat/6.0`** (`phase-9` merged to `main`, annotated tag). The first **major** bump since `rat/2.0`: the contract surface grew a new core↔operator service (`ControlService`) — additive, but a genuine new wire. `rat add`/`remove` now materialize against a **running** daemon (no restart); the registry + reconciler desired-set became mutable while the six-thing core held (the live control plane *extends* the Registry + API gateway, it is not a 7th thing — see the temptation ledger). The line: `rat/2.0` core · `rat/2.5`–`5.9` (platform · surfaces · distribution · authoring · authoring↔runtime · dependency resolution · marketplace ×4 · project lifecycle) · **`rat/6.0` live control**. Detail of the 6-slice build below.
+
+---
+
+## 2026-06-03 — Phase 9 BUILT: live plugin control — the `ControlService` RPC ⚡ ([ADR-027](../docs/architecture/adrs/027-live-plugin-control-rpc.md))
 
 The big one: `rat add`/`remove` now materialize against a **running** daemon — a plugin joins/leaves the live plane with **no restart** — the reconcile-to-desired-state premise finally exercised at runtime. [ADR-027](../docs/architecture/adrs/027-live-plugin-control-rpc.md) (**Accepted**), chosen via a 3-way design fork (dedicated `ControlService` gRPC over control-as-capability / SIGHUP-reload). Built in 6 slices on `phase-9-adr-027-live-control`:
 
@@ -27,7 +33,7 @@ The big one: `rat add`/`remove` now materialize against a **running** daemon —
 5. **Daemon-aware CLI** — `rat add`/`remove` dial the control socket and materialize live when a daemon is up (`projectDaemonAddr`/`dialControl`/`materializeAdd`/`materializeRemove`), else stay declarative; `--no-live` escape. `rat.toml` stays the source of truth (written first; the RPC applies the diff).
 6. **Proofs** — deterministic `control_test.go` (incl. the **real `reconciler.Loop` + `lease.Elector`**, fake runtime): register→launch→Healthy→authorizable→listed, idempotent, rollback-on-never-healthy; `serve_control_test.go`: a **real `rat serve` daemon** driven over the actual socket — a live RegisterPlugin **flips the gateway's C5 decision** (PermissionDenied → routed → PermissionDenied after Deregister) with no restart; ListPlugins reflects the live plane. `make breaking` clean throughout.
 
-*Note:* the real-process-LAUNCH smoke tests (`TestServe`, `TestReconcilerDrivesRealRuntime`) are starved/flaky under this sandbox's host load — **confirmed failing on the clean `rat/5.9` tree, independent of ADR-027**; the launch path is proven via the deterministic real-loop test instead. **Open (ADR-027 Q01–Q04):** operator identity + mTLS for TCP control; atomic multi-plugin `ApplyPlane`; Deregister cascade-on-dependents; hot `UpdatePlugin`. **Not yet sealed** — `phase-9` → `main` (`rat/6.0`) when ready.
+*Note:* the real-process-LAUNCH smoke tests (`TestServe`, `TestReconcilerDrivesRealRuntime`) are starved/flaky under this sandbox's host load — **confirmed failing on the clean `rat/5.9` tree, independent of ADR-027**; the launch path is proven via the deterministic real-loop test instead. **Open (ADR-027 Q01–Q04):** operator identity + mTLS for TCP control; atomic multi-plugin `ApplyPlane`; Deregister cascade-on-dependents; hot `UpdatePlugin`. 🎉 **SEALED `rat/6.0`** (see the seal entry above).
 
 ---
 
