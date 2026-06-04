@@ -597,13 +597,13 @@ if __name__ == "__main__":
     serve()
 `, name, kind, name)
 
-	dockerfile := fmt.Sprintf(`# %s plugin image. Build from the plugin dir; rat launches it under the I9 profile.
-FROM docker.io/library/python:3.12-slim
-ENV PYTHONUNBUFFERED=1 RAT_PLUGIN_ADDR=0.0.0.0:50051
+	dockerfile := fmt.Sprintf(`# %s plugin image — FROM the rat python base (the rat SDK + grpc are baked in, ADR-026).
+# Your plugin repo carries only its OWN code; the SDK arrives via the base image, not vendored.
+# Build the base once: `+"`make plugin-base-py`"+` in the rat repo (a published ghcr image later).
+FROM localhost/rat/plugin-base-py:dev
 WORKDIR /plugin
 COPY . /plugin/
-# the rat Python SDK (vendor it next to the plugin, or COPY from the SDK distribution):
-#   COPY rat /usr/local/lib/python3.12/site-packages/rat
+# your plugin's OWN extra deps (duckdb, boto3, …) go in requirements.txt; the rat SDK is already present.
 RUN pip install --no-cache-dir -r requirements.txt
 CMD ["python", "main.py"]
 `, name)
@@ -649,7 +649,7 @@ jobs:
 		"manifest.yaml":               m,
 		"server.py":                   server,
 		"main.py":                     "from server import serve\n\nif __name__ == \"__main__\":\n    serve()\n",
-		"requirements.txt":            "grpcio==1.80.0\nprotobuf==7.35.0\n",
+		"requirements.txt":            "# your plugin's own Python deps (the rat SDK + grpc come from the base image)\n",
 		"Dockerfile":                  dockerfile,
 		"README.md":                   readme,
 		".gitignore":                  "__pycache__/\n*.pyc\n",

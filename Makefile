@@ -34,7 +34,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking release-build release-image release-checksums help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-base-py plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking release-build release-image release-checksums help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -160,6 +160,10 @@ release-checksums: ## sha256 the dist/ binaries (the Release attaches these)
 stateplugin-image: ## ADR-022: build a launchable stateplugin image (rat `podman run`s it as a plugin container)
 	@echo ">> building rat/stateplugin:dev"
 	@$(RUNTIME) build -f core/testplugins/stateplugin/Dockerfile -t rat/stateplugin:dev .
+
+plugin-base-py: ## ADR-026: build rat/plugin-base-py (the rat Python SDK + grpc baked in; plugins FROM it)
+	@echo ">> building localhost/rat/plugin-base-py:dev (Python SDK baked in)"
+	@$(RUNTIME) build -t localhost/rat/plugin-base-py:dev $(CONTRACTS)/sdks/python
 
 plugin-images: ## ADR-022: build the launchable Python plugin images (rat/<name>:dev) — the platform's plugins
 	@echo ">> building the Python plugin images"
