@@ -14,6 +14,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -55,16 +56,27 @@ func main() {
 	args := os.Args[1:]
 	cmd := ""
 	if len(args) > 0 {
-		if args[0] == "--version" || args[0] == "-v" {
+		switch {
+		case args[0] == "--version" || args[0] == "-v":
 			cmd, args = "version", args[1:]
-		} else if !strings.HasPrefix(args[0], "-") {
+		case args[0] == "--help" || args[0] == "-h" || args[0] == "help":
+			cmd, args = "help", args[1:]
+		case !strings.HasPrefix(args[0], "-"):
 			cmd, args = args[0], args[1:]
 		}
 	}
 
 	var err error
 	switch cmd {
+	case "help":
+		printHelp(os.Stdout)
 	case "", "serve":
+		// Bare `rat` (no subcommand, no flags) shows help — NOT a daemon boot from a
+		// missing plane.yaml. `rat serve` (or the legacy `rat --plane …`) starts the daemon.
+		if cmd == "" && len(args) == 0 {
+			printHelp(os.Stdout)
+			break
+		}
 		log.SetPrefix("rat serve: ")
 		fs := flag.NewFlagSet("serve", flag.ExitOnError)
 		planePath := fs.String("plane", "plane.yaml", "path to the plane file (the desired plugin set)")
@@ -107,12 +119,57 @@ func main() {
 		// manage the added marketplaces (add | list).
 		err = runMarketplace(args, os.Stdout)
 	default:
-		err = fmt.Errorf("unknown command %q (want: serve | up | down | status | ls | init | add | call | apply | ui | plugin | version)", cmd)
+		fmt.Fprintf(os.Stderr, "rat: unknown command %q — run `rat help`\n", cmd)
+		os.Exit(1)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "rat:", err)
 		os.Exit(1)
 	}
+}
+
+// printHelp is what bare `rat` (and `rat help` / `-h`) shows: the one-screen overview of the
+// command surface, grouped by what you're doing.
+func printHelp(out io.Writer) {
+	fmt.Fprintf(out, `rat %s — a data platform that orchestrates self-describing plugins.
+The core does six things; everything else is a plugin.
+
+USAGE
+  rat <command> [args]        run `+"`rat <command> -h`"+` for a command's flags
+
+PROJECT  (a project is a rat.toml — the declared plugin set)
+  init        create a rat.toml here (a new project)
+  add         add a plugin to the project (reads the manifest stamped in its image)
+  remove      remove a plugin from the project            (alias: rm)
+  list        list the plugins installed in this project
+  search      find plugins across the local + added marketplaces
+
+DAEMON  (run the project's plane)
+  up          start this project's daemon            (-d = background)
+  down        stop this project's daemon
+  status      this project's daemon + its plugins
+  ls          every rat daemon running on this machine
+  serve       run a daemon directly from a plane.yaml (low-level)
+
+AUTHOR  (build a plugin)
+  plugin init     scaffold a plugin   (--kind <axis> --lang go|python|typescript|rust)
+  plugin check    validate its manifest (static gate)
+  plugin pack     build + stamp the manifest + verify it serves what it declares
+  plugin publish  push the verified image to a registry
+
+MARKETPLACE  (discover + distribute plugins)
+  marketplace add|list          manage plugin sources (local images + remote indexes)
+  marketplace keygen|sign|verify  ed25519 provenance for an index
+
+CLIENT  (talk to a running gateway)
+  call        invoke a capability         rat call <rat://…> --as <caller> --data <json>
+  apply       submit a project (e.g. a dbt project) to the orchestrator
+  ui          render a surface's plugin contributions
+
+  version     print the version          help        this screen
+
+Docs: docs/ in the rat repo · ADRs in docs/architecture/adrs/.
+`, version)
 }
 
 // serve loads a YAML plane file and runs the daemon (`rat serve --plane …`, the low-level
