@@ -16,6 +16,19 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-04 — Identity at the edge: `identity-token` plugin + hub TLS + secure-by-default guardrail ([ADR-034](../docs/architecture/adrs/034-security-responsibility-model.md))
+
+Built ADR-034 Q01/Q02 + [ADR-033](../docs/architecture/adrs/033-workspace-federation-hub.md) Q03 on `phase-10-workspace-federation` (commit `2ece0c4`):
+
+- **`identity-token` reference plugin** (in `~/sandbox/kitchen`) — the ADR-034 Q01 reference: implements the **frozen** `rat/identity/v1 Authenticate`, mapping a bearer token → `{subject, tenant}` (env-backed `RAT_TOKENS`; swap for OIDC/SPIFFE behind the same method). Packed `localhost/rat/identity-token:0.1.0`.
+- **`rat hub` secure-by-default binding guardrail** (ADR-034 §4): a **public** (non-loopback) bind **refuses** unless `--tls-cert/--tls-key` **and** `--identity` are set — or an explicit `--insecure` (loud-warned); a **localhost** bind stays open (loopback trust). `isPublicAddr()`.
+- **TLS** serving on the hub + **edge authentication**: with `--identity <addr>`, every `Invoke` must carry a valid `rat-token`; the hub calls the identity plugin's `Authenticate` and rejects `Unauthenticated` **before forwarding** — closing the trust-asserted `--as` gap *at the edge*.
+- **client**: `rat call --token` (bearer), `--cacert` / `--tls-skip-verify` (reach a TLS hub). **descriptors**: the frozen identity axis wired into `routableDescriptors`.
+- **Proven:** public bind refused w/o TLS+identity; the secure hub authenticates `subject=alice tenant=acme` + forwards to kitchen; **bad/missing token → `Unauthenticated`**; plaintext→TLS-hub → handshake fails; localhost bind stays plaintext/open. No proto change, `breaking` + vet clean.
+- **Still owed** (follow-on): **gateway-level** identity enforcement for *direct* (non-hub) access — today the per-plane gateway still trusts the wire `--as`; the hub closes it at the federated edge. Plus subject-stamping onto the forwarded envelope.
+
+---
+
 ## 2026-06-04 — Workspace federation: the `rat hub` ([ADR-033](../docs/architecture/adrs/033-workspace-federation-hub.md)) + remote-access architecture
 
 Dogfooding session ("build a rat platform from scratch") that surfaced + built real work, on `phase-10-workspace-federation`:
