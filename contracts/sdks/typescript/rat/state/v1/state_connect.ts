@@ -8,8 +8,9 @@
 // Capability mapping:
 //   rat://state/v1/get   -> Get
 //   rat://state/v1/put   -> Put
-//   rat://state/v1/list  -> List
-//   rat://state/v1/watch -> Watch
+//   rat://state/v1/list   -> List
+//   rat://state/v1/delete -> Delete   (ADR-035; additive, optional per backend)
+//   rat://state/v1/watch  -> Watch
 //
 // C3 — STATE-GATEWAY ISOLATION: every key is namespaced per-plugin and
 // per-tenant. The gateway derives the effective namespace from
@@ -52,7 +53,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetRequest, GetResponse, ListRequest, ListResponse, PutRequest, PutResponse, WatchRequest, WatchResponse } from "./state_pb.js";
+import { DeleteRequest, DeleteResponse, GetRequest, GetResponse, ListRequest, ListResponse, PutRequest, PutResponse, WatchRequest, WatchResponse } from "./state_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -92,6 +93,21 @@ export const StateService = {
       name: "List",
       I: ListRequest,
       O: ListResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * rat://state/v1/delete — remove one key (plugin+tenant relative), optionally compare-and-set.
+     * ADDITIVE amendment (ADR-035): a state-backend MAY return UNIMPLEMENTED — Delete is optional;
+     * a backend declares this capability in `provides` only if it supports it, and consumers MUST
+     * handle UNIMPLEMENTED. Idempotent (absent key -> found=false, not an error). CAS via if_revision
+     * with the same fencing rigor as Put (deleting a lease key releases the lease).
+     *
+     * @generated from rpc rat.state.v1.StateService.Delete
+     */
+    delete: {
+      name: "Delete",
+      I: DeleteRequest,
+      O: DeleteResponse,
       kind: MethodKind.Unary,
     },
     /**

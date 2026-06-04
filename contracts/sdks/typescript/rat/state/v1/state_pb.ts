@@ -8,8 +8,9 @@
 // Capability mapping:
 //   rat://state/v1/get   -> Get
 //   rat://state/v1/put   -> Put
-//   rat://state/v1/list  -> List
-//   rat://state/v1/watch -> Watch
+//   rat://state/v1/list   -> List
+//   rat://state/v1/delete -> Delete   (ADR-035; additive, optional per backend)
+//   rat://state/v1/watch  -> Watch
 //
 // C3 — STATE-GATEWAY ISOLATION: every key is namespaced per-plugin and
 // per-tenant. The gateway derives the effective namespace from
@@ -60,7 +61,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file rat/state/v1/state.proto.
  */
 export const file_rat_state_v1_state: GenFile = /*@__PURE__*/
-  fileDesc("ChhyYXQvc3RhdGUvdjEvc3RhdGUucHJvdG8SDHJhdC5zdGF0ZS52MSIfCgpHZXRSZXF1ZXN0EgsKA2tleRgCIAEoCUoECAEQAiI9CgtHZXRSZXNwb25zZRINCgVmb3VuZBgBIAEoCBINCgV2YWx1ZRgCIAEoDBIQCghyZXZpc2lvbhgDIAEoAyJDCgpQdXRSZXF1ZXN0EgsKA2tleRgCIAEoCRINCgV2YWx1ZRgDIAEoDBITCgtpZl9yZXZpc2lvbhgEIAEoA0oECAEQAiJKCgtQdXRSZXNwb25zZRIpCgdvdXRjb21lGAEgASgOMhgucmF0LnN0YXRlLnYxLlB1dE91dGNvbWUSEAoIcmV2aXNpb24YAiABKAMiIwoLTGlzdFJlcXVlc3QSDgoGcHJlZml4GAIgASgJSgQIARACIhwKDExpc3RSZXNwb25zZRIMCgRrZXlzGAEgAygJIjsKDFdhdGNoUmVxdWVzdBIOCgZwcmVmaXgYAiABKAkSFQoNZnJvbV9yZXZpc2lvbhgDIAEoA0oECAEQAiKqAQoNV2F0Y2hSZXNwb25zZRIuCgR0eXBlGAEgASgOMiAucmF0LnN0YXRlLnYxLldhdGNoUmVzcG9uc2UuVHlwZRILCgNrZXkYAiABKAkSDQoFdmFsdWUYAyABKAwSEAoIcmV2aXNpb24YBCABKAMiOwoEVHlwZRIUChBUWVBFX1VOU1BFQ0lGSUVEEAASDAoIVFlQRV9QVVQQARIPCgtUWVBFX0RFTEVURRACKncKClB1dE91dGNvbWUSGwoXUFVUX09VVENPTUVfVU5TUEVDSUZJRUQQABIZChVQVVRfT1VUQ09NRV9DT01NSVRURUQQARIYChRQVVRfT1VUQ09NRV9DT05GTElDVBACEhcKE1BVVF9PVVRDT01FX1VOS05PV04QAzLsAgoMU3RhdGVTZXJ2aWNlElIKA0dldBIYLnJhdC5zdGF0ZS52MS5HZXRSZXF1ZXN0GhkucmF0LnN0YXRlLnYxLkdldFJlc3BvbnNlIhaKlyIScmF0Oi8vc3RhdGUvdjEvZ2V0ElIKA1B1dBIYLnJhdC5zdGF0ZS52MS5QdXRSZXF1ZXN0GhkucmF0LnN0YXRlLnYxLlB1dFJlc3BvbnNlIhaKlyIScmF0Oi8vc3RhdGUvdjEvcHV0ElYKBExpc3QSGS5yYXQuc3RhdGUudjEuTGlzdFJlcXVlc3QaGi5yYXQuc3RhdGUudjEuTGlzdFJlc3BvbnNlIheKlyITcmF0Oi8vc3RhdGUvdjEvbGlzdBJcCgVXYXRjaBIaLnJhdC5zdGF0ZS52MS5XYXRjaFJlcXVlc3QaGy5yYXQuc3RhdGUudjEuV2F0Y2hSZXNwb25zZSIYipciFHJhdDovL3N0YXRlL3YxL3dhdGNoMAFCMVovZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3N0YXRlL3YxO3N0YXRldjFiBnByb3RvMw", [file_rat_common_v1_annotations]);
+  fileDesc("ChhyYXQvc3RhdGUvdjEvc3RhdGUucHJvdG8SDHJhdC5zdGF0ZS52MSIfCgpHZXRSZXF1ZXN0EgsKA2tleRgCIAEoCUoECAEQAiI9CgtHZXRSZXNwb25zZRINCgVmb3VuZBgBIAEoCBINCgV2YWx1ZRgCIAEoDBIQCghyZXZpc2lvbhgDIAEoAyJDCgpQdXRSZXF1ZXN0EgsKA2tleRgCIAEoCRINCgV2YWx1ZRgDIAEoDBITCgtpZl9yZXZpc2lvbhgEIAEoA0oECAEQAiJKCgtQdXRSZXNwb25zZRIpCgdvdXRjb21lGAEgASgOMhgucmF0LnN0YXRlLnYxLlB1dE91dGNvbWUSEAoIcmV2aXNpb24YAiABKAMiIwoLTGlzdFJlcXVlc3QSDgoGcHJlZml4GAIgASgJSgQIARACIhwKDExpc3RSZXNwb25zZRIMCgRrZXlzGAEgAygJIjcKDURlbGV0ZVJlcXVlc3QSCwoDa2V5GAIgASgJEhMKC2lmX3JldmlzaW9uGAMgASgDSgQIARACIh8KDkRlbGV0ZVJlc3BvbnNlEg0KBWZvdW5kGAEgASgIIjsKDFdhdGNoUmVxdWVzdBIOCgZwcmVmaXgYAiABKAkSFQoNZnJvbV9yZXZpc2lvbhgDIAEoA0oECAEQAiKqAQoNV2F0Y2hSZXNwb25zZRIuCgR0eXBlGAEgASgOMiAucmF0LnN0YXRlLnYxLldhdGNoUmVzcG9uc2UuVHlwZRILCgNrZXkYAiABKAkSDQoFdmFsdWUYAyABKAwSEAoIcmV2aXNpb24YBCABKAMiOwoEVHlwZRIUChBUWVBFX1VOU1BFQ0lGSUVEEAASDAoIVFlQRV9QVVQQARIPCgtUWVBFX0RFTEVURRACKncKClB1dE91dGNvbWUSGwoXUFVUX09VVENPTUVfVU5TUEVDSUZJRUQQABIZChVQVVRfT1VUQ09NRV9DT01NSVRURUQQARIYChRQVVRfT1VUQ09NRV9DT05GTElDVBACEhcKE1BVVF9PVVRDT01FX1VOS05PV04QAzLMAwoMU3RhdGVTZXJ2aWNlElIKA0dldBIYLnJhdC5zdGF0ZS52MS5HZXRSZXF1ZXN0GhkucmF0LnN0YXRlLnYxLkdldFJlc3BvbnNlIhaKlyIScmF0Oi8vc3RhdGUvdjEvZ2V0ElIKA1B1dBIYLnJhdC5zdGF0ZS52MS5QdXRSZXF1ZXN0GhkucmF0LnN0YXRlLnYxLlB1dFJlc3BvbnNlIhaKlyIScmF0Oi8vc3RhdGUvdjEvcHV0ElYKBExpc3QSGS5yYXQuc3RhdGUudjEuTGlzdFJlcXVlc3QaGi5yYXQuc3RhdGUudjEuTGlzdFJlc3BvbnNlIheKlyITcmF0Oi8vc3RhdGUvdjEvbGlzdBJeCgZEZWxldGUSGy5yYXQuc3RhdGUudjEuRGVsZXRlUmVxdWVzdBocLnJhdC5zdGF0ZS52MS5EZWxldGVSZXNwb25zZSIZipciFXJhdDovL3N0YXRlL3YxL2RlbGV0ZRJcCgVXYXRjaBIaLnJhdC5zdGF0ZS52MS5XYXRjaFJlcXVlc3QaGy5yYXQuc3RhdGUudjEuV2F0Y2hSZXNwb25zZSIYipciFHJhdDovL3N0YXRlL3YxL3dhdGNoMAFCMVovZ2l0aHViLmNvbS9yYXQtZGV2L3JhdC9nZW4vcmF0L3N0YXRlL3YxO3N0YXRldjFiBnByb3RvMw", [file_rat_common_v1_annotations]);
 
 /**
  * @generated from message rat.state.v1.GetRequest
@@ -205,6 +206,54 @@ export const ListResponseSchema: GenMessage<ListResponse> = /*@__PURE__*/
   messageDesc(file_rat_state_v1_state, 5);
 
 /**
+ * ADR-035 — additive Delete. Optional per backend (UNIMPLEMENTED allowed).
+ *
+ * @generated from message rat.state.v1.DeleteRequest
+ */
+export type DeleteRequest = Message<"rat.state.v1.DeleteRequest"> & {
+  /**
+   * Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
+   *
+   * @generated from field: string key = 2;
+   */
+  key: string;
+
+  /**
+   * CAS: if > 0, delete only if the current revision matches (FAILED_PRECONDITION on mismatch).
+   * 0 == unconditional delete. Releasing a lease key is a Delete — same fencing rigor as Put-CAS.
+   *
+   * @generated from field: int64 if_revision = 3;
+   */
+  ifRevision: bigint;
+};
+
+/**
+ * Describes the message rat.state.v1.DeleteRequest.
+ * Use `create(DeleteRequestSchema)` to create a new message.
+ */
+export const DeleteRequestSchema: GenMessage<DeleteRequest> = /*@__PURE__*/
+  messageDesc(file_rat_state_v1_state, 6);
+
+/**
+ * @generated from message rat.state.v1.DeleteResponse
+ */
+export type DeleteResponse = Message<"rat.state.v1.DeleteResponse"> & {
+  /**
+   * true if the key existed and was removed; false if it was already absent (delete is idempotent).
+   *
+   * @generated from field: bool found = 1;
+   */
+  found: boolean;
+};
+
+/**
+ * Describes the message rat.state.v1.DeleteResponse.
+ * Use `create(DeleteResponseSchema)` to create a new message.
+ */
+export const DeleteResponseSchema: GenMessage<DeleteResponse> = /*@__PURE__*/
+  messageDesc(file_rat_state_v1_state, 7);
+
+/**
  * @generated from message rat.state.v1.WatchRequest
  */
 export type WatchRequest = Message<"rat.state.v1.WatchRequest"> & {
@@ -228,7 +277,7 @@ export type WatchRequest = Message<"rat.state.v1.WatchRequest"> & {
  * Use `create(WatchRequestSchema)` to create a new message.
  */
 export const WatchRequestSchema: GenMessage<WatchRequest> = /*@__PURE__*/
-  messageDesc(file_rat_state_v1_state, 6);
+  messageDesc(file_rat_state_v1_state, 8);
 
 /**
  * @generated from message rat.state.v1.WatchResponse
@@ -260,7 +309,7 @@ export type WatchResponse = Message<"rat.state.v1.WatchResponse"> & {
  * Use `create(WatchResponseSchema)` to create a new message.
  */
 export const WatchResponseSchema: GenMessage<WatchResponse> = /*@__PURE__*/
-  messageDesc(file_rat_state_v1_state, 7);
+  messageDesc(file_rat_state_v1_state, 9);
 
 /**
  * @generated from enum rat.state.v1.WatchResponse.Type
@@ -286,7 +335,7 @@ export enum WatchResponse_Type {
  * Describes the enum rat.state.v1.WatchResponse.Type.
  */
 export const WatchResponse_TypeSchema: GenEnum<WatchResponse_Type> = /*@__PURE__*/
-  enumDesc(file_rat_state_v1_state, 7, 0);
+  enumDesc(file_rat_state_v1_state, 9, 0);
 
 /**
  * The outcome of a Put. The old `committed: bool` could not distinguish a lost
@@ -369,6 +418,20 @@ export const StateService: GenService<{
     methodKind: "unary";
     input: typeof ListRequestSchema;
     output: typeof ListResponseSchema;
+  },
+  /**
+   * rat://state/v1/delete — remove one key (plugin+tenant relative), optionally compare-and-set.
+   * ADDITIVE amendment (ADR-035): a state-backend MAY return UNIMPLEMENTED — Delete is optional;
+   * a backend declares this capability in `provides` only if it supports it, and consumers MUST
+   * handle UNIMPLEMENTED. Idempotent (absent key -> found=false, not an error). CAS via if_revision
+   * with the same fencing rigor as Put (deleting a lease key releases the lease).
+   *
+   * @generated from rpc rat.state.v1.StateService.Delete
+   */
+  delete: {
+    methodKind: "unary";
+    input: typeof DeleteRequestSchema;
+    output: typeof DeleteResponseSchema;
   },
   /**
    * rat://state/v1/watch — stream changes under a prefix (reconciler/event use).

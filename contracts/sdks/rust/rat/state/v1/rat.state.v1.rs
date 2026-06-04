@@ -49,6 +49,23 @@ pub struct ListResponse {
     #[prost(string, repeated, tag = "1")]
     pub keys: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
+/// ADR-035 — additive Delete. Optional per backend (UNIMPLEMENTED allowed).
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeleteRequest {
+    /// Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
+    #[prost(string, tag = "2")]
+    pub key: ::prost::alloc::string::String,
+    /// CAS: if > 0, delete only if the current revision matches (FAILED_PRECONDITION on mismatch).
+    /// 0 == unconditional delete. Releasing a lease key is a Delete — same fencing rigor as Put-CAS.
+    #[prost(int64, tag = "3")]
+    pub if_revision: i64,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DeleteResponse {
+    /// true if the key existed and was removed; false if it was already absent (delete is idempotent).
+    #[prost(bool, tag = "1")]
+    pub found: bool,
+}
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct WatchRequest {
     /// Plugin-relative prefix; subject to KEY GRAMMAR (file header). MAY be empty.
