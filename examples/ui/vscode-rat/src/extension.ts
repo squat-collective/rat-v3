@@ -10,6 +10,7 @@ import * as vscode from "vscode";
 import { GatewayClient } from "./client";
 import { CatalogProvider, HealthProvider, ConnectionNode, TableNode } from "./tree";
 import { showQuery, showSearch } from "./panel";
+import { RatFS } from "./ratfs";
 import {
   RatConnection, getConnections, addConnection, removeConnection,
   updateConnection, pickConnection,
@@ -37,6 +38,22 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand("ratDataDev.refresh", refresh),
+
+    // --- code-fs as a native folder (RatFS FileSystemProvider, ADR-033/034) --------
+    vscode.workspace.registerFileSystemProvider("rat", new RatFS(), { isCaseSensitive: true }),
+    vscode.commands.registerCommand("ratDataDev.openCodeFs", async (arg?: unknown) => {
+      const conn = await resolve(arg);
+      if (!conn) { return; }
+      if (!conn.workspace && !conn.hub) {
+        vscode.window.showWarningMessage(
+          `Connection "${conn.name}" has no hub/workspace for code-fs — set hub, workspace, token, cacert in the connection.`);
+        return;
+      }
+      // Mount rat://<connection>/ as a workspace folder; the Explorer/editor take over from there.
+      const uri = vscode.Uri.parse(`rat://${conn.name}/`);
+      const at = vscode.workspace.workspaceFolders?.length ?? 0;
+      vscode.workspace.updateWorkspaceFolders(at, 0, { uri, name: `code-fs · ${conn.name}` });
+    }),
 
     // --- connection management ----------------------------------------------------
     vscode.commands.registerCommand("ratDataDev.addConnection", async () => {

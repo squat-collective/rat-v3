@@ -13,6 +13,12 @@ export interface RatConnection {
   name: string;
   url: string;
   tenant?: string; // forward-room: stamped as identity once the core fronts the UI
+  // --- code-fs access via the federation hub (RatFS FileSystemProvider, ADR-033/034) ---
+  hub?: string;       // gRPC hub addr, e.g. "127.0.0.1:7700" (federates workspaces)
+  workspace?: string; // which federated workspace this connection mounts
+  token?: string;     // bearer credential for an authenticating hub (--token)
+  cacert?: string;    // path to the hub's TLS cert/CA (--cacert); omit for a plaintext localhost hub
+  caller?: string;    // the `--as` plugin identity that `requires` state/* (default "s3-storage")
 }
 
 const SECTION = "ratDataDev";

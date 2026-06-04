@@ -1,14 +1,14 @@
 {
   "name": "vscode-rat",
   "displayName": "RAT Data-Dev",
-  "description": "A VS Code window into RAT v3 data-dev planes — manage many RAT connections, browse the DuckLake catalog, run the incremental-embed pipeline, query, and 🔍 semantic-search. EXPLORATORY (experiments/data-dev-plane).",
-  "version": "0.2.1",
+  "description": "A VS Code window into RAT v3 planes — manage many RAT connections, mount a workspace's code-fs as a native folder (RatFS), browse the DuckLake catalog, run pipelines, query, and 🔍 semantic-search. EXPLORATORY (experiments/data-dev-plane).",
+  "version": "0.3.0",
   "publisher": "rat-data-dev",
   "license": "Apache-2.0",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],
   "repository": { "type": "git", "url": "https://github.com/rat-dev/rat" },
-  "activationEvents": ["onView:ratDataDev.catalog", "onView:ratDataDev.health"],
+  "activationEvents": ["onView:ratDataDev.catalog", "onView:ratDataDev.health", "onFileSystem:rat"],
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
@@ -44,7 +44,8 @@
       { "command": "ratDataDev.runPipeline", "title": "RAT: Run Pipeline", "icon": "$(play)" },
       { "command": "ratDataDev.query", "title": "RAT: Run SQL Query", "icon": "$(database)" },
       { "command": "ratDataDev.search", "title": "RAT: Semantic Search", "icon": "$(search)" },
-      { "command": "ratDataDev.previewTable", "title": "RAT: Preview Table" }
+      { "command": "ratDataDev.previewTable", "title": "RAT: Preview Table" },
+      { "command": "ratDataDev.openCodeFs", "title": "RAT: Open code-fs Folder", "icon": "$(folder-opened)" }
     ],
     "menus": {
       "view/title": [
@@ -58,6 +59,8 @@
         { "command": "ratDataDev.runPipeline", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "1_actions@1" },
         { "command": "ratDataDev.query", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "1_actions@2" },
         { "command": "ratDataDev.search", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "1_actions@3" },
+        { "command": "ratDataDev.openCodeFs", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "inline@0" },
+        { "command": "ratDataDev.openCodeFs", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "1_actions@0" },
         { "command": "ratDataDev.editConnection", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "2_manage@1" },
         { "command": "ratDataDev.removeConnection", "when": "view == ratDataDev.catalog && viewItem == connection", "group": "2_manage@2" },
         { "command": "ratDataDev.previewTable", "when": "view == ratDataDev.catalog && viewItem == table", "group": "1_actions@1" }
@@ -76,9 +79,19 @@
             "properties": {
               "name": { "type": "string", "description": "Display name (e.g. local, staging, prod)" },
               "url": { "type": "string", "description": "RAT gateway URL (e.g. http://localhost:8787)" },
-              "tenant": { "type": "string", "description": "Optional tenant identity (forward-room for core-fronted auth)" }
+              "tenant": { "type": "string", "description": "Optional tenant identity (forward-room for core-fronted auth)" },
+              "hub": { "type": "string", "description": "code-fs: gRPC federation hub addr (e.g. 127.0.0.1:7700)" },
+              "workspace": { "type": "string", "description": "code-fs: which federated workspace this connection mounts" },
+              "token": { "type": "string", "description": "code-fs: bearer credential for an authenticating hub" },
+              "cacert": { "type": "string", "description": "code-fs: path to the hub's TLS cert/CA (omit for a plaintext localhost hub)" },
+              "caller": { "type": "string", "description": "code-fs: the `--as` plugin identity that requires state/* (default s3-storage)" }
             }
           }
+        },
+        "ratDataDev.ratPath": {
+          "type": "string",
+          "default": "rat",
+          "description": "Path to the `rat` CLI binary RatFS shells out to for code-fs access."
         }
       }
     }
