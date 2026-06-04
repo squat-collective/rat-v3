@@ -2,7 +2,7 @@
   "name": "vscode-rat",
   "displayName": "RAT Data-Dev",
   "description": "A VS Code window into RAT v3 planes — manage many RAT connections, mount a workspace's code-fs as a native folder (RatFS), browse the DuckLake catalog, run pipelines, query, and 🔍 semantic-search. EXPLORATORY (experiments/data-dev-plane).",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "publisher": "rat-data-dev",
   "license": "Apache-2.0",
   "engines": { "vscode": "^1.85.0" },

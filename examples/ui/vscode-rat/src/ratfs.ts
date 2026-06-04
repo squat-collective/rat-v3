@@ -47,6 +47,11 @@ const ADAPTERS: Record<string, FsAdapter> = {
 
 interface Mount { adapter: FsAdapter; prefix: string; conn: RatConnection; }
 
+// A path→bytes namespace (state/v1) has no empty directories. To let "New Folder" persist, we write
+// a zero-byte marker object; readDirectory hides it. (When `Delete` lands on the fs capability, the
+// marker is deleted with the folder.) Standard object-store "folder marker" trick.
+const DIR_MARKER = ".ratkeep";
+
 /** Run one `rat call` against the connection's hub and return the parsed protojson response. */
 function ratCall(conn: RatConnection, capability: string, data: unknown): Promise<any> {
   const hub = conn.hub ?? conn.url ?? "127.0.0.1:7700";
@@ -116,7 +121,7 @@ export class RatFS implements vscode.FileSystemProvider {
     for (const full of keys) {
       if (!full.startsWith(prefix)) { continue; }
       const rest = full.slice(prefix.length);
-      if (rest === "") { continue; }
+      if (rest === "" || rest === DIR_MARKER) { continue; } // hide the empty-folder marker
       const slash = rest.indexOf("/");
       if (slash === -1) { children.set(rest, vscode.FileType.File); }
       else { children.set(rest.slice(0, slash), vscode.FileType.Directory); }
@@ -132,9 +137,17 @@ export class RatFS implements vscode.FileSystemProvider {
     return new Uint8Array(Buffer.from(got.valueB64, "base64"));
   }
 
-  async writeFile(uri: vscode.Uri, content: Uint8Array, _opts: { create: boolean; overwrite: boolean }): Promise<void> {
+  async writeFile(uri: vscode.Uri, content: Uint8Array, opts: { create: boolean; overwrite: boolean }): Promise<void> {
     const m = this.mount(uri);
-    const p = m.adapter.put(this.key(m, uri), Buffer.from(content).toString("base64"));
+    const key = this.key(m, uri);
+    // Honor VS Code's create/overwrite contract (a normal save is create+overwrite → no extra read).
+    if (!opts.create || !opts.overwrite) {
+      const g = m.adapter.get(key);
+      const exists = m.adapter.parseGet(await ratCall(m.conn, g.cap, g.data)).found;
+      if (!exists && !opts.create) { throw vscode.FileSystemError.FileNotFound(uri); }
+      if (exists && opts.create && !opts.overwrite) { throw vscode.FileSystemError.FileExists(uri); }
+    }
+    const p = m.adapter.put(key, Buffer.from(content).toString("base64"));
     const outcome = m.adapter.parsePut(await ratCall(m.conn, p.cap, p.data));
     if (outcome && outcome !== "PUT_OUTCOME_COMMITTED") {
       // CAS conflict = a concurrent edit landed first (collaborative safety, ADR-032).
@@ -143,13 +156,25 @@ export class RatFS implements vscode.FileSystemProvider {
     this._emitter.fire([{ type: vscode.FileChangeType.Changed, uri }]);
   }
 
-  // Most filesystem-capability families (state/v1) are get/put/list — no delete/rename in the contract.
-  async delete(): Promise<void> {
-    throw vscode.FileSystemError.NoPermissions("this filesystem has no delete capability");
+  // Empty folders: write a hidden marker so the directory persists (path→bytes has no empty dirs).
+  async createDirectory(uri: vscode.Uri): Promise<void> {
+    const m = this.mount(uri);
+    const marker = this.key(m, uri).replace(/\/?$/, "/") + DIR_MARKER;
+    const p = m.adapter.put(marker, "");
+    await ratCall(m.conn, p.cap, p.data);
+    this._emitter.fire([{ type: vscode.FileChangeType.Created, uri }]);
   }
-  async rename(): Promise<void> {
-    throw vscode.FileSystemError.NoPermissions("this filesystem has no rename capability (copy via read+write)");
+
+  // delete / rename / move need a DELETE on the filesystem capability. state/v1 has none — so these
+  // are honestly unsupported until `Delete` lands on state/v1 (or the fs axis, ADR-032). Clear error
+  // (not a crash) so VS Code surfaces it as "operation not supported".
+  async delete(_uri: vscode.Uri): Promise<void> {
+    throw vscode.FileSystemError.NoPermissions(
+      "Delete isn't supported yet: this filesystem is backed by the state axis (get/put/list), which has no delete. Pending a `Delete` on state/v1 (or the fs axis).");
   }
-  createDirectory(_uri: vscode.Uri): void { /* directories are implicit in the path namespace */ }
+  async rename(_old: vscode.Uri, _new: vscode.Uri): Promise<void> {
+    throw vscode.FileSystemError.NoPermissions(
+      "Rename/move isn't supported yet: it needs delete (rename = copy + delete), and state/v1 has no delete. Pending a `Delete` on state/v1 (or the fs axis).");
+  }
   watch(_uri: vscode.Uri): vscode.Disposable { return new vscode.Disposable(() => { /* no server push yet */ }); }
 }
