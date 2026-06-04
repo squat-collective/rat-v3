@@ -284,3 +284,16 @@ When an item is dropped (decided against, superseded):
 1. Cut it from this file.
 2. Note the decision in the relevant ADR or `ideas/inbox.md` archive.
 3. Don't leave dead entries here.
+
+---
+
+## 🔭 Remote access, federation & security (from the 2026-06-04 dogfooding session)
+
+Built: `rat hub` first cut ([ADR-033](../docs/architecture/adrs/033-workspace-federation-hub.md), see [done.md](done.md)). Queued refinements, roughly in order:
+
+1. **Security responsibility model — ADR (owed).** Write the ADR the hub already leans on: the three-ring model (🌍 environment = perimeter/VPC/mesh · 🔌 plugins = identity/connectivity/secret/audit · ⚙️ core = identity-required + C5 + audit), the **secure-by-default binding posture** (localhost default; public bind ⇒ TLS + identity plugin or fail-loud; trust-asserted `--as` is localhost-only), and the irreducible core minimum. Foundational — the federation + identity work cite it.
+2. **Identity-at-hub + TLS** (ADR-033 Q03). Authenticate the principal once at the hub (API token → OIDC), TLS on a public bind. Closes the trust-asserted `--as` gap *at the edge*. Needs the **identity axis** to have a real reference plugin (today `--as` is trust-asserted).
+3. **Transparent any-method proxy** (ADR-033 Q02). Forward `InvokeServerStream` (e.g. `state.Watch`) / `InvokeBidiStream` / `ControlService` through the hub via a passthrough codec, so watches + `rat status --workspace` + admin route through the one door. First cut is unary `Invoke` only.
+4. **NATS-leaf federation** (ADR-033 Q01). The cross-machine, outbound-only transport: each workspace daemon leaf-connects to the hub's NATS; route over `rat.<workspace>.invoke.<cap>`; per-workspace NATS accounts give identity/tenancy. Reuses the event-bus core thing; the real "fleet" + SaaS shape. Optional **`connectivity` axis** (reverse-tunnel/mesh/nats-leaf) as the pluggable reachability concern.
+5. **Prior-art doc** — `research/prior-art/remote-access-and-trust.md`: Tailscale/WireGuard, NATS leaf, Teleport, ngrok/Cloudflare Tunnel, SPIFFE/SPIRE, k8s konnectivity — the patterns + the rat mapping ("rat = Teleport-for-data-platforms").
+6. **Dynamic descriptors** (the unlock, [`ideas/inbox.md`](../ideas/inbox.md)). Make the gateway learn axis protos from plugins at runtime instead of the hardcoded `routableDescriptors()`, so a **new axis becomes a pure plugin** with no core recompile — turns the deferred `fs` axis ([ADR-032](../docs/architecture/adrs/032-filesystem-axis.md)) into a clean plugin.
