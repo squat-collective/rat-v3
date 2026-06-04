@@ -37,6 +37,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [031](031-durable-local-storage.md) | Durable local storage — the per-project `/data` mount (configurable volumes later) | Accepted | 2026-06-04 |
 | [032](032-filesystem-axis.md) | The filesystem axis (`rat://fs/v1/…`) — a pluggable remote filesystem for collaborative code | Deferred | 2026-06-04 |
 | [033](033-workspace-federation-hub.md) | Workspace federation — the `rat hub` (a gateway-of-gateways) | Accepted | 2026-06-04 |
+| [034](034-security-responsibility-model.md) | The security responsibility model — what rat owns, plugins enforce, the environment provides | Accepted | 2026-06-04 |
 
 ## Template
 
