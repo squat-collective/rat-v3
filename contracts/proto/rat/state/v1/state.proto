@@ -8,8 +8,9 @@
 // Capability mapping:
 //   rat://state/v1/get   -> Get
 //   rat://state/v1/put   -> Put
-//   rat://state/v1/list  -> List
-//   rat://state/v1/watch -> Watch
+//   rat://state/v1/list   -> List
+//   rat://state/v1/delete -> Delete   (ADR-035; additive, optional per backend)
+//   rat://state/v1/watch  -> Watch
 //
 // C3 — STATE-GATEWAY ISOLATION: every key is namespaced per-plugin and
 // per-tenant. The gateway derives the effective namespace from
@@ -68,6 +69,15 @@ service StateService {
   // rat://state/v1/list — list keys under a plugin+tenant-relative prefix.
   rpc List(ListRequest) returns (ListResponse) {
     option (rat.common.v1.capability) = "rat://state/v1/list";
+  }
+
+  // rat://state/v1/delete — remove one key (plugin+tenant relative), optionally compare-and-set.
+  // ADDITIVE amendment (ADR-035): a state-backend MAY return UNIMPLEMENTED — Delete is optional;
+  // a backend declares this capability in `provides` only if it supports it, and consumers MUST
+  // handle UNIMPLEMENTED. Idempotent (absent key -> found=false, not an error). CAS via if_revision
+  // with the same fencing rigor as Put (deleting a lease key releases the lease).
+  rpc Delete(DeleteRequest) returns (DeleteResponse) {
+    option (rat.common.v1.capability) = "rat://state/v1/delete";
   }
 
   // rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
@@ -138,6 +148,21 @@ message ListRequest {
 
 message ListResponse {
   repeated string keys = 1;
+}
+
+// ADR-035 — additive Delete. Optional per backend (UNIMPLEMENTED allowed).
+message DeleteRequest {
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
+  // Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
+  string key = 2;
+  // CAS: if > 0, delete only if the current revision matches (FAILED_PRECONDITION on mismatch).
+  // 0 == unconditional delete. Releasing a lease key is a Delete — same fencing rigor as Put-CAS.
+  int64 if_revision = 3;
+}
+
+message DeleteResponse {
+  // true if the key existed and was removed; false if it was already absent (delete is idempotent).
+  bool found = 1;
 }
 
 message WatchRequest {

@@ -33,6 +33,13 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [025](025-surfaces-and-consumers.md) | Surfaces & consumers — plugins contribute per-surface interfaces; consumers are out-of-stack renderers | Proposed | 2026-06-03 |
 | [026](026-plugin-authoring-and-packaging.md) | Plugin authoring & packaging — the `rat plugin` toolkit, the verified-plugin gate, scaffolded CI/CD | Proposed | 2026-06-03 |
 | [027](027-live-plugin-control-rpc.md) | Live plugin control — the daemon's `ControlService` (Register/Deregister/List); live `rat add`/`remove` | Accepted | 2026-06-03 |
+| [029](029-plugin-runtime-sdk.md) | The plugin runtime SDK — `ratplugin` (Serve · Call · CallerTenant) | Accepted | 2026-06-04 |
+| [031](031-durable-local-storage.md) | Durable local storage — the per-project `/data` mount (configurable volumes later) | Accepted | 2026-06-04 |
+| [032](032-filesystem-axis.md) | The filesystem axis (`rat://fs/v1/…`) — a pluggable remote filesystem for collaborative code | Deferred | 2026-06-04 |
+| [033](033-workspace-federation-hub.md) | Workspace federation — the `rat hub` (a gateway-of-gateways) | Accepted | 2026-06-04 |
+| [034](034-security-responsibility-model.md) | The security responsibility model — what rat owns, plugins enforce, the environment provides | Accepted | 2026-06-04 |
+| [035](035-state-axis-delete.md) | Add `Delete` to the state axis (`rat://state/v1/delete`) — additive, optional-per-backend | Accepted | 2026-06-04 |
+| [036](036-reconciler-hosts-operators.md) | The reconciler hosts operators — generic resource reconciliation via operator plugins | Proposed | 2026-06-04 |
 
 ## Template
 

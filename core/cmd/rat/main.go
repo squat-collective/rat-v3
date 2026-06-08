@@ -14,6 +14,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -55,16 +56,27 @@ func main() {
 	args := os.Args[1:]
 	cmd := ""
 	if len(args) > 0 {
-		if args[0] == "--version" || args[0] == "-v" {
+		switch {
+		case args[0] == "--version" || args[0] == "-v":
 			cmd, args = "version", args[1:]
-		} else if !strings.HasPrefix(args[0], "-") {
+		case args[0] == "--help" || args[0] == "-h" || args[0] == "help":
+			cmd, args = "help", args[1:]
+		case !strings.HasPrefix(args[0], "-"):
 			cmd, args = args[0], args[1:]
 		}
 	}
 
 	var err error
 	switch cmd {
+	case "help":
+		printHelp(os.Stdout)
 	case "", "serve":
+		// Bare `rat` (no subcommand, no flags) shows help — NOT a daemon boot from a
+		// missing plane.yaml. `rat serve` (or the legacy `rat --plane …`) starts the daemon.
+		if cmd == "" && len(args) == 0 {
+			printHelp(os.Stdout)
+			break
+		}
 		log.SetPrefix("rat serve: ")
 		fs := flag.NewFlagSet("serve", flag.ExitOnError)
 		planePath := fs.String("plane", "plane.yaml", "path to the plane file (the desired plugin set)")
@@ -77,6 +89,10 @@ func main() {
 		err = runDown(args, os.Stdout)
 	case "status":
 		err = runStatus(args, os.Stdout)
+	case "hub":
+		// federation front door (ADR-033): one endpoint fanning out to many workspace daemons.
+		log.SetPrefix("rat hub: ")
+		err = runHub(args, os.Stdout)
 	case "ls":
 		err = runLs(args, os.Stdout)
 	case "init":
@@ -107,12 +123,58 @@ func main() {
 		// manage the added marketplaces (add | list).
 		err = runMarketplace(args, os.Stdout)
 	default:
-		err = fmt.Errorf("unknown command %q (want: serve | up | down | status | ls | init | add | call | apply | ui | plugin | version)", cmd)
+		fmt.Fprintf(os.Stderr, "rat: unknown command %q — run `rat help`\n", cmd)
+		os.Exit(1)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "rat:", err)
 		os.Exit(1)
 	}
+}
+
+// printHelp is what bare `rat` (and `rat help` / `-h`) shows: the one-screen overview of the
+// command surface, grouped by what you're doing.
+func printHelp(out io.Writer) {
+	fmt.Fprintf(out, `rat %s — a data platform that orchestrates self-describing plugins.
+The core does six things; everything else is a plugin.
+
+USAGE
+  rat <command> [args]        run `+"`rat <command> -h`"+` for a command's flags
+
+PROJECT  (a project is a rat.toml — the declared plugin set)
+  init        create a rat.toml here (a new project)
+  add         add a plugin to the project (reads the manifest stamped in its image)
+  remove      remove a plugin from the project            (alias: rm)
+  list        list the plugins installed in this project
+  search      find plugins across the local + added marketplaces
+
+DAEMON  (run the project's plane)
+  up          start this project's daemon            (-d = background)
+  down        stop this project's daemon
+  status      this project's daemon + its plugins
+  ls          every rat daemon running on this machine
+  hub         federate many workspaces behind one endpoint (ADR-033)
+  serve       run a daemon directly from a plane.yaml (low-level)
+
+AUTHOR  (build a plugin)
+  plugin init     scaffold a plugin   (--kind <axis> --lang go|python|typescript|rust)
+  plugin check    validate its manifest (static gate)
+  plugin pack     build + stamp the manifest + verify it serves what it declares
+  plugin publish  push the verified image to a registry
+
+MARKETPLACE  (discover + distribute plugins)
+  marketplace add|list          manage plugin sources (local images + remote indexes)
+  marketplace keygen|sign|verify  ed25519 provenance for an index
+
+CLIENT  (talk to a running gateway)
+  call        invoke a capability         rat call <rat://…> --as <caller> --data <json>
+  apply       submit a project (e.g. a dbt project) to the orchestrator
+  ui          render a surface's plugin contributions
+
+  version     print the version          help        this screen
+
+Docs: docs/ in the rat repo · ADRs in docs/architecture/adrs/.
+`, version)
 }
 
 // serve loads a YAML plane file and runs the daemon (`rat serve --plane …`, the low-level
@@ -134,7 +196,13 @@ func serveResolved(pl *Plane) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	rt, err := newRuntime(pl.Runtime, pl.Instance)
+	// Durable local storage (ADR-031): a project gets a persistent per-plugin /data mount under
+	// .rat/data/ (survives restart, gitignored). No project (raw `rat serve --plane`) → ephemeral.
+	dataRoot := ""
+	if pl.RuntimeDir != "" {
+		dataRoot = filepath.Join(pl.RuntimeDir, "data")
+	}
+	rt, err := newRuntime(pl.Runtime, pl.Instance, dataRoot)
 	if err != nil {
 		return err
 	}
@@ -406,7 +474,7 @@ func selfGatewayAddr(pl *Plane) string {
 // newRuntime selects the deployment-runtime axis plugin the plane asks for. Phase A
 // defaults to local-process (the `chmod +x ./rat` runtime); podman is the B/C path. The
 // instance id (ADR-023) namespaces SIBLING-mode runtime resources so many rats coexist.
-func newRuntime(name, instance string) (deploymentruntimev1.DeploymentRuntimeServiceServer, error) {
+func newRuntime(name, instance, dataRoot string) (deploymentruntimev1.DeploymentRuntimeServiceServer, error) {
 	switch name {
 	case "local":
 		return deploymentruntime.NewLocalProcess(), nil
@@ -418,10 +486,14 @@ func newRuntime(name, instance string) (deploymentruntimev1.DeploymentRuntimeSer
 		// id — so two daemons never collide on a name like "rat-state-1" even if they share a
 		// network. Host mode (no network) publishes to ephemeral loopback ports + lets podman
 		// auto-name, which already coexists.
+		var p *deploymentruntime.Podman
 		if net := os.Getenv("RAT_PODMAN_NETWORK"); net != "" {
-			return deploymentruntime.NewPodmanInstanced(net, instance), nil
+			p = deploymentruntime.NewPodmanInstanced(net, instance)
+		} else {
+			p = deploymentruntime.NewPodman()
 		}
-		return deploymentruntime.NewPodman(), nil
+		p.DataRoot = dataRoot // durable per-plugin /data mount (ADR-031); "" = ephemeral
+		return p, nil
 	default:
 		return nil, fmt.Errorf("unknown runtime %q", name)
 	}
