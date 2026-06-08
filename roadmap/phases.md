@@ -17,8 +17,16 @@ The full-project plan, Phase 0 → Phase 5. Reflects the **post-synthesis** scop
 | **5** | **Plugin authoring & packaging** (ADR-026) — `rat plugin init/check/test/pack/publish` | ✅ **DONE — SEALED `rat/4.0`** (2026-06-03) | — | *Reframed from "ecosystem moves":* the authoring lifecycle (scaffold → check incl. dep coherence → I9 launch-verify → verified manifest-stamped image → publish to a registry). The third pillar (author) beside run + distribute. Marketplace/signing/conformance are follow-ons. |
 | **6** | **Authoring ↔ runtime** (ADR-026 Q05) — manifest-from-image | ✅ **DONE — SEALED `rat/4.5`** (2026-06-03) | — | `rat add --image <ref>` reads the manifest stamped into a packed image (no `--manifest`; name derived). Closes the author→run handoff; the image is self-describing. |
 | **7** | **Dependency resolution** (ADR-023 #6) — the satisfiability resolver | ✅ **DONE — SEALED `rat/5.0`** (2026-06-03) | — | `rat add`/`rat up` warn when a `requires` has no provider in the project (the poetry-resolver). With `rat plugin check`'s coherence, both halves of dep-checking are real. Auto-suggest-the-plugin (marketplace) is the follow-on. |
+| **8** | **The marketplace** — discovery over local + remote signed indexes | ✅ **DONE — SEALED `rat/5.9`** (2026-06-03) | — | `rat search`/`list`/`add --with-deps`/`remove`; local stamped-manifest images + added index files + remote/HTTP indexes (timeout + offline cache); ed25519-signed provenance (pinned per source, `--require-signed`). Iterated `rat/5.5`–`5.9`. |
+| **9** | **Live plugin control** ([ADR-027](../docs/architecture/adrs/027-live-plugin-control-rpc.md)) — the daemon's `ControlService` | ✅ **DONE — SEALED `rat/6.0`** (2026-06-04) | — | `rat add`/`remove` materialize against a *running* daemon (no restart) via `RegisterPlugin`/`DeregisterPlugin`/`ListPlugins`. Mutable registry + reconciler desired-set; convergence unchanged; six-thing core held. First **major** bump since `rat/2.0` (additive `ControlService`). |
+| **10** | **Workspace federation + the security model** (ADRs [029](../docs/architecture/adrs/029-plugin-runtime-sdk.md)/[031](../docs/architecture/adrs/031-durable-local-storage.md)/[033](../docs/architecture/adrs/033-workspace-federation-hub.md)/[034](../docs/architecture/adrs/034-security-responsibility-model.md)/[035](../docs/architecture/adrs/035-state-axis-delete.md)) | 🔵 **IN-FLIGHT** (consolidated on `phase-10`, not yet sealed) | — | The `rat hub` (gateway-of-gateways), identity-at-the-edge + hub TLS + secure-by-default binding, the `ratplugin` runtime SDK, durable `/data` mount, `state/v1 Delete`, RatFS (`rat://` as a native VS Code folder). Additive; `rat/6.x` to be cut at seal. Also: the **professionalization restructure** ([docs/restructure/](../docs/restructure/)). |
 
 **Total:** ~12-18 months from Phase 0 kick-off to v1 GA.
+
+> **Note on numbering:** the "at a glance" table above tracks the **delivered** phases (each
+> a `rat/N.M` seal tag), which extended well past the original conceptual Phase 0→5 plan
+> documented in the prose below. The prose is preserved as the founding plan-of-record; the
+> table is the actual delivery history.
 
 ---
 
