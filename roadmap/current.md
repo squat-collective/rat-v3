@@ -42,15 +42,16 @@ separate `rat-data-dev` repo**.
 2. ✅ Cuts — dropped the unused TS + Rust SDKs ([ADR-037](../docs/architecture/adrs/037-trim-committed-sdks-to-consumed-languages.md), 89 files) + the superseded `sql-pipeline-py`/`platform/project/`/`pipelines/` (ADR-021).
 3. ✅ Archive — the Q02 simulated-review kit + `reviews/board/` → `reviews/archive/` (12 files; links repointed).
 4. ✅ Moves — `research/`→`docs/research/` + `examples/`→`plugins/` ([ADR-038](../docs/architecture/adrs/038-reference-plugins-live-under-plugins.md); 343 files, Go modules rebuilt clean, 0 broken links).
-5. ⏸️ Extract `rat-data-dev` (paused — needs the go-ahead): `experiments/data-dev-plane/` + 5 exploratory plugins (`engine/duckdb-ml-py`, `catalog/ducklake-py`, `storage/minio-s3`, `strategy/incremental-embed-py`, `ui/vscode-rat`) + the `data-dev-*` scripts.
+5. ✅ Extracted `rat-data-dev` (`~/sandbox/rat-data-dev`): the experiment + 5 exploratory plugins (incl. `vscode-rat`) + `data-dev-*` scripts. The platform's attach-mode engine/catalog services were vestigial (dbt-runner embeds them) → removed. 47→40 plugins.
 
 **Bonus:** a repo-wide markdown link verifier surfaced + fixed **20 pre-existing broken links**; integrity now clean (0 broken across ~1400 links).
 
 ## Immediate next concrete step
 
-Decide on the `rat-data-dev` extraction (restructure step 5). Then optionally clean `backlog.md`
-(intermixes done + live items) and seal Phase 10 to `main` + tag. After that, the Phase-10
-follow-on (direct-gateway identity enforcement) or any backlog item by appetite.
+The restructure (steps 1–5) is **complete**. Remaining: optionally clean `backlog.md` (intermixes
+done + live items), then **seal Phase 10** to `main` + tag (`rat/6.x`). The `rat-data-dev` repo is
+local/unpushed — push it when ready. After the seal, the Phase-10 follow-on (direct-gateway
+identity enforcement) or any backlog item by appetite.
 
 ## What's NOT in flight
 

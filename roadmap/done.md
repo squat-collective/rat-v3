@@ -37,11 +37,17 @@ professional structure (audit + locked target in [`docs/restructure/`](../docs/r
 - **Verified:** 8/8 Go plugin modules go-build clean under new module paths; `core/` build+vet clean;
   buf lint clean; a new repo-wide markdown link verifier (~1400 links) found + fixed **20
   pre-existing broken links** and now reports **0 broken**.
-- **Paused for sign-off:** step 5 — graduate `experiments/data-dev-plane/` + 5 exploratory plugins
-  (incl. `vscode-rat`) + `data-dev-*` scripts to a separate `rat-data-dev` repo.
+- **Step 5 — extraction DONE.** Graduated the ML lakehouse experiment + its 5 exploratory plugins
+  (`engine/duckdb-ml-py`, `catalog/ducklake-py`, `storage/minio-s3`, `strategy/incremental-embed-py`,
+  `ui/vscode-rat`) + the `data-dev-*` scripts to a new sibling repo **`rat-data-dev`** (`~/sandbox/rat-data-dev`).
+  Discovery: the attach-mode platform's `engine`+`catalog` services were **vestigial** — the dbt-runner
+  embeds engine+catalog in-process (dbt-duckdb + DuckLake), nothing on the dbt path calls
+  `rat://engine`/`catalog` — so they were removed (compose.yaml + plane.yaml + manifests +
+  `rat/{engine,catalog}:dev` builds), not repointed. 47→40 plugins; 0 broken links;
+  `docs/experiments.md` left as the pointer.
 
 The top-level tree now reads as the architecture: `contracts/` · `core/` · `plugins/` · `platform/`
-· `marketplace/` · `docs/` · `reviews/` · `roadmap/` · `ideas/` · `scripts/`.
+· `marketplace/` · `docs/` · `reviews/` · `roadmap/` · `ideas/` · `scripts/`. (`experiments/` graduated out.)
 
 ---
 
