@@ -22,4 +22,4 @@ echo ">> cross-axis composition — booting catalog+engine+format together, runn
 $RUNTIME run --rm -v "$ROOT":/work:Z -v rat-pipcache:/root/.cache/pip \
   -e PYTHONPATH=/work/contracts/sdks/python -e GRPC_VERBOSITY=NONE "$PY_IMAGE" bash -c '
   pip install -q --root-user-action=ignore '"$PY_DEPS"' >/dev/null 2>&1
-  cd /work/examples/composition && python harness.py'
+  cd /work/plugins/composition && python harness.py'

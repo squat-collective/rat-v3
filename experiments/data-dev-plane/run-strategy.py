@@ -1,6 +1,6 @@
 """run-strategy.py — the incremental-embed ELT driving the data-dev plane.
 
-Build-order step 4 (experiment README §11): the real strategy (examples/strategy/
+Build-order step 4 (experiment README §11): the real strategy (plugins/strategy/
 incremental-embed-py) over a live stack — strategy → gateway → engine + catalog, all
 gRPC, the strategy naming no concrete plugin. It proves the §5.4 ELT pattern AND C1
 idempotency on a genuine incremental workload:
@@ -10,7 +10,7 @@ idempotency on a genuine incremental workload:
   run 2 replay (no new)   →  embeds 0, commit already_applied   (idempotency, C1)
 
 The strategy reaches engine/catalog ONLY through the capability-invoke gateway
-(examples/composition/gateway.py) bound to its `requires` set — C5 deny-by-default. The
+(plugins/composition/gateway.py) bound to its `requires` set — C5 deny-by-default. The
 runner just (a) provides that gateway, (b) lands raw rows in lake.reviews_raw (the
 ingestion an upstream would do), and (c) calls strategy.Apply over the wire.
 
@@ -45,13 +45,13 @@ def _load_plugin(reldir, bare_modules):
         for m in bare_modules:
             sys.modules.pop(m, None)
 
-_eng = _load_plugin("examples/engine/duckdb-ml-py", ["embed", "store", "streams", "server"])
+_eng = _load_plugin("plugins/engine/duckdb-ml-py", ["embed", "store", "streams", "server"])
 eng_store, eng_server = _eng["store"], _eng["server"]
-_cat = _load_plugin("examples/catalog/ducklake-py", ["store", "server"])
+_cat = _load_plugin("plugins/catalog/ducklake-py", ["store", "server"])
 cat_store, cat_server = _cat["store"], _cat["server"]
-_str = _load_plugin("examples/strategy/incremental-embed-py", ["store", "server"])
+_str = _load_plugin("plugins/strategy/incremental-embed-py", ["store", "server"])
 strat_store, strat_server = _str["store"], _str["server"]
-_gw = _load_plugin("examples/composition", ["gateway"])
+_gw = _load_plugin("plugins/composition", ["gateway"])
 Gateway = _gw["gateway"].Gateway
 
 MODEL, DIM = "hash-256", 256

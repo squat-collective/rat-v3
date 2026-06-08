@@ -69,7 +69,7 @@ post-freeze additive (v1.1), not GA-distant; until it lands, the pipeline model 
 test harness, not in the contract."
 
 **Corroboration (ecosystem + composition harness):** this is the **documented composition
-casualty**, not a hypothetical — `examples/composition/README.md:85-90` finding #3: *"The catalog
+casualty**, not a hypothetical — `plugins/composition/README.md:85-90` finding #3: *"The catalog
 has no create-table RPC. `GetTable` only resolves pre-existing tables, so the harness registers the
 source+target out-of-band."* `ecosystem` ranks it the #1 wart they hit: a strategy writes via
 `format.overwrite/merge` but has no wire path to tell the catalog what snapshot landed, so catalog
@@ -134,7 +134,7 @@ descriptor.
 **Why additive:** a future `optional int64 expected_batches`/`expected_rows` on `ArrowStream` is a
 new tag. **Severity: upgraded to MEDIUM-HIGH** on `ecosystem`'s evidence — this is a *silent
 data-corruption* path, not mere ergonomics. The SCD2 reference strategy is both producer and
-consumer: it pulls `target_rows` (`examples/strategy/scd2-py/store.py:69-70`) then treats any
+consumer: it pulls `target_rows` (`plugins/strategy/scd2-py/store.py:69-70`) then treats any
 current key **not** present in the pulled source as DELETED and closes its version
 (`store.py:90-92`). A truncated scan (producer died mid-stream, consumer can't tell done-vs-crashed)
 delivers fewer rows → SCD2 **closes versions that should stay open → silent history corruption**.

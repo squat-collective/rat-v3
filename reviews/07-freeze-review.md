@@ -24,7 +24,7 @@
 > - **M1–M4 + S1–S4 remediated** — commits `16d9c37` (error model), `7e169e1` (`key_id` +
 >   verification cross-check), `df07ff9` (S-cluster). Conformance held 20/20.
 > - **Cross-axis composition gate MET** — sub-phase 0i (`abd1228`): the
->   [composition test](../examples/composition) runs the strategy across all four ADR-003
+>   [composition test](../plugins/composition) runs the strategy across all four ADR-003
 >   cross-combinations on golden data; every one produces the identical target.
 > - **Freeze executed** — [ADR-009](../docs/architecture/adrs/009-data-plane-contract-freeze-v1.md)
 >   advances the six data-plane axes + the cross-cutting types to `v1` (tag `rat/1`).
@@ -101,7 +101,7 @@ The signature covers `(principal, tenant, bound_correlation_id, expires_unix_ms)
 correcting the reviewer's "tenant unsigned" framing. But the VERIFICATION CONTRACT (steps 1–3) never
 mandates that the **bare `Identity.tenant` mirror equals the signed tenant**, nor that
 `Identity.subject.principal` equals the signed principal. A consuming hop that reads the convenient
-bare `Identity.tenant` (as the stub gateway does, [gateway_test.go:104](../examples/state/inmemory-go/gateway_test.go))
+bare `Identity.tenant` (as the stub gateway does, [gateway_test.go:104](../plugins/state/inmemory-go/gateway_test.go))
 instead of the verified value trusts an unchecked field. *Fix:* add step 4 to the verification
 contract — "the bare `Identity.tenant`/`subject.principal` mirrors MUST equal the
 signature-covered values or the request is rejected" — and state explicitly that `caller_plugin`
@@ -127,7 +127,7 @@ mid-stream. *Fix:* pin "non-empty `capability` on a non-first frame → stream a
 **S3 — Audit-on-deny is intended but not pinned as a conformance obligation; the reference omits it.**
 `AUDIT_OUTCOME_DENIED` exists ([audit.proto:26](../contracts/proto/rat/common/v1/audit.proto)) and
 the coverage doc says audit covers "auth decisions," but the stub gateway appends to its audit log
-*after* the deny/traceparent early-returns ([gateway_test.go:94–116](../examples/state/inmemory-go/gateway_test.go)),
+*after* the deny/traceparent early-returns ([gateway_test.go:94–116](../plugins/state/inmemory-go/gateway_test.go)),
 so denied calls produce no record. The wire supports it; the **obligation** isn't stated. *Fix:*
 make "every enforcement decision — including DENIED — emits exactly one audit record" an explicit C8
 conformance obligation (and a future gateway-conformance vector). Wire-safe; do now.

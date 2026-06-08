@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Data-dev gateway — the backend the VS Code extension (examples/ui/vscode-rat) talks
+# Data-dev gateway — the backend the VS Code extension (plugins/ui/vscode-rat) talks
 # to (experiments/data-dev-plane, build-order step 6). Boots the in-proc engine +
 # catalog + strategy stack on a local DuckLake, seeds a corpus + runs the
 # incremental-embed strategy once, and serves a small JSON API over HTTP.
@@ -22,10 +22,10 @@ PORT="${RAT_GATEWAY_PORT:-8787}"
 if [ -z "$RUNTIME" ]; then echo "no podman/docker found" >&2; exit 2; fi
 
 echo ">> data-dev gateway on http://localhost:${PORT}  (Ctrl-C to stop)"
-echo ">> point the VS Code extension (examples/ui/vscode-rat) at this URL"
+echo ">> point the VS Code extension (plugins/ui/vscode-rat) at this URL"
 exec $RUNTIME run --rm -it -p "${PORT}:${PORT}" \
   -v "$ROOT":/work:Z -v rat-pipcache:/root/.cache/pip \
   -e PYTHONPATH=/work/contracts/sdks/python -e GRPC_VERBOSITY=NONE -e RAT_GATEWAY_PORT="${PORT}" \
   "$PY_IMAGE" bash -c "
   pip install -q --root-user-action=ignore $PY_DEPS >/dev/null 2>&1
-  cd /work/examples/ui/vscode-rat/gateway && python app.py"
+  cd /work/plugins/ui/vscode-rat/gateway && python app.py"

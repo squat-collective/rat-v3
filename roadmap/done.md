@@ -17,7 +17,7 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
-## 2026-06-04 — RatFS: code-fs as a native VS Code folder (`examples/ui/vscode-rat`)
+## 2026-06-04 — RatFS: code-fs as a native VS Code folder (`plugins/ui/vscode-rat`)
 
 Commit `1c66b17` on `phase-10-workspace-federation`. A `vscode.FileSystemProvider` for the `rat://<connection>/<path>` scheme, backed by the frozen **state axis through the federation hub** ([ADR-033](../docs/architecture/adrs/033-workspace-federation-hub.md)/[034](../docs/architecture/adrs/034-security-responsibility-model.md)): `readFile→state/get`, `writeFile→state/put` (CAS conflict surfaced as a write error), `readDirectory/stat→state/list`. Registered, the **Explorer/editor/save/search work natively on `rat://` URIs** — code-fs becomes an editable remote folder, **authenticated + multi-workspace + collaborative**. Transport: shells the proven `rat call` path (TLS `--cacert` · auth `--token` · routing `--workspace`) — reuses the verified CLI rather than re-implementing gRPC + binary call-context metadata in Node (like the Git extension shelling `git`); native Connect-ES transport is a future refinement. Extended `RatConnection` (hub/workspace/token/cacert/caller), added the *Open code-fs Folder* command + `onFileSystem:rat` activation. **Compiles (tsc) clean; backend verified live** — `readDirectory`/`readFile` against the secured hub (kitchen) return the code-fs tree + file bytes. v0.2.1→0.3.0.
 
@@ -316,7 +316,7 @@ The third surface (ADR-025) — and the one we can prove **visually**. The bff n
 
 ## 2026-06-03 — Phase 3 slice 2: the VS Code shell becomes the `vscode` surface consumer 🪟
 
-Pointed the generic shell (`examples/ui/vscode-platform/`) at its surface: it now fetches `GET /api/ui?surface=vscode` (a `surface()` helper + `uiPath()`; a `ratPlatform.surface` setting, default `vscode`) instead of the unscoped `/api/ui`. So the shell renders only the **vscode-targeted** contributions — a plugin's `cli`/`webapp` interfaces never leak in. Compile-verified strict (`tsc`).
+Pointed the generic shell (`plugins/ui/vscode-platform/`) at its surface: it now fetches `GET /api/ui?surface=vscode` (a `surface()` helper + `uiPath()`; a `ratPlatform.surface` setting, default `vscode`) instead of the unscoped `/api/ui`. So the shell renders only the **vscode-targeted** contributions — a plugin's `cli`/`webapp` interfaces never leak in. Compile-verified strict (`tsc`).
 
 The rendering still needs a running VS Code (unprovable headlessly), but the data side is proven: the bff already returns `?surface=vscode` → `{explorer:[run-history,lake-tables], command:[run-pipeline]}` (and `?surface=cli` → `{command:[build]}`), so the shell receives exactly its surface's set, `build` excluded. Two surfaces now consume the same registry independently: the **CLI** (`rat ui`, proven live) and the **VS Code** shell (surface-scoped + compiling). Additive (TS only). Next: a webapp consumer; the ADR-025 follow-ons (per-consumer identity/connection, the webview content protocol, view-data capabilities).
 
@@ -368,7 +368,7 @@ Made the VS Code UI **scalable by plugins**: it hardcodes no view; plugins *cont
 
 - **Contribution = manifest binding + runtime spec.** The manifest declares the slot binding; the rich component spec (`title`, `data` endpoint / `capability` / `schema`) is published to the **state-backend** at `ui/components/<plugin>/<id>` — the state-backend is the contribution registry (as it is the project store, ADR-021). No core change.
 - **bff aggregates** (`platform/bff.py`): `GET /api/ui` does `state/list ui/components/` + get-each → a slot-grouped descriptor (`explorer`/`command`/`config`); it **hardcodes no view** (seeds only the platform's *own* components once). `POST /api/invoke {capability, data}` is the **generic action path** — any contributed command resolves its capability via the protobuf descriptor pool (json↔proto) and routes through the gateway (C5 + audit). bff manifest gains `state/v1/put`.
-- **Generic shell** (`examples/ui/vscode-platform/`): a VS Code extension that fetches `/api/ui`, renders each slot (explorer→tree with table/row drill-in, command→VS Code command, config→form), and fires actions via `/api/invoke`. **Compile-verified strict** (`tsc`, reusing vscode-rat's toolchain); the rendering needs a running VS Code (only the aggregation is headlessly provable — and is).
+- **Generic shell** (`plugins/ui/vscode-platform/`): a VS Code extension that fetches `/api/ui`, renders each slot (explorer→tree with table/row drill-in, command→VS Code command, config→form), and fires actions via `/api/invoke`. **Compile-verified strict** (`tsc`, reusing vscode-rat's toolchain); the rendering needs a running VS Code (only the aggregation is headlessly provable — and is).
 
 **Proven live:** the platform's seeded contributions showed in `/api/ui` (explorer: Lake Tables, Run History; command: Run pipeline); then a **brand-new "cooltool" plugin** published a **config form + a command** to `ui/components/cooltool/*` (via `state/put`) and **both appeared in `/api/ui` with the bff + shell unchanged** (`from cooltool`); `/api/invoke` fired a contributed command generically → `{rowsAffected:0, snapshotId:ui-test}`, audited as `platform-bff → strategy/apply` through the gateway. `make breaking` green; additive (no proto/axis/Go).
 
@@ -476,7 +476,7 @@ Decided the *shape of the daemon* (the question Phase 2 left open) and built the
 ADR-021's headline made real: the dbt project is no longer baked into the runner image — you **submit** it to the running orchestrator, and the next run executes YOUR code. Crucially, this needed **no new axis and no proto change**: the **state-backend IS the project store**.
 
 - **`ratctl apply --project <dir> --name <name>`** (`core/cmd/ratctl`): tar.gz's the project client-side (generated/VCS noise excluded — `tarProject` + `TestTarProject`), then ships it to `projects/<name>` via `rat://state/v1/put` — the same C5-authorized, audited gateway path as any command. `ratctl` grew a subcommand dispatcher (`call` | `apply`); `apply` builds a `state.PutRequest` directly (binary tarball, not protojson). Default caller `--as platform-runner`.
-- **The dbt-runner fetches the applied project** (`examples/runner/dbt-duckdb/server.py`): on each `strategy/apply` it `rat://state/v1/get`s `projects/<name>`, extracts it (py3.12 `filter="data"` safe untar), and runs `dbt build` on it — re-extracting **only when the stored revision changed** (revision-cached). The baked sample project is the fallback until something is applied.
+- **The dbt-runner fetches the applied project** (`plugins/runner/dbt-duckdb/server.py`): on each `strategy/apply` it `rat://state/v1/get`s `projects/<name>`, extracts it (py3.12 `filter="data"` safe untar), and runs `dbt build` on it — re-extracting **only when the stored revision changed** (revision-cached). The baked sample project is the fallback until something is applied.
 - **Wiring:** `rat-pipeline` manifest `requires rat://state/v1/get`; `platform-runner` `requires rat://state/v1/put` (the operator identity `ratctl apply` uses); rat now **injects `RAT_PLUGIN_NAME`** (each plugin's manifest name → its caller identity) alongside `RAT_GATEWAY` in `launchPlane`, so the runner can identify itself when it calls `state/get`; `plugins.yaml` sets `RAT_PROJECT_KEY: projects/medallion`.
 
 **Proven live** (host mode): the **baked** run was `PASS=7` (no `applied_marker`); `ratctl apply` of a modified project returned `applied … → projects/medallion (8 files, revision 1)`; the runner logged `extracted applied project 'projects/medallion' rev 1` and the next run built `1 of 8 OK created sql table model main.applied_marker` → `PASS=8`, with DuckDB ground-truth `('applied-via-rat-apply', 42)`. **Re-apply** of a further-changed project bumped to **rev 2**, re-extracted, and the value propagated `42 → 99`. Audit shows the full path: `platform-runner → state/put → rat-state` (the apply) + `rat-pipeline → state/get → rat-state` (the fetch). `make core-test` + `breaking` + `ratctl-smoke` green; additive (no proto/axis).
@@ -489,8 +489,8 @@ So adding/updating a pipeline is now `ratctl apply` — your code, submitted to 
 
 Tom's "store one or 2 secrets on a communicating secret plugin" made real, on the **frozen `secret/v1`** contract (no proto change). A `kind: secret-backend` plugin holds the platform's secrets in **one trust boundary**; consumer plugins hold only an opaque **ref** and resolve it at point of use through the gateway (C5-authorized, audited, tenant-scoped, redacted).
 
-- **`examples/secret/env-py`** — an env-backed secret-backend (`store.py` loads a `{tenant: {ref: value}}` map from `$RAT_SECRETS`; `server.py`/`main.py` serve the frozen `SecretService.Resolve`). Keeps the conformance reference (`inmemory-py`, hardcoded golden map) untouched. Same tenant-scoped anti-enumeration: unknown ref AND cross-tenant ref both → `found=false` (never `PERMISSION_DENIED`); 5-min TTL; `value` is `debug_redact`.
-- **`rat-state` resolves its DSN, lazily** (`examples/state/postgres-py/server.py`): on first state op it dials the gateway (`RAT_GATEWAY`, injected) and calls `rat://secret/v1/resolve` for `$RAT_STATE_PG_REF` (`ref://state/pg-dsn`), retrying until `rat-secret` is wired, then connects Postgres. A literal `$RAT_STATE_PG` is still honored as a fallback. Lazy ⇒ rat-state is Healthy immediately and doesn't race the secret plugin's boot.
+- **`plugins/secret/env-py`** — an env-backed secret-backend (`store.py` loads a `{tenant: {ref: value}}` map from `$RAT_SECRETS`; `server.py`/`main.py` serve the frozen `SecretService.Resolve`). Keeps the conformance reference (`inmemory-py`, hardcoded golden map) untouched. Same tenant-scoped anti-enumeration: unknown ref AND cross-tenant ref both → `found=false` (never `PERMISSION_DENIED`); 5-min TTL; `value` is `debug_redact`.
+- **`rat-state` resolves its DSN, lazily** (`plugins/state/postgres-py/server.py`): on first state op it dials the gateway (`RAT_GATEWAY`, injected) and calls `rat://secret/v1/resolve` for `$RAT_STATE_PG_REF` (`ref://state/pg-dsn`), retrying until `rat-secret` is wired, then connects Postgres. A literal `$RAT_STATE_PG` is still honored as a fallback. Lazy ⇒ rat-state is Healthy immediately and doesn't race the secret plugin's boot.
 - **Wiring:** `secret/v1` added to the gateway's routable descriptors (`cmd/rat/descriptors.go`); `rat-state` manifest gains `requires: rat://secret/v1/resolve`; `platform/manifests/secret.plugin.yaml`; `plugins.yaml` adds `rat-secret` (the DSN lives in its `$RAT_SECRETS`, one place) and `rat-state`'s env drops the DSN for `RAT_STATE_PG_REF`. `make plugin-images` builds `rat/secret:dev`.
 
 **Proven live** (host mode, `rat serve --plane plugins.yaml`, 5 launched plugins): startup injected `RAT_GATEWAY` + wired all 5 + served; the new audit hop **`rat-state → rat://secret/v1/resolve → rat-secret`** fired (lazy, once, then cached); `rat-state`'s container env carried **no credential** (only `RAT_STATE_PG_REF=ref://state/pg-dsn`, no `RAT_SECRETS`, no password); the platform **self-drove** (ticks 2+ refreshed) and recorded **durable** run history to Postgres (so the DSN resolved + connected); the raw DSN password appeared **0×** in rat's audit log. `make core-test` + `breaking` green; additive (no proto/axis).
@@ -541,7 +541,7 @@ So **the medallion runs through a rat-launched stack; the infra carries no per-p
 
 ## 2026-06-03 — 2c: the Python plugin images are baked 🐳
 
-The launchable images for every platform plugin (ADR-022) — so rat can `podman run` each as its own container (no per-plugin compose service). A `Dockerfile` per plugin (build context = repo root; `.dockerignore` loosened to allow `examples/` + `platform/`, junk excluded) + `make plugin-images`:
+The launchable images for every platform plugin (ADR-022) — so rat can `podman run` each as its own container (no per-plugin compose service). A `Dockerfile` per plugin (build context = repo root; `.dockerignore` loosened to allow `plugins/` + `platform/`, junk excluded) + `make plugin-images`:
 - `rat/state:dev` (161M) · `rat/catalog:dev` (214M) · `rat/engine:dev` (443M) · `rat/scheduler:dev` (153M) · `rat/dbt-runner:dev` (324M) · `rat/bff:dev` (153M) — each `FROM python:3.12-slim`, copies the python SDK into site-packages + the plugin code, pip-installs its `requirements.txt`, `CMD python main.py`.
 - The **dbt-runner** is special: dbt lives in its **own venv** (`/opt/dbtvenv`, `$RAT_DBT_BIN`) because dbt-core pins an older protobuf than the RAT SDK's 7.35 — verified live: the gRPC side runs **protobuf 7.35.0** + imports the SDK, AND **dbt 1.11.11** runs from the venv. The Go `rat/stateplugin:dev` (19M) from the prior step rounds out the set.
 
@@ -598,7 +598,7 @@ The second architectural trigger from Tom: *adding a plugin should be almost not
 ## 2026-06-02 — ADR-021 PROVEN (experiment): real dbt, orchestrated by rat 🧪✅
 
 First working slice of the [ADR-021](../docs/architecture/adrs/021-orchestrator-pipelines-as-code.md) vision — **rat orchestrates a real dbt project**, on `phase-2-dbt-runner`:
-- **`examples/runner/dbt-duckdb`** — a **dbt-runner plugin** (reuses the frozen `strategy/v1/apply` axis for the experiment). On Apply it runs `dbt build` on a project — **dbt owns the DAG, `ref()`, Jinja, materializations AND tests; rat reinvents none of it.** dbt runs as a subprocess from its **own venv** (dbt-core pins an older protobuf than the RAT SDK's 7.35 — isolated behind a binary boundary).
+- **`plugins/runner/dbt-duckdb`** — a **dbt-runner plugin** (reuses the frozen `strategy/v1/apply` axis for the experiment). On Apply it runs `dbt build` on a project — **dbt owns the DAG, `ref()`, Jinja, materializations AND tests; rat reinvents none of it.** dbt runs as a subprocess from its **own venv** (dbt-core pins an older protobuf than the RAT SDK's 7.35 — isolated behind a binary boundary).
 - **`platform/dbt-project/`** — a standard dbt project (the user's *code*): `dbt_project.yml`, `models/{bronze,silver,gold}.sql` with `{{ ref() }}`, `models/schema.yml` native tests (not_null/unique), and one `rat.yaml` (`kind: pipeline, runner: dbt, schedule`).
 - Wired into the stack (the `pipeline` service → the dbt-runner; its manifest now requires nothing — dbt-duckdb + DuckLake are the engine+catalog, in-proc).
 - **Proven live:** the scheduler fired `strategy/apply` into the dbt-runner; `dbt build` ran the medallion — `bronze_orders → silver_orders → gold_daily_revenue` + 4 tests — **`PASS=7 ERROR=0, Completed successfully`**. Every fire audited (`rat-scheduler → strategy/apply → rat-pipeline`); run history recorded the failed early runs (the "lake" errors → `status: failed` — the quality/error path) and the successful ones (`status: success`).
@@ -619,7 +619,7 @@ The portal-replacement's backend is now the **real orchestrator**. New [`platfor
 - `GET /api/health` → `{ ok, gateway }` · `GET /api/runs` → the run history (`rat://state/v1/list` + `get`) · `POST /api/run` → trigger a refresh (`rat://strategy/v1/apply`).
 - Wired into the compose stack (`bff` service on host `:8088`). **Proven live via curl:** `/api/runs` returned `runs/000001/2` and `/api/run` triggered a refresh (`snap-12`) — every hop audited as caller `platform-bff` (`→ state/get`, `→ state/list`, `→ strategy/apply`).
 
-`make breaking` clean; no Go/proto change. **What this IS:** the UI's control path now flows through the real gateway (the ADR-019 Phase-B-step-4 / ADR-020 S4 intent), proven without the VS Code UI (which can't run headlessly). **What remains (follow-on):** the **VS Code extension UI itself** — the existing `examples/ui/vscode-rat` is experiment-shaped (semantic search over reviews), so a platform UX (medallion layers + run history) pointed at this BFF, run interactively, is the next step; the bulk data-leg (table/row preview) is the F9 follow-on.
+`make breaking` clean; no Go/proto change. **What this IS:** the UI's control path now flows through the real gateway (the ADR-019 Phase-B-step-4 / ADR-020 S4 intent), proven without the VS Code UI (which can't run headlessly). **What remains (follow-on):** the **VS Code extension UI itself** — the existing `plugins/ui/vscode-rat` is experiment-shaped (semantic search over reviews), so a platform UX (medallion layers + run history) pointed at this BFF, run interactively, is the next step; the bulk data-leg (table/row preview) is the F9 follow-on.
 
 **🎉 ADR-020 S1–S4 complete (core + backends):** v2's platform, rebuilt on the v3 plugin core with DuckLake as catalog — **decoupled stack · self-driving scheduled refresh · quality-gated commits · run history · a UI control-path through the gateway** — every hop authorized + audited, CLI/BFF not a portal. From a sealed library to a running, self-driving, quality-gated data platform.
 
@@ -627,7 +627,7 @@ The portal-replacement's backend is now the **real orchestrator**. New [`platfor
 
 ## 2026-06-02 — ADR-020 S4 (state-backend) DONE: the platform has run history 📋
 
-The platform now records + serves its own metadata — v2's `runs` table, as a **state-backend plugin** behind the gateway (on `phase-2-state`). New [`examples/state/postgres-py`](../examples/state/postgres-py/): a Postgres-backed `kind: state-backend` plugin implementing the frozen state/v1 **Get/Put/List** (monotonic revisions + single-key CAS via `if_revision`), reusing the stack's Postgres (a `rat_state` KV table). Wired into the platform:
+The platform now records + serves its own metadata — v2's `runs` table, as a **state-backend plugin** behind the gateway (on `phase-2-state`). New [`plugins/state/postgres-py`](../plugins/state/postgres-py/): a Postgres-backed `kind: state-backend` plugin implementing the frozen state/v1 **Get/Put/List** (monotonic revisions + single-key CAS via `if_revision`), reusing the stack's Postgres (a `rat_state` KV table). Wired into the platform:
 - the **scheduler** records a run record per fire — `rat://state/v1/put` `runs/<tick>` = `{tick, status, snapshot, error}` (Q04 resolved: reuse the stack's Postgres);
 - the **runner** reads the history back through the gateway — `rat://state/v1/list` (prefix `runs/`) + `get`.
 - **Proven live:** `make platform-up` → the scheduler self-drives and records runs; `make platform-run` lists them: `3 run(s) recorded; runs/000001 {"status":"success","snapshot":"snap-4"} …`. Every state hop audited (`rat-scheduler → state/put`, `platform-runner → state/list/get → rat-state`).
@@ -649,8 +649,8 @@ The pipeline strategy now runs **data-quality tests** that gate the catalog comm
 ## 2026-06-02 — ADR-020 S2 DONE: the platform is SELF-DRIVING — scheduled refresh through rat ⏰
 
 The always-on stack now refreshes **on its own**, no command needed — v2's `ratd` scheduler→runner, decoupled into v3 plugins behind the gateway. Two pieces (both proven live on `phase-2-scheduler`):
-- **S2a — the pipeline as a capability** (`examples/strategy/sql-pipeline-py` (removed — superseded by the dbt-runner, ADR-021)): the medallion runner promoted to a `strategy` plugin (Q02). On `rat://strategy/v1/apply` it runs bronze→silver→gold via `rat://engine/v1/execute` and commits the gold snapshot via `rat://catalog/v1/{register,commit}-table` — **all back through the gateway** (it dials `RAT_GATEWAY`, names no concrete plugin). The audited chain: `platform-runner → strategy/apply → rat-pipeline → engine/catalog` — exactly v2's `ratd → runner → engine`, now per-hop C5-enforced. `run.py` is now just the manual trigger (one `strategy.apply`).
-- **S2b — the self-driving clock** ([`examples/scheduler/cron-py`](../examples/scheduler/cron-py/)): a `kind: scheduler-backend` driver that fires `rat://strategy/v1/apply` on an interval (demo: every 20s; a real plane: hourly). Proven: `make platform-up` → the scheduler fires on its own — tick 1 → snap-4, tick 2 → snap-8, tick 3 → snap-12 (a fresh DuckLake snapshot each refresh, 3 gold Parquet snapshots on S3), every fire audited as caller `rat-scheduler`. *(A minimal active trigger; the full scheduler-backend axis — `Schedule`/`Cancel`/`WatchDue`, a clock the orchestrator watches — is the richer form, noted as a follow-on.)*
+- **S2a — the pipeline as a capability** (`plugins/strategy/sql-pipeline-py` (removed — superseded by the dbt-runner, ADR-021)): the medallion runner promoted to a `strategy` plugin (Q02). On `rat://strategy/v1/apply` it runs bronze→silver→gold via `rat://engine/v1/execute` and commits the gold snapshot via `rat://catalog/v1/{register,commit}-table` — **all back through the gateway** (it dials `RAT_GATEWAY`, names no concrete plugin). The audited chain: `platform-runner → strategy/apply → rat-pipeline → engine/catalog` — exactly v2's `ratd → runner → engine`, now per-hop C5-enforced. `run.py` is now just the manual trigger (one `strategy.apply`).
+- **S2b — the self-driving clock** ([`plugins/scheduler/cron-py`](../plugins/scheduler/cron-py/)): a `kind: scheduler-backend` driver that fires `rat://strategy/v1/apply` on an interval (demo: every 20s; a real plane: hourly). Proven: `make platform-up` → the scheduler fires on its own — tick 1 → snap-4, tick 2 → snap-8, tick 3 → snap-12 (a fresh DuckLake snapshot each refresh, 3 gold Parquet snapshots on S3), every fire audited as caller `rat-scheduler`. *(A minimal active trigger; the full scheduler-backend axis — `Schedule`/`Cancel`/`WatchDue`, a clock the orchestrator watches — is the richer form, noted as a follow-on.)*
 
 Plus a `minio-setup` one-shot in `compose.yaml` (provisions the lake bucket at stack-up, so the pipeline writes whether triggered by the scheduler or the manual runner). `make breaking` clean; no Go/proto change (S2 is all plugins + compose). **Next: S3 — merge strategies + quality gates (branch-on-failure-discard).**
 
@@ -692,7 +692,7 @@ On `phase-1-adr-019-phase-b` (off `phase-1`). A conversation with Tom reframed t
 ## 2026-06-02 — ADR-019: `rat` runs in a container — the control-plane daemon image 🐀📦
 
 On `phase-1-adr-019-rat-serve`. Tom's steer: the control plane should run **in a containerized environment** (the same `rat` binary runs bare-metal *or* in a container — the k8s/docker-daemon shape). So the ADR-019 **Phase-C daemon-image** piece was pulled forward (architecture unchanged — just packaging):
-- **`core/Dockerfile`** — multi-stage: a `golang:1.25` builder produces a **static, CGO-free** `rat` binary (+ the Phase-A `stateplugin`), copied into a minimal **non-root** `alpine:3.20` runtime (non-root is mandatory — the local-process runtime refuses root per I9). Builds from the repo root (the core module's `replace` target is `contracts/sdks/go`); `.dockerignore` scopes the context to `core` + `contracts` (excludes the ~59M `examples/`).
+- **`core/Dockerfile`** — multi-stage: a `golang:1.25` builder produces a **static, CGO-free** `rat` binary (+ the Phase-A `stateplugin`), copied into a minimal **non-root** `alpine:3.20` runtime (non-root is mandatory — the local-process runtime refuses root per I9). Builds from the repo root (the core module's `replace` target is `contracts/sdks/go`); `.dockerignore` scopes the context to `core` + `contracts` (excludes the ~59M `plugins/`).
 - **`core/cmd/rat/plane.container.yaml`** — the Phase-A demo plane baked at `/etc/rat/plane.yaml`, so `podman run -p 7777:7777 rat/serve:dev` serves a working gateway out of the box; override by mounting your own plane.
 - **`make rat-image`** target.
 
@@ -731,8 +731,8 @@ On `phase-1-data-dev-plane`. The VS Code extension now manages **many named RAT 
 
 On `phase-1-data-dev-plane`. Build-order §11 step 6 — a VS Code extension as a UI client of the data-dev plane, closing the multi-UI vision (CLI / web-portal / **VS Code**). With this the experiment spans **storage → catalog → engine+ML → strategy → UI**, local AND remote. EXPLORATORY + **ADDITIVE**: `make breaking` clean, conformance unchanged (34/34), sealed `rat/2.0` surface untouched.
 
-- **[`examples/ui/vscode-rat`](../examples/ui/vscode-rat/)** — TypeScript VS Code extension: DuckLake catalog tree (tables→snapshots, click-to-preview), **Run Pipeline** (incremental-embed strategy), SQL query grid, **🔍 semantic search**, plugin-health view. Compiles clean under strict `tsc` (verified in a node:22 container → `out/*.js`).
-- **[`gateway/app.py`](../examples/ui/vscode-rat/gateway/)** + **`make data-dev-gateway`** ([`scripts/data-dev-gateway.sh`](../scripts/data-dev-gateway.sh)) — a stdlib-only Python BFF that owns the in-proc engine+catalog+strategy, seeds + runs the strategy at boot, and serves a JSON API (`/api/{health,tables,snapshots,query,search,pipeline/run}`). Its `selftest.py` exercises every endpoint over HTTP; verified host-facing over the published port (curl: health/tables/search/pipeline all correct, incremental 12→15).
+- **[`plugins/ui/vscode-rat`](../plugins/ui/vscode-rat/)** — TypeScript VS Code extension: DuckLake catalog tree (tables→snapshots, click-to-preview), **Run Pipeline** (incremental-embed strategy), SQL query grid, **🔍 semantic search**, plugin-health view. Compiles clean under strict `tsc` (verified in a node:22 container → `out/*.js`).
+- **[`gateway/app.py`](../plugins/ui/vscode-rat/gateway/)** + **`make data-dev-gateway`** ([`scripts/data-dev-gateway.sh`](../scripts/data-dev-gateway.sh)) — a stdlib-only Python BFF that owns the in-proc engine+catalog+strategy, seeds + runs the strategy at boot, and serves a JSON API (`/api/{health,tables,snapshots,query,search,pipeline/run}`). Its `selftest.py` exercises every endpoint over HTTP; verified host-facing over the published port (curl: health/tables/search/pipeline all correct, incremental 12→15).
 - **Finding F9 (README §10):** the bytes/control split means a UI needs a data-leg helper — `engine.Query` returns an out-of-band `ArrowStream` and the reference engine's leg is in-proc (a Flight stand-in), so an external client can't pull rows over the wire. Hence the gateway BFF. The frozen **control** capabilities are exactly what the connectionless Connect TS SDK (ADR-018) calls directly; a real Flight engine would retire the BFF. Honest deployment reality, not a contract gap.
 - **🎉 The data-dev plane experiment is now end-to-end** — 5 new plugins (`minio-s3`, `ducklake-py`, `duckdb-ml-py`, `incremental-embed-py`, `vscode-rat`) + a gateway, composing a real scalable ML lakehouse on the sealed `rat/2.0` core **without changing one byte of the frozen wire**. Steps 2/3/4/6 done; step 5 (full compose) is covered by the `make data-dev-{local,remote,strategy,gateway}` targets. The practical Q02 substitute (principle #8) has produced its findings (F1–F9). **Next: a synthesis writeup of what held / what bent, and decide which findings feed back into the contracts or a future ADR.**
 
@@ -742,7 +742,7 @@ On `phase-1-data-dev-plane`. Build-order §11 step 6 — a VS Code extension as 
 
 On `phase-1-data-dev-plane`. Build-order §11 step 4 — a genuine incremental ELT as a `kind: strategy` plugin, composing capabilities through the invoke gateway (names no concrete plugin). EXPLORATORY + **ADDITIVE**: `make breaking` clean, conformance unchanged (34/34 — the strategy, like fullrefresh/scd2, has no `harness_test.py`; it's exercised by its runner), sealed `rat/2.0` surface untouched.
 
-- **[`examples/strategy/incremental-embed-py`](../examples/strategy/incremental-embed-py/)** — the §5.4 pattern: register/own target → CTAS schema-from-source → **server-side watermark** stage (only-new rows, no Arrow round-trip) → **MERGE** upsert → **embed only `embedding IS NULL`** → `ducklake_flush_inlined_data` → `commit-table` (idempotency_key = run id). `REQUIRES = (get-table, register-table, engine.execute, commit-table)` — **no `format` capability** (the engine writes the lake directly).
+- **[`plugins/strategy/incremental-embed-py`](../plugins/strategy/incremental-embed-py/)** — the §5.4 pattern: register/own target → CTAS schema-from-source → **server-side watermark** stage (only-new rows, no Arrow round-trip) → **MERGE** upsert → **embed only `embedding IS NULL`** → `ducklake_flush_inlined_data` → `commit-table` (idempotency_key = run id). `REQUIRES = (get-table, register-table, engine.execute, commit-table)` — **no `format` capability** (the engine writes the lake directly).
 - **[`run-strategy.py`](../experiments/data-dev-plane/run-strategy.py)** + **`make data-dev-strategy`** ([`scripts/data-dev-strategy.sh`](../scripts/data-dev-strategy.sh)) — strategy→gateway→engine+catalog over gRPC, 3 runs: **run 1 embeds 12** (full load), **run 2 embeds 3** (only the newly-landed delta — incrementality), **run 2 replay embeds 0 / already_applied** (C1 idempotency). New batch-2 rows rank top in search (#15 "weekend trip", #13 "fingerprint sensor"), confirming the incremental embed landed. Assertion-bearing.
 - **Finding F8 (README §10):** a strategy in a DuckLake world writes through the **engine** (not a format plugin) and addresses tables by lake-qualified name — plugin-agnostic in *binding*, DuckLake-aware in *addressing*. The watermark is server-side, so the strategy is pure `execute` + a final snapshot. **Next: §11 step 6 — `vscode-rat` (the VS Code UI via the connectionless TS SDK).** (Step 5, the full compose/`make data-dev-plane`, is largely covered by the local/remote/strategy runners + their make targets.)
 
@@ -752,7 +752,7 @@ On `phase-1-data-dev-plane`. Build-order §11 step 4 — a genuine incremental E
 
 On `phase-1-data-dev-plane`. Build-order §11 step 3 — data moves to **S3/MinIO**, DuckLake metadata to **Postgres**, and the engine's S3 creds are **vended by a storage plugin**. The same pipeline runs distributed with **search distances byte-identical to local** — the data plane is unchanged when storage goes remote (the "swap a plugin, the rest holds" thesis). EXPLORATORY + **ADDITIVE**: conformance **34/34** (minio-s3 joined), `make breaking` clean, sealed `rat/2.0` surface untouched.
 
-- **[`examples/storage/minio-s3`](../examples/storage/minio-s3/)** (`ca13589`) — `kind: storage` plugin, **first impl of the Q02 5c read/write split**. Two minters ([`creds.py`](../examples/storage/minio-s3/creds.py)): `ScopeReceiptMinter` (offline, passes `storage-v1` golden vectors) + `MinioSTSMinter` (real `AssumeRole` with an inline policy scoped to `s3://bucket/<tenant>/<prefix>/*`). Tenant from `rat-callmeta-bin` (ADR-007, C7 anti-forgery). Verified against live MinIO: read creds read `acme/*`, denied cross-tenant `globex` + denied writes (least-privilege).
+- **[`plugins/storage/minio-s3`](../plugins/storage/minio-s3/)** (`ca13589`) — `kind: storage` plugin, **first impl of the Q02 5c read/write split**. Two minters ([`creds.py`](../plugins/storage/minio-s3/creds.py)): `ScopeReceiptMinter` (offline, passes `storage-v1` golden vectors) + `MinioSTSMinter` (real `AssumeRole` with an inline policy scoped to `s3://bucket/<tenant>/<prefix>/*`). Tenant from `rat-callmeta-bin` (ADR-007, C7 anti-forgery). Verified against live MinIO: read creds read `acme/*`, denied cross-tenant `globex` + denied writes (least-privilege).
 - **[`run-remote.py`](../experiments/data-dev-plane/run-remote.py)** + **`make data-dev-remote`** ([`scripts/data-dev-remote.sh`](../scripts/data-dev-remote.sh), [`compose/compose.yaml`](../experiments/data-dev-plane/compose/compose.yaml)) — boots MinIO + Postgres, vends WRITE creds → engine `CREATE SECRET S3` + `ATTACH ducklake:postgres (DATA_PATH s3://…)` → create→register→transform→embed→**flush(Parquet→S3)**→snapshot→commit→🔍search→idempotent-replay→D3-isolation. Assertion-bearing; Parquet verified on S3; D3 cross-tenant denial verified.
 - **Enabling edits (additive, defaults unchanged):** engine `_EXTENSIONS` += `postgres`; engine `Engine(secret_sql=…)` runs `CREATE SECRET` before ATTACH; catalog `Catalog(extensions=…, secret_sql=…)` for the remote lake.
 - **Findings (README §10):** F3 ✅ resolved by Postgres (real concurrent writers); F4 ✅ resolved by `ducklake_flush_inlined_data`; **F6** the catalog needs **no S3 creds** (metadata-only — bytes/metadata split falls out cleanly, sharper least-privilege); **F7** STS isolation is real object-store policy, not just the RAT capability layer. **Next: §11 step 4 — `incremental-embed-py` strategy (watermark→merge→embed-only-new→index→snapshot).**
@@ -763,8 +763,8 @@ On `phase-1-data-dev-plane`. Build-order §11 step 3 — data moves to **S3/MinI
 
 On `phase-1-data-dev-plane`. Build-order §11 step 2 complete — the DuckLake catalog + DuckDB-ML engine, with a **local end-to-end transform→embed→search running green over real gRPC**. EXPLORATORY + **ADDITIVE**: `make breaking` clean, conformance **33/33** (was 32; the new engine joined), the sealed `rat/2.0` surface untouched — **no proto, no new axis** (the "ML is an engine extension" thesis, README §3, proven in code).
 
-- **[`examples/engine/duckdb-ml-py`](../examples/engine/duckdb-ml-py/)** — the `duckdb-py` engine extended with `vss`/`ducklake`/`httpfs` (best-effort load) + an **`embed(text, model) → FLOAT[]`** UDF ([`embed.py`](../examples/engine/duckdb-ml-py/embed.py): pluggable `hash-256` default / `minilm` / `ollama:*` seam). `Execute` now surfaces the DuckLake snapshot in `WriteResult.snapshot_id`. Still a conformant engine: passes **engine-real-v1** AND a new **[`engine-embed-v1.json`](../contracts/conformance/engine-embed-v1.json)** deterministic embed golden (dim 256 + exact nonzero buckets + L2-norm).
-- **[`examples/catalog/ducklake-py`](../examples/catalog/ducklake-py/)** — a DuckLake-backed `catalog/v1`: `GetTable`/`CommitTable` resolve+record the **real** lake snapshot; branches are a thin tracker (the §10 Q2 spike). On a `selftest.py` (frozen catalog-v1 parity deferred), not yet in the auto-conformance matrix.
+- **[`plugins/engine/duckdb-ml-py`](../plugins/engine/duckdb-ml-py/)** — the `duckdb-py` engine extended with `vss`/`ducklake`/`httpfs` (best-effort load) + an **`embed(text, model) → FLOAT[]`** UDF ([`embed.py`](../plugins/engine/duckdb-ml-py/embed.py): pluggable `hash-256` default / `minilm` / `ollama:*` seam). `Execute` now surfaces the DuckLake snapshot in `WriteResult.snapshot_id`. Still a conformant engine: passes **engine-real-v1** AND a new **[`engine-embed-v1.json`](../contracts/conformance/engine-embed-v1.json)** deterministic embed golden (dim 256 + exact nonzero buckets + L2-norm).
+- **[`plugins/catalog/ducklake-py`](../plugins/catalog/ducklake-py/)** — a DuckLake-backed `catalog/v1`: `GetTable`/`CommitTable` resolve+record the **real** lake snapshot; branches are a thin tracker (the §10 Q2 spike). On a `selftest.py` (frozen catalog-v1 parity deferred), not yet in the auto-conformance matrix.
 - **[`experiments/data-dev-plane/run-local.py`](../experiments/data-dev-plane/run-local.py)** / **`make data-dev-local`** — boots both plugins over gRPC sharing one DuckLake; runs create→register→transform→`embed()`→snapshot→commit→🔍 semantic-search→idempotent-replay on a 12-row real corpus; **assertion-bearing** (search ranking checked). Resolves the **§4/§10(b) catalog/engine-boundary tension** (engine writes, catalog records the snapshot).
 - **Findings folded into README §10:** F1 DuckLake rejects fixed `FLOAT[N]` → embeddings as `FLOAT[]`, HNSW needs a derived non-lake table (brute-force cosine on the lake); F2 list UDFs need numpy; F3 DuckLake sqlite metadata is single-writer → catalog uses short-lived read connections (Postgres at scale); F4 DuckLake inlines small writes (flush for Parquet); F5 `snapshot_time` pulls pytz (avoided). **Next: §11 step 3 — `minio-s3` + S3 wiring (data goes remote).**
 
@@ -948,7 +948,7 @@ Three more lens-tailored companions (parallel to the security one), each front-l
 
 `core/composition` ([reviews/10](../reviews/10-phase-1-spike-exit.md) D3 exit), on `phase-1-d3-storage-creds`. The storage axis's C7 obligation — *vended creds are scoped to the caller's tenant + prefix + mode, short-TTL, and a prefix can't escape the tenant root* — is now **vector-tested through the real launched plugin behind the gateway**, not honor-system.
 
-- **The proof** (`composition_storagecreds_test.go`): the **round-2 real** `examples/storage/localfs-go` ref (independent module) is launched via local-process (`RAT_STORAGE_ROOT=tempdir`) behind the gateway; `vend-credentials` flows through the C5 gateway and returns the JSON scope receipt. Asserted: **(1) scoping** — bound to (tenant, prefix, mode) + a TTL; **(2) tenant isolation** — `acme` and `globex` vend the SAME logical prefix but resolve to DISTINCT per-tenant roots (`…/acme/warehouse/orders` vs `…/globex/warehouse/orders`); **(3) containment** — `../globex/secrets` from `acme` → `PERMISSION_DENIED`; **(4)** empty prefix → `INVALID_ARGUMENT`; **(5) C5** — an undeclared caller is denied. The tenant comes ONLY from the gateway-re-stamped metadata envelope (not a request field).
+- **The proof** (`composition_storagecreds_test.go`): the **round-2 real** `plugins/storage/localfs-go` ref (independent module) is launched via local-process (`RAT_STORAGE_ROOT=tempdir`) behind the gateway; `vend-credentials` flows through the C5 gateway and returns the JSON scope receipt. Asserted: **(1) scoping** — bound to (tenant, prefix, mode) + a TTL; **(2) tenant isolation** — `acme` and `globex` vend the SAME logical prefix but resolve to DISTINCT per-tenant roots (`…/acme/warehouse/orders` vs `…/globex/warehouse/orders`); **(3) containment** — `../globex/secrets` from `acme` → `PERMISSION_DENIED`; **(4)** empty prefix → `INVALID_ARGUMENT`; **(5) C5** — an undeclared caller is denied. The tenant comes ONLY from the gateway-re-stamped metadata envelope (not a request field).
 - **Defense in depth, surfaced in the audit:** C5 authorizes the `vend-credentials` *capability*, then the storage plugin enforces tenancy *containment* — so the containment/validation refusals are the **provider's** (C5-allowed in the audit); only the undeclared caller is a C5 denial (the audit shows exactly 1). `make core-test` + `make breaking` green. Commit `7a8b386`.
 - **C2 caveat (deferred):** the spike trusts the tenant claimed in the inbound envelope; the full core re-derives it from the authenticated channel — the scoping mechanism proven here is unchanged, only the source of the trusted tenant tightens. **Next DoD:** D4 conformance-attestation enforced · D2 real bulk leg · C1 against real backends · sre#4.
 
@@ -979,8 +979,8 @@ Three more lens-tailored companions (parallel to the security one), each front-l
 
 `core/composition` + `core/deploymentruntime` ([reviews/10](../reviews/10-phase-1-spike-exit.md) C5 exit), on `phase-1-c5-real-providers`. The spike enforced C5 against our in-repo fakes; this **extends the proof to genuine reference plugins** behind the supervisor + gateway. The manifest-derived authorization holds identically: declared caps route + return **real results**; a capability the real provider genuinely implements but the caller never declared is **denied + audited**.
 
-- **Proof 1 — Go refs via local-process** (`composition_realproviders_test.go`): the full get-table → register → overwrite → commit-table pipeline runs through the canonical ADR-003 refs `examples/{catalog,format}/inmemory-go` — built as **independent modules** (own `go.mod`), launched as isolated processes. Real results (the real catalog returns `catalog://warehouse.sales.orders@main`; the real format returns `snap-1`; commit-linkage holds). C5 then denies `format/merge` + `catalog/merge-branch` — caps the refs implement but the strategy never declared. 4 allow + 2 deny audited (C4).
-- **Proof 2 — SQLite catalog via podman** (`composition_realpodman_test.go`): C5 against a **real-backend plugin in a real container** — the SQLite catalog ref `examples/catalog/sqlite-py`, built into a `python:3.12-slim` image and launched by the **podman runtime under the full I9 profile**, behind the gateway. `get-table` + `commit-table` (declared) hit real SQLite and return real results; `merge-branch` (undeclared) is denied. Ties C5 + supervisor + the podman runtime together end-to-end. Gated by `RAT_PODMAN_TEST` → `make core-test-podman`.
+- **Proof 1 — Go refs via local-process** (`composition_realproviders_test.go`): the full get-table → register → overwrite → commit-table pipeline runs through the canonical ADR-003 refs `plugins/{catalog,format}/inmemory-go` — built as **independent modules** (own `go.mod`), launched as isolated processes. Real results (the real catalog returns `catalog://warehouse.sales.orders@main`; the real format returns `snap-1`; commit-linkage holds). C5 then denies `format/merge` + `catalog/merge-branch` — caps the refs implement but the strategy never declared. 4 allow + 2 deny audited (C4).
+- **Proof 2 — SQLite catalog via podman** (`composition_realpodman_test.go`): C5 against a **real-backend plugin in a real container** — the SQLite catalog ref `plugins/catalog/sqlite-py`, built into a `python:3.12-slim` image and launched by the **podman runtime under the full I9 profile**, behind the gateway. `get-table` + `commit-table` (declared) hit real SQLite and return real results; `merge-branch` (undeclared) is denied. Ties C5 + supervisor + the podman runtime together end-to-end. Gated by `RAT_PODMAN_TEST` → `make core-test-podman`.
 - **podman runtime hardening:** add a writable `/tmp` tmpfs (read-only root + tmpfs is the canonical hardened pattern — lets a stateful plugin keep scratch, e.g. SQLite's WAL db, without weakening the read-only root) + `rm -f -t 0` on Terminate (no 10s SIGTERM grace). `make core-test` + `make core-test-podman` + `make breaking` green. Commit `6e66a24`.
 - **Next:** remaining Phase-1 DoD — C4 terminal audit incl. denials, C3 idle-timeout backstop, D2 real bulk leg, D3 storage-cred isolation, D4 conformance-attestation enforced, C1 against real backends, sre#4.
 
@@ -1073,7 +1073,7 @@ The spike's centerpiece, end-to-end ([ADR-014](../docs/architecture/adrs/014-spi
 
 ## 2026-06-01 — Spike core: the capability-invoke gateway — C5 enforced end-to-end at the wire
 
-Second spike increment ([ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md)), on `phase-1-invoke-gateway`. `core/gateway` implements the `core/v1` `CapabilityInvokeService` (`Invoke` + `InvokeServerStream`), seeded from the faithful non-test `examples/bench/latency-go/gateway.go` — but its **C5 decision is `registry.Authorize` (derived from declared manifests), audited per decision (C4)**, not the stubs' hardcoded allowlist. Routes `capability→method` from the `(rat.common.v1.capability)` annotation; relays opaque frames (passthrough codec); re-stamps identity + propagates traceparent (ADR-007); rejects a missing/ill-formed traceparent (C1).
+Second spike increment ([ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md)), on `phase-1-invoke-gateway`. `core/gateway` implements the `core/v1` `CapabilityInvokeService` (`Invoke` + `InvokeServerStream`), seeded from the faithful non-test `plugins/bench/latency-go/gateway.go` — but its **C5 decision is `registry.Authorize` (derived from declared manifests), audited per decision (C4)**, not the stubs' hardcoded allowlist. Routes `capability→method` from the `(rat.common.v1.capability)` annotation; relays opaque frames (passthrough codec); re-stamps identity + propagates traceparent (ADR-007); rejects a missing/ill-formed traceparent (C1).
 
 - **Real gRPC enforcement test** (state axis, bufconn): an allowed `Get` relayed intact; an undeclared `put` + an unknown caller → `PERMISSION_DENIED`; a server-stream `watch` denied at open (ADR-008 enforce-at-open); a missing envelope → `InvalidArgument` before the decision. `go vet` + `go test ./core/...` **PASS** (`golang:1.25`). Commit `de34989`.
 - **C5 is now real end-to-end** — the self-asserted stub is replaced by a decision derived from what plugins declare. Next: composition-on-Go (the full pipeline through this gateway) + the C1/C2 cases + CI.
@@ -1087,13 +1087,13 @@ First real Phase-1 spike code (ADR-014), on `phase-1-registry-core`. New Go modu
 - **`core/manifest`** — loads the frozen `plugin.v1.json` manifest shape (the real `contracts/examples/*.plugin.yaml`) into Go structs + validates the `rat://<axis>/v<major>/<cap>` URI grammar.
 - **`core/registry`** — indexes manifests by name + provided capability; **`Authorize(caller, cap)` allows iff `caller.requires ∋ cap ∧ provider.provides ∋ cap`** — the C5 decision *derived from declared manifests*, replacing the throwaway stubs' hardcoded allowlist. Rejects duplicate providers (no selection policy yet).
 - **Tested green** (containerized `golang:1.25`, `go vet` + `go test ./...`, `GOSUMDB=off`): the allow path (`scd2→format/merge`) + 3 deny modes (undeclared-require / no-provider / unknown-caller) + duplicate-provider + malformed-URI, all against the 2 real manifests. Commit `fdcf780`.
-- **Next:** `core/gateway` (`CapabilityInvokeService` seeded from `examples/bench/latency-go/gateway.go`, C5 wired to `registry.Authorize` + an audit record per decision), then composition-on-Go + the C5-negative / C1 / C2 exit tests.
+- **Next:** `core/gateway` (`CapabilityInvokeService` seeded from `plugins/bench/latency-go/gateway.go`, C5 wired to `registry.Authorize` + an audit record per decision), then composition-on-Go + the C5-negative / C1 / C2 exit tests.
 
 ---
 
 ## 2026-06-01 — ADR-014: the spike-core shape pinned (registry + capability-invoke gateway)
 
-Contracts-before-code for the Phase-1 spike. [ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md) scopes the minimum real core that makes **C5 real**: a Go **registry** (loads the real `plugin.yaml` manifests → indexes `(kind,name,version)` + a capability map; builds the `capability→(service,method)` route table from the `(rat.common.v1.capability)` annotation) + a **capability-invoke gateway** (seeded from the faithful non-test `examples/bench/latency-go/gateway.go`) whose **C5 decision is *derived from the manifests*** — `X allowed iff X ∈ caller.requires ∧ X ∈ provider.provides` — not the test stubs' hardcoded allowlist. Reconciler/bus/identity/state-gateway/process-launch deferred; plugins run as local gRPC servers. Exit tests: composition-on-Go + C5-negative (`PERMISSION_DENIED` + audit) + C1 crash-mid-strategy + C2 truncation; a frozen-wire insufficiency = a freeze-reopen while still local. Lives in a new `core/` module (`replace` → the SDK). Next: build `phase-1-registry-core`.
+Contracts-before-code for the Phase-1 spike. [ADR-014](../docs/architecture/adrs/014-spike-core-registry-and-invoke-gateway.md) scopes the minimum real core that makes **C5 real**: a Go **registry** (loads the real `plugin.yaml` manifests → indexes `(kind,name,version)` + a capability map; builds the `capability→(service,method)` route table from the `(rat.common.v1.capability)` annotation) + a **capability-invoke gateway** (seeded from the faithful non-test `plugins/bench/latency-go/gateway.go`) whose **C5 decision is *derived from the manifests*** — `X allowed iff X ∈ caller.requires ∧ X ∈ provider.provides` — not the test stubs' hardcoded allowlist. Reconciler/bus/identity/state-gateway/process-launch deferred; plugins run as local gRPC servers. Exit tests: composition-on-Go + C5-negative (`PERMISSION_DENIED` + audit) + C1 crash-mid-strategy + C2 truncation; a frozen-wire insufficiency = a freeze-reopen while still local. Lives in a new `core/` module (`replace` → the SDK). Next: build `phase-1-registry-core`.
 
 ---
 
@@ -1125,7 +1125,7 @@ As Phase 1 begins, codified "always work on a nice branch" (Tom's ask). Planned 
 The final close-out item. Folded the two cheap additive crash-safety fields into the seal (while the surface is local/unpublished), then cut `rat/1.5` over the complete Phase-0 contract surface.
 
 - **[ADR-012](../docs/architecture/adrs/012-crash-safety-additive-fields.md) — additive crash-safety fields.** **C1** (write-leg idempotency): `idempotency_key` on `format` Append/Overwrite/Merge + `strategy.ApplyRequest`, `already_applied` on `WriteResult` — the data plane now has **one** idempotency model across the commit leg (ADR-010) and the write leg. **C2** (stream completeness): `optional expected_rows`/`expected_batches` on `ArrowStream` — a truncated transfer is detectable; the consumer MUST fail the write, closing the silent SCD2-history-corruption path. Additive (`buf breaking` FILE clean); SDKs regenerated.
-- **Demonstrated end-to-end** in [examples/composition](../examples/composition): the full-refresh strategy threads `idempotency_key` → a reconciler **retry** of every combo is a no-op (`already_applied=true`, no double-write — verified across all 4 combos, incl. the datafusion engine whose bind was made idempotent); producers declare `expected_rows` + consumers verify; a truncation negative (declare 9, deliver 4) fails the write. **`make composition` ✅.** Obligations documented in `format` + `strategy` CONTRACT.md. Per-axis conformance vectors deferred to Phase 1 (the enforcement bucket).
+- **Demonstrated end-to-end** in [plugins/composition](../plugins/composition): the full-refresh strategy threads `idempotency_key` → a reconciler **retry** of every combo is a no-op (`already_applied=true`, no double-write — verified across all 4 combos, incl. the datafusion engine whose bind was made idempotent); producers declare `expected_rows` + consumers verify; a truncation negative (declare 9, deliver 4) fails the write. **`make composition` ✅.** Obligations documented in `format` + `strategy` CONTRACT.md. Per-axis conformance vectors deferred to Phase 1 (the enforcement bucket).
 - **`rat/1.5` cut** over the sealed surface: 18 axis protos + cross-cutting types frozen, catalog commit-linkage (ADR-010), manifest envelope + 18 per-kind schemas (ADR-011), all 18 `CONTRACT.md`, C1/C2 crash-safety (ADR-012). **`make conformance` 32/32 · `make composition` ✅ · `make validate-manifests` 32/32.**
 - **🎉 PHASE 0 COMPLETE.** Next: **Phase 1 (the core)** — the registry + reconciler + event bus + identity/state/API gateways — with the board's remaining crash-safety + enforcement findings (reviews/08 **C3–C5, D1–D5**) as its acceptance criteria.
 
@@ -1195,9 +1195,9 @@ Ran the first adversarial review *after* the freeze, as a **communicating agent 
 
 Built one reference per experience axis and froze them — **completing the entire axis-contract surface**. `make conformance` **32/32** (commits `5ce7b30` refs, `030d406` freeze, tag **`rat/1.4`**).
 
-- **`examples/notifications/inmemory-py`** — Send delivery sink (captures messages); rejects empty title (`INVALID_ARGUMENT`).
-- **`examples/marketplace/community-py`** — Search/Get over seeded listings; the load-bearing **capability-aware "works on my deployment?" filter** (only listings whose `required_capabilities` are satisfied by the caller's `deployment_capabilities` are returned — e.g. scd2 is filtered until `format/merge` is present). Mandatory listing fields (provided/required/conformed + signed) exercised; Get unknown → `NOT_FOUND`.
-- **`examples/ui/web-portal-py`** — Describe (display name + hosted slots) + RenderSlot (resolve a contributed component → asset_ref + props_schema); unknown → `NOT_FOUND`.
+- **`plugins/notifications/inmemory-py`** — Send delivery sink (captures messages); rejects empty title (`INVALID_ARGUMENT`).
+- **`plugins/marketplace/community-py`** — Search/Get over seeded listings; the load-bearing **capability-aware "works on my deployment?" filter** (only listings whose `required_capabilities` are satisfied by the caller's `deployment_capabilities` are returned — e.g. scd2 is filtered until `format/merge` is present). Mandatory listing fields (provided/required/conformed + signed) exercised; Get unknown → `NOT_FOUND`.
+- **`plugins/ui/web-portal-py`** — Describe (display name + hosted slots) + RenderSlot (resolve a contributed component → asset_ref + props_schema); unknown → `NOT_FOUND`.
 - **Build method:** all 3 via **parallel subagents** on the storage template (omitting the tenant/context handling these stateless axes don't need).
 - **Freeze:** flipped ui/notifications/marketplace DRAFT → `v1` (`rat/1.4`); buf clean.
 
@@ -1209,8 +1209,8 @@ Built one reference per experience axis and froze them — **completing the enti
 
 Built two technologically-divergent references for the tier-0 `deployment-runtime` axis (the I9 trust boundary) and froze it. `make conformance` **29/29** (commits `119a1a0` refs, `50f21ee` freeze, tag **`rat/1.3`**).
 
-- **`examples/deploymentruntime/local-process-py`** — runs each plugin instance as a real child OS process (the `chmod +x ./rat` runtime); real Launch → Healthcheck (PID liveness) → Terminate lifecycle.
-- **`examples/deploymentruntime/k8s-dryrun-py`** — models a managed/declarative runtime: maps the `LaunchSpec` + I9 `IsolationProfile` → a Kubernetes Pod `securityContext` and admits the manifest (dry-run, no cluster). Where the isolation profile gets a real enforcement target.
+- **`plugins/deploymentruntime/local-process-py`** — runs each plugin instance as a real child OS process (the `chmod +x ./rat` runtime); real Launch → Healthcheck (PID liveness) → Terminate lifecycle.
+- **`plugins/deploymentruntime/k8s-dryrun-py`** — models a managed/declarative runtime: maps the `LaunchSpec` + I9 `IsolationProfile` → a Kubernetes Pod `securityContext` and admits the manifest (dry-run, no cluster). Where the isolation profile gets a real enforcement target.
 - **Shared I9 gate** (the load-bearing obligation): both refuse to launch below the I9 minimum (`run_as_non_root` + `drop_all_capabilities` + `no_new_privileges`) → `FAILED_PRECONDITION`; empty image → `INVALID_ARGUMENT`. Both expose an isolation-honored receipt in `Healthcheck.detail`. Both pass the shared [`deploymentruntime-v1.json`](../contracts/conformance/deploymentruntime-v1.json) — local fork vs container proving the contract composes across runtime technologies.
 - **Freeze:** flipped the proto Status DRAFT → `v1` (`rat/1.3`). Like the 6 ADR-003-listed data-plane axes, it got the full two-reference rigor (it's outside ADR-003's explicit list, like strategy, but it's the trust boundary the 3rd-party-plugin bet leans on).
 
@@ -1222,13 +1222,13 @@ Built two technologically-divergent references for the tier-0 `deployment-runtim
 
 Built one reference per control-plane axis (ADR-003 requires only one for control-plane, vs two for data-plane) and froze them. `make conformance` now **27/27** (commits `5bcedf9` refs, `ba9269b` freeze, tag **`rat/1.2`**).
 
-- **`examples/identity/static-token-py`** — Authenticate (constant-time token compare; the C2 default, not anon-root) + Authorize (coarse role-based `deny_code`).
-- **`examples/secret/inmemory-py`** — Resolve with **anti-enumeration**: unknown ref AND cross-tenant ref both return `found=false` (never `PERMISSION_DENIED`).
-- **`examples/scheduler/inmemory-py`** — Schedule/Cancel + server-streaming WatchDue (one-shots; at-least-once delivery).
-- **`examples/tenancy/inmemory-py`** — Decide (permission/sharing/quota → `allowed` + `deny_code`); policy *on top of* the core's structural C7 isolation.
-- **`examples/billing/inmemory-py`** — Record usage events, per-tenant by construction (C7) + aggregation/isolation tests.
-- **`examples/observability/inmemory-py`** — bidi Ingest with cumulative per-batch acks.
-- **`examples/auditlog/inmemory-py`** — Append sink enforcing all 4 freeze-blocker-#4 properties: **Ed25519 signature verify** over the pinned canonical serialization, `prev_hash` chain check, prefix-only commit, idempotent DUPLICATE (adds `cryptography`; harness plays the signing core).
+- **`plugins/identity/static-token-py`** — Authenticate (constant-time token compare; the C2 default, not anon-root) + Authorize (coarse role-based `deny_code`).
+- **`plugins/secret/inmemory-py`** — Resolve with **anti-enumeration**: unknown ref AND cross-tenant ref both return `found=false` (never `PERMISSION_DENIED`).
+- **`plugins/scheduler/inmemory-py`** — Schedule/Cancel + server-streaming WatchDue (one-shots; at-least-once delivery).
+- **`plugins/tenancy/inmemory-py`** — Decide (permission/sharing/quota → `allowed` + `deny_code`); policy *on top of* the core's structural C7 isolation.
+- **`plugins/billing/inmemory-py`** — Record usage events, per-tenant by construction (C7) + aggregation/isolation tests.
+- **`plugins/observability/inmemory-py`** — bidi Ingest with cumulative per-batch acks.
+- **`plugins/auditlog/inmemory-py`** — Append sink enforcing all 4 freeze-blocker-#4 properties: **Ed25519 signature verify** over the pinned canonical serialization, `prev_hash` chain check, prefix-only commit, idempotent DUPLICATE (adds `cryptography`; harness plays the signing core).
 - **Build method:** the 4 simple unary axes (identity/secret/tenancy/billing) via **parallel subagents** on the storage template; the 3 streaming/crypto axes (scheduler/observability/auditlog) built directly.
 - **Freeze:** flipped the 7 axis Status markers DRAFT → `v1` (frozen, `rat/1.2`); buf clean. Executes ADR-009's stated plan.
 
@@ -1240,7 +1240,7 @@ Built one reference per control-plane axis (ADR-003 requires only one for contro
 
 The ADR-009-anticipated follow-on: with a second, semantically-different strategy reference, `strategy/v1` advances `v1-preview` → `v1` (commit `cd8fcac`, tagged **`rat/1.1`**).
 
-- **`examples/strategy/scd2-py/`** — Slowly Changing Dimension Type 2: stateful + temporal, the deliberate ADR-003 divergence from full-refresh. Reads source snapshot + existing target history; closes changed versions (`is_current=false`, `effective_to=run-ts`) + inserts new current versions; written via one `format.merge` keyed on `(natural_key…, effective_from)`. **Different capability mix** (`get-table` + `scan`×2 + `merge`, no engine) over the same `Apply` contract.
+- **`plugins/strategy/scd2-py/`** — Slowly Changing Dimension Type 2: stateful + temporal, the deliberate ADR-003 divergence from full-refresh. Reads source snapshot + existing target history; closes changed versions (`is_current=false`, `effective_to=run-ts`) + inserts new current versions; written via one `format.merge` keyed on `(natural_key…, effective_from)`. **Different capability mix** (`get-table` + `scan`×2 + `merge`, no engine) over the same `Apply` contract.
 - **`contracts/conformance/strategy-scd2-v1.json`** — two-run temporal golden scenario (initial load → snapshot with changed + unchanged + new key → expected history).
 - **`make composition`** extended — added `FormatService.Merge` + an SCD2 phase; now proves the cross-axis matrix **AND both strategy references** over the real stack (gateway + parquet + sqlite + Flight). Green.
 - **`strategy.proto` → v1** (frozen, `rat/1.1`).
@@ -1266,8 +1266,8 @@ The Phase 0 contract-freeze milestone. With both gates met (0h-remediation + 0i 
 
 Built the ADR-003 "run against each other on golden data" gate the freeze review flagged as the one unmet clause (reviews/07 Part C).
 
-- **`examples/strategy/fullrefresh-py/`** (`abd1228`) — the FIRST `kind: strategy` reference (the axis had zero). Pure capability orchestration over a single `invoke` seam: `catalog.get-table → engine.query → format.overwrite`, coupled to nothing by name. Its conformance IS the composition test.
-- **`examples/composition/`** + **`make composition`** — boots catalog+engine+format as real gRPC servers wired by capability through a mediating gateway, Arrow over **real pyarrow.flight** between axes, and runs the strategy across the 4 ADR-003 combos on shared golden data ([`composition-v1.json`](../contracts/conformance/composition-v1.json)). `comp_engine.py` closes the gap the per-axis engine refs left (resolve `QueryRequest.tables` via `format.scan`, bind, stream results over Flight).
+- **`plugins/strategy/fullrefresh-py/`** (`abd1228`) — the FIRST `kind: strategy` reference (the axis had zero). Pure capability orchestration over a single `invoke` seam: `catalog.get-table → engine.query → format.overwrite`, coupled to nothing by name. Its conformance IS the composition test.
+- **`plugins/composition/`** + **`make composition`** — boots catalog+engine+format as real gRPC servers wired by capability through a mediating gateway, Arrow over **real pyarrow.flight** between axes, and runs the strategy across the 4 ADR-003 combos on shared golden data ([`composition-v1.json`](../contracts/conformance/composition-v1.json)). `comp_engine.py` closes the gap the per-axis engine refs left (resolve `QueryRequest.tables` via `format.scan`, bind, stream results over Flight).
 - **Result:** all 4 combos — DuckDB/DataFusion × Parquet/Delta × sqlite/in-memory, storage held at local-fs — produce the **identical** target with the strategy code unchanged. **Gate MET.**
 - **Findings surfaced** (the payoff): engine `SUM` type diverges DuckDB(hugeint)/DataFusion(int64) → golden SQL pins it with `CAST AS BIGINT`; the engine `tables`-binding + real Arrow transport weren't exercised per-axis; catalog has no create-table RPC (GA commit-linkage, R3). None wire-breaking. Conformance still 20/20.
 
@@ -1333,14 +1333,14 @@ This is the 0g deliverable for the axes that have references (the grounded, non-
 
 The second + final 0f sub-item: a benchmark that quantifies the one perf number the architecture trades on — the **core-mediated gateway's overhead vs a direct call** (ADR-005 accepted "a latency hop per control call", with a direct-dial fast-path *only if a profiling pass shows it's needed*; ADR-008 added a streaming relay). This IS that profiling pass.
 
-- **`examples/bench/latency-go/`** + **`make bench`** — measures the SAME plugin RPC two ways (direct `caller→plugin` vs mediated `caller→gateway→plugin`) for a unary RPC (`state.Get`) and a server-streaming one (`runtime.Execute`); reports p50/p99/mean + the delta. The plugin RPCs are trivial (fixed response / a few fixed frames) so the measurement isolates transport + mediation cost. The mediated path includes the client-side marshal/unmarshal + the `rat-callmeta-bin` envelope stamp (the SDK's real cost) + the gateway's traceparent-validate + identity-restamp + passthrough relay (a faithful non-test gateway in `gateway.go`).
+- **`plugins/bench/latency-go/`** + **`make bench`** — measures the SAME plugin RPC two ways (direct `caller→plugin` vs mediated `caller→gateway→plugin`) for a unary RPC (`state.Get`) and a server-streaming one (`runtime.Execute`); reports p50/p99/mean + the delta. The plugin RPCs are trivial (fixed response / a few fixed frames) so the measurement isolates transport + mediation cost. The mediated path includes the client-side marshal/unmarshal + the `rat-callmeta-bin` envelope stamp (the SDK's real cost) + the gateway's traceparent-validate + identity-restamp + passthrough relay (a faithful non-test gateway in `gateway.go`).
 - **Result (localhost TCP, single goroutine):** unary direct p50 ~62µs vs mediated ~228µs → **+166µs (+266%)**; streaming direct ~66µs vs mediated ~249µs → **+183µs (+277%)**. Mediation roughly TRIPLES a control RPC's latency (a full extra gRPC hop + serialization) but the **absolute cost is ~0.2ms**.
 - **Validates the ADR-005 bet honestly:** cheap enough for control traffic (a pipeline run makes a handful of control calls → ~ms total, negligible vs the data work), and the hot path doesn't pay it at all — bulk DATA bypasses the gateway entirely via `ArrowStream`. If a future hot control path ever needs sub-mediation latency, the direct-dial fast-path ADR-005 left open can be added — but the number shows it isn't needed for v1.
 - The benchmark dir has a `go.mod` but no `harness_test.go`, so `scripts/conformance.sh` discovery was tightened to require a harness — the bench is correctly excluded from `make conformance` (still 20/20).
 
 **🎉 Sub-phase 0f is COMPLETE** — conformance suite runner (`make conformance`, 20/20) + latency benchmark (`make bench`). Plus the real Arrow Flight transport landed. The data-plane reference + conformance + perf arc of Phase 0 is done; remaining is freeze prep (0c/0g/0h).
 
-**Files:** `examples/bench/latency-go/**`, `Makefile` (bench target), `scripts/conformance.sh` (harness-required discovery).
+**Files:** `plugins/bench/latency-go/**`, `Makefile` (bench target), `scripts/conformance.sh` (harness-required discovery).
 
 ---
 
@@ -1348,7 +1348,7 @@ The second + final 0f sub-item: a benchmark that quantifies the one perf number 
 
 Formalized the conformance suite (the operational form of ADR-003's "both pass the axis's conformance suite"). The per-axis golden vectors were already authoritative; what was missing was a single runner across all references.
 
-- **`scripts/conformance.sh`** + **`make conformance`** — **auto-discovers every reference** under `examples/<axis>/<impl>/` (Go = has `go.mod`; Python = has `harness_test.py`), runs each one's harness against its golden vectors (Go via `go test`, Python via `python harness_test.py`), and prints a single **axis × impl × lang × vectors × result** matrix. Containerized (podman/docker, no host installs); one golang container for all Go refs, one python container (union of deps installed once) for all Python refs. **Exit 0 iff every reference conforms** — so CI / the freeze gate can hang on it. A new reference joins the suite the moment it lands (no registration).
+- **`scripts/conformance.sh`** + **`make conformance`** — **auto-discovers every reference** under `plugins/<axis>/<impl>/` (Go = has `go.mod`; Python = has `harness_test.py`), runs each one's harness against its golden vectors (Go via `go test`, Python via `python harness_test.py`), and prints a single **axis × impl × lang × vectors × result** matrix. Containerized (podman/docker, no host installs); one golang container for all Go refs, one python container (union of deps installed once) for all Python refs. **Exit 0 iff every reference conforms** — so CI / the freeze gate can hang on it. A new reference joins the suite the moment it lands (no registration).
 - Portable rendering (host `sort` + plain `awk`, works under mawk/gawk); real-engine refs correctly mapped to `engine-real-v1.json`, the rest to `<axis>-v1.json`.
 - **Verified: 20/20 references conform** — all 6 axes' round-1 language twins + the round-2 real backends (sqlite/local-fs/subprocess/duckdb/datafusion/parquet/delta), green in one run.
 - `contracts/conformance/README.md` documents `make conformance` + a sample matrix.
@@ -1361,16 +1361,16 @@ This is the 0f deliverable's core (the suite runner). A per-RPC latency benchmar
 
 ## 2026-05-31 — Real Arrow Flight transport — the last in-process data-leg stand-in retired
 
-Replaced the in-process Arrow-IPC registry with a REAL `pyarrow.flight` transport in `examples/format/parquet-py` — the only reference where the bulk-data leg is now *fully* real (real Parquet files + real Flight wire).
+Replaced the in-process Arrow-IPC registry with a REAL `pyarrow.flight` transport in `plugins/format/parquet-py` — the only reference where the bulk-data leg is now *fully* real (real Parquet files + real Flight wire).
 
-- **`examples/format/parquet-py/flight.py`** — a real `FlightServerBase` on an ephemeral localhost port. `put(table)` hosts the table + returns `ArrowStream{endpoint=grpc://host:port, ticket}`; `flight_pull(stream)` dials the descriptor's endpoint and `DoGet`s the ticket — a real Flight round-trip over a TCP socket. Single-use tickets (DoGet consumes — SEC-14).
+- **`plugins/format/parquet-py/flight.py`** — a real `FlightServerBase` on an ephemeral localhost port. `put(table)` hosts the table + returns `ArrowStream{endpoint=grpc://host:port, ticket}`; `flight_pull(stream)` dials the descriptor's endpoint and `DoGet`s the ticket — a real Flight round-trip over a TCP socket. Single-use tickets (DoGet consumes — SEC-14).
 - **Both directions are real:** the PLUGIN hosts a Flight server for Resolve results (the harness DoGets); the CALLER (harness) hosts a Flight server for Append/Merge/Overwrite sources (the plugin DoGets). Matches the contract's "Resolve → producer-hosted; the format pulls from a caller-hosted source" — both `PRODUCER_HOSTED` (data-holder hosts, data-needer DoGets).
 - **Zero contract change:** the `common.v1.ArrowStream {endpoint, ticket, transport=FLIGHT, role}` descriptor was always real-Flight-shaped; only the implementation swapped (in-process dict → real Flight server). `streams.py` deleted from parquet-py; `server.py` + `harness_test.py` use `flight.py`. Still passes the SAME shared `format-v1.json` + the real-Parquet-files test. Green in `python:3.12`.
 - This proves the in-process registry was always a transport CHOICE, not a contract limitation. The other refs keep it for simplicity; parquet-py is the canonical real-Flight demonstration.
 
 **Significance:** the last "stand-in" in the data plane is retired (in this reference). Across rounds 1+2 the DATA was already real typed Arrow (engine/format); now the TRANSPORT is real Arrow Flight too. The data-plane contract is validated end-to-end with real backends AND a real wire.
 
-**Files:** `examples/format/parquet-py/{flight.py,server.py,harness_test.py,README.md}` (−`streams.py`). No proto/SDK/vector change.
+**Files:** `plugins/format/parquet-py/{flight.py,server.py,harness_test.py,README.md}` (−`streams.py`). No proto/SDK/vector change.
 
 ---
 
@@ -1379,8 +1379,8 @@ Replaced the in-process Arrow-IPC registry with a REAL `pyarrow.flight` transpor
 Sixth + final round-2 axis, via option (b) two REAL backends. **Round 2 is now complete — all six data-plane axes have a technologically-divergent real backend.**
 
 - **Real Arrow data leg, BOTH directions:** unlike the toy refs (string-row registry), the source rows for Append/Merge/Overwrite are staged as real Arrow (Arrow IPC) and Resolve results pulled back as real Arrow — `streams.py` (shared with the engine pair). This is the full typed-Arrow data leg for format, retiring the last in-process-stand-in for these refs.
-- **`examples/format/parquet-py`** (pyarrow): writes real `.parquet` files per table; full Append→scan→Merge(upsert)→Overwrite→Maintain(compact) lifecycle on real files; backend test asserts real Parquet files land on disk + readable.
-- **`examples/format/delta-py`** (`deltalake`): backs the table with a real **Delta Lake** table (transaction log over Parquet). Earns **time travel** (`test_delta_time_travel`: two appends → versions 0/1; read v0 back → prior state) — the versioned-snapshot substrate the `catalog` axis's branches sit on. Only `store.py` differs from parquet; `server.py`/`streams.py` identical. (deltalake's Rust runtime aborts at interpreter teardown after all logic ran → `os._exit(0)` after PASS.)
+- **`plugins/format/parquet-py`** (pyarrow): writes real `.parquet` files per table; full Append→scan→Merge(upsert)→Overwrite→Maintain(compact) lifecycle on real files; backend test asserts real Parquet files land on disk + readable.
+- **`plugins/format/delta-py`** (`deltalake`): backs the table with a real **Delta Lake** table (transaction log over Parquet). Earns **time travel** (`test_delta_time_travel`: two appends → versions 0/1; read v0 back → prior state) — the versioned-snapshot substrate the `catalog` axis's branches sit on. Only `store.py` differs from parquet; `server.py`/`streams.py` identical. (deltalake's Rust runtime aborts at interpreter teardown after all logic ran → `os._exit(0)` after PASS.)
 - **Both pass the SAME shared `format-v1.json`** the in-memory + Parquet refs use (format data is provider-neutral rows). All FOUR format refs green (inmemory-go, inmemory-py, parquet-py, delta-py). Verified in `python:3.12` / `golang:1.25`.
 
 **🎉 ROUND 2 COMPLETE — 6/6 data-plane axes with a real divergent backend, each passing its shared golden vectors + a backend-specific semantic test:**
@@ -1393,7 +1393,7 @@ Sixth + final round-2 axis, via option (b) two REAL backends. **Round 2 is now c
 
 This is the full ADR-003 rigor: every data-plane contract is now validated by running code in two languages (round 1, wire contract) AND a technologically-divergent real backend (round 2, semantic). The typed-Arrow gap is retired for engine + format. **The remaining gap before `v1`** is just the real Arrow Flight transport (all data legs still use an in-process IPC registry stand-in) + 0f conformance-suite formalization + 0h peer review/freeze.
 
-**Files:** `examples/format/{parquet-py,delta-py}/**`. No proto/SDK/vector change.
+**Files:** `plugins/format/{parquet-py,delta-py}/**`. No proto/SDK/vector change.
 
 ---
 
@@ -1402,19 +1402,19 @@ This is the full ADR-003 rigor: every data-plane contract is now validated by ru
 The first round-2 axis done via **option (b): two REAL backends** (ADR-003's literal "duckdb + datafusion" example), not toy + real. Two genuinely different SQL engine technologies agree on one shared golden-vector file.
 
 - **`contracts/conformance/engine-real-v1.json`** — REAL typed SQL (`CREATE TABLE orders (id INTEGER, region VARCHAR, amount INTEGER)`, `INSERT`, `SELECT … WHERE … / LIMIT`) with typed-Arrow result assertions (row_count + projected columns + rows_contain with TYPED values). Distinct from the round-1 toy `engine-v1.json` (which validates the wire contract via the in-memory mini-SQL refs).
-- **`examples/engine/duckdb-py`** (DuckDB 1.5.3) + **`examples/engine/datafusion-py`** (Apache DataFusion 53.0.0) — both execute the same SQL, both return results as **real typed Arrow**. Only `store.py` differs between them; `server.py`/`streams.py`/`harness_test.py` are identical (the contract is the same, only the engine changes). Both green in `python:3.12`.
+- **`plugins/engine/duckdb-py`** (DuckDB 1.5.3) + **`plugins/engine/datafusion-py`** (Apache DataFusion 53.0.0) — both execute the same SQL, both return results as **real typed Arrow**. Only `store.py` differs between them; `server.py`/`streams.py`/`harness_test.py` are identical (the contract is the same, only the engine changes). Both green in `python:3.12`.
 - **Retires the typed-Arrow gap for engine:** the result leg is now **real Arrow IPC** (typed schema + columnar batches, serialized + read back with pyarrow via `streams.py`), not the toy string-row stand-in. The transport is still an in-process registry (Flight deferred), but the DATA is genuine typed Arrow.
 - Deps install cleanly + fast in-container (duckdb/datafusion/pyarrow, ~8s). The toy `inmemory-go`/`inmemory-py` engine refs remain as the round-1 wire-contract validation.
 
 **Round 2 progress: 5 of 6 axes.** `state`=sqlite, `storage`=local-fs, `catalog`=sqlite, `runtime`=subprocess, **`engine`=duckdb+datafusion**. Remaining: **`format`** (parquet + delta/iceberg — real Arrow files; the last + heaviest).
 
-**Files:** `contracts/conformance/engine-real-v1.json` + README, `examples/engine/duckdb-py/**`, `examples/engine/datafusion-py/**`. No proto/SDK change.
+**Files:** `contracts/conformance/engine-real-v1.json` + README, `plugins/engine/duckdb-py/**`, `plugins/engine/datafusion-py/**`. No proto/SDK change.
 
 ---
 
 ## 2026-05-31 — Round 2: `runtime` = subprocess (real backend) — OS process isolation
 
-Fourth round-2 real backend. `examples/runtime/subprocess-py/` — each `Execute` runs the work unit in a real CHILD OS PROCESS (`worker.py`) instead of in-thread. Runtime is the "where does the code run" axis; this one actually runs it elsewhere.
+Fourth round-2 real backend. `plugins/runtime/subprocess-py/` — each `Execute` runs the work unit in a real CHILD OS PROCESS (`worker.py`) instead of in-thread. Runtime is the "where does the code run" axis; this one actually runs it elsewhere.
 
 - **Passes the SAME shared vectors** (`contracts/conformance/runtime-v1.json`) — the toy work_spec (`{steps, rows, indeterminate, fail}`) is abstract enough a child-process runtime interprets it identically (emit `steps` progress events ± fraction, then a completion). All three runtime refs (inmemory-go, inmemory-py, subprocess-py) green on one shared file.
 - **Two isolation properties the in-thread runtime CANNOT show:** `test_work_runs_in_a_separate_process` (work unit PID ≠ server's) and `test_each_work_unit_gets_its_own_process` (two Execute calls → two DISTINCT child PIDs).
@@ -1422,13 +1422,13 @@ Fourth round-2 real backend. `examples/runtime/subprocess-py/` — each `Execute
 
 **Round 2 progress: 4 of 6 axes** (`state`, `storage`, `catalog`, `runtime`). Remaining: **`format` + `engine`** — the genuinely heavy ones (real Arrow Flight + Parquet / DuckDB) that need conformance-vector REWORK first (engine vectors are toy-mini-SQL-specific; format carries the bulk leg as an in-process stand-in). Not drop-in like the other four — surfaced for a decision (see [current.md](current.md)).
 
-**Files:** `examples/runtime/subprocess-py/**`. No proto/SDK/vector change.
+**Files:** `plugins/runtime/subprocess-py/**`. No proto/SDK/vector change.
 
 ---
 
 ## 2026-05-31 — Round 2: `catalog` = sqlite (real backend) — durable branches/ledger + concurrent-merge safety
 
-Third round-2 real backend. `examples/catalog/sqlite-py/` — branches, their snapshots, and the idempotency ledger live in sqlite (real transactional SQL DB, file, WAL) rather than an in-memory dict.
+Third round-2 real backend. `plugins/catalog/sqlite-py/` — branches, their snapshots, and the idempotency ledger live in sqlite (real transactional SQL DB, file, WAL) rather than an in-memory dict.
 
 - **Passes the SAME shared vectors** (`contracts/conformance/catalog-v1.json`) — same model + deterministic snapshot scheme. All three catalog refs (inmemory-go, inmemory-py, sqlite-py) green on one shared file.
 - **Two properties the in-memory catalog CANNOT show:**
@@ -1438,13 +1438,13 @@ Third round-2 real backend. `examples/catalog/sqlite-py/` — branches, their sn
 
 **Round 2 progress: 3 of 6 axes** (`state`=sqlite, `storage`=local-fs, `catalog`=sqlite). Remaining: `format`, `engine`, `runtime` (the Arrow-heavy / execution ones).
 
-**Files:** `examples/catalog/sqlite-py/**`. No proto/SDK/vector change.
+**Files:** `plugins/catalog/sqlite-py/**`. No proto/SDK/vector change.
 
 ---
 
 ## 2026-05-31 — Round 2: `storage` = local-fs (real backend) — path containment + tenant isolation
 
-Second round-2 real backend. `examples/storage/localfs-go/` — a `storage` plugin that vends credentials scoped to a REAL local filesystem path under a per-tenant root, where the in-memory refs just echo the requested prefix into a JSON scope receipt.
+Second round-2 real backend. `plugins/storage/localfs-go/` — a `storage` plugin that vends credentials scoped to a REAL local filesystem path under a per-tenant root, where the in-memory refs just echo the requested prefix into a JSON scope receipt.
 
 - **Provider-neutral vectors:** `storage`'s `prefix` is provider-specific (the in-memory refs used `s3://…` URIs). Changed `contracts/conformance/storage-v1.json` to scheme-less LOGICAL prefixes (`warehouse/orders`, …) so every backend can resolve them per its own scheme; the in-memory refs (which echo) re-pass unchanged (verified). The receipt MAY carry extra provider-specific fields (local-fs adds `resolved_path`) the vectors ignore.
 - **Passes the SAME shared vectors** through the stub gateway (scope = tenant + logical prefix + mode + short TTL). All three `storage` refs (inmemory-go, inmemory-py, localfs-go) green on one shared file.
@@ -1455,13 +1455,13 @@ Second round-2 real backend. `examples/storage/localfs-go/` — a `storage` plug
 
 **Round 2 progress: 2 of 6 axes** have a divergent real backend (`state`=sqlite, `storage`=local-fs). Pattern holds: real backend + same shared vectors + a backend-specific semantic test.
 
-**Files:** `contracts/conformance/storage-v1.json` (logical prefixes), `examples/storage/localfs-go/**`. No proto/SDK change.
+**Files:** `contracts/conformance/storage-v1.json` (logical prefixes), `plugins/storage/localfs-go/**`. No proto/SDK change.
 
 ---
 
 ## 2026-05-31 — ROUND 2 begins: `state` = sqlite (real backend) — durability + linearizable CAS
 
-The first **technologically-divergent** reference (ADR-003's *spirit*, not just letter): a third `state` implementation backed by **sqlite** (real embedded transactional SQL DB, file-on-disk, WAL) rather than an in-memory hashmap. `examples/state/sqlite-py/`.
+The first **technologically-divergent** reference (ADR-003's *spirit*, not just letter): a third `state` implementation backed by **sqlite** (real embedded transactional SQL DB, file-on-disk, WAL) rather than an in-memory hashmap. `plugins/state/sqlite-py/`.
 
 - **Passes the SAME shared golden vectors** (`contracts/conformance/state-v1.json`) the in-memory twins pass — a real backend conforming to the identical wire contract is the actual round-2 ADR-003 evidence. All three `state` refs (inmemory-go, inmemory-py, sqlite-py) green on one shared file.
 - **Two properties the in-memory twins CANNOT show, now actually tested:**
@@ -1472,7 +1472,7 @@ The first **technologically-divergent** reference (ADR-003's *spirit*, not just 
 
 **Significance:** this is the first axis where the round-2 SEMANTIC gate (not just the wire-contract gate) is exercised on a divergent backend. The in-memory `state` CAS is serialized by a mutex (also linearizable, but in-process + non-durable); sqlite proves the contract holds on a backend with a genuinely different consistency/durability profile — exactly the "orthogonality assumption" rigor ADR-003 exists for.
 
-**Files:** `examples/state/sqlite-py/**`. No proto/SDK change.
+**Files:** `plugins/state/sqlite-py/**`. No proto/SDK change.
 
 ---
 
@@ -1489,7 +1489,7 @@ Sixth + final data-plane axis through the 0d wire-contract two-reference gate �
 
 **What round 1 is NOT (per the scope caveat):** all twelve are in-memory twins — the WIRE-contract gate. The technologically-divergent real-backend pair (round 2: state=sqlite, storage=local-fs, …) + the typed-Arrow pass are still required before any axis → `v1`. See [backlog.md](backlog.md).
 
-**Files:** `contracts/conformance/state-v1.json`, `contracts/proto/rat/state/v1/state.proto`, `contracts/sdks/**`, `examples/state/inmemory-go/**`, `examples/state/inmemory-py/**`.
+**Files:** `contracts/conformance/state-v1.json`, `contracts/proto/rat/state/v1/state.proto`, `contracts/sdks/**`, `plugins/state/inmemory-go/**`, `plugins/state/inmemory-py/**`.
 
 ---
 
@@ -1499,14 +1499,14 @@ Fifth data-plane axis through the 0d two-reference (wire-contract) gate. The ric
 
 - **contracts/conformance/catalog-v1.json** — a STATEFUL lifecycle: GetTable(main) → CreateBranch(run-42 from main) → GetTable(on branch) → MergeBranch with optimistic-concurrency ACCEPT (`expected_into_snapshot` matches) + idempotency_key → idempotent retry (`already_applied=true`) → MergeBranch REJECT (`FAILED_PRECONDITION`, target moved) ; + stateless errors (unknown table `NOT_FOUND`, empty id `INVALID_ARGUMENT`). Exercises the MERGE-SAFETY contract (reviews/06 #8) for real. Deterministic snapshot scheme (seed main@snap-0; merge → snap-<counter>) keeps the two impls in lockstep; the harness gained per-step `expect.code` so an error can be asserted mid-sequence.
 - **catalog.proto:** added `(rat.common.v1.capability)` to all 3 RPCs (get-table/create-branch/merge-branch) + annotations import (was comment-only) so the gateway routes them. SDKs regenerated.
-- **inmemory-go** (`examples/catalog/inmemory-go/`): store(branches/merges ledger)/server/main + the unary stub gateway re-pointed at CatalogService + harness. Green in `golang:1.25`.
-- **inmemory-py** (`examples/catalog/inmemory-py/`): from-scratch second reference mirroring the snapshot model. Green in `python:3.12`.
+- **inmemory-go** (`plugins/catalog/inmemory-go/`): store(branches/merges ledger)/server/main + the unary stub gateway re-pointed at CatalogService + harness. Green in `golang:1.25`.
+- **inmemory-py** (`plugins/catalog/inmemory-py/`): from-scratch second reference mirroring the snapshot model. Green in `python:3.12`.
 
 **Verified (containers):** all TEN references (format+engine+storage+runtime+catalog, Go+Python) green together.
 
 **Scope (per the round-1/round-2 split):** in-memory twins — wire-contract gate. A real divergent backend (e.g. sqlite-catalog) is round-2.
 
-**Files:** `contracts/conformance/catalog-v1.json`, `contracts/proto/rat/catalog/v1/catalog.proto`, `contracts/sdks/**` (regenerated), `examples/catalog/inmemory-go/**`, `examples/catalog/inmemory-py/**`.
+**Files:** `contracts/conformance/catalog-v1.json`, `contracts/proto/rat/catalog/v1/catalog.proto`, `contracts/sdks/**` (regenerated), `plugins/catalog/inmemory-go/**`, `plugins/catalog/inmemory-py/**`.
 
 ---
 
@@ -1522,7 +1522,7 @@ Implemented [ADR-008](../docs/architecture/adrs/008-streaming-capability-invocat
 
 **Behavior-preserving — verified:** the **unchanged** runtime golden vectors still pass, now over the mediated streaming path (Go `golang:1.25`); INVALID_ARGUMENT relays through the streaming gateway verbatim. All EIGHT references (format+engine+storage+runtime, Go+Python) green together after the invoke.proto + SDK changes.
 
-**Files:** `contracts/proto/rat/core/v1/invoke.proto`, `contracts/proto/rat/runtime/v1/runtime.proto`, `contracts/sdks/**` (regenerated), `docs/architecture/adrs/008-*.md` (§2 + Migration amended), `examples/runtime/inmemory-go/{gateway_test.go,harness_test.go}`, `examples/runtime/inmemory-py/README.md`.
+**Files:** `contracts/proto/rat/core/v1/invoke.proto`, `contracts/proto/rat/runtime/v1/runtime.proto`, `contracts/sdks/**` (regenerated), `docs/architecture/adrs/008-*.md` (§2 + Migration amended), `plugins/runtime/inmemory-go/{gateway_test.go,harness_test.go}`, `plugins/runtime/inmemory-py/README.md`.
 
 ---
 
@@ -1543,14 +1543,14 @@ Resolved the streaming-mediation finding the `runtime` 0d reference surfaced. **
 Fourth data-plane axis through the 0d two-reference gate, and the **first streaming axis**: `Execute(ExecuteRequest) returns (stream ExecuteResponse)` — interim `ExecuteProgress` + terminal `ExecuteCompleted` (a oneof).
 
 - **contracts/conformance/runtime-v1.json** — drives a tiny work_spec (`{steps, rows, indeterminate, fail}`): emit `steps` progress messages (fraction `(i+1)/steps`, or **absent** when indeterminate — exercising the proto3 optional double presence) then a terminal completion (success + `WriteResult.rows_affected`, or `success=false`+error). Vectors: determinate / indeterminate / zero-progress / failure + an empty-work_spec error.
-- **inmemory-go** (`examples/runtime/inmemory-go/`): `spec`/`server`/`main` + streaming harness. Green in `golang:1.25`.
-- **inmemory-py** (`examples/runtime/inmemory-py/`): from-scratch second reference (server-streaming generator). Green in `python:3.12`.
+- **inmemory-go** (`plugins/runtime/inmemory-go/`): `spec`/`server`/`main` + streaming harness. Green in `golang:1.25`.
+- **inmemory-py** (`plugins/runtime/inmemory-py/`): from-scratch second reference (server-streaming generator). Green in `python:3.12`.
 
 **⚠️ Contract finding surfaced (the 0d forcing function working as designed, like ADR-007):** ADR-005's `core/v1 CapabilityInvokeService.Invoke` is **unary**, but `runtime.Execute` is **server-streaming** — so the stub gateway **cannot mediate a streaming capability**. Runtime is therefore driven **directly** (bypassing the gateway), meaning its C2/C5/C7/C8 + traceparent seams are currently unenforced. Freeze-relevant (`invoke.proto` is in `rat/1`, and any future streaming axis hits this). Captured in [ideas/inbox.md](../ideas/inbox.md) with three resolutions (add `InvokeStream` / direct-dial-with-token / progress-to-event-bus); leaning toward `InvokeStream`. Candidate follow-up ADR queued in [backlog.md](backlog.md). The runtime capability annotation was **deferred** (only needed for gateway routing, which is blocked) — so NO proto change, NO SDK regen this commit.
 
 **Verified (containers):** all EIGHT references (format + engine + storage + runtime, Go + Python) green together.
 
-**Files:** `contracts/conformance/runtime-v1.json` + README, `examples/runtime/inmemory-go/**`, `examples/runtime/inmemory-py/**`, `ideas/inbox.md`.
+**Files:** `contracts/conformance/runtime-v1.json` + README, `plugins/runtime/inmemory-go/**`, `plugins/runtime/inmemory-py/**`, `ideas/inbox.md`.
 
 ---
 
@@ -1573,14 +1573,14 @@ Third data-plane axis through the 0d two-reference gate. Storage owns credential
 - **First reference that CONSUMES identity from the metadata envelope.** Tenant-scoping is storage's whole job, so both impls read `context.identity.tenant` from the `rat-callmeta-bin` metadata header (ADR-007) — never a request field, so a caller can't request another tenant's creds. This exercises the ADR-007 **provider-side read** that format/engine didn't.
 - **Capability annotation rolled out to storage.** `storage.proto`'s `VendCredentials` had the capability only in a comment (freeze-blocker #5 only annotated format+engine); added `option (rat.common.v1.capability) = "rat://storage/v1/vend-credentials"` (+ the annotations import) so the gateway can route it. Additive/wire-compatible. Partial progress on the backlog "roll `(rat.capability)` across remaining axes" item. SDK delta: one TS file (`storage_pb.ts`); Rust codegen doesn't emit method options (no diff); Go/Python generated files are gitignored (see finding below).
 - **Conformance via a scope receipt.** The credential blob is opaque/provider-specific in production; the references encode the granted scope as JSON `{tenant, prefix, mode, expires_unix_ms}` so the harness can assert the C7 obligation (scope.tenant == caller tenant + requested prefix + mode + short TTL). Added a `TestStorage_TenantComesFromMetadataNotRequest` / `test_tenant_from_metadata_not_request` structural check (vend under a different caller tenant → creds scoped to THAT tenant).
-- **inmemory-go** (`examples/storage/inmemory-go/`): creds/server/main + the axis-generic stub gateway re-pointed at `StorageService` + harness. Green in `golang:1.25`.
-- **inmemory-py** (`examples/storage/inmemory-py/`): from-scratch second reference. Green in `python:3.12`.
+- **inmemory-go** (`plugins/storage/inmemory-go/`): creds/server/main + the axis-generic stub gateway re-pointed at `StorageService` + harness. Green in `golang:1.25`.
+- **inmemory-py** (`plugins/storage/inmemory-py/`): from-scratch second reference. Green in `python:3.12`.
 
 **Verified (containers):** all SIX references (format + engine + storage, Go + Python) green together.
 
 **⚠️ Pre-existing repo finding surfaced (not introduced here):** the root `.gitignore` ignores `*.pb.go` (line 28) and `*_pb2.py` (line 29) — so the **Go SDK and the Python message classes are NOT committed** (only TS/Rust + Python grpc-stubs are tracked). This contradicts ADR-006 D1's "vendored SDKs are committed." References build fine against locally-regenerated SDKs (and CI regenerates), but a fresh clone can't import the Go/Python SDK without `make gen-sdks`. Logged in [backlog.md](backlog.md) for a decision.
 
-**Files:** `contracts/conformance/storage-v1.json` + README, `contracts/proto/rat/storage/v1/storage.proto` (annotation), `contracts/sdks/typescript/rat/storage/v1/storage_pb.ts`, `examples/storage/inmemory-go/**`, `examples/storage/inmemory-py/**`.
+**Files:** `contracts/conformance/storage-v1.json` + README, `contracts/proto/rat/storage/v1/storage.proto` (annotation), `contracts/sdks/typescript/rat/storage/v1/storage_pb.ts`, `plugins/storage/inmemory-go/**`, `plugins/storage/inmemory-py/**`.
 
 ---
 
@@ -1590,13 +1590,13 @@ Second data-plane axis through the 0d two-reference gate, reusing the format pat
 
 - **Shared golden vectors** — `contracts/conformance/engine-v1.json` (+ README grammar note): CREATE/INSERT via Execute (rows_affected 0 vs 1), Query (SELECT, WHERE, projection), Preview (bounded by `limit`), + `rows_exclude_keys` to assert projection drops columns; 2 error vectors (unknown table, empty SQL).
 - **Mini-SQL** — a deliberately tiny, fully-specified grammar (`CREATE TABLE` / `INSERT … VALUES` / `SELECT … [WHERE] [LIMIT]`) so two independent parsers stay in lockstep: the SAME three regexes in Go (`sql.go`) and Python (`sql.py`). The point under test is the engine WIRE contract, not SQL fidelity. Self-contained in-memory tables (the engine↔format handoff is separate integration work, noted).
-- **inmemory-go** (`examples/engine/inmemory-go/`) — first reference: store/sql/stream/server/main + a stub gateway (`gateway_test.go`, the axis-generic ADR-005/007 stub re-pointed at `EngineService`) + harness routing Execute/Query/Preview through the gateway (C5 + C8 + traceparent gate). Green in `golang:1.25`.
-- **inmemory-py** (`examples/engine/inmemory-py/`) — second, from-scratch reference; imports the vendored Python SDK; loads the same JSON. Green in `python:3.12`.
+- **inmemory-go** (`plugins/engine/inmemory-go/`) — first reference: store/sql/stream/server/main + a stub gateway (`gateway_test.go`, the axis-generic ADR-005/007 stub re-pointed at `EngineService`) + harness routing Execute/Query/Preview through the gateway (C5 + C8 + traceparent gate). Green in `golang:1.25`.
+- **inmemory-py** (`plugins/engine/inmemory-py/`) — second, from-scratch reference; imports the vendored Python SDK; loads the same JSON. Green in `python:3.12`.
 - Context rides in `rat-callmeta-bin` metadata throughout (ADR-007) — these references are built natively on the post-migration contract.
 
 **Verified (containers):** all FOUR references (format + engine, Go + Python) green together — `go test ./...` (both Go) and `python harness_test.py` (both Python).
 
-**Files:** `contracts/conformance/engine-v1.json` + README, `examples/engine/inmemory-go/**`, `examples/engine/inmemory-py/**`.
+**Files:** `contracts/conformance/engine-v1.json` + README, `plugins/engine/inmemory-go/**`, `plugins/engine/inmemory-py/**`.
 
 ---
 
@@ -1614,7 +1614,7 @@ Implemented [ADR-007](../docs/architecture/adrs/007-call-context-transport.md) (
 
 **Caveat (recorded, non-blocking):** `make gen-check` hit the known BSR rate-limit (429) on its *temp* regen (the done.md 2026-05-31 multi-SDK caveat) → false "python stale." The committed SDKs are correct — proven by both harnesses passing against them. Network-bound check, not a content defect.
 
-**Files:** `contracts/proto/**` (20 files), `contracts/sdks/**` (regenerated), `examples/format/inmemory-go/{gateway_test.go,harness_test.go}`, `examples/format/inmemory-py/harness_test.py`, `roadmap/**`.
+**Files:** `contracts/proto/**` (20 files), `contracts/sdks/**` (regenerated), `plugins/format/inmemory-go/{gateway_test.go,harness_test.go}`, `plugins/format/inmemory-py/harness_test.py`, `roadmap/**`.
 
 ---
 
@@ -1637,7 +1637,7 @@ The [ADR-003](../docs/architecture/adrs/003-two-references-before-contract-freez
 - **Shared golden vectors** — `contracts/conformance/format-v1.json` (+ README). Language-neutral, executable: the *single source of truth* for format/v1 behavior (lifecycle append→scan→merge→overwrite→maintain + 2 error vectors). This is how "run against each other on golden data" is met *literally* (one file, two impls) rather than by hand-copied-but-equal vectors.
 - **Go harness refactored** — `inmemory-go/harness_test.go` now loads the shared JSON (was inline vectors) and drives everything through a generic vector executor.
 - **Stub ADR-005 invoke-gateway** — `inmemory-go/gateway_test.go` (~150 LOC, test-only, throwaway). The Go harness no longer dials FormatService directly; it goes harness → `core/v1 CapabilityInvokeService.Invoke` → format plugin. The gateway is a **faithful generic byte-relay**: a passthrough codec (`Name()=="proto"`) forwards the serialized payload without deserializing it, capability→method routing is read from the `(rat.common.v1.capability)` method annotation (freeze-blocker #5 machinery, not a hand map), and it enforces C5 (capability allowlist) + emits C8 audit (asserted: one record per mediated call). Validates the mediation seams, not just the plugin-to-plugin data contract.
-- **Second reference, `inmemory-py`** — `examples/format/inmemory-py/` (store.py / streams.py / server.py / main.py / harness_test.py + README + pinned requirements). From-scratch Python code path (not a Go port), imports the vendored Python SDK via `PYTHONPATH`. Its harness loads the SAME shared JSON.
+- **Second reference, `inmemory-py`** — `plugins/format/inmemory-py/` (store.py / streams.py / server.py / main.py / harness_test.py + README + pinned requirements). From-scratch Python code path (not a Go port), imports the vendored Python SDK via `PYTHONPATH`. Its harness loads the SAME shared JSON.
 
 **Verified (containers, no host installs):**
 - Go (`golang:1.25`): `go test ./...` green — full lifecycle + error vectors, all mediated through the stub gateway. `go.mod` cleanly promotes `google.golang.org/protobuf` to a direct dep (`go mod tidy`).
@@ -1647,13 +1647,13 @@ The [ADR-003](../docs/architecture/adrs/003-two-references-before-contract-freez
 
 **Still open before `format/v1` advances `v1-preview`→`v1`:** the identity-transport decision above; a typed-Arrow conformance pass (the bulk leg is still an in-process registry stand-in in both refs).
 
-**Files:** `contracts/conformance/**`, `examples/format/inmemory-go/{harness_test.go,gateway_test.go,go.mod,go.sum}`, `examples/format/inmemory-py/**`, `ideas/inbox.md`.
+**Files:** `contracts/conformance/**`, `plugins/format/inmemory-go/{harness_test.go,gateway_test.go,go.mod,go.sum}`, `plugins/format/inmemory-py/**`, `ideas/inbox.md`.
 
 ---
 
 ## 2026-05-31 — 0d started: first reference plugin (rat-format-inmemory-go) — commit `c472620`
 
-First real RAT v3 *code*: a reference `kind: format` plugin under `examples/format/inmemory-go/` (ADR-006 D2 layout), implementing the full `format/v1` wire contract to validate it by building against it (ADR-003 forcing function), not as production storage.
+First real RAT v3 *code*: a reference `kind: format` plugin under `plugins/format/inmemory-go/` (ADR-006 D2 layout), implementing the full `format/v1` wire contract to validate it by building against it (ADR-003 forcing function), not as production storage.
 
 - `store.go` — in-memory ordered-row tables: append / merge(upsert on keys) / overwrite / scan / maintain; per-mutation snapshot.
 - `stream.go` — in-process stand-in for the out-of-band Arrow leg: single-use ticket registry; `Resolve` returns producer-hosted `ArrowStream{transport=FLIGHT}`; mutating RPCs pull a caller-hosted source. (Real Arrow Flight deferred to a production reference.)
@@ -1667,9 +1667,9 @@ First real RAT v3 *code*: a reference `kind: format` plugin under `examples/form
 
 **Process note:** a long cancelled tool-batch mid-session left a stale compiled 15MB binary + a broken `server.go` (dead `errUnused` + stray brace) uncommitted, and the first plugin commit + roadmap edits never landed. Terminal stdout was also corrupting. Recovered by checking real git/file state (not terminal output), rewriting `server.go` clean, removing the binary, re-verifying green in-container, then committing fresh as `c472620`.
 
-**Next (ADR-003 gate):** a SECOND independent `format` impl — e.g. `examples/format/inmemory-py` — running the SAME golden vectors, before `format/v1` can freeze. (The sequencing panel — see chat — recommends also routing the harness's control RPCs through a ~200-LOC throwaway stub invoke-gateway so the freeze also validates the ADR-005 mediation seams, not just the plugin-to-plugin data contract.)
+**Next (ADR-003 gate):** a SECOND independent `format` impl — e.g. `plugins/format/inmemory-py` — running the SAME golden vectors, before `format/v1` can freeze. (The sequencing panel — see chat — recommends also routing the harness's control RPCs through a ~200-LOC throwaway stub invoke-gateway so the freeze also validates the ADR-005 mediation seams, not just the plugin-to-plugin data contract.)
 
-**Files:** `examples/format/inmemory-go/**`, `contracts/sdks/go/{go.mod,go.sum}`, `contracts/.gitignore`.
+**Files:** `plugins/format/inmemory-go/**`, `contracts/sdks/go/{go.mod,go.sum}`, `contracts/.gitignore`.
 
 ---
 
@@ -1708,12 +1708,12 @@ First real RAT v3 *code*: a reference `kind: format` plugin under `examples/form
 **What:** Before scaffolding 0d (first reference implementations — the first code), pinned three project-shaping decisions in [ADR-006](../docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md), prompted by Tom's point that plugins must be authorable in *any* language (ADR-001 / vision #3), not just Go.
 
 - **D1 SDK distribution:** vendored `contracts/sdks/<lang>/` (Go/Python/TS as peer committed dirs, none privileged), regenerated-not-hand-edited; **BSR publication deferred** as the later external-distribution channel. Mirrors Kubernetes (vendor for the monorepo, publish for outsiders). Chosen over BSR-now (needs network + org; sandbox blocks) and protos-only/local-codegen (multi-step build in a fiddly-toolchain env).
-- **D2 layout:** reference plugins under `examples/<axis>/<impl>-<lang>/`; ADR-003's two-reference rule satisfied per critical axis by two impls in *different* languages running shared golden-data vectors — cross-language interop is the strongest form of the rule.
+- **D2 layout:** reference plugins under `plugins/<axis>/<impl>-<lang>/`; ADR-003's two-reference rule satisfied per critical axis by two impls in *different* languages running shared golden-data vectors — cross-language interop is the strongest form of the rule.
 - **D3 codegen:** containerized `buf generate` driven by a committed `scripts/gen-sdks.sh`. Captured two gotchas already hit: the generated Go gRPC stubs need Go ≥ 1.25 (base `golang:1.23` image failed to build the SDK this session — pin the image or pin grpc/protobuf), and `buf generate` uses remote buf.build plugins (network) so the script must handle local-plugin fallback.
 
 **Process note / correction:** earlier this session I claimed the Go SDK "compiles clean" — it does NOT yet; codegen *produces* 42 Go files but compiling them failed on the Go-version floor above. ADR-006 D3 records the real situation; resolving it is the first 0d task.
 
-**Next:** scaffold per D1/D2/D3 — `buf.gen.<lang>.yaml` + `scripts/gen-sdks.sh` (settle the Go-version/grpc-pin), generate+commit `sdks/`, drop the transient `gen/` path, then `examples/format/inmemory-go/`.
+**Next:** scaffold per D1/D2/D3 — `buf.gen.<lang>.yaml` + `scripts/gen-sdks.sh` (settle the Go-version/grpc-pin), generate+commit `sdks/`, drop the transient `gen/` path, then `plugins/format/inmemory-go/`.
 
 **Files:** `docs/architecture/adrs/006-sdk-distribution-and-plugin-layout.md` (new), `docs/architecture/adrs/README.md`.
 

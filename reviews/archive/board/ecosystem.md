@@ -21,7 +21,7 @@ a mechanism.
 `marketplace.proto:45-47` makes `conformed_capabilities` a MANDATORY listing field and the proto
 comment claims it is "which capabilities have passed their axis golden-data suite (C6)". But it is
 a bare `repeated string` the publisher fills in by hand. The reference proves the gap rather than
-closing it: `examples/marketplace/community-py/store.py:45-49,87` simply **hardcodes
+closing it: `plugins/marketplace/community-py/store.py:45-49,87` simply **hardcodes
 `conformed_capabilities = provided_capabilities`**. A `grep` for any linkage between the real
 conformance harness's PASS result and either the manifest or the listing returns **nothing** —
 there is no signed conformance attestation, no machine artifact a marketplace can verify. A
@@ -38,8 +38,8 @@ but the *honesty story* should be written down now so authors aren't told a self
 `plugin.v1.json:88` calls `compatible_core` "A CHECKED compatibility gate (like VSCode
 engines.vscode), **not advisory**." `plugin.v1.json:98` says `provides` is "what the gateway
 enforces at runtime (C5)." Both describe a running core. There is **no core** — no `core/`,
-`cmd/`, `src/`, or `*.rs` outside `contracts/`+`examples/` (verified), and the only invoke-gateway
-is explicitly a `// THROWAWAY STUB` (`examples/state/inmemory-go/gateway_test.go:1-7`). `roadmap/current.md`
+`cmd/`, `src/`, or `*.rs` outside `contracts/`+`plugins/` (verified), and the only invoke-gateway
+is explicitly a `// THROWAWAY STUB` (`plugins/state/inmemory-go/gateway_test.go:1-7`). `roadmap/current.md`
 is honest internally ("OR start Phase 1 (the core)"), but a 3rd-party reading only the frozen
 schema + CONTRACT.md cannot tell **designed** from **working**. They'll assume C2/C5/C7 enforcement,
 capability routing, and `compatible_core` checking exist.
@@ -82,7 +82,7 @@ in-memory refs carry the bulk leg as an "**in-process row registry rather than a
 stream**." `composition/README.md:80-84` is the smoking gun: the engine refs "**ignored
 `QueryRequest.tables` and carried results on an in-process stand-in incompatible with the format's
 real Flight**" — the *intended* behavior only appeared when composition forced it. A 3rd-party who
-starts from `examples/engine/inmemory-py` (the natural starting template) learns a data path that
+starts from `plugins/engine/inmemory-py` (the natural starting template) learns a data path that
 **does not interoperate**. The real refs (parquet-py, duckdb-py) exist, but nothing flags "start
 here, not there."
 **Recommendation:** label round-1 refs `EXAMPLE — WIRE CONTRACT ONLY, NOT A STARTER TEMPLATE` in
@@ -117,7 +117,7 @@ Otherwise an operator reads a green filter as "this will run" when it means "the
 
 ### 8. [MED] [V2-REGRET] The strategy `options` bytes bag pushes all per-run typing into an unvalidated, undiscoverable blob
 Per-run strategy parameters (natural key, tracked columns, run timestamp) ride as opaque
-UTF-8-JSON bytes. `examples/strategy/scd2-py/store.py:62` does `json.loads(options.decode("utf-8"))`
+UTF-8-JSON bytes. `plugins/strategy/scd2-py/store.py:62` does `json.loads(options.decode("utf-8"))`
 then `store.py:63-65` accesses `spec["natural_key"]` / `spec["tracked"]` with raw dict indexing — a
 missing or misspelled key is an **uncaught language exception, not the `INVALID_ARGUMENT` the
 ERROR_MODEL mandates** for malformed input. The `metadata_schema` that would describe this blob is

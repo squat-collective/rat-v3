@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Data-dev plane — incremental-embed STRATEGY runner (experiments/data-dev-plane,
-# build-order step 4). Drives the real incremental ELT strategy (examples/strategy/
+# build-order step 4). Drives the real incremental ELT strategy (plugins/strategy/
 # incremental-embed-py) over a live engine + catalog via the capability-invoke gateway:
 # run 1 (initial load) → run 2 (only the delta embeds) → run 2 replay (idempotent, C1).
 # Local DuckLake (no S3 needed). EXPLORATORY + additive.

@@ -29,7 +29,7 @@ Flight, [CONTRACT.md:66-67](../../../contracts/proto/rat/engine/v1/CONTRACT.md#L
 **not how it resolves and binds its inputs.** Composition itself surfaced that "the
 engine references ignored `QueryRequest.tables`" and the test had to *force* the
 intended behaviour — resolve each ref via `format.scan`, bind it, stream over real
-Flight ([examples/composition/README.md:80-84](../../../examples/composition/README.md#L80)). So the
+Flight ([plugins/composition/README.md:80-84](../../../plugins/composition/README.md#L80)). So the
 single most important engine interaction (reading inputs from a format) lives as
 *composition convention*, with no normative text and no conformance vector in the
 frozen contract. Two conformant engines can legitimately disagree on whether
@@ -57,7 +57,7 @@ catalog.proto itself flags it: "the separate gap — how the catalog learns what
 format.Write put on a branch — is the additive commit-linkage RPC, GA-deferred"
 ([catalog.proto:27-30](../../../contracts/proto/rat/catalog/v1/catalog.proto#L27)). Worse,
 there is **no create-table RPC at all** — composition had to register source+target
-*out-of-band* (R3, [composition/README.md:86-90](../../../examples/composition/README.md#L86),
+*out-of-band* (R3, [composition/README.md:86-90](../../../plugins/composition/README.md#L86),
 [ADR-009:86](../../../docs/architecture/adrs/009-data-plane-contract-freeze-v1.md#L86)).
 Net: the canonical pipeline loop (create → write → **register** → merge) has its two
 load-bearing middle steps living *outside* the frozen contracts, even though both
@@ -85,7 +85,7 @@ saga whose saga-primitive (branch isolation) is convention, not contract.
 ### 3. [PROCESS] "Swap the engine, code unchanged" is false for user SQL — the SUM-type divergence pushes portability onto the user
 **Severity: MEDIUM.** Composition found DuckDB's `SUM(int)`→128-bit decimal vs
 DataFusion's→`int64`; the fix was to pin `CAST(SUM(amount) AS BIGINT)` in the golden
-SQL ([composition/README.md:73-79](../../../examples/composition/README.md#L73)). That means an
+SQL ([composition/README.md:73-79](../../../plugins/composition/README.md#L73)). That means an
 engine substitution **does** change result schema unless the *user* pre-CASTs — the
 engine axis guarantees no portable result type system. This is arguably inherent
 (engines bring their own SQL semantics; cross-engine federation is explicitly plugin
@@ -148,7 +148,7 @@ what was tempted, why it stayed a plugin), even if the count is currently 0.
 them through the core invoke gateway, naming no plugin
 ([strategy.proto:20-28](../../../contracts/proto/rat/strategy/v1/strategy.proto#L20)), and
 composition shows the *identical* strategy code across all four substitutions
-([composition/README.md:36-40](../../../examples/composition/README.md#L36)). This is real and it's
+([composition/README.md:36-40](../../../plugins/composition/README.md#L36)). This is real and it's
 the design's best moment. **Honest caveat:** the strategy is this clean partly because
 it *offloads* the format-coupling down a layer — the engine absorbs the
 `format.scan`+Flight binding (Finding 1). The showcase is genuine; it isn't free.

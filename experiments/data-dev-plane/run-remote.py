@@ -52,11 +52,11 @@ def _load_plugin(reldir, bare_modules):
         for m in bare_modules:
             sys.modules.pop(m, None)
 
-_eng = _load_plugin("examples/engine/duckdb-ml-py", ["embed", "store", "streams", "server"])
+_eng = _load_plugin("plugins/engine/duckdb-ml-py", ["embed", "store", "streams", "server"])
 eng_store, eng_server = _eng["store"], _eng["server"]
-_cat = _load_plugin("examples/catalog/ducklake-py", ["store", "server"])
+_cat = _load_plugin("plugins/catalog/ducklake-py", ["store", "server"])
 cat_store, cat_server = _cat["store"], _cat["server"]
-_sto = _load_plugin("examples/storage/minio-s3", ["creds", "server"])
+_sto = _load_plugin("plugins/storage/minio-s3", ["creds", "server"])
 sto_creds, sto_server = _sto["creds"], _sto["server"]
 
 # config

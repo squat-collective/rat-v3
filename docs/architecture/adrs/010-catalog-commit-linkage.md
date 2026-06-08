@@ -29,7 +29,7 @@ The consequence is that the **branch-isolated pipeline** — the v2 model RAT ke
 (`overview.md`) — cannot complete its own **create → write → register → merge** loop on the
 frozen wire. Both ends of the loop (`CreateBranch`, `MergeBranch`) are contracted; its
 load-bearing middle is not. The cross-axis composition
-([examples/composition](../../../examples/composition)) only passes because the harness reaches
+([plugins/composition](../../../plugins/composition)) only passes because the harness reaches
 *into the catalog's private store* to seed the source and target tables out-of-band
 (`harness.py` `build_catalog`, the `cat._tables.add(...)` / `INSERT INTO tables` pokes) — i.e.
 the green badge is propped up by a stand-in the contract can't express.
@@ -211,7 +211,7 @@ core). The landing sequence:
    in-memory Py, sqlite Py) + their gRPC servers.
 4. Extend `catalog-v1.json` with the new lifecycle + error vectors; extend the three conformance
    harnesses (and add the two capabilities to the Go stub gateway's C5 allowlist).
-5. Update `examples/composition` to register + commit through the gateway (drop the out-of-band
+5. Update `plugins/composition` to register + commit through the gateway (drop the out-of-band
    target seeding); have the composition format servicer return a real `snapshot_id`.
 6. `make conformance` (still 32/32) + `make composition` (loop now closed) green.
 
@@ -231,4 +231,4 @@ published; until then the tag is local and movable.
   split is the method-level-capability precedent for the two-RPC decision.
 - [`common/v1/data.proto`](../../../contracts/proto/rat/common/v1/data.proto) — `WriteResult`
   (the A1 `optional snapshot_id` fix) + `TableRef` (the F2 no-snapshot-field residual).
-- [examples/composition](../../../examples/composition) — the cross-axis loop now closed on-wire.
+- [plugins/composition](../../../plugins/composition) — the cross-axis loop now closed on-wire.

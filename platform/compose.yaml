@@ -45,7 +45,7 @@ services:
 
   engine:
     image: docker.io/library/python:3.12
-    working_dir: /work/examples/engine/duckdb-ml-py
+    working_dir: /work/plugins/engine/duckdb-ml-py
     command:
       - bash
       - -lc
@@ -75,7 +75,7 @@ services:
 
   catalog:
     image: docker.io/library/python:3.12
-    working_dir: /work/examples/catalog/ducklake-py
+    working_dir: /work/plugins/catalog/ducklake-py
     command:
       - bash
       - -lc
@@ -103,7 +103,7 @@ services:
 
   pipeline:
     image: docker.io/library/python:3.12
-    working_dir: /work/examples/runner/dbt-duckdb
+    working_dir: /work/plugins/runner/dbt-duckdb
     command:
       - bash
       - -lc
@@ -134,7 +134,7 @@ services:
 
   state:
     image: docker.io/library/python:3.12
-    working_dir: /work/examples/state/postgres-py
+    working_dir: /work/plugins/state/postgres-py
     command:
       - bash
       - -lc
@@ -171,7 +171,7 @@ services:
 
   scheduler:
     image: docker.io/library/python:3.12
-    working_dir: /work/examples/scheduler/cron-py
+    working_dir: /work/plugins/scheduler/cron-py
     command:
       - bash
       - -lc

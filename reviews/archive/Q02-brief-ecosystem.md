@@ -70,7 +70,7 @@ The zero-third-party cold-start (Phase-4 GTM, unsolved); manifest signing (C8) d
 1. This brief + the ecosystem-health table.
 2. [reviews/02-plugin-ecosystem-builder.md](../02-plugin-ecosystem-builder.md) + [reviews/board/ecosystem.md](board/ecosystem.md) + [reviews/05-product-gtm.md](../05-product-gtm.md) — the internal ecosystem/GTM reviews (challenge them).
 3. `docs/vision.md` — the premise + the "if a competitor can do X without a plugin, we did it wrong" anti-goal; [ADR-001](../../docs/architecture/adrs/001-everything-is-a-plugin.md) (the 18 plugin axes) · [ADR-003](../../docs/architecture/adrs/003-two-references-before-contract-freeze.md) (two-references-before-freeze).
-4. What an author actually touches: `contracts/schema/plugin.v1.json` (the manifest they write) · `contracts/proto/rat/marketplace/v1/` (`marketplace.proto` + `CONTRACT.md` — the compatibility oracle) · `contracts/conformance/` (the golden vectors they must pass) · `examples/**` (the reference plugins they'd copy — pick an axis and imagine authoring a third).
+4. What an author actually touches: `contracts/schema/plugin.v1.json` (the manifest they write) · `contracts/proto/rat/marketplace/v1/` (`marketplace.proto` + `CONTRACT.md` — the compatibility oracle) · `contracts/conformance/` (the golden vectors they must pass) · `plugins/**` (the reference plugins they'd copy — pick an axis and imagine authoring a third).
 5. `roadmap/backlog.md` (the marketplace/signing/DX/governance items) + `roadmap/phases.md` (Phase 4 = GTM/ecosystem).
 
 ## Findings & logistics

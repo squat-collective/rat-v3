@@ -32,7 +32,7 @@ subject-stamping onto the forwarded envelope. Then seal → cut a `rat/6.x` tag.
 
 Reducing the repo to the essential + a professional structure. Plan + audit:
 [`docs/restructure/`](../docs/restructure/) (AUDIT.md = keep/remove analysis; TARGET.md =
-the locked end-state tree). **Locked decisions:** `examples/`→`plugins/`,
+the locked end-state tree). **Locked decisions:** `plugins/`→`plugins/`,
 `research/`→`docs/research/`, `reviews/` stays top-level with `reviews/archive/`, and the
 **data-dev-plane experiment + 5 exploratory plugins** (incl. `vscode-rat`) **graduate to a
 separate `rat-data-dev` repo**.
@@ -41,7 +41,7 @@ separate `rat-data-dev` repo**.
 1. ✅ Hygiene — `make clean`, ADR status sweep, this roadmap refresh.
 2. 🔵 Cuts — drop the unused TS + Rust SDKs, the superseded `sql-pipeline-py` + `platform/project/`.
 3. 🔵 Archive — the Q02 simulated-review kit + `reviews/board/` → `reviews/archive/`.
-4. 🔵 Moves — `research/`→`docs/`, `examples/`→`plugins/` (scripted link-rewrite, green-check).
+4. 🔵 Moves — `research/`→`docs/`, `plugins/`→`plugins/` (scripted link-rewrite, green-check).
 5. ⏸️ Extract `rat-data-dev` (paused — needs the go-ahead).
 
 ## Immediate next concrete step

@@ -114,8 +114,8 @@ unregistered table + empty `snapshot_id`).
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/catalog/inmemory-go`](../../../../../examples/catalog/inmemory-go), [`inmemory-py`](../../../../../examples/catalog/inmemory-py) | 1 (wire) | two language code paths; git-like global branches |
-| [`examples/catalog/sqlite-py`](../../../../../examples/catalog/sqlite-py) | 2 (real) | sqlite — DURABLE branches + idempotency ledger (survive reopen) + CONCURRENT-MERGE safety (16 racers → exactly one winner via `BEGIN IMMEDIATE`) |
+| [`plugins/catalog/inmemory-go`](../../../../../plugins/catalog/inmemory-go), [`inmemory-py`](../../../../../plugins/catalog/inmemory-py) | 1 (wire) | two language code paths; git-like global branches |
+| [`plugins/catalog/sqlite-py`](../../../../../plugins/catalog/sqlite-py) | 2 (real) | sqlite — DURABLE branches + idempotency ledger (survive reopen) + CONCURRENT-MERGE safety (16 racers → exactly one winner via `BEGIN IMMEDIATE`) |
 
 ## Related
 

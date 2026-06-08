@@ -75,7 +75,7 @@ transfer as complete; a stream that ends early (fewer than declared) MUST **fail
 
 The field shapes + obligations are locked now and **documented** in the proto comments +
 `format`/`strategy` `CONTRACT.md`. They are demonstrated **end-to-end in
-[examples/composition](../../../examples/composition)** (the strategy threads an
+[plugins/composition](../../../plugins/composition)** (the strategy threads an
 `idempotency_key`; the format servicer dedups on it and sets `already_applied`; produced
 streams declare `expected_rows` and the consumer verifies, failing a truncated stream). The
 **per-axis conformance vectors** (an idempotent-write case in `format-v1.json`; a
@@ -130,7 +130,7 @@ land at the `rat/1.5` minor, like the catalog commit-linkage RPCs (ADR-010).
 
 Design from `rat/1.5` onward; no running core, no data migration. Sequence: add the fields
 (additive, `buf breaking` FILE clean) → `make gen-sdks` → document the obligations in proto
-comments + `format`/`strategy` `CONTRACT.md` → thread + honor them in `examples/composition`
+comments + `format`/`strategy` `CONTRACT.md` → thread + honor them in `plugins/composition`
 → `make conformance` (still 32/32 — per-axis vectors unchanged) + `make composition` green →
 fold into the `rat/1.5` tag. The per-axis idempotency + truncation vectors land in Phase 1.
 
@@ -152,4 +152,4 @@ shorthand for "the first sealed minor after the `rat/1` freeze." But the git tag
 - [`common/v1/data.proto`](../../../contracts/proto/rat/common/v1/data.proto) (`WriteResult`,
   `ArrowStream`) · [`format.proto`](../../../contracts/proto/rat/format/v1/format.proto) ·
   [`strategy.proto`](../../../contracts/proto/rat/strategy/v1/strategy.proto).
-- [examples/composition](../../../examples/composition) — where C1/C2 are demonstrated.
+- [plugins/composition](../../../plugins/composition) — where C1/C2 are demonstrated.

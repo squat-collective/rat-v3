@@ -131,7 +131,7 @@ Worth a dedicated ADR when the marketplace plugin is being built. Look at: VSCod
 
 > **Resolved by [ADR-007](../docs/architecture/adrs/007-call-context-transport.md):** the whole cross-cutting envelope (trace + identity) moves out of the payload into a `rat-callmeta-bin` transport-metadata header — option (a), refined. This upholds ADR-005's generic-proxy guarantee (the gateway parses zero payload bytes) and keeps the keystone `RequestContext` shape verbatim, only changing its carrier. The reasoning below is kept as the historical record.
 
-**Surfaced by building the 0d stub invoke-gateway** (`examples/format/inmemory-go/gateway_test.go`) — exactly the kind of gap ADR-003 predicts a real implementation exposes.
+**Surfaced by building the 0d stub invoke-gateway** (`plugins/format/inmemory-go/gateway_test.go`) — exactly the kind of gap ADR-003 predicts a real implementation exposes.
 
 ADR-005 / `core/v1/invoke.proto` says the gateway is a **generic proxy**: it routes by capability and forwards `payload` **without interpreting it**. But two clauses collide:
 1. The gateway must **re-derive `identity.caller_plugin`** for the downstream hop and **never trust wire-supplied identity** (keystone, `context.proto`).
@@ -169,7 +169,7 @@ Three resolutions to weigh (→ a candidate follow-up ADR, "streaming capability
 Leaning **(a)** — it preserves the central-enforcement property ADR-005 is built on and keeps the gateway generic; streaming is just the unary relay with N response frames. But it needs the ADR to weigh (b)'s perf argument for genuinely high-volume streams.
 
 Open question: pick (a)/(b)/(c) before `runtime/v1` (or any streaming axis) routes through the gateway — and before `invoke.proto` freezes.
-Related: [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md), [ADR-007](../docs/architecture/adrs/007-call-context-transport.md) (same "0d reveals the gap" pattern), `contracts/proto/rat/core/v1/invoke.proto`, `contracts/proto/rat/runtime/v1/runtime.proto`, `examples/runtime/inmemory-go/harness_test.go` (the direct-dial workaround + its header note).
+Related: [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md), [ADR-007](../docs/architecture/adrs/007-call-context-transport.md) (same "0d reveals the gap" pattern), `contracts/proto/rat/core/v1/invoke.proto`, `contracts/proto/rat/runtime/v1/runtime.proto`, `plugins/runtime/inmemory-go/harness_test.go` (the direct-dial workaround + its header note).
 
 ## 2026-06-02 — [experiment, ui] vscode-rat as a multi-environment RAT explorer (many connections)
 

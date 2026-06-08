@@ -23,8 +23,8 @@
 ### 1. [HIGH] [PROCESS] The I9 isolation gate is real; I9 *enforcement* is honor-system, and conformance can't tell the difference
 **Evidence.** The gate IS real and identical across runtimes: `check_spec` refuses to
 launch below the I9 minimum
-([local-process-py/store.py:44-53](../../../examples/deploymentruntime/local-process-py/store.py#L44),
-[k8s-dryrun-py/store.py:41-51](../../../examples/deploymentruntime/k8s-dryrun-py/store.py#L41)),
+([local-process-py/store.py:44-53](../../../plugins/deploymentruntime/local-process-py/store.py#L44),
+[k8s-dryrun-py/store.py:41-51](../../../plugins/deploymentruntime/k8s-dryrun-py/store.py#L41)),
 and the error vector asserts `FAILED_PRECONDITION`
 ([deploymentruntime-v1.json](../../../contracts/conformance/deploymentruntime-v1.json) `below_i9_minimum`).
 That part holds.
@@ -32,9 +32,9 @@ That part holds.
 But the *enforcement receipt is a self-asserted echo of the request*, not evidence of
 anything applied. `honored()` returns `iso.read_only_root_fs` / `iso.block_metadata_egress`
 **verbatim from the spec**
-([local-process-py/store.py:32-41](../../../examples/deploymentruntime/local-process-py/store.py#L32)),
+([local-process-py/store.py:32-41](../../../plugins/deploymentruntime/local-process-py/store.py#L32)),
 while the actual "launch" is a bare `subprocess.Popen([...sleep 300])`
-([store.py:69](../../../examples/deploymentruntime/local-process-py/store.py#L69)) — **no
+([store.py:69](../../../plugins/deploymentruntime/local-process-py/store.py#L69)) — **no
 namespaces, no seccomp, no cap-drop, no read-only mount, no egress filtering**. So a
 local-process runtime reports `read_only_root_fs: true` "honored" while enforcing nothing.
 Worse, the conformance vector only checks the **three gate bools**
@@ -46,7 +46,7 @@ and never `read_only_root_fs` / `block_metadata_egress`
 while enforcing nothing.* The trust boundary the "install many 3rd-party plugins" bet
 leans on (reviews/01 F6, the proto SECURITY block, deployment_runtime.proto:14-19) is, at
 v1, a **promise the harness does not verify**. Only k8s-dryrun maps the profile to a
-real `securityContext` ([k8s-dryrun-py/store.py:54-63](../../../examples/deploymentruntime/k8s-dryrun-py/store.py#L54)),
+real `securityContext` ([k8s-dryrun-py/store.py:54-63](../../../plugins/deploymentruntime/k8s-dryrun-py/store.py#L54)),
 and even that is dry-run (no admission actually enforces it).
 
 **Recommendation.** (a) Document loudly that I9 is a *gate + attestation*, not a
@@ -112,10 +112,10 @@ core refuse to enter multi-tenant mode on a non-authenticated transport. Not a w
 
 ### 4. [MEDIUM] [PROCESS] Audit chain defeats forge + reorder, but *drop* (tail-truncation) at the sink is not cryptographically prevented; key-ring trust-root is unspecified
 **Evidence.** Forge: the sink holds only the core's **public** key
-([store.py:17-19,44-56](../../../examples/auditlog/inmemory-py/store.py#L43)) — it can verify,
+([store.py:17-19,44-56](../../../plugins/auditlog/inmemory-py/store.py#L43)) — it can verify,
 never forge. Reorder/mid-gap: `prev_hash` must equal the chain head or the record (and the
 prefix after it) is REJECTED
-([store.py:76-80](../../../examples/auditlog/inmemory-py/store.py#L76)), and `key_id` is inside
+([store.py:76-80](../../../plugins/auditlog/inmemory-py/store.py#L76)), and `key_id` is inside
 the signed canonical bytes, defeating key-substitution
 ([audit.proto:49-50,79](../../../contracts/proto/rat/common/v1/audit.proto#L49)). Strong.
 
@@ -184,7 +184,7 @@ add this later without breaking `rat/1`.
 ### 7. [LOW-MEDIUM] [ADDITIVE]/[PROCESS] Secret anti-enumeration is airtight at the response/data layer but says nothing about timing/error-path side-channels
 **Evidence.** The ref is airtight *at the data layer*: `(tenant, secret_ref)` is the dict key,
 so a foreign-tenant ref and a nonexistent ref both fall to the identical `(False, b"", 0)`
-branch ([secret/inmemory-py/store.py:27-38](../../../examples/secret/inmemory-py/store.py#L27)),
+branch ([secret/inmemory-py/store.py:27-38](../../../plugins/secret/inmemory-py/store.py#L27)),
 and the error model *forbids* `PERMISSION_DENIED` here, mandating the collapse to
 `found=false`+`OK` ([ERROR_MODEL.md:72-79](../../../contracts/proto/rat/common/v1/ERROR_MODEL.md#L72)).
 The response-shape defense is correct and well-specified.

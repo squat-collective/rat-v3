@@ -155,7 +155,7 @@ uses those creds (DuckDB `CREATE SECRET … TYPE S3`) to read/write Parquet on S
 the bytes never touch the core (the D3 model; storage-cred isolation is vector-tested).
 
 ```yaml
-# examples/storage/minio-s3/plugin.yaml
+# plugins/storage/minio-s3/plugin.yaml
 api_version: rat/1
 kind: storage
 metadata: { name: rat-storage-minio, version: 0.1.0,
@@ -179,7 +179,7 @@ snapshots on commit, resolve refs (incl. time-travel + branch), and the branch m
 (shared metadata DB + the same S3 data via `minio-s3` creds).
 
 ```yaml
-# examples/catalog/ducklake-py/plugin.yaml
+# plugins/catalog/ducklake-py/plugin.yaml
 api_version: rat/1
 kind: catalog
 metadata: { name: rat-catalog-ducklake, version: 0.1.0,
@@ -232,7 +232,7 @@ opt-ins — set via the plugin's config (e.g. `EMBED_BACKENDS`, `OLLAMA_URL`). *
 never changes when you swap backends.**
 
 ```yaml
-# examples/engine/duckdb-ml-py/plugin.yaml
+# plugins/engine/duckdb-ml-py/plugin.yaml
 api_version: rat/1
 kind: engine
 metadata: { name: rat-engine-duckdb-ml, version: 0.1.0,
@@ -281,7 +281,7 @@ gateway endpoint, and every action is a capability call the core routes + audits
 `ui`-plugin *in spirit* (a UI client of the platform), and the cleanest demonstration of the
 multi-UI story (CLI / web-portal / **VS Code**) the vision names.
 
-> Lives in `examples/ui/vscode-rat/` (a standard VS Code extension: `package.json` +
+> Lives in `plugins/ui/vscode-rat/` (a standard VS Code extension: `package.json` +
 > `src/extension.ts` + views/commands). Build last — it sits on top of a working data plane.
 
 ---
@@ -476,7 +476,7 @@ is exactly the "where they *don't* hold up" value §0 is after):
    green over real gRPC: [`run-local.py`](run-local.py) / `make data-dev-local`. The engine
    joins the conformance suite (engine-real-v1 + a new embed golden, [`engine-embed-v1.json`](../../contracts/conformance/engine-embed-v1.json)); the catalog has a `selftest.py`
    (frozen catalog-v1 parity deferred to the branch-model spike). Findings folded into §10.
-3. **`minio-s3` + S3 wiring** ✅ **DONE** — the [`minio-s3`](../../examples/storage/minio-s3/)
+3. **`minio-s3` + S3 wiring** ✅ **DONE** — the [`minio-s3`](../../plugins/storage/minio-s3/)
    storage plugin vends short-TTL, tenant+prefix-scoped **STS** creds (first impl of the 5c
    read/write split); the engine reads/writes Parquet on **S3/MinIO** with them while DuckLake
    metadata moves to **Postgres**. [`run-remote.py`](run-remote.py) / `make data-dev-remote`
@@ -485,7 +485,7 @@ is exactly the "where they *don't* hold up" value §0 is after):
    holds. Stack: [`compose/compose.yaml`](compose/compose.yaml) or the dependency-free
    `scripts/data-dev-remote.sh`. Resolves findings F3 + F4 (see §10).
 4. **`incremental-embed-py` strategy** ✅ **DONE** — the real ELT (§5.4) as a `kind: strategy`
-   plugin ([`examples/strategy/incremental-embed-py`](../../examples/strategy/incremental-embed-py/))
+   plugin ([`plugins/strategy/incremental-embed-py`](../../plugins/strategy/incremental-embed-py/))
    composing capabilities through the invoke gateway (names no concrete plugin).
    [`run-strategy.py`](run-strategy.py) / `make data-dev-strategy` proves it across 3 runs:
    run 1 embeds the full corpus, run 2 embeds **only the newly-landed delta**
@@ -494,11 +494,11 @@ is exactly the "where they *don't* hold up" value §0 is after):
    capability** — the engine writes the lake directly (finding F8, §10).
 5. **The composition** — a runner + a `make data-dev-plane` target that boots the stack
    (podman) and runs the pipeline on a real dataset.
-6. **`vscode-rat`** ✅ **DONE** — a VS Code extension ([`examples/ui/vscode-rat`](../../examples/ui/vscode-rat/))
+6. **`vscode-rat`** ✅ **DONE** — a VS Code extension ([`plugins/ui/vscode-rat`](../../plugins/ui/vscode-rat/))
    that's a UI client of the data-dev plane: DuckLake catalog tree (tables → snapshots,
    click-to-preview), **Run Pipeline** (the incremental-embed strategy), SQL query grid,
    **🔍 semantic search**, plugin-health view. Compiles clean (`tsc`, strict). Talks to a
-   small Python **gateway BFF** ([`gateway/app.py`](../../examples/ui/vscode-rat/gateway/),
+   small Python **gateway BFF** ([`gateway/app.py`](../../plugins/ui/vscode-rat/gateway/),
    `make data-dev-gateway`) that owns the in-proc stack and re-exposes it as JSON — because
    the reference engine's Arrow result leg is in-proc only (finding F9). Verified host-facing
    over the published port. The frozen control capabilities are what the connectionless

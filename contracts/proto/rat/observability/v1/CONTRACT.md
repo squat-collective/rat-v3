@@ -87,7 +87,7 @@ client-stream implementation is non-conformant.
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/observability/inmemory-py`](../../../../../examples/observability/inmemory-py) | 1 (control-plane) | bidi-stream Ingest; cumulative accepted/rejected counts; empty-name rejection; `store.TelemetrySink` as a separable sink object |
+| [`plugins/observability/inmemory-py`](../../../../../plugins/observability/inmemory-py) | 1 (control-plane) | bidi-stream Ingest; cumulative accepted/rejected counts; empty-name rejection; `store.TelemetrySink` as a separable sink object |
 
 ## Related
 

@@ -101,7 +101,7 @@ require two). `web-portal-py` is the single required reference.
 
 | ref | demonstrates |
 |---|---|
-| [`examples/ui/web-portal-py`](../../../../../examples/ui/web-portal-py) | experience-axis reference; slot hosting + component resolution; `NOT_FOUND` on unknown component; no tenant scoping |
+| [`plugins/ui/web-portal-py`](../../../../../plugins/ui/web-portal-py) | experience-axis reference; slot hosting + component resolution; `NOT_FOUND` on unknown component; no tenant scoping |
 
 ## Related
 

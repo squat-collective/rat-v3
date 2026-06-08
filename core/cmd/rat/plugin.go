@@ -629,7 +629,7 @@ compatible_core: ["rat/1"]
 
 	readme := fmt.Sprintf("# %s\n\nA rat **%s** plugin in **%s** (scaffolded by `rat plugin init`, ADR-026).\n\n"+
 		"```sh\nrat plugin check     # validate the manifest (static gate)\nrat plugin pack      # build + verify (launches under I9, must SERVE its declared capability)\nrat plugin publish   # push to ghcr.io\n```\n\n"+
-		"Implement your servicer (see `examples/` for a reference of the same kind), then `rat plugin pack`.\n", name, kind, lang)
+		"Implement your servicer (see `plugins/` for a reference of the same kind), then `rat plugin pack`.\n", name, kind, lang)
 
 	ci := `#!/bin/sh
 # ci.sh — the portable plugin CI/CD steps (ADR-026). The logic lives in rat verbs, so this
@@ -784,7 +784,7 @@ replace github.com/rat-dev/rat/gen => /sdk
 
 func tsFiles(name, kind string) map[string]string {
 	main := fill(`// __NAME__ — a rat __KIND__ plugin (TypeScript). Implement the servicer for your kind's
-// capabilities; see examples/ for a reference of the same kind.
+// capabilities; see plugins/ for a reference of the same kind.
 import * as grpc from "@grpc/grpc-js";
 
 const addr = process.env.RAT_PLUGIN_ADDR ?? "0.0.0.0:50051";
@@ -841,7 +841,7 @@ CMD ["node", "dist/main.js"]
 
 func rustFiles(name, kind string) map[string]string {
 	main := fill(`// __NAME__ — a rat __KIND__ plugin (Rust, tonic). Implement the servicer for your kind's
-// capabilities; see examples/ for a reference. The stub serves a health service so it launches
+// capabilities; see plugins/ for a reference. The stub serves a health service so it launches
 // HEALTHY; add your axis service below.
 use std::env;
 

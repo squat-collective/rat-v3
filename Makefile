@@ -119,7 +119,7 @@ validate-manifests: ## Validate example manifests vs envelope + per-kind schemas
 
 bench: ## Per-RPC latency benchmark: core-mediated gateway overhead vs direct (0f)
 	@$(RUNTIME) run --rm $(RUNFLAGS) -v "$(CURDIR)":/work:Z -v rat-gocache:/go/pkg/mod \
-	  -w /work/examples/bench/latency-go $(GO_IMAGE) go run . $(N)
+	  -w /work/plugins/bench/latency-go $(GO_IMAGE) go run . $(N)
 
 ## --- spike core (Phase 1, ADR-013/014) ---------------------------------------
 core-test: ## Build + vet + test the spike core (core/) in a container
@@ -179,12 +179,12 @@ plugin-base-py: ## ADR-026: build rat/plugin-base-py (the rat Python SDK + grpc 
 
 plugin-images: ## ADR-022: build the launchable Python plugin images (rat/<name>:dev) — the platform's plugins
 	@echo ">> building the Python plugin images"
-	@$(RUNTIME) build -f examples/state/postgres-py/Dockerfile   -t rat/state:dev .
-	@$(RUNTIME) build -f examples/secret/env-py/Dockerfile       -t rat/secret:dev .
-	@$(RUNTIME) build -f examples/catalog/ducklake-py/Dockerfile -t rat/catalog:dev .
-	@$(RUNTIME) build -f examples/engine/duckdb-ml-py/Dockerfile -t rat/engine:dev .
-	@$(RUNTIME) build -f examples/scheduler/cron-py/Dockerfile   -t rat/scheduler:dev .
-	@$(RUNTIME) build -f examples/runner/dbt-duckdb/Dockerfile   -t rat/dbt-runner:dev .
+	@$(RUNTIME) build -f plugins/state/postgres-py/Dockerfile   -t rat/state:dev .
+	@$(RUNTIME) build -f plugins/secret/env-py/Dockerfile       -t rat/secret:dev .
+	@$(RUNTIME) build -f plugins/catalog/ducklake-py/Dockerfile -t rat/catalog:dev .
+	@$(RUNTIME) build -f plugins/engine/duckdb-ml-py/Dockerfile -t rat/engine:dev .
+	@$(RUNTIME) build -f plugins/scheduler/cron-py/Dockerfile   -t rat/scheduler:dev .
+	@$(RUNTIME) build -f plugins/runner/dbt-duckdb/Dockerfile   -t rat/dbt-runner:dev .
 	@$(RUNTIME) build -f platform/bff.Dockerfile                 -t rat/bff:dev .
 	@echo ">> built: rat/{state,secret,catalog,engine,scheduler,dbt-runner,bff}:dev"
 

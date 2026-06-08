@@ -24,7 +24,7 @@ Two things had to be true before this ADR could be written:
 2. **The ADR-003 cross-combination gate is met.** Previously only the *per-axis* gate
    was satisfied (two refs per axis on shared golden vectors). Sub-phase **0i**
    (`abd1228`) built the first `strategy` reference + a cross-axis composition test
-   ([examples/composition](../../../examples/composition)) that boots catalog + engine +
+   ([plugins/composition](../../../plugins/composition)) that boots catalog + engine +
    format together, wired by capability, with Arrow over real Flight, and runs the
    strategy across ADR-003's four cross-combinations (baseline + format/catalog/engine
    substitution, storage held at A) on shared golden data
@@ -145,6 +145,6 @@ bounded properties (tracked in [backlog](../../../roadmap/backlog.md)):
 - [ADR-003](003-two-references-before-contract-freeze.md) — the gate this ADR satisfies.
 - [reviews/07-freeze-review.md](../../../reviews/07-freeze-review.md) — the 0h freeze
   review (punch-list + cross-axis gap) this ADR closes.
-- [examples/composition](../../../examples/composition) — the 0i cross-combination test.
+- [plugins/composition](../../../plugins/composition) — the 0i cross-combination test.
 - [ADR-005](005-capability-invocation-model.md) / [007](007-call-context-transport.md) /
   [008](008-streaming-capability-invocation.md) — the cross-cutting decisions now frozen.

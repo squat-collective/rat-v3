@@ -7,7 +7,7 @@
 //
 // The providers here are in-Go fakes that honor the frozen RPCs + the idempotency
 // contract; real-backend equivalence (DuckDB/Parquet) is already proven by the
-// Python examples/composition. The NEW signal this adds is the Go *enforcing*
+// Python plugins/composition. The NEW signal this adds is the Go *enforcing*
 // gateway mediating a multi-axis pipeline + the crash-safety recovery path.
 //
 // Beyond that in-process pipeline, the package has become the home for the core's

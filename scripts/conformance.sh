@@ -2,7 +2,7 @@
 #
 # RAT conformance suite (sub-phase 0f).
 #
-# Runs EVERY reference plugin under examples/<axis>/<impl>/ against its shared golden
+# Runs EVERY reference plugin under plugins/<axis>/<impl>/ against its shared golden
 # vectors (contracts/conformance/<axis>-v1.json) and prints a unified pass/fail
 # matrix. The per-axis golden vectors are the authoritative conformance set; this is
 # the single runner that proves "implementation X conforms to axis Y" across all of
@@ -25,7 +25,7 @@ if [ -z "$RUNTIME" ]; then echo "no podman/docker found" >&2; exit 2; fi
 
 # --- discover references ---------------------------------------------------------
 GO_REFS=(); PY_REFS=()
-for d in examples/*/*/; do
+for d in plugins/*/*/; do
   d="${d%/}"
   # A conformance reference is a dir with a harness (harness_test.{go,py}). Dirs
   # with a go.mod but no harness (e.g. the latency benchmark) are NOT references.

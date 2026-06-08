@@ -5,14 +5,14 @@
 # host node/npm install. The .vsix lands next to the extension (gitignored).
 #
 #   make data-dev-vsix
-#   code --install-extension examples/ui/vscode-rat/vscode-rat-0.1.0.vsix
+#   code --install-extension plugins/ui/vscode-rat/vscode-rat-0.1.0.vsix
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 RUNTIME="$(command -v podman || command -v docker)"
 NODE_IMAGE="${NODE_IMAGE:-docker.io/library/node:22}"
-EXT="$ROOT/examples/ui/vscode-rat"
+EXT="$ROOT/plugins/ui/vscode-rat"
 
 if [ -z "$RUNTIME" ]; then echo "no podman/docker found" >&2; exit 2; fi
 

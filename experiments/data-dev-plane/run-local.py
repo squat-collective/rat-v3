@@ -54,9 +54,9 @@ def _load_plugin(reldir, bare_modules):
             sys.modules.pop(m, None)
 
 # Load the engine (embed → store → streams → server) and catalog (store → server) refs.
-_eng = _load_plugin("examples/engine/duckdb-ml-py", ["embed", "store", "streams", "server"])
+_eng = _load_plugin("plugins/engine/duckdb-ml-py", ["embed", "store", "streams", "server"])
 eng_store, eng_server = _eng["store"], _eng["server"]
-_cat = _load_plugin("examples/catalog/ducklake-py", ["store", "server"])
+_cat = _load_plugin("plugins/catalog/ducklake-py", ["store", "server"])
 cat_store, cat_server = _cat["store"], _cat["server"]
 
 

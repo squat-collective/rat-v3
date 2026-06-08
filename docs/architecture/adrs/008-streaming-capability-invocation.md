@@ -4,7 +4,7 @@
 **Date:** 2026-05-31
 **Deciders:** Tom, Claude (architecture session)
 **Extends:** [ADR-005](005-capability-invocation-model.md) (the unary `Invoke` this generalizes) and [ADR-007](007-call-context-transport.md) (whose enforce-at-open + identity-in-metadata model it reuses).
-**Surfaced by:** the 0d `runtime` reference (`examples/runtime/inmemory-go/harness_test.go`) — the ADR-003 forcing function exposing a contract gap a real implementation reveals. See [done.md 2026-05-31](../../../roadmap/done.md) + [ideas/inbox.md](../../../ideas/inbox.md).
+**Surfaced by:** the 0d `runtime` reference (`plugins/runtime/inmemory-go/harness_test.go`) — the ADR-003 forcing function exposing a contract gap a real implementation reveals. See [done.md 2026-05-31](../../../roadmap/done.md) + [ideas/inbox.md](../../../ideas/inbox.md).
 
 ---
 
@@ -112,7 +112,7 @@ Pre-freeze; additive. This is an ADR-only commit (one-ADR-per-commit). The imple
 1. **`invoke.proto`** — add `InvokeServerStream` + `InvokeBidiStream` to `CapabilityInvokeService` with distinct per-variant request/response types (buf STANDARD `RPC_REQUEST_RESPONSE_UNIQUE`; see Decision §2); document enforce-at-open + the first-frame-establishes-capability rule for bidi. `buf lint/build` clean; added methods + messages are non-breaking.
 2. **Regenerate the 4 SDKs.**
 3. **Stub gateway** — add a server-stream relay (the runtime case); enforce once at open, stamp downstream `rat-callmeta-bin`, relay frames via the passthrough codec, one C8 audit per stream.
-4. **Route `runtime.Execute` through `InvokeServerStream`** in `examples/runtime/inmemory-go` (replacing the direct-dial workaround + updating its header note); add `runtime.proto`'s **deferred** `(rat.common.v1.capability) = "rat://runtime/v1/execute"` annotation (+ import) so the gateway can route it. Re-run the **unchanged** runtime golden vectors (must stay green — behavior-preserving, like ADR-007's migration).
+4. **Route `runtime.Execute` through `InvokeServerStream`** in `plugins/runtime/inmemory-go` (replacing the direct-dial workaround + updating its header note); add `runtime.proto`'s **deferred** `(rat.common.v1.capability) = "rat://runtime/v1/execute"` annotation (+ import) so the gateway can route it. Re-run the **unchanged** runtime golden vectors (must stay green — behavior-preserving, like ADR-007's migration).
 5. The bidi relay (`observability.Ingest`) + the other server-streams (`state.Watch`, `scheduler.WatchDue`) get wired when those axes are referenced in 0d.
 
 ## Related

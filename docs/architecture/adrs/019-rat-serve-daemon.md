@@ -129,7 +129,7 @@ capability through it with **C5 enforced + an audit line emitted**; an undeclare
    `CMD ["python","main.py"]`, honoring `RAT_PLUGIN_ADDR`. **Image-only — no proto change:** the
    container's own CMD runs python, so `LaunchSpec.image` = the image and the daemon needs no
    `args` field (frozen wire untouched). Build images tagged `rat/<plugin>:dev`.
-2. Write their **plugin.yaml manifests** (they exist in `examples/.../plugin.yaml` already) +
+2. Write their **plugin.yaml manifests** (they exist in `plugins/.../plugin.yaml` already) +
    a `data-dev-plane.yaml` (launch mode, `runtime: podman`, images + the I9 profile + the
    `RAT_DUCKLAKE_*` / `MINIO_*` env each needs).
 3. `rat serve --plane data-dev-plane.yaml` runs the **real** ML lakehouse under the actual core:

@@ -85,8 +85,8 @@ state on behalf of every other plugin, namespaced per-plugin and per-tenant.
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/state/inmemory-go`](../../../../../examples/state/inmemory-go), [`inmemory-py`](../../../../../examples/state/inmemory-py) | 1 (wire) | two language code paths conform to the wire contract |
-| [`examples/state/sqlite-py`](../../../../../examples/state/sqlite-py) | 2 (real) | sqlite — DURABILITY (survives reopen) + LINEARIZABLE CAS (concurrent CAS via `BEGIN IMMEDIATE`, exactly one winner) |
+| [`plugins/state/inmemory-go`](../../../../../plugins/state/inmemory-go), [`inmemory-py`](../../../../../plugins/state/inmemory-py) | 1 (wire) | two language code paths conform to the wire contract |
+| [`plugins/state/sqlite-py`](../../../../../plugins/state/sqlite-py) | 2 (real) | sqlite — DURABILITY (survives reopen) + LINEARIZABLE CAS (concurrent CAS via `BEGIN IMMEDIATE`, exactly one winner) |
 
 ## Related
 

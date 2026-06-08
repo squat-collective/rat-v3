@@ -16,7 +16,7 @@ A from-scratch reimagining of the RAT data platform.
 |---|---|
 | [`core/`](core/) | the Go control-plane core (the six things + cross-cutting enforcement) — sealed at `rat/2.0` |
 | [`contracts/`](contracts/) | the frozen `.proto` wire + generated SDKs + golden-data conformance vectors |
-| [`examples/`](examples/) | 30+ reference plugins across the 18 axes |
+| [`plugins/`](plugins/) | 30+ reference plugins across the 18 axes |
 | [`docs/`](docs/) | the vision, the architecture overview, and the numbered ADRs |
 | [`reviews/`](reviews/) | the internal adversarial reviews + the Q02 external-review kit |
 | [`roadmap/`](roadmap/) | where we are / what's done / what's next ([current.md](roadmap/current.md) first) |
