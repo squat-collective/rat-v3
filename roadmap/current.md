@@ -32,23 +32,25 @@ subject-stamping onto the forwarded envelope. Then seal → cut a `rat/6.x` tag.
 
 Reducing the repo to the essential + a professional structure. Plan + audit:
 [`docs/restructure/`](../docs/restructure/) (AUDIT.md = keep/remove analysis; TARGET.md =
-the locked end-state tree). **Locked decisions:** `plugins/`→`plugins/`,
+the locked end-state tree). **Locked decisions:** `examples/`→`plugins/`,
 `research/`→`docs/research/`, `reviews/` stays top-level with `reviews/archive/`, and the
 **data-dev-plane experiment + 5 exploratory plugins** (incl. `vscode-rat`) **graduate to a
 separate `rat-data-dev` repo**.
 
-**Execution (steps 1–4 in flight; 5 = extraction, paused for sign-off):**
-1. ✅ Hygiene — `make clean`, ADR status sweep, this roadmap refresh.
-2. 🔵 Cuts — drop the unused TS + Rust SDKs, the superseded `sql-pipeline-py` + `platform/project/`.
-3. 🔵 Archive — the Q02 simulated-review kit + `reviews/board/` → `reviews/archive/`.
-4. 🔵 Moves — `research/`→`docs/`, `plugins/`→`plugins/` (scripted link-rewrite, green-check).
-5. ⏸️ Extract `rat-data-dev` (paused — needs the go-ahead).
+**Execution (steps 1–4 DONE on `phase-10`; 5 = extraction, paused for sign-off):**
+1. ✅ Hygiene — `make clean` (reclaimed ~105M), ADR status sweep (021–026 → Accepted), roadmap refresh.
+2. ✅ Cuts — dropped the unused TS + Rust SDKs ([ADR-037](../docs/architecture/adrs/037-trim-committed-sdks-to-consumed-languages.md), 89 files) + the superseded `sql-pipeline-py`/`platform/project/`/`pipelines/` (ADR-021).
+3. ✅ Archive — the Q02 simulated-review kit + `reviews/board/` → `reviews/archive/` (12 files; links repointed).
+4. ✅ Moves — `research/`→`docs/research/` + `examples/`→`plugins/` ([ADR-038](../docs/architecture/adrs/038-reference-plugins-live-under-plugins.md); 343 files, Go modules rebuilt clean, 0 broken links).
+5. ⏸️ Extract `rat-data-dev` (paused — needs the go-ahead): `experiments/data-dev-plane/` + 5 exploratory plugins (`engine/duckdb-ml-py`, `catalog/ducklake-py`, `storage/minio-s3`, `strategy/incremental-embed-py`, `ui/vscode-rat`) + the `data-dev-*` scripts.
+
+**Bonus:** a repo-wide markdown link verifier surfaced + fixed **20 pre-existing broken links**; integrity now clean (0 broken across ~1400 links).
 
 ## Immediate next concrete step
 
-Finish restructure steps 2–4 on `phase-10`, then decide on the `rat-data-dev` extraction (5),
-then seal Phase 10 to `main` + tag. After that, the Phase-10 follow-on (direct-gateway
-identity enforcement) or any backlog item by appetite.
+Decide on the `rat-data-dev` extraction (restructure step 5). Then optionally clean `backlog.md`
+(intermixes done + live items) and seal Phase 10 to `main` + tag. After that, the Phase-10
+follow-on (direct-gateway identity enforcement) or any backlog item by appetite.
 
 ## What's NOT in flight
 

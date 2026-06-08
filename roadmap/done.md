@@ -17,6 +17,34 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-08 — Professionalization restructure (steps 1–4) + Phase-10 consolidation
+
+On `phase-10` (11 commits, `49d08bd`→roadmap). **Goal:** reduce the repo to the essential + a
+professional structure (audit + locked target in [`docs/restructure/`](../docs/restructure/)).
+
+- **Phase 10 consolidated** — merged `phase-10-workspace-federation` (33 commits, ADRs 029–036)
+  + `phase-10-adr-028-local-catalog` into the `phase-10` integration branch (`main` untouched).
+- **Step 1 — hygiene.** `make clean` target (reclaimed ~105M of gitignored build output: 180M→75M);
+  ADR **status sweep** (021–026 Proposed→Accepted — code shipped; left 017/028/036/032 honestly
+  open); **roadmap refresh** (current.md was 2 phases stale; phases.md table extended to Phase 10).
+- **Step 2 — cuts.** [ADR-037](../docs/architecture/adrs/037-trim-committed-sdks-to-consumed-languages.md): dropped the **TS + Rust SDKs** (zero consumers) + codegen wiring + dead
+  `buf.gen.python.yaml` (89 files / ~17.2k lines). Removed the **superseded** `sql-pipeline-py` +
+  `platform/project/` + `pipelines/` (ADR-021's dbt-runner replaced them).
+- **Step 3 — archive.** The Q02 *simulated*-review kit + `reviews/board/` raw outputs → `reviews/archive/` (12 files); every inbound link repointed.
+- **Step 4 — moves.** `research/`→`docs/research/`; **`examples/`→`plugins/`** ([ADR-038](../docs/architecture/adrs/038-reference-plugins-live-under-plugins.md), 343 files,
+  `git mv` history-preserved, 8 Go module paths `rat/examples/`→`rat/plugins/`). The separate
+  `contracts/examples/` manifest-vector dir was preserved (reverted over-eager rewrites).
+- **Verified:** 8/8 Go plugin modules go-build clean under new module paths; `core/` build+vet clean;
+  buf lint clean; a new repo-wide markdown link verifier (~1400 links) found + fixed **20
+  pre-existing broken links** and now reports **0 broken**.
+- **Paused for sign-off:** step 5 — graduate `experiments/data-dev-plane/` + 5 exploratory plugins
+  (incl. `vscode-rat`) + `data-dev-*` scripts to a separate `rat-data-dev` repo.
+
+The top-level tree now reads as the architecture: `contracts/` · `core/` · `plugins/` · `platform/`
+· `marketplace/` · `docs/` · `reviews/` · `roadmap/` · `ideas/` · `scripts/`.
+
+---
+
 ## 2026-06-04 — RatFS: code-fs as a native VS Code folder (`plugins/ui/vscode-rat`)
 
 Commit `1c66b17` on `phase-10-workspace-federation`. A `vscode.FileSystemProvider` for the `rat://<connection>/<path>` scheme, backed by the frozen **state axis through the federation hub** ([ADR-033](../docs/architecture/adrs/033-workspace-federation-hub.md)/[034](../docs/architecture/adrs/034-security-responsibility-model.md)): `readFile→state/get`, `writeFile→state/put` (CAS conflict surfaced as a write error), `readDirectory/stat→state/list`. Registered, the **Explorer/editor/save/search work natively on `rat://` URIs** — code-fs becomes an editable remote folder, **authenticated + multi-workspace + collaborative**. Transport: shells the proven `rat call` path (TLS `--cacert` · auth `--token` · routing `--workspace`) — reuses the verified CLI rather than re-implementing gRPC + binary call-context metadata in Node (like the Git extension shelling `git`); native Connect-ES transport is a future refinement. Extended `RatConnection` (hub/workspace/token/cacert/caller), added the *Open code-fs Folder* command + `onFileSystem:rat` activation. **Compiles (tsc) clean; backend verified live** — `readDirectory`/`readFile` against the secured hub (kitchen) return the code-fs tree + file bytes. v0.2.1→0.3.0.
