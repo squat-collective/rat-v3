@@ -31,6 +31,5 @@ Point `ratPlatform.bff` at a running platform bff (`http://127.0.0.1:<bff-port>`
 **RAT Platform** view. The seeded platform contributions (Lake Tables, Run History, Run
 pipeline) appear; publish a new `ui/components/<x>` and hit **RAT: Refresh UI** to see it.
 
-> Build: `ln -s ../vscode-rat/node_modules node_modules && npm run compile` (reuses the
-> sibling extension's toolchain). Compile-verified strict; the rendering itself needs a
-> running VS Code (it can't be exercised headlessly — only the bff aggregation can, and is).
+> Build: `npm install && npm run compile`. Compile-verified strict; the rendering itself needs
+> a running VS Code (it can't be exercised headlessly — only the bff aggregation can, and is).

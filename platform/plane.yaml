@@ -5,14 +5,9 @@ addr: 0.0.0.0:7777
 runtime: local
 health_timeout: 90s
 plugins:
-  - name: rat-engine
-    manifest: ./manifests/engine.plugin.yaml
-    endpoint: engine:50051          # the `engine` compose service
-
-  - name: rat-catalog
-    manifest: ./manifests/catalog.plugin.yaml
-    endpoint: catalog:50051         # the `catalog` compose service
-
+  # The medallion's engine + catalog are embedded in the dbt-runner (dbt-duckdb + DuckLake,
+  # in-process); no standalone engine/catalog plugin is attached. The duckdb-ml + ducklake
+  # reference plugins graduated to the `rat-data-dev` showcase repo.
   - name: rat-pipeline
     manifest: ./manifests/pipeline.plugin.yaml
     endpoint: pipeline:50051        # the `pipeline` compose service (the medallion strategy)

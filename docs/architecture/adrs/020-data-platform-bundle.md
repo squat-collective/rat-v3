@@ -24,7 +24,7 @@ bundle/medallion/DuckLake/VS-Code-CLI decision is unchanged; the *execution mode
 [phases.md](../../../roadmap/phases.md) **Phase 2 (Solo deployment)** wants the *product*: the
 thing a solo dev deploys and uses. [ADR-019](019-rat-serve-daemon.md) delivered the always-on
 orchestrator (`rat serve`), the containerized daemon, and a client (`ratctl`); the
-[data-dev-plane experiment](../../../experiments/data-dev-plane/README.md) produced the reference
+data-dev-plane experiment produced the reference
 plugins (engine `duckdb-ml`, catalog `ducklake`, storage `minio-s3`, a strategy, ui `vscode-rat`).
 
 ### What v2 is (the target behavior)
@@ -190,6 +190,6 @@ DuckLake owns catalog+branching and every hop is a gateway capability call.
 - [ADR-019](019-rat-serve-daemon.md) — `rat serve` (the always-on orchestrator) + `ratctl` + the daemon image: the runtime this bundle assembles.
 - [ADR-016](016-plugin-provisioning-via-deployment-runtime.md) — the deployment-runtime (local + podman) + attach mode (S1 keystone).
 - [ADR-014](014-spike-core-registry-and-invoke-gateway.md) — the registry + invoke gateway every pipeline hop routes through (C5 + audit).
-- [`experiments/data-dev-plane/README.md`](../../../experiments/data-dev-plane/README.md) — the reference plugins this bundle packages; findings F1–F9 (esp. F9, the in-proc Arrow leg).
+- `experiments/data-dev-plane/README.md` — the reference plugins this bundle packages; findings F1–F9 (esp. F9, the in-proc Arrow leg).
 - v2 prior art: `ratatouille-v2` — `ratd`/runner/ratq/portal, ADR-013 (landing zones), ADR-014 (merge strategies), ADR-006 (query service), ADR-007 (plugin system).
 - [`ideas/inbox.md`](../../../ideas/inbox.md) — parked: runtime plugin self-registration (orthogonal; revisit at scale).

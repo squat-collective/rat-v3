@@ -43,63 +43,10 @@ services:
       - "until mc alias set m http://minio:9000 minioadmin minioadmin; do sleep 1; done; mc mb --ignore-existing m/rat; echo bucket-ready"
     restart: "no"
 
-  engine:
-    image: docker.io/library/python:3.12
-    working_dir: /work/plugins/engine/duckdb-ml-py
-    command:
-      - bash
-      - -lc
-      - "pip install -q --root-user-action=ignore grpcio==1.80.0 protobuf==7.35.0 duckdb==1.5.3 pyarrow==24.0.0 numpy==2.2.6 && exec python main.py"
-    environment:
-      PYTHONPATH: /work/contracts/sdks/python
-      RAT_PLUGIN_ADDR: "0.0.0.0:50051"
-      RAT_DUCKLAKE_META: "postgres:host=postgres port=5432 dbname=ducklake user=ducklake password=ducklake"
-      RAT_DUCKLAKE_DATA: "s3://rat/platform/"
-      RAT_DUCKLAKE_ALIAS: "lake"
-      RAT_S3_ENDPOINT: "minio:9000"
-      RAT_S3_KEY_ID: "minioadmin"
-      RAT_S3_SECRET: "minioadmin"
-      RAT_S3_USE_SSL: "false"
-    volumes:
-      - ../:/work:z
-      - pipcache:/root/.cache/pip
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('localhost',50051),2)\""]
-      interval: 5s
-      timeout: 4s
-      retries: 40
-      start_period: 60s
-    depends_on:
-      postgres: {condition: service_healthy}
-      minio-setup: {condition: service_completed_successfully}
-
-  catalog:
-    image: docker.io/library/python:3.12
-    working_dir: /work/plugins/catalog/ducklake-py
-    command:
-      - bash
-      - -lc
-      - "pip install -q --root-user-action=ignore grpcio==1.80.0 protobuf==7.35.0 duckdb==1.5.3 && exec python main.py"
-    environment:
-      PYTHONPATH: /work/contracts/sdks/python
-      RAT_PLUGIN_ADDR: "0.0.0.0:50051"
-      RAT_DUCKLAKE_META: "postgres:host=postgres port=5432 dbname=ducklake user=ducklake password=ducklake"
-      RAT_DUCKLAKE_DATA: "s3://rat/platform/"
-      RAT_DUCKLAKE_ALIAS: "lake"
-      RAT_DUCKLAKE_EXTENSIONS: "httpfs,postgres,ducklake"
-      RAT_CATALOG_TRACKING: "/tmp/tracking.db"
-    volumes:
-      - ../:/work:z
-      - pipcache:/root/.cache/pip
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('localhost',50051),2)\""]
-      interval: 5s
-      timeout: 4s
-      retries: 40
-      start_period: 60s
-    depends_on:
-      postgres: {condition: service_healthy}
-      minio-setup: {condition: service_completed_successfully}
+  # NOTE: the medallion's engine + catalog are EMBEDDED in the dbt-runner (dbt-duckdb +
+  # DuckLake, in-process — see plugins/runner/dbt-duckdb). The standalone engine/catalog
+  # plugins (duckdb-ml + ducklake) graduated to the `rat-data-dev` showcase repo and are not
+  # needed here: nothing on the dbt path invokes rat://engine or rat://catalog.
 
   pipeline:
     image: docker.io/library/python:3.12
@@ -164,8 +111,6 @@ services:
       - ./plane.yaml:/etc/rat/plane.yaml:ro,z
       - ./manifests:/etc/rat/manifests:ro,z
     depends_on:
-      engine: {condition: service_healthy}
-      catalog: {condition: service_healthy}
       pipeline: {condition: service_healthy}
       state: {condition: service_healthy}
 
