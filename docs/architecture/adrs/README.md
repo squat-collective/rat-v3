@@ -33,6 +33,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [025](025-surfaces-and-consumers.md) | Surfaces & consumers — plugins contribute per-surface interfaces; consumers are out-of-stack renderers | Proposed | 2026-06-03 |
 | [026](026-plugin-authoring-and-packaging.md) | Plugin authoring & packaging — the `rat plugin` toolkit, the verified-plugin gate, scaffolded CI/CD | Proposed | 2026-06-03 |
 | [027](027-live-plugin-control-rpc.md) | Live plugin control — the daemon's `ControlService` (Register/Deregister/List); live `rat add`/`remove` | Accepted | 2026-06-03 |
+| [028](028-local-marketplace-cached-index.md) | The local marketplace as a cached, digest-keyed index (delta refresh; daemonless floor) | Proposed | 2026-06-04 |
 | [029](029-plugin-runtime-sdk.md) | The plugin runtime SDK — `ratplugin` (Serve · Call · CallerTenant) | Accepted | 2026-06-04 |
 | [031](031-durable-local-storage.md) | Durable local storage — the per-project `/data` mount (configurable volumes later) | Accepted | 2026-06-04 |
 | [032](032-filesystem-axis.md) | The filesystem axis (`rat://fs/v1/…`) — a pluggable remote filesystem for collaborative code | Deferred | 2026-06-04 |
