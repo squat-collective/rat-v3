@@ -48,6 +48,11 @@ contracts/
     rust/                     # generated *.rs (prost + tonic)       — committed
 ```
 
+> **Narrowed by [ADR-037](037-trim-committed-sdks-to-consumed-languages.md) (2026-06-08):**
+> the TypeScript + Rust committed SDKs (zero consumers) were removed; only **Go + Python**
+> (the consumed languages) remain vendored. The proto source of truth is unchanged and any
+> language regenerates on demand. The four-language amendment below is the historical record.
+
 **Amendment (2026-05-31):** all four target languages — **Go, Python, TypeScript,
 Rust** — are now wired and generated (not Go-first-only as the original text below
 contemplated). Counts at first generation: go 43 (+go.mod), python 46, typescript

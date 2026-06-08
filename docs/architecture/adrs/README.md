@@ -41,6 +41,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [034](034-security-responsibility-model.md) | The security responsibility model — what rat owns, plugins enforce, the environment provides | Accepted | 2026-06-04 |
 | [035](035-state-axis-delete.md) | Add `Delete` to the state axis (`rat://state/v1/delete`) — additive, optional-per-backend | Accepted | 2026-06-04 |
 | [036](036-reconciler-hosts-operators.md) | The reconciler hosts operators — generic resource reconciliation via operator plugins | Proposed | 2026-06-04 |
+| [037](037-trim-committed-sdks-to-consumed-languages.md) | Trim the committed SDKs to the consumed languages (Go + Python) | Accepted | 2026-06-08 |
 
 ## Template
 
