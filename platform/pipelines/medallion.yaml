@@ -1,8 +1,0 @@
-# The medallion pipeline: the models to run, in order. The runner issues each through
-# the rat serve gateway as rat://engine/v1/execute (C5-authorized + audited). Paths are
-# relative to project/.
-name: medallion
-models:
-  - bronze/orders.sql
-  - silver/orders.sql
-  - gold/daily_revenue.sql
