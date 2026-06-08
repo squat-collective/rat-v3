@@ -1,6 +1,6 @@
 # ADR-026: Plugin authoring & packaging — the `rat plugin` toolkit, the verified-plugin gate, scaffolded CI/CD
 
-## Status: Proposed (2026-06-03)
+## Status: Accepted (2026-06-03) — built + proven (see roadmap/done.md)
 
 ## Context
 

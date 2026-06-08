@@ -1,6 +1,6 @@
 # ADR-022: Plugins are launched, not composed — adding a plugin is one declaration (socket-mount local, Kubernetes prod)
 
-## Status: Proposed (2026-06-02)
+## Status: Accepted (2026-06-02) — built + proven (see roadmap/done.md)
 
 > **The complaint that drove this:** in the ADR-019/020 platform, adding a plugin means
 > hand-writing a whole **compose service** (image, install command, env, healthcheck,

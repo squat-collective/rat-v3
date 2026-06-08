@@ -1,6 +1,6 @@
 # ADR-021: rat is a pure orchestrator — pipelines are code, the pipeline-runner axis, infra declares only plugins
 
-## Status: Proposed (2026-06-02)
+## Status: Accepted (2026-06-02) — built + proven (see roadmap/done.md)
 
 > **The product re-thought.** [ADR-020](020-data-platform-bundle.md)'s first build (S1–S4) proved the
 > v3 *plumbing* — plugins routed through the gateway, self-driving, quality-gated, with run history.
