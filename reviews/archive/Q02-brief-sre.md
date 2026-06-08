@@ -5,7 +5,7 @@
 
 ## The ask, as an SRE
 
-**Would you carry the pager for this?** RAT v3 is a control plane that orchestrates N independently-versioned, polyglot plugin processes. Our own internal SRE review ([reviews/03-operations-sre.md](03-operations-sre.md)) was the harshest of the lot — its thesis was *"the gap isn't code, it's that operability was deferred to 'it's a plugin'."* We acted on the part that became a Phase-1 exit gate (reconciler crash-loop backoff/jitter + lease-thrash guard — see below), but **most of that review's recommendations are still paper.** We want you to pressure-test the *survivability* of the design at 3am and tell us what must be true before it runs in production / multi-tenant.
+**Would you carry the pager for this?** RAT v3 is a control plane that orchestrates N independently-versioned, polyglot plugin processes. Our own internal SRE review ([reviews/03-operations-sre.md](../03-operations-sre.md)) was the harshest of the lot — its thesis was *"the gap isn't code, it's that operability was deferred to 'it's a plugin'."* We acted on the part that became a Phase-1 exit gate (reconciler crash-loop backoff/jitter + lease-thrash guard — see below), but **most of that review's recommendations are still paper.** We want you to pressure-test the *survivability* of the design at 3am and tell us what must be true before it runs in production / multi-tenant.
 
 ## RAT v3 in one SRE-relevant paragraph
 
@@ -74,8 +74,8 @@ Native `/metrics`/SLOs (sre#8); `rat diagnose`; reconcile fairness; resource-lim
 ## Materials & reading order (SRE-relevant)
 
 1. This brief + the failure-domain table.
-2. [reviews/03-operations-sre.md](03-operations-sre.md) + [reviews/board/sre.md](board/sre.md) — the internal SRE review + its Failure Mode Catalog (challenge it; tell us what it missed and what it over-weighted).
-3. `docs/architecture/overview.md` §reconciliation, §scalability, §HA (leader/lease, D5); [ADR-001](../docs/architecture/adrs/001-everything-is-a-plugin.md) (tier-0 + the six things).
+2. [reviews/03-operations-sre.md](../03-operations-sre.md) + [reviews/board/sre.md](board/sre.md) — the internal SRE review + its Failure Mode Catalog (challenge it; tell us what it missed and what it over-weighted).
+3. `docs/architecture/overview.md` §reconciliation, §scalability, §HA (leader/lease, D5); [ADR-001](../../docs/architecture/adrs/001-everything-is-a-plugin.md) (tier-0 + the six things).
 4. The built reliability surface, in `core/`: `reconciler/` (convergence + backoff/jitter/cap + `Status()`) · `lease/` (CAS + thrash guard + failover) · `gateway/gateway.go` (C3 bounding, C4 audit).
 5. `roadmap/backlog.md` (sre#4/#8 + the deferred operability items) + `roadmap/done.md` (sre#4).
 

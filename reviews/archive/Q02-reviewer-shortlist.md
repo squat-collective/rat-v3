@@ -46,5 +46,5 @@ You do **not** need all five. Two to three sharp reviewers beat five shallow one
 
 - Reach out with a [cover note](Q02-outreach-note.md) (per-lens variant) **first**; attach the matching brief on a yes.
 - It's **confidential / unpublished** — say so up front; a light NDA is reasonable if they want one.
-- Track each in [Q02-tracker.md](Q02-tracker.md); their findings land as `reviews/11-q02-<name>.md` (template in the tracker).
+- Track each in [Q02-tracker.md](../Q02-tracker.md); their findings land as `reviews/11-q02-<name>.md` (template in the tracker).
 - Budget the *synthesis*: once ≥2 reviews are in, reconcile + severity-rank them, and feed the bottom-line into the **Q01** (v2-vs-v3) call.

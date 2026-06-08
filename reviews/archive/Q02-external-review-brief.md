@@ -1,6 +1,6 @@
 # Q02 — External peer review: reviewer brief
 
-> **Status:** the ask for the Q02 external review owed by [ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) §Open-questions and [reviews/09](09-phase-1-gate-review.md) (the gate review's dissent: *zero* external human review so far).
+> **Status:** the ask for the Q02 external review owed by [ADR-013](../../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) §Open-questions and [reviews/09](../09-phase-1-gate-review.md) (the gate review's dissent: *zero* external human review so far).
 > **Confidentiality:** RAT v3 is unpublished and the contract freeze is **local/unpushed**. Please treat everything here as confidential and do not redistribute.
 > **Audience:** an external practitioner who has *built* a plugin platform or a control plane (see "Who we're looking for").
 
@@ -21,8 +21,8 @@ Read `CLAUDE.md` + `docs/vision.md` for the full premise and anti-goals.
 
 ## Where we are
 
-- **Phase 0 — contracts frozen** (`rat/1.5`): 18 axes, `.proto` + per-kind manifest schemas, two independent reference implementations per data-plane axis before freeze ([ADR-003](../docs/architecture/adrs/003-two-references-before-contract-freeze.md)), golden-data conformance vectors.
-- **Phase 1 — the core, sealed** (`rat/2.0`): a spike grew into a real control plane — manifest-driven registry, a capability-invoke gateway (capability authz + audit + deadline/idle bounding), two deployment-runtimes (local-process + a podman runtime that enforces the full kernel-level isolation profile), a supervisor, a reconciler with leader-election, conformance-attestation verification, and the Arrow bytes-leg ticket. Nine board-defined exit criteria (C1, C3, C4, C5, D1, D2, D3, D4, sre#4) are all green **against real launched plugins**, and the frozen wire held throughout (`make breaking` clean). See [reviews/10](10-phase-1-spike-exit.md) and `roadmap/done.md`.
+- **Phase 0 — contracts frozen** (`rat/1.5`): 18 axes, `.proto` + per-kind manifest schemas, two independent reference implementations per data-plane axis before freeze ([ADR-003](../../docs/architecture/adrs/003-two-references-before-contract-freeze.md)), golden-data conformance vectors.
+- **Phase 1 — the core, sealed** (`rat/2.0`): a spike grew into a real control plane — manifest-driven registry, a capability-invoke gateway (capability authz + audit + deadline/idle bounding), two deployment-runtimes (local-process + a podman runtime that enforces the full kernel-level isolation profile), a supervisor, a reconciler with leader-election, conformance-attestation verification, and the Arrow bytes-leg ticket. Nine board-defined exit criteria (C1, C3, C4, C5, D1, D2, D3, D4, sre#4) are all green **against real launched plugins**, and the frozen wire held throughout (`make breaking` clean). See [reviews/10](../10-phase-1-spike-exit.md) and `roadmap/done.md`.
 
 ## Who we're looking for
 
@@ -40,16 +40,16 @@ People who have *operated or built* one of: an extension/plugin platform (OSGi, 
 
 ## What internal review already covered (please don't just re-derive this)
 
-A five-perspective adversarial review + board reviews are in `reviews/` (start with [reviews/00-synthesis.md](00-synthesis.md)):
+A five-perspective adversarial review + board reviews are in `reviews/` (start with [reviews/00-synthesis.md](../00-synthesis.md)):
 
 | file | lens | the load-bearing thing it surfaced |
 |---|---|---|
-| [01](01-adversarial-architect.md) | architect | "tier-0" plugins (state-backend / deployment-runtime / bus) are bootstrap-critical, not hot-swappable |
-| [02](02-plugin-ecosystem-builder.md) | ecosystem | capability negotiation is a lie unless *conformance* is enforced, not declared |
-| [03](03-operations-sre.md) | SRE | the failure domain is huge + undiagnosable; the state-backend is a hidden tier-0 SPOF; crash-loop/lease-thrash hazards |
-| [04](04-security-reviewer.md) | security | credential vending + the bytes-leg ticket are the real trust boundaries |
-| [05](05-product-gtm.md) | product/GTM | the ecosystem cold-start problem |
-| [00](00-synthesis.md) | synthesis | C1–C10 cross-cutting concerns the core's *enforcement layer* must own (trace propagation, per-plugin isolation, mandatory audit, native observability) |
+| [01](../01-adversarial-architect.md) | architect | "tier-0" plugins (state-backend / deployment-runtime / bus) are bootstrap-critical, not hot-swappable |
+| [02](../02-plugin-ecosystem-builder.md) | ecosystem | capability negotiation is a lie unless *conformance* is enforced, not declared |
+| [03](../03-operations-sre.md) | SRE | the failure domain is huge + undiagnosable; the state-backend is a hidden tier-0 SPOF; crash-loop/lease-thrash hazards |
+| [04](../04-security-reviewer.md) | security | credential vending + the bytes-leg ticket are the real trust boundaries |
+| [05](../05-product-gtm.md) | product/GTM | the ecosystem cold-start problem |
+| [00](../00-synthesis.md) | synthesis | C1–C10 cross-cutting concerns the core's *enforcement layer* must own (trace propagation, per-plugin isolation, mandatory audit, native observability) |
 
 We acted on these (they shaped the frozen contracts + the Phase-1 exit criteria). **What we cannot do is verify we found *all* of them, or that our fixes are right.** That's the gap you're filling.
 
@@ -98,8 +98,8 @@ These are known, documented, and deferred — not blind spots:
 1. `CLAUDE.md` — the premise + working discipline (10 principles).
 2. `docs/vision.md` — the *why* + anti-goals.
 3. `docs/architecture/overview.md` — the *what* (the six things, the reconciliation model, the data-plane bypass).
-4. ADRs [001](../docs/architecture/adrs/001-everything-is-a-plugin.md) (everything-is-a-plugin), [002](../docs/architecture/adrs/002-founding-tech-stack.md) (tech stack), [003](../docs/architecture/adrs/003-two-references-before-contract-freeze.md) (two-references-before-freeze).
-5. [reviews/00-synthesis.md](00-synthesis.md) — what internal review concluded (challenge it).
+4. ADRs [001](../../docs/architecture/adrs/001-everything-is-a-plugin.md) (everything-is-a-plugin), [002](../../docs/architecture/adrs/002-founding-tech-stack.md) (tech stack), [003](../../docs/architecture/adrs/003-two-references-before-contract-freeze.md) (two-references-before-freeze).
+5. [reviews/00-synthesis.md](../00-synthesis.md) — what internal review concluded (challenge it).
 6. `contracts/proto/**` — the frozen wire (skim `common/v1`, `catalog/v1`, `format/v1`, `deploymentruntime/v1`, `storage/v1`).
 7. `core/README.md` + `core/**` — the Phase-1 core.
 8. `roadmap/current.md` + `roadmap/done.md` — exactly where we are and how we got here.
@@ -127,4 +127,4 @@ Plus a one-paragraph **bottom line**: *would you make this bet, and what's the s
 
 ## Related
 
-- [ADR-013](../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) (Q01/Q02) · [reviews/09](09-phase-1-gate-review.md) (the dissent that owes this review) · [reviews/00-synthesis.md](00-synthesis.md) (internal review to challenge) · [reviews/10](10-phase-1-spike-exit.md) (the spike exit report).
+- [ADR-013](../../docs/architecture/adrs/013-phase-1-spike-and-commitment-gate.md) (Q01/Q02) · [reviews/09](../09-phase-1-gate-review.md) (the dissent that owes this review) · [reviews/00-synthesis.md](../00-synthesis.md) (internal review to challenge) · [reviews/10](../10-phase-1-spike-exit.md) (the spike exit report).

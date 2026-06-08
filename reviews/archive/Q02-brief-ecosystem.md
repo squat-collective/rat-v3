@@ -5,7 +5,7 @@
 
 ## The ask, as an ecosystem builder
 
-RAT v3's entire value proposition is the **plugin ecosystem** — the differentiator is *"fully pluggable everything; if a competitor can do X without a plugin, we did it wrong."* A platform like that lives or dies on whether third parties actually build, publish, and trust plugins. You've watched ecosystems reach critical mass (VSCode, K8s operators, dbt adapters, Backstage) and watched others stall (OSGi outside Eclipse, most "platforms"). **Would you build a plugin for this — would you bet your tool's distribution on it — and does this reach a self-sustaining ecosystem or die at cold-start?** All review so far has been internal ([reviews/02-plugin-ecosystem-builder.md](02-plugin-ecosystem-builder.md), [reviews/05-product-gtm.md](05-product-gtm.md)); we want your outside read on the adoption thesis we can't validate from inside.
+RAT v3's entire value proposition is the **plugin ecosystem** — the differentiator is *"fully pluggable everything; if a competitor can do X without a plugin, we did it wrong."* A platform like that lives or dies on whether third parties actually build, publish, and trust plugins. You've watched ecosystems reach critical mass (VSCode, K8s operators, dbt adapters, Backstage) and watched others stall (OSGi outside Eclipse, most "platforms"). **Would you build a plugin for this — would you bet your tool's distribution on it — and does this reach a self-sustaining ecosystem or die at cold-start?** All review so far has been internal ([reviews/02-plugin-ecosystem-builder.md](../02-plugin-ecosystem-builder.md), [reviews/05-product-gtm.md](../05-product-gtm.md)); we want your outside read on the adoption thesis we can't validate from inside.
 
 ## RAT v3 in one ecosystem-relevant paragraph
 
@@ -17,8 +17,8 @@ The Q02 review is of the **architecture/strategy**; here's how much exists:
 
 **Real (Phase 0–1):**
 - **The contract triple is frozen** (`rat/1.5`): 18 axes, `.proto` + per-kind `plugin.yaml` JSON schemas + the `rat://` capability grammar.
-- **30-plus reference plugins** across all 18 axes — and per [ADR-003](../docs/architecture/adrs/003-two-references-before-contract-freeze.md), **two technologically-divergent references per data-plane axis** before any freeze (e.g. DuckDB *and* DataFusion engines; local-process *and* k8s runtimes), each passing shared **golden-data conformance vectors**. So the contracts are not single-implementation artifacts.
-- **Capability negotiation is enforced, not asserted (D4):** the core verifies `declared == conformed` via a signed attestation — a plugin can't claim a capability it didn't pass the golden vectors for. ("Capability declared" is no longer a lie — the thing [reviews/02](02-plugin-ecosystem-builder.md) flagged as the ecosystem's make-or-break.)
+- **30-plus reference plugins** across all 18 axes — and per [ADR-003](../../docs/architecture/adrs/003-two-references-before-contract-freeze.md), **two technologically-divergent references per data-plane axis** before any freeze (e.g. DuckDB *and* DataFusion engines; local-process *and* k8s runtimes), each passing shared **golden-data conformance vectors**. So the contracts are not single-implementation artifacts.
+- **Capability negotiation is enforced, not asserted (D4):** the core verifies `declared == conformed` via a signed attestation — a plugin can't claim a capability it didn't pass the golden vectors for. ("Capability declared" is no longer a lie — the thing [reviews/02](../02-plugin-ecosystem-builder.md) flagged as the ecosystem's make-or-break.)
 - **Generated SDKs** (Go + Python are exercised by the reference plugins) + a manifest schema + a conformance suite an author runs.
 
 **Paper / partial (the ecosystem-load-bearing gaps — assume NOT solved):**
@@ -68,8 +68,8 @@ The zero-third-party cold-start (Phase-4 GTM, unsolved); manifest signing (C8) d
 ## Materials & reading order (ecosystem-relevant)
 
 1. This brief + the ecosystem-health table.
-2. [reviews/02-plugin-ecosystem-builder.md](02-plugin-ecosystem-builder.md) + [reviews/board/ecosystem.md](board/ecosystem.md) + [reviews/05-product-gtm.md](05-product-gtm.md) — the internal ecosystem/GTM reviews (challenge them).
-3. `docs/vision.md` — the premise + the "if a competitor can do X without a plugin, we did it wrong" anti-goal; [ADR-001](../docs/architecture/adrs/001-everything-is-a-plugin.md) (the 18 plugin axes) · [ADR-003](../docs/architecture/adrs/003-two-references-before-contract-freeze.md) (two-references-before-freeze).
+2. [reviews/02-plugin-ecosystem-builder.md](../02-plugin-ecosystem-builder.md) + [reviews/board/ecosystem.md](board/ecosystem.md) + [reviews/05-product-gtm.md](../05-product-gtm.md) — the internal ecosystem/GTM reviews (challenge them).
+3. `docs/vision.md` — the premise + the "if a competitor can do X without a plugin, we did it wrong" anti-goal; [ADR-001](../../docs/architecture/adrs/001-everything-is-a-plugin.md) (the 18 plugin axes) · [ADR-003](../../docs/architecture/adrs/003-two-references-before-contract-freeze.md) (two-references-before-freeze).
 4. What an author actually touches: `contracts/schema/plugin.v1.json` (the manifest they write) · `contracts/proto/rat/marketplace/v1/` (`marketplace.proto` + `CONTRACT.md` — the compatibility oracle) · `contracts/conformance/` (the golden vectors they must pass) · `examples/**` (the reference plugins they'd copy — pick an axis and imagine authoring a third).
 5. `roadmap/backlog.md` (the marketplace/signing/DX/governance items) + `roadmap/phases.md` (Phase 4 = GTM/ecosystem).
 

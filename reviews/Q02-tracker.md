@@ -9,13 +9,13 @@
 
 | lens | reviewer | brief sent | status | findings doc |
 |---|---|---|---|---|
-| architect/contracts | _(tbd)_ | [architect](Q02-brief-architect.md) | **not started** | |
-| security | _(tbd)_ | [security](Q02-brief-security.md) | **not started** | |
-| SRE/operability | _(tbd)_ | [SRE](Q02-brief-sre.md) | **not started** | |
-| ecosystem _(optional)_ | _(tbd)_ | [ecosystem](Q02-brief-ecosystem.md) | **not started** | |
+| architect/contracts | _(tbd)_ | [architect](archive/Q02-brief-architect.md) | **not started** | |
+| security | _(tbd)_ | [security](archive/Q02-brief-security.md) | **not started** | |
+| SRE/operability | _(tbd)_ | [SRE](archive/Q02-brief-sre.md) | **not started** | |
+| ecosystem _(optional)_ | _(tbd)_ | [ecosystem](archive/Q02-brief-ecosystem.md) | **not started** | |
 
 Status flow: `not started` → `reached out` → `accepted` → `reviewing` → `findings in` → `synthesized`.
-Target: **architect + security** at minimum; + SRE comfortable. Sourcing: [Q02-reviewer-shortlist.md](Q02-reviewer-shortlist.md). The dry-run synthesis below is a **baseline for real reviewers to react to / falsify**, not a replacement.
+Target: **architect + security** at minimum; + SRE comfortable. Sourcing: [Q02-reviewer-shortlist.md](archive/Q02-reviewer-shortlist.md). The dry-run synthesis below is a **baseline for real reviewers to react to / falsify**, not a replacement.
 
 ## Simulated dry-run panel — findings in (2026-06-02)
 

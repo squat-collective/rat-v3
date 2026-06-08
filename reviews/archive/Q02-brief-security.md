@@ -5,7 +5,7 @@
 
 ## The ask, as a security person
 
-RAT v3's whole bet is *"install many self-describing plugins, including third-party ones."* That makes the platform's security a property of its **trust boundaries and isolation**, not of any single plugin. **Be the adversary:** model a malicious or compromised plugin, a malicious tenant, a leaked ticket/credential, a supply-chain-poisoned plugin image, and a network attacker on the data plane — and tell us where a boundary breaks. All review so far has been internal ([reviews/04-security-reviewer.md](04-security-reviewer.md), [reviews/board/security.md](board/security.md)), so it shares our blind spots; we want you to find the ones we structurally can't.
+RAT v3's whole bet is *"install many self-describing plugins, including third-party ones."* That makes the platform's security a property of its **trust boundaries and isolation**, not of any single plugin. **Be the adversary:** model a malicious or compromised plugin, a malicious tenant, a leaked ticket/credential, a supply-chain-poisoned plugin image, and a network attacker on the data plane — and tell us where a boundary breaks. All review so far has been internal ([reviews/04-security-reviewer.md](../04-security-reviewer.md), [reviews/board/security.md](board/security.md)), so it shares our blind spots; we want you to find the ones we structurally can't.
 
 ## RAT v3 in one security-relevant paragraph
 
@@ -64,8 +64,8 @@ C2 channel auth (the deferral above); unsigned audit records (signing seeded by 
 ## Materials & reading order (security-relevant)
 
 1. This brief + the trust-model table above.
-2. [reviews/04-security-reviewer.md](04-security-reviewer.md) + [reviews/board/security.md](board/security.md) — the internal security review (challenge its conclusions).
-3. `docs/architecture/overview.md` §"data plane bypasses core" + §reconciliation; [ADR-001](../docs/architecture/adrs/001-everything-is-a-plugin.md) (tier-0).
+2. [reviews/04-security-reviewer.md](../04-security-reviewer.md) + [reviews/board/security.md](board/security.md) — the internal security review (challenge its conclusions).
+3. `docs/architecture/overview.md` §"data plane bypasses core" + §reconciliation; [ADR-001](../../docs/architecture/adrs/001-everything-is-a-plugin.md) (tier-0).
 4. Contracts: `common/v1/data.proto` (`ArrowStream.ticket`, SEC-14) · `common/v1/audit.proto` (signing/hash-chain) · `storage/v1` (C7 vend-credentials) · `deploymentruntime/v1` (the I9 `IsolationProfile`).
 5. The enforcement, in `core/`: `gateway/gateway.go` (C5/C4/C3 + the passthrough relay + the C2-deferred note) · `deploymentruntime/podman.go` (I9 enforcement) · `arrowticket/` (the ticket) · `conformance/attestation.go` (ed25519) · `composition/composition_storagecreds_test.go` (cred scoping).
 
