@@ -78,5 +78,5 @@ This ADR is foundational; nothing to migrate from. The next actions:
 - [docs/conversations/2026-05-30-the-vision-conversation.md](../../conversations/2026-05-30-the-vision-conversation.md) — the conversation that produced ADR-001 and ADR-002.
 - [docs/conversations/2026-05-30-tech-stack-decisions.md](../../conversations/2026-05-30-tech-stack-decisions.md) — the conversation where these specific 10 decisions were debated.
 - [docs/architecture/overview.md](../overview.md) — needs updating to reference this ADR.
-- [research/prior-art/](../../../research/prior-art/) — NATS, K8s, OSGi, VSCode references underpin many of these choices.
+- [research/prior-art/](../../../docs/research/prior-art/) — NATS, K8s, OSGi, VSCode references underpin many of these choices.
 - v2's ADR-024 (decoupled axes), ADR-025 (on-demand planes), ADR-026 (manifests) — inform many of these decisions.

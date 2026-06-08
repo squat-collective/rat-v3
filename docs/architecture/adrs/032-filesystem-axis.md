@@ -8,7 +8,7 @@
 > remote code store), we use a **pure-plugin** approach instead: a plugin that **reuses the existing
 > `state` axis** (`get`/`put`/`list` = read/write/list a path→bytes namespace) and **requires the
 > `storage` axis** (so any storage backend — minio, S3, … — plugs in). No proto, no core change. See
-> [`ideas/inbox.md`](../../ideas/inbox.md) → "code-fs (plugin-only)". **Revisit this fs axis** when
+> [`ideas/inbox.md`](../../../ideas/inbox.md) → "code-fs (plugin-only)". **Revisit this fs axis** when
 > richer semantics (stat/delete/real dirs, git-backing) are wanted — and ideally *after* the
 > **dynamic-descriptor gap** is closed (so a new axis is a pure plugin, not a core recompile).
 
@@ -120,5 +120,5 @@ reference plugin → prove the `fs → storage → secret` chain. `make breaking
 
 - [ADR-001](001-everything-is-a-plugin.md) — the open axis set this extends.
 - [ADR-003](003-two-references-before-contract-freeze.md) — the two-reference rule `fs/v1` owes.
-- [storage axis](../../contracts/proto/rat/storage/v1/storage.proto) — what `fs-s3` builds on.
+- [storage axis](../../../contracts/proto/rat/storage/v1/storage.proto) — what `fs-s3` builds on.
 - [ADR-005](005-capability-invocation-model.md) — the Invoke gateway `fs/*` routes through.

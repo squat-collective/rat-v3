@@ -136,7 +136,7 @@ Additive: define `operator/v1` (proto + the manifest `reconciles` field); the re
 work-queue + registry-resolve + `Invoke`-reconcile + backoff + leader-election (CAS) + status path;
 reframe the existing plugin-set loop as the built-in **deployment operator**. First domain operator:
 a **pipeline operator** (watches pipeline desired-state, runs the `runtime`). **Depends on:** the
-reconcile loop actually running in the daemon (the deferred finding, [done.md](../../roadmap/done.md)) +
+reconcile loop actually running in the daemon (the deferred finding, [done.md](../../../roadmap/done.md)) +
 the event bus wired alongside the daemon.
 
 ## Related

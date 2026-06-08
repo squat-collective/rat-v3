@@ -50,8 +50,8 @@ MUST STILL:
 
 This is **not a 7th core thing.** These are the *correctness conditions of the existing six*
 (identity gateway + API gateway + the cross-cutting enforcement, see
-[`plugin-architecture.md`](../../.claude/rules/plugin-architecture.md) "Cross-plugin concerns" and
-[reviews/00](../../reviews/00-synthesis.md) C1–C10). The count stays **6**.
+[`plugin-architecture.md`](../../../.claude/rules/plugin-architecture.md) "Cross-plugin concerns" and
+[reviews/00](../../../reviews/00-synthesis.md) C1–C10). The count stays **6**.
 
 ### 3. Authentication + transport are **plugin / environment** concerns
 
@@ -146,7 +146,7 @@ are follow-on builds.
 ## Migration
 
 1. **Codify** the three rings + secure-by-default posture in
-   [`plugin-architecture.md`](../../.claude/rules/plugin-architecture.md) (extends the existing
+   [`plugin-architecture.md`](../../../.claude/rules/plugin-architecture.md) (extends the existing
    "Cross-plugin concerns" section) so the boundary is always-loaded discipline.
 2. **Implement the binding guardrail** in `rat serve` + `rat hub`: a public TCP bind requires TLS +
    an identity plugin, else refuse / fail-loud (Q02).
@@ -161,9 +161,9 @@ No proto change; `make breaking` clean.
 - [ADR-001](001-everything-is-a-plugin.md) — the six-thing core + plugin discipline this model keeps.
 - [ADR-033](033-workspace-federation-hub.md) — the federation hub; this model is what secures it (the
   single front door is where TLS + identity become mandatory).
-- [ADR-007](007-call-context-in-metadata.md) — identity rides in `rat-callmeta-bin`; the gateway
+- [ADR-007](007-call-context-transport.md) — identity rides in `rat-callmeta-bin`; the gateway
   re-derives `caller_plugin` per hop (wire identity is not trusted).
-- [ADR-019](019-rat-serve-cold-executable-spec.md) — the daemon's bind address (default unix socket)
+- [ADR-019](019-rat-serve-daemon.md) — the daemon's bind address (default unix socket)
   this posture builds on.
-- [`plugin-architecture.md`](../../.claude/rules/plugin-architecture.md) + [reviews/00](../../reviews/00-synthesis.md)
+- [`plugin-architecture.md`](../../../.claude/rules/plugin-architecture.md) + [reviews/00](../../../reviews/00-synthesis.md)
   C1–C10 — the cross-cutting correctness conditions this names.

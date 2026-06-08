@@ -145,11 +145,11 @@ NATS-leaf for cross-machine.
 
 ## Related
 
-- [ADR-019](019-rat-serve-cold-executable-spec.md) — the orchestrator/client (edge) split the hub
+- [ADR-019](019-rat-serve-daemon.md) — the orchestrator/client (edge) split the hub
   sits on.
 - [ADR-005](005-capability-invocation-model.md) — the `CapabilityInvokeService` the hub reuses as a
   generic relay.
-- [ADR-007](007-call-context-in-metadata.md) — the `rat-callmeta-bin` envelope the hub preserves so
+- [ADR-007](007-call-context-transport.md) — the `rat-callmeta-bin` envelope the hub preserves so
   workspaces authorize the original identity.
 - [ADR-023](023-rat-as-a-per-project-daemon.md) — per-project daemons + the instance registry the
   hub discovers from.

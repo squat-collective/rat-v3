@@ -3,7 +3,7 @@
 > A cross-system entry (Docker, containerd, npm, pip, Cargo, apt, Homebrew) focused on **one
 > question**: how does a package manager answer *"what do I have / what's available, locally"*
 > quickly and offline? This is the prior art for RAT v3's **local marketplace** — the source
-> that's derived from the plugin images present on a machine ([ADR-028](../../docs/architecture/adrs/028-local-marketplace-cached-index.md)).
+> that's derived from the plugin images present on a machine ([ADR-028](../../architecture/adrs/028-local-marketplace-cached-index.md)).
 
 ## The claim
 
@@ -83,4 +83,4 @@ A fourth, smaller pattern: **"installed" vs "available" are different queries**,
 - Cargo registry index (git → sparse HTTP): <https://doc.rust-lang.org/cargo/reference/registry-index.html>
 - apt lists / dpkg status: `/var/lib/apt/lists`, `/var/lib/dpkg/status` (Debian policy §)
 - skopeo (daemonless inspect): <https://github.com/containers/skopeo>
-- RAT marketplace format + sources: [`marketplace/README.md`](../../marketplace/README.md)
+- RAT marketplace format + sources: [`marketplace/README.md`](../../../marketplace/README.md)

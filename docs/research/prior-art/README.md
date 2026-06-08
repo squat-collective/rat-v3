@@ -25,7 +25,7 @@ Links to docs / source / talks.
 
 ## Written up
 
-- ✅ [**Package managers — the local catalog problem**](package-manager-local-catalogs.md) — Docker, containerd, npm, pip, Cargo, apt, Homebrew, focused on how each answers "what do I have, locally" fast + offline. Prior art for the local marketplace ([ADR-028](../../docs/architecture/adrs/028-local-marketplace-cached-index.md)).
+- ✅ [**Package managers — the local catalog problem**](package-manager-local-catalogs.md) — Docker, containerd, npm, pip, Cargo, apt, Homebrew, focused on how each answers "what do I have, locally" fast + offline. Prior art for the local marketplace ([ADR-028](../../architecture/adrs/028-local-marketplace-cached-index.md)).
 
 ## Systems on the list (write-ups coming)
 

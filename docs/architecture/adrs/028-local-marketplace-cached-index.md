@@ -4,7 +4,7 @@
 
 ## Context
 
-The marketplace ([Phase 8](../../roadmap/done.md), `marketplace.go`) reads from two source
+The marketplace ([Phase 8](../../../roadmap/done.md), `marketplace.go`) reads from two source
 kinds: **added** (index files / remote URLs, already cached under `~/.cache/rat/marketplaces/`
 and signature-verified) and **local** — the plugin images present on this machine, discovered
 by their stamped manifest (the OCI label `dev.rat.manifest.v1.b64`, ADR-026).
@@ -149,5 +149,5 @@ clean (no contract touched).
   deferred daemon-owned local index (Q01).
 - [research/prior-art/package-manager-local-catalogs.md](../../research/prior-art/package-manager-local-catalogs.md)
   — the Docker / Cargo / apt / npm prior art this applies.
-- [`marketplace/README.md`](../../marketplace/README.md) — the marketplace format + the local vs
+- [`marketplace/README.md`](../../../marketplace/README.md) — the marketplace format + the local vs
   added source distinction.

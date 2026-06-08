@@ -11,7 +11,7 @@
 
 The contract triple (`.proto` + `plugin.yaml` schema + capability URIs) is language-neutral by
 design — ADR-001 commits that "plugin authors can use any language; the contract is proto +
-manifest," and [vision.md](../vision.md) commitment #3 forbids "language-specific SDKs that
+manifest," and [vision.md](../../vision.md) commitment #3 forbids "language-specific SDKs that
 other languages must replicate." Sub-phase 0d now needs to produce *running code* (reference
 plugins) against that contract, which forces three project-shaping decisions that have not been
 made yet:
