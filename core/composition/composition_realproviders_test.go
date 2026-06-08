@@ -24,12 +24,12 @@ import (
 
 // C5 against REAL providers (Go refs): the SAME enforcing gateway + supervisor as
 // composition_launched_test.go, but the catalog and format are the canonical ADR-003
-// reference implementations (examples/{catalog,format}/inmemory-go) — built as
+// reference implementations (plugins/{catalog,format}/inmemory-go) — built as
 // INDEPENDENT modules and launched as isolated processes, not our in-repo fakes. C5
 // holds identically: declared caps route + return real results; a capability the real
 // provider genuinely implements but the caller never declared is denied.
 
-// buildRef builds an external examples/<modRel> module to a temp binary the
+// buildRef builds an external plugins/<modRel> module to a temp binary the
 // local-process runtime can launch. The refs are separate Go modules (own go.mod +
 // replace → contracts/sdks/go), so this also proves the core enforces against
 // independently-built plugins, the way a third party's would be.
@@ -39,7 +39,7 @@ func buildRef(t *testing.T, modRel string) string {
 	cmd := exec.Command("go", "build", "-o", bin, ".")
 	cmd.Dir = filepath.Join("..", "..", "examples", modRel) // this test runs in core/composition
 	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("build examples/%s: %v\n%s", modRel, err, out)
+		t.Fatalf("build plugins/%s: %v\n%s", modRel, err, out)
 	}
 	return bin
 }

@@ -129,7 +129,7 @@ unary gRPC call. No streaming, no Arrow IPC.
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/auditlog/inmemory-py`](../../../../../examples/auditlog/inmemory-py) | 1 (control-plane ref) | all four tamper-evidence properties; canonical-bytes helper; chain-head watermark; prefix-only + idempotent-duplicate in-memory |
+| [`plugins/auditlog/inmemory-py`](../../../../../plugins/auditlog/inmemory-py) | 1 (control-plane ref) | all four tamper-evidence properties; canonical-bytes helper; chain-head watermark; prefix-only + idempotent-duplicate in-memory |
 
 ## Related
 

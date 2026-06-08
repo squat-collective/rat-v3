@@ -1,6 +1,6 @@
 # ADR-026: Plugin authoring & packaging — the `rat plugin` toolkit, the verified-plugin gate, scaffolded CI/CD
 
-## Status: Proposed (2026-06-03)
+## Status: Accepted (2026-06-03) — built + proven (see roadmap/done.md)
 
 ## Context
 
@@ -153,6 +153,30 @@ shape. The validate + conformance steps are NOT pluggable — they are the froze
    wrappers is portable by construction.
 4. **A long-running packaging daemon** (à la `dockerd`). Rejected for v1: `rat plugin pack` is a command;
    the local OCI store is the "service". A build-cache daemon is a future optimization, not the model.
+
+## Update — 2026-06-04 (Phase 10): SDK distribution + polyglot scaffold
+
+Two gaps surfaced by *dogfooding* `rat plugin init/pack` to author a plugin from scratch, both
+fixed:
+
+- **SDK as a base image, not vendored.** The scaffold told Python plugins to *vendor the whole
+  generated SDK* (844K of all-axes stubs) into their own repo. Replaced with **`rat/plugin-base-py`**
+  (the SDK + grpc baked into `site-packages`, built by `make plugin-base-py`); scaffolded Python
+  plugins now `FROM` it and ship only their own code (proven: a plugin repo 892K → 40K, still passes
+  the verified gate). The plugin-axis contract is the wire — a plugin needs the *generated stubs* for
+  the axes it speaks, but as an installed dependency, not committed source.
+- **`rat plugin init --lang` is polyglot.** The toolkit emitted Python only, though the architecture
+  (gRPC + manifest, four generated SDKs) was always language-agnostic. Added **`go | typescript |
+  rust`** (Python default): each emits an idiomatic server stub + build manifest + Dockerfile.
+  Compiled langs (Go, Rust) link the SDK in and ship a tiny static-ish binary (no base image —
+  Go is **14.9 MB on `scratch`** vs the 153 MB Python base); interpreted langs get the SDK from a
+  base / npm. All four verified: scaffold → `check` → `pack` (build → launch under I9 → healthy →
+  serves-gate). `--lang go` is arguably the better default for performance-sensitive axes.
+
+**Still open (follow-ons):** publish `rat/plugin-base-py` to ghcr (today a local `make` target, the
+same placeholder gap as the official-marketplace URL); a per-axis SDK split; and `init --lang`
+emitting a *fully implemented* engine stub (today the servicer is a TODO, so a fresh `pack` fails the
+serves-gate until you implement it — by design).
 
 ## Related
 

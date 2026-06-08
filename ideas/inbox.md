@@ -131,7 +131,7 @@ Worth a dedicated ADR when the marketplace plugin is being built. Look at: VSCod
 
 > **Resolved by [ADR-007](../docs/architecture/adrs/007-call-context-transport.md):** the whole cross-cutting envelope (trace + identity) moves out of the payload into a `rat-callmeta-bin` transport-metadata header — option (a), refined. This upholds ADR-005's generic-proxy guarantee (the gateway parses zero payload bytes) and keeps the keystone `RequestContext` shape verbatim, only changing its carrier. The reasoning below is kept as the historical record.
 
-**Surfaced by building the 0d stub invoke-gateway** (`examples/format/inmemory-go/gateway_test.go`) — exactly the kind of gap ADR-003 predicts a real implementation exposes.
+**Surfaced by building the 0d stub invoke-gateway** (`plugins/format/inmemory-go/gateway_test.go`) — exactly the kind of gap ADR-003 predicts a real implementation exposes.
 
 ADR-005 / `core/v1/invoke.proto` says the gateway is a **generic proxy**: it routes by capability and forwards `payload` **without interpreting it**. But two clauses collide:
 1. The gateway must **re-derive `identity.caller_plugin`** for the downstream hop and **never trust wire-supplied identity** (keystone, `context.proto`).
@@ -169,7 +169,7 @@ Three resolutions to weigh (→ a candidate follow-up ADR, "streaming capability
 Leaning **(a)** — it preserves the central-enforcement property ADR-005 is built on and keeps the gateway generic; streaming is just the unary relay with N response frames. But it needs the ADR to weigh (b)'s perf argument for genuinely high-volume streams.
 
 Open question: pick (a)/(b)/(c) before `runtime/v1` (or any streaming axis) routes through the gateway — and before `invoke.proto` freezes.
-Related: [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md), [ADR-007](../docs/architecture/adrs/007-call-context-transport.md) (same "0d reveals the gap" pattern), `contracts/proto/rat/core/v1/invoke.proto`, `contracts/proto/rat/runtime/v1/runtime.proto`, `examples/runtime/inmemory-go/harness_test.go` (the direct-dial workaround + its header note).
+Related: [ADR-005](../docs/architecture/adrs/005-capability-invocation-model.md), [ADR-007](../docs/architecture/adrs/007-call-context-transport.md) (same "0d reveals the gap" pattern), `contracts/proto/rat/core/v1/invoke.proto`, `contracts/proto/rat/runtime/v1/runtime.proto`, `plugins/runtime/inmemory-go/harness_test.go` (the direct-dial workaround + its header note).
 
 ## 2026-06-02 — [experiment, ui] vscode-rat as a multi-environment RAT explorer (many connections)
 
@@ -263,3 +263,96 @@ a single `rat` binary that's both might be the friendlier front door (Tom keeps 
 not "`ratctl apply`"). Decide alongside the release pipeline.
 Related: the marketplace/distribution idea above (plugin images on GHCR), ADR-019 (rat/ratctl split),
 the founding `chmod +x ./rat` vision (docs/vision.md / CLAUDE.md).
+
+---
+
+## `code-fs` — a remote, collaborative code store as a PURE plugin (plug any storage) — 2026-06-04
+
+**What Tom wants:** a thing that stores *code* and behaves like a **remote filesystem**, so work
+becomes collaborative — and crucially, **a plugin you can plug *any* storage behind** (minio today,
+another S3, "why not fs tomorrow"). It must be **just a plugin** — no new proto, no core change.
+
+**The realization that killed the fs-axis attempt:** a *new axis* (`fs`) needs a new proto **and a
+core recompile** (the gateway's `routableDescriptors()` is hardcoded). That's not "just a plugin."
+So `fs` is **deferred** ([ADR-032](../docs/architecture/adrs/032-filesystem-axis.md) → Deferred).
+
+**The plan (pure plugin, no proto):**
+
+```
+┌─ consumer (an app, an editor) ─┐
+│  get/put/list  code/app/main.py│   ← the "filesystem" = the EXISTING state axis
+└───────────────┬────────────────┘
+                ▼  rat://state/v1/{get,put,list}      (PROVIDES — no new proto)
+        ┌───────────────┐
+        │   code-fs      │  the plugin we build
+        └───────┬────────┘
+                ▼  rat://storage/v1/vend-credentials  (REQUIRES — pluggable backend)
+        ┌───────────────┐
+        │ s3-storage     │  ← minio today; swap for gcs/anything; code-fs UNCHANGED
+        └───────┬────────┘
+                ▼  reads/writes one object per path in the bucket
+            (shared S3 = collaborative; CAS via if_revision = no clobber)
+```
+
+- **PROVIDES** the existing `rat://state/v1/{get,put,list}` — `put code/x = bytes` (write a file),
+  `get code/x` (read), `list code/` (list a dir). The path→bytes namespace *is* a filesystem.
+- **REQUIRES** `rat://storage/v1/vend-credentials-{read,write}` — so the backend is **any storage
+  plugin**. That's the "plug any storage" Tom asked for: swap `s3-storage`→`gcs-storage`, `code-fs`
+  doesn't change. Same composition trick already proven (keyring↔vault swap under s3-storage).
+- **Collaborative:** code lives in **shared** storage; CAS (`if_revision`) detects concurrent edits.
+- **Pure plugin:** reuses two frozen axes (state + storage). **No proto, no `routableDescriptors`
+  change, no core rebuild.** This is the whole point.
+
+**The one honest caveat:** providing `state/*` makes `code-fs` a **state-backend**, and a plane has
+**one** state provider (registry rejects duplicates). So in a code-focused plane, `code-fs` IS the
+state-backend (code under `code/`, everything else under its own prefixes). If a plane ever needs a
+*separate* fast local state-backend too, that's the duplicate-provider limit — and the real fix is
+the **dynamic-descriptor gap** below (which lets `code-fs` provide a distinct `fs` axis cleanly).
+
+**Two things this surfaced, parked for later:**
+1. **Dynamic descriptors (the important one).** The gateway should learn axis protos from plugins at
+   **runtime**, not from a hardcoded `routableDescriptors()`. Until then, "community can add axes
+   without core changes" (ADR-001) is **aspirational** — a new axis = a core rebuild. Closing this
+   makes the deferred `fs` axis (and any community axis) a *pure plugin*. This is the unlock.
+2. **The `fs` axis itself** (ADR-032) — richer semantics (stat/delete/real dirs, **git-backing** =
+   branches/history/merge) — revisit *after* #1, when KV-over-state isn't enough.
+
+**Next step when we build:** `rat plugin init code-fs --kind state-backend --lang go`, implement
+get/put/list over storage-vended S3 objects, pack, add to the kitchen plane behind `s3-storage`,
+prove a `consumer → code-fs → s3-storage → keyring` write+read chain (all ALLOW + audited).
+
+---
+
+## code-fs spaces + per-user permissions (deferred — KISS for now) — 2026-06-04
+
+**Idea:** evolve code-fs from one namespace into a **multi-space, permission-aware filesystem
+manager** (the same shape s3-storage already has for connections). Register N **spaces** into
+code-fs; each space = a named prefix on a storage backend + a per-user ACL; access depends on the
+authenticated subject; perms map to scoped S3 creds.
+
+**Decision (2026-06-04): defer — keep code-fs simple now (one space, no per-user authz, proxy in
+the path). The door stays open; it's all additive.** Captured so it's not lost.
+
+**The shape that formed (for when we pick it up):**
+- **code-fs = a permissioned PROXY** (does the I/O → central CAS + audit + authz). This is *why*
+  code-fs exists vs the raw storage axis, which is already a *broker* (vend creds, talk S3 directly).
+  Model: **code-fs = permissioned proxy for code; storage axis = broker for bulk.** A broker
+  escape-hatch (vend a scoped cred for large files) is an open option.
+- **A space = a named prefix on a backend** (not its own bucket) — many spaces share infra.
+- **code-fs ENFORCES, identity DECIDES:** code-fs owns only the space→backend *registry*; the
+  space→user→permission *policy* lives in the **identity axis** (`Authorize(subject, action,
+  resource=space)`), so it's swappable (OIDC claims / RBAC / LDAP) and granting access is an
+  *identity* operation code-fs never sees. (Don't make code-fs an authz engine — scope creep.)
+- **Permissions shape DISCOVERY, not just access:** "my spaces" is an authz-filtered list — the
+  check happens at *discovery* (which spaces appear in the RatFS tree) AND at *access* (open/write).
+- **Don't reinvent tenancy:** per-tenant isolation is automatic (C3); spaces are the finer,
+  *shareable, per-user* layer **within** a tenant. Cross-tenant shared spaces = a separate,
+  deliberate, harder feature.
+
+**Dependencies:** the hub stamping the authenticated **subject** into the forwarded envelope (owed
+follow-on, backlog #2 area) — per-user authz needs the subject to reach code-fs.
+
+**Why additive (no rewrite):** spaces = key prefixes + a registry; authz = a new `requires` +
+an Authorize call; scoped creds = existing storage vending; surface = already generic. Layers on
+the current code-fs without touching contracts or RatFS. This is the multi-tenant SaaS code-platform
+endgame the federation/hub work points at. Worth its own ADR when picked up.

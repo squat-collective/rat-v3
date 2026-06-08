@@ -20,7 +20,7 @@ truth on its next run.
 make conformance        # or: scripts/conformance.sh
 ```
 
-This **auto-discovers every reference** under `examples/<axis>/<impl>/`, runs each
+This **auto-discovers every reference** under `plugins/<axis>/<impl>/`, runs each
 one's harness against its golden vectors (Go refs via `go test`, Python refs via
 `python harness_test.py`, all containerized — no host installs), and prints a single
 pass/fail matrix:
@@ -61,10 +61,10 @@ contract + the guide together):
 
 | File | Axis | Consumed by |
 |---|---|---|
-| `format-v1.json` | `format/v1` | `examples/format/inmemory-go` (Go harness), `examples/format/inmemory-py` (Python harness) |
-| `engine-v1.json` | `engine/v1` | `examples/engine/inmemory-go` (Go harness), `examples/engine/inmemory-py` (Python harness) — round-1 toy mini-SQL (wire contract) |
-| `engine-real-v1.json` | `engine/v1` | `examples/engine/duckdb-py`, `examples/engine/datafusion-py` — round-2 REAL SQL + typed Arrow (the duckdb+datafusion cross-run) |
-| `storage-v1.json` | `storage/v1` | `examples/storage/inmemory-go` (Go harness), `examples/storage/inmemory-py` (Python harness) |
+| `format-v1.json` | `format/v1` | `plugins/format/inmemory-go` (Go harness), `plugins/format/inmemory-py` (Python harness) |
+| `engine-v1.json` | `engine/v1` | `plugins/engine/inmemory-go` (Go harness), `plugins/engine/inmemory-py` (Python harness) — round-1 toy mini-SQL (wire contract) |
+| `engine-real-v1.json` | `engine/v1` | `plugins/engine/duckdb-py`, `plugins/engine/datafusion-py` — round-2 REAL SQL + typed Arrow (the duckdb+datafusion cross-run) |
+| `storage-v1.json` | `storage/v1` | `plugins/storage/inmemory-go` (Go harness), `plugins/storage/inmemory-py` (Python harness) |
 
 ### `engine-v1.json` mini-SQL grammar
 

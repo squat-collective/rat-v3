@@ -86,7 +86,7 @@ second tenant must leave tenant `"acme"`'s aggregates unchanged. This is the C7 
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/billing/inmemory-py`](../../../../../examples/billing/inmemory-py) | 1 (control-plane ref) | in-memory ledger; tenant from metadata; per-`(tenant, meter)` aggregate; C7 isolation |
+| [`plugins/billing/inmemory-py`](../../../../../plugins/billing/inmemory-py) | 1 (control-plane ref) | in-memory ledger; tenant from metadata; per-`(tenant, meter)` aggregate; C7 isolation |
 
 ## Related
 

@@ -133,8 +133,8 @@ error vectors:
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/deploymentruntime/local-process-py`](../../../../../examples/deploymentruntime/local-process-py) | 1 (wire) | I9 gate + lifecycle over bare OS subprocesses; isolation-honored receipt self-attested |
-| [`examples/deploymentruntime/k8s-dryrun-py`](../../../../../examples/deploymentruntime/k8s-dryrun-py) | 1 (wire) | same I9 gate; `IsolationProfile` mapped 1:1 to a k8s Pod `securityContext` — the real kernel-level enforcement surface |
+| [`plugins/deploymentruntime/local-process-py`](../../../../../plugins/deploymentruntime/local-process-py) | 1 (wire) | I9 gate + lifecycle over bare OS subprocesses; isolation-honored receipt self-attested |
+| [`plugins/deploymentruntime/k8s-dryrun-py`](../../../../../plugins/deploymentruntime/k8s-dryrun-py) | 1 (wire) | same I9 gate; `IsolationProfile` mapped 1:1 to a k8s Pod `securityContext` — the real kernel-level enforcement surface |
 
 These two references are **technologically divergent** per [ADR-003](../../../../../docs/architecture/adrs/003-two-references-before-contract-freeze.md):
 local-process (fork/subprocess) vs managed/declarative (k8s Pod manifest), running the identical

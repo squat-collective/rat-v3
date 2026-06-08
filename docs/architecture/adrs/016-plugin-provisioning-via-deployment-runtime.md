@@ -114,4 +114,4 @@ breaking` stays green) — this is all `core/` + examples.
 
 - [ADR-015](015-phase-1-commitment-gate-cleared.md) — the cleared gate / full-build commitment whose D1 this starts · [ADR-014](014-spike-core-registry-and-invoke-gateway.md) — the spike core (dial-pre-running) this supersedes for provisioning.
 - [ADR-001](001-everything-is-a-plugin.md) — tier-0 + the six things · [reviews/10](../../../reviews/10-phase-1-spike-exit.md) §"what the spike did NOT prove" (D1).
-- [`deployment_runtime.proto`](../../../contracts/proto/rat/deploymentruntime/v1/deployment_runtime.proto) + its [CONTRACT.md](../../../contracts/proto/rat/deploymentruntime/v1/CONTRACT.md) — the frozen axis · `examples/deploymentruntime/local-process-py` — the existing reference this Go runtime mirrors.
+- [`deployment_runtime.proto`](../../../contracts/proto/rat/deploymentruntime/v1/deployment_runtime.proto) + its [CONTRACT.md](../../../contracts/proto/rat/deploymentruntime/v1/CONTRACT.md) — the frozen axis · `plugins/deploymentruntime/local-process-py` — the existing reference this Go runtime mirrors.

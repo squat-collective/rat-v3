@@ -76,8 +76,8 @@ creds, not separate RPCs.)
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/storage/inmemory-go`](../../../../../examples/storage/inmemory-go), [`inmemory-py`](../../../../../examples/storage/inmemory-py) | 1 (wire) | first refs to READ tenant from the metadata envelope (C7) |
-| [`examples/storage/localfs-go`](../../../../../examples/storage/localfs-go) | 2 (real) | real filesystem — PATH CONTAINMENT (escaping prefix → `PERMISSION_DENIED`) + TENANT ISOLATION (distinct per-tenant roots) |
+| [`plugins/storage/inmemory-go`](../../../../../plugins/storage/inmemory-go), [`inmemory-py`](../../../../../plugins/storage/inmemory-py) | 1 (wire) | first refs to READ tenant from the metadata envelope (C7) |
+| [`plugins/storage/localfs-go`](../../../../../plugins/storage/localfs-go) | 2 (real) | real filesystem — PATH CONTAINMENT (escaping prefix → `PERMISSION_DENIED`) + TENANT ISOLATION (distinct per-tenant roots) |
 
 ## Related
 

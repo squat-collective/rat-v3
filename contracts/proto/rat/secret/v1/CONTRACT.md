@@ -116,7 +116,7 @@ top-level `"tenant": "acme"` except the `cross_tenant` vector, which overrides t
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/secret/inmemory-py`](../../../../../examples/secret/inmemory-py) | 1 (control-plane reference) | tenant-keyed in-memory store; anti-enumeration via `(tenant, secret_ref)` lookup key; cross-tenant miss indistinguishable from absent; TTL hint |
+| [`plugins/secret/inmemory-py`](../../../../../plugins/secret/inmemory-py) | 1 (control-plane reference) | tenant-keyed in-memory store; anti-enumeration via `(tenant, secret_ref)` lookup key; cross-tenant miss indistinguishable from absent; TTL hint |
 
 ## Related
 

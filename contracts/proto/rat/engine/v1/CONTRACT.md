@@ -79,8 +79,8 @@ no per-mode split (unlike `format.Write`).
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/engine/inmemory-go`](../../../../../examples/engine/inmemory-go), [`inmemory-py`](../../../../../examples/engine/inmemory-py) | 1 (wire) | toy mini-SQL — two language code paths conform to the RPC shapes |
-| [`examples/engine/duckdb-py`](../../../../../examples/engine/duckdb-py) + [`datafusion-py`](../../../../../examples/engine/datafusion-py) | 2 (real) | **two real SQL engines** (DuckDB + DataFusion, ADR-003's literal example) agree on real typed Arrow over `engine-real-v1.json` |
+| [`plugins/engine/inmemory-go`](../../../../../plugins/engine/inmemory-go), [`inmemory-py`](../../../../../plugins/engine/inmemory-py) | 1 (wire) | toy mini-SQL — two language code paths conform to the RPC shapes |
+| [`plugins/engine/duckdb-py`](../../../../../plugins/engine/duckdb-py) + [`datafusion-py`](../../../../../plugins/engine/datafusion-py) | 2 (real) | **two real SQL engines** (DuckDB + DataFusion, ADR-003's literal example) agree on real typed Arrow over `engine-real-v1.json` |
 
 ## Related
 

@@ -2,7 +2,7 @@
 // the core/v1 CapabilityInvokeService (ADR-005/008) whose C5 authorization is
 // DERIVED from the registry's manifest data — not a hardcoded allowlist.
 //
-// It is seeded from examples/bench/latency-go/gateway.go (the faithful non-test
+// It is seeded from plugins/bench/latency-go/gateway.go (the faithful non-test
 // relay: read the rat-callmeta-bin envelope, validate traceparent, re-stamp
 // identity, route by the (rat.common.v1.capability) annotation, relay opaque
 // frames via a passthrough codec). The difference that matters — and the whole

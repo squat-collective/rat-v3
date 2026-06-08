@@ -97,7 +97,7 @@ the one uncancelled past-due trigger fires (`expect_due: ["run-A"]`). The vector
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/scheduler/inmemory-py`](../../../../../examples/scheduler/inmemory-py) | 1 (control-plane reference) | one-shot triggers; at-least-once `WatchDue` via snapshot-and-yield; conformance harness integration |
+| [`plugins/scheduler/inmemory-py`](../../../../../plugins/scheduler/inmemory-py) | 1 (control-plane reference) | one-shot triggers; at-least-once `WatchDue` via snapshot-and-yield; conformance harness integration |
 
 ## Related
 

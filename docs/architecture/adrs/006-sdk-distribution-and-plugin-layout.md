@@ -11,7 +11,7 @@
 
 The contract triple (`.proto` + `plugin.yaml` schema + capability URIs) is language-neutral by
 design — ADR-001 commits that "plugin authors can use any language; the contract is proto +
-manifest," and [vision.md](../vision.md) commitment #3 forbids "language-specific SDKs that
+manifest," and [vision.md](../../vision.md) commitment #3 forbids "language-specific SDKs that
 other languages must replicate." Sub-phase 0d now needs to produce *running code* (reference
 plugins) against that contract, which forces three project-shaping decisions that have not been
 made yet:
@@ -48,6 +48,11 @@ contracts/
     rust/                     # generated *.rs (prost + tonic)       — committed
 ```
 
+> **Narrowed by [ADR-037](037-trim-committed-sdks-to-consumed-languages.md) (2026-06-08):**
+> the TypeScript + Rust committed SDKs (zero consumers) were removed; only **Go + Python**
+> (the consumed languages) remain vendored. The proto source of truth is unchanged and any
+> language regenerates on demand. The four-language amendment below is the historical record.
+
 **Amendment (2026-05-31):** all four target languages — **Go, Python, TypeScript,
 Rust** — are now wired and generated (not Go-first-only as the original text below
 contemplated). Counts at first generation: go 43 (+go.mod), python 46, typescript
@@ -78,6 +83,11 @@ A") was rejected for now because it makes "clone and build a plugin" a multi-ste
 toolchain-dependent operation in an environment where the toolchain is itself fiddly.
 
 ### D2 — Reference-plugin layout: `examples/<axis>/<impl>-<lang>/`
+
+> **Superseded (location only) by [ADR-038](038-reference-plugins-live-under-plugins.md)
+> (2026-06-08):** the reference plugins now live under **`plugins/`**, not `examples/` — they are
+> load-bearing conformance references, not samples. The layout shape below (`<axis>/<impl>-<lang>/`,
+> one module each) is unchanged; read `plugins/` for `examples/` throughout this section.
 
 Reference plugins live under a top-level `examples/` (the term ADR-001 + roadmap already use),
 one directory per (axis, implementation), language suffixed so the any-language story is visible

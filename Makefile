@@ -34,11 +34,19 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking release-build release-image release-checksums help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-base-go plugin-base-py plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking release-build release-image release-checksums clean help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
 	  awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+
+clean: ## Remove all build output + caches (everything here is gitignored + regenerable)
+	@echo ">> cleaning build artifacts + caches"
+	@rm -rf bin dist core/bin
+	@find . -type d -name __pycache__ -not -path './.git/*' -prune -exec rm -rf {} + 2>/dev/null || true
+	@find . -type f -name '*.pyc' -not -path './.git/*' -delete 2>/dev/null || true
+	@find . -type d -name node_modules -not -path './.git/*' -prune -exec rm -rf {} + 2>/dev/null || true
+	@echo "   done — run 'make build' / npm install / go build to regenerate."
 
 ## --- fast gate (per-commit) --------------------------------------------------
 check: lint ## FAST per-commit gate — buf lint only (seconds)
@@ -85,24 +93,8 @@ composition: ## Boot catalog+engine+format together; run the strategy across 4 A
 context-carriage: ## Cross-run the 2 context-carriage references (Go + Python) on shared vectors
 	@scripts/context-carriage.sh
 
-## --- data-dev plane local end-to-end (EXPLORATORY, experiments/data-dev-plane) ---
-data-dev-local: ## Boot DuckLake catalog + DuckDB-ML engine; run transform→embed→search locally
-	@scripts/data-dev-local.sh
-
-data-dev-remote: ## Boot MinIO+Postgres; run the pipeline remote (S3 data, Postgres metadata, vended creds)
-	@scripts/data-dev-remote.sh
-
-data-dev-remote-down: ## Tear down the MinIO+Postgres data-dev remote stack
-	@scripts/data-dev-remote.sh --down
-
-data-dev-strategy: ## Run the incremental-embed ELT strategy (2 runs + idempotent replay)
-	@scripts/data-dev-strategy.sh
-
-data-dev-gateway: ## Serve the data-dev gateway (the VS Code extension's backend) on :8787
-	@scripts/data-dev-gateway.sh
-
-data-dev-vsix: ## Package the vscode-rat extension into an installable .vsix
-	@scripts/data-dev-vsix.sh
+## NOTE: the data-dev-* targets + the ML lakehouse experiment graduated to the
+## `rat-data-dev` showcase repo (restructure ADR-038 / docs/restructure).
 
 ## --- manifest validation (ADR-011 / the static half of `rat plugin validate`) -
 validate-manifests: ## Validate example manifests vs envelope + per-kind schemas; assert the INVALID corpus is rejected
@@ -111,7 +103,7 @@ validate-manifests: ## Validate example manifests vs envelope + per-kind schemas
 
 bench: ## Per-RPC latency benchmark: core-mediated gateway overhead vs direct (0f)
 	@$(RUNTIME) run --rm $(RUNFLAGS) -v "$(CURDIR)":/work:Z -v rat-gocache:/go/pkg/mod \
-	  -w /work/examples/bench/latency-go $(GO_IMAGE) go run . $(N)
+	  -w /work/plugins/bench/latency-go $(GO_IMAGE) go run . $(N)
 
 ## --- spike core (Phase 1, ADR-013/014) ---------------------------------------
 core-test: ## Build + vet + test the spike core (core/) in a container
@@ -161,16 +153,24 @@ stateplugin-image: ## ADR-022: build a launchable stateplugin image (rat `podman
 	@echo ">> building rat/stateplugin:dev"
 	@$(RUNTIME) build -f core/testplugins/stateplugin/Dockerfile -t rat/stateplugin:dev .
 
+plugin-base-go: ## ADR-026: build rat/plugin-base-go (Go SDK at /sdk; Go plugins replace onto it)
+	@echo ">> building localhost/rat/plugin-base-go:dev (Go SDK at /sdk)"
+	@$(RUNTIME) build -t localhost/rat/plugin-base-go:dev $(CONTRACTS)/sdks/go
+
+plugin-base-py: ## ADR-026: build rat/plugin-base-py (the rat Python SDK + grpc baked in; plugins FROM it)
+	@echo ">> building localhost/rat/plugin-base-py:dev (Python SDK baked in)"
+	@$(RUNTIME) build -t localhost/rat/plugin-base-py:dev $(CONTRACTS)/sdks/python
+
 plugin-images: ## ADR-022: build the launchable Python plugin images (rat/<name>:dev) — the platform's plugins
 	@echo ">> building the Python plugin images"
-	@$(RUNTIME) build -f examples/state/postgres-py/Dockerfile   -t rat/state:dev .
-	@$(RUNTIME) build -f examples/secret/env-py/Dockerfile       -t rat/secret:dev .
-	@$(RUNTIME) build -f examples/catalog/ducklake-py/Dockerfile -t rat/catalog:dev .
-	@$(RUNTIME) build -f examples/engine/duckdb-ml-py/Dockerfile -t rat/engine:dev .
-	@$(RUNTIME) build -f examples/scheduler/cron-py/Dockerfile   -t rat/scheduler:dev .
-	@$(RUNTIME) build -f examples/runner/dbt-duckdb/Dockerfile   -t rat/dbt-runner:dev .
+	@$(RUNTIME) build -f plugins/state/postgres-py/Dockerfile   -t rat/state:dev .
+	@$(RUNTIME) build -f plugins/secret/env-py/Dockerfile       -t rat/secret:dev .
+	@$(RUNTIME) build -f plugins/scheduler/cron-py/Dockerfile   -t rat/scheduler:dev .
+	@$(RUNTIME) build -f plugins/runner/dbt-duckdb/Dockerfile   -t rat/dbt-runner:dev .
 	@$(RUNTIME) build -f platform/bff.Dockerfile                 -t rat/bff:dev .
-	@echo ">> built: rat/{state,secret,catalog,engine,scheduler,dbt-runner,bff}:dev"
+	@echo ">> built: rat/{state,secret,scheduler,dbt-runner,bff}:dev"
+	@# (rat/{engine,catalog}:dev — duckdb-ml + ducklake — graduated to the rat-data-dev repo;
+	@#  the launch-mode platform embeds engine+catalog in the dbt-runner, not standalone plugins.)
 
 ## --- the data platform bundle (ADR-020) --------------------------------------
 platform-up: rat-image ## ADR-020 S1: bring up the always-on data platform stack (Postgres+MinIO+engine+catalog+rat serve)

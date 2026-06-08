@@ -33,7 +33,7 @@ The spike validated the **enforcement spine + crash-safety** against a Go-fake p
 - **D1** real process isolation (a podman deployment-runtime, not in-process providers).
 - **D3** storage-cred scoping; **D4** conformance-attestation *enforcement*; **C4** terminal stream-close audit record.
 - **sre#4** reconciler crash-loop backoff / jitter / lease-thrash.
-- Real-backend equivalence (DuckDB/Parquet) *through the Go gateway* — already proven for the wire shapes by the Python `examples/composition`; not re-run here.
+- Real-backend equivalence (DuckDB/Parquet) *through the Go gateway* — already proven for the wire shapes by the Python `plugins/composition`; not re-run here.
 - A streaming idle-timeout for a hung provider with **no** deadline set (the deadline-bound covers the deadline-set case; an idle-timeout backstop is an implementation follow-on, not a wire question).
 
 ## Recommendation (for Tom's commitment-gate decision — ADR-013)

@@ -63,7 +63,7 @@ OUT (Resolve). Both are out-of-band `ArrowStream`s, never through the control pl
 
 The at-least-once write path gets two additive guards (field shapes pinned at `rat/1.5`;
 full per-axis vectors land in Phase 1 — demonstrated end-to-end now in
-[examples/composition](../../../../../examples/composition)):
+[plugins/composition](../../../../../plugins/composition)):
 
 - **C1 — idempotent writes.** A write submitted with a non-empty `idempotency_key` that
   already committed MUST be a **no-op returning the original `WriteResult` with
@@ -101,9 +101,9 @@ full per-axis vectors land in Phase 1 — demonstrated end-to-end now in
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/format/inmemory-go`](../../../../../examples/format/inmemory-go), [`inmemory-py`](../../../../../examples/format/inmemory-py) | 1 (wire) | two language code paths; in-process Arrow stand-in |
-| [`examples/format/parquet-py`](../../../../../examples/format/parquet-py) | 2 (real) | real Parquet files **+ REAL Arrow Flight transport** (both data legs over real TCP `DoGet`) |
-| [`examples/format/delta-py`](../../../../../examples/format/delta-py) | 2 (real) | real Delta Lake table **+ time travel** (versioned snapshots) |
+| [`plugins/format/inmemory-go`](../../../../../plugins/format/inmemory-go), [`inmemory-py`](../../../../../plugins/format/inmemory-py) | 1 (wire) | two language code paths; in-process Arrow stand-in |
+| [`plugins/format/parquet-py`](../../../../../plugins/format/parquet-py) | 2 (real) | real Parquet files **+ REAL Arrow Flight transport** (both data legs over real TCP `DoGet`) |
+| [`plugins/format/delta-py`](../../../../../plugins/format/delta-py) | 2 (real) | real Delta Lake table **+ time travel** (versioned snapshots) |
 
 ## Related
 

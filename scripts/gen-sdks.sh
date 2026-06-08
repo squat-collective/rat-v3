@@ -37,7 +37,7 @@ else
 fi
 
 # Languages wired today -> their buf.gen template + output subdir.
-LANGS=(go python typescript rust)
+LANGS=(go python)
 
 # runner_image LANG -> the image that runs `buf generate` for LANG, on stdout.
 # A local toolchain image (ADR-018) if contracts/codegen/Dockerfile.<lang> exists

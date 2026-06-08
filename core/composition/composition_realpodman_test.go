@@ -21,7 +21,7 @@ import (
 )
 
 // C5 against a REAL-backend provider in a REAL container: the SQLite catalog ref
-// (examples/catalog/sqlite-py), launched by the podman runtime under the FULL I9
+// (plugins/catalog/sqlite-py), launched by the podman runtime under the FULL I9
 // profile, behind the gateway. Declared caps (get-table, commit-table) route to real
 // SQLite and return real results; an undeclared cap the ref implements (merge-branch)
 // is DENIED. This ties C5 + the supervisor + the podman runtime together end-to-end.

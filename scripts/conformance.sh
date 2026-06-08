@@ -2,7 +2,7 @@
 #
 # RAT conformance suite (sub-phase 0f).
 #
-# Runs EVERY reference plugin under examples/<axis>/<impl>/ against its shared golden
+# Runs EVERY reference plugin under plugins/<axis>/<impl>/ against its shared golden
 # vectors (contracts/conformance/<axis>-v1.json) and prints a unified pass/fail
 # matrix. The per-axis golden vectors are the authoritative conformance set; this is
 # the single runner that proves "implementation X conforms to axis Y" across all of
@@ -18,14 +18,13 @@ RUNTIME="$(command -v podman || command -v docker)"
 GO_IMAGE="${GO_IMAGE:-docker.io/library/golang:1.25}"
 PY_IMAGE="${PY_IMAGE:-docker.io/library/python:3.12}"
 # Union of every Python reference's runtime deps (real backends included).
-# numpy: required by the duckdb-ml engine's list-returning embed() UDF (data-dev plane).
 PY_DEPS="grpcio==1.80.0 protobuf==7.35.0 pyarrow==24.0.0 duckdb==1.5.3 datafusion==53.0.0 deltalake==1.6.0 cryptography==44.0.0 numpy==2.2.6"
 
 if [ -z "$RUNTIME" ]; then echo "no podman/docker found" >&2; exit 2; fi
 
 # --- discover references ---------------------------------------------------------
 GO_REFS=(); PY_REFS=()
-for d in examples/*/*/; do
+for d in plugins/*/*/; do
   d="${d%/}"
   # A conformance reference is a dir with a harness (harness_test.{go,py}). Dirs
   # with a go.mod but no harness (e.g. the latency benchmark) are NOT references.

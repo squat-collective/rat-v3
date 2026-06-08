@@ -1,6 +1,6 @@
 # ADR-024: The UI is assembled from plugin contributions, not hardcoded
 
-## Status: Proposed (2026-06-03)
+## Status: Accepted (2026-06-03) — built + proven (see roadmap/done.md)
 
 ## Context
 

@@ -14,8 +14,9 @@ This directory is **Phase 0** work (see [`../roadmap/phases.md`](../roadmap/phas
 contracts/
 ├── README.md              # this file
 ├── buf.yaml               # buf module + lint(STANDARD) + breaking(FILE) config
-├── buf.gen.yaml           # codegen config (Go wired; other SDKs in 0d/0e)
-├── .gitignore             # excludes generated gen/ SDKs
+├── buf.gen.go.yaml        # Go codegen template (Python uses codegen/Dockerfile.python)
+├── codegen/               # pinned connectionless codegen toolchain (ADR-018): Go + Python
+├── .gitignore             # excludes only sdks/go/go.sum (the SDKs themselves ARE committed)
 ├── schema/
 │   ├── plugin.v1.json     # the manifest envelope schema (sub-phase 0a) ✅
 │   └── README.md          # schema design notes + the per-kind decision
@@ -75,9 +76,11 @@ podman run --rm --userns=keep-id -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
   -v "$PWD:/workspace:Z" -w /workspace docker.io/bufbuild/buf:1.47.2 build
 ```
 
-Both pass clean (0 findings) as of 0b. `buf generate` (codegen) additionally
-needs network for the remote plugins on buf.build — deferred to 0d when the
-reference plugins are built; the SDKs are git-ignored build artifacts.
+Both pass clean (0 findings). Codegen runs **connectionless** via pinned local
+toolchain images (ADR-018, `make gen-sdks`) — no BSR/network at gen time. The
+generated SDKs **are committed** under `sdks/<lang>/` (ADR-006 D1) for **Go +
+Python**, the consumed languages (ADR-037 trimmed the unused TS + Rust trees);
+the proto stays the source of truth and any language regenerates on demand.
 
 **Manifests** — no `rat plugin validate` yet (sub-phase 0f). Any JSON Schema
 2020-12 validator works; we used a containerized `python:3.12-slim` + `jsonschema`

@@ -154,7 +154,7 @@ either reading.
 
 ### C-2 · `format` capability URI naming breaks the contract triple
 **API-7 ⊕ AUTH-1** · api-designer + plugin-author + security-eng · **CRITICAL · FREEZE-BLOCKER**
-**File:** `format/v1/format.proto` + `schema/plugin.v1.json` + `examples/`
+**File:** `format/v1/format.proto` + `schema/plugin.v1.json` + `plugins/`
 
 Every axis maps kind→URI uniformly (`rat.state.v1` ↔ `rat://state/v1/…`) **except `format`**,
 which uses `rat://format-capability/v1/{scan,merge,append,maintain}` while the package is

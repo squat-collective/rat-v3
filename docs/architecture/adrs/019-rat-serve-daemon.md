@@ -21,7 +21,7 @@ gateway?" thread):
 > **"core components built + tested" ≠ "core runs as a server a client can connect to."**
 
 Because no core server runs, the experiment's VS Code UI talks to a hand-rolled **BFF
-stand-in** ([`experiments/data-dev-plane/gateway`](../../../experiments/data-dev-plane/)) that
+stand-in** (`experiments/data-dev-plane/gateway`) that
 *plays* the front-door role and hosts the plugins in-process. There is nothing running to point
 a client at. `rat serve` closes that gap, and — packaged as a container — becomes the on-ramp
 end of the vision's range: **`./rat serve` for the solo hacker, `compose up` for the
@@ -129,7 +129,7 @@ capability through it with **C5 enforced + an audit line emitted**; an undeclare
    `CMD ["python","main.py"]`, honoring `RAT_PLUGIN_ADDR`. **Image-only — no proto change:** the
    container's own CMD runs python, so `LaunchSpec.image` = the image and the daemon needs no
    `args` field (frozen wire untouched). Build images tagged `rat/<plugin>:dev`.
-2. Write their **plugin.yaml manifests** (they exist in `examples/.../plugin.yaml` already) +
+2. Write their **plugin.yaml manifests** (they exist in `plugins/.../plugin.yaml` already) +
    a `data-dev-plane.yaml` (launch mode, `runtime: podman`, images + the I9 profile + the
    `RAT_DUCKLAKE_*` / `MINIO_*` env each needs).
 3. `rat serve --plane data-dev-plane.yaml` runs the **real** ML lakehouse under the actual core:
@@ -241,5 +241,5 @@ gateway**. The "getting started" is two lines.
 - [ADR-014](014-spike-core-registry-and-invoke-gateway.md) — the registry + invoke gateway this serves.
 - [ADR-016](016-plugin-provisioning-via-deployment-runtime.md) — the launch contract B/C lean on.
 - [ADR-005](005-capability-invocation-model.md) / [ADR-007](007-call-context-transport.md) — what the gateway enforces on every routed call.
-- [`experiments/data-dev-plane/README.md`](../../../experiments/data-dev-plane/README.md) §10 **F9** — the BFF/data-leg this mostly retires.
+- `experiments/data-dev-plane/README.md` §10 **F9** — the BFF/data-leg this mostly retires.
 - Code being wrapped: `core/supervisor/supervisor.go` (`BringUp`/`Plane`), `core/gateway/gateway.go` (`New`/`Auditor`), `core/reconciler/{reconciler,loop}.go`, `core/manifest/manifest.go` (`Load`), `core/deploymentruntime/{localprocess,podman}.go`. Attach-mode model: `core/composition/composition_realproviders_test.go`.

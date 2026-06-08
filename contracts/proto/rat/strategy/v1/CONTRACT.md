@@ -59,7 +59,7 @@ two independent reference implementations run against each other on golden data:
 1. **Cross-combination gate** ([`composition-v1.json`](../../../../conformance/composition-v1.json)):
    the full-refresh strategy (`fullrefresh-py`) is driven through the four ADR-003 cross-axis
    combinations (baseline + one-axis substitution for format, catalog, engine) via
-   `examples/composition/`. Every combination must produce the identical `expected_target`. This
+   `plugins/composition/`. Every combination must produce the identical `expected_target`. This
    proves the strategy couples to no concrete provider — the code does not change; only the
    providers wired beneath it change.
 
@@ -126,8 +126,8 @@ truncated transfer rather than write a partial result (C2).
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/strategy/fullrefresh-py`](../../../../../examples/strategy/fullrefresh-py/store.py) | 1 (capability composition) | the capability-composition showcase: read source via catalog → register target → engine.query → format.overwrite → commit-table, coupling to zero concrete providers; proven across the 4-combo composition cross-matrix |
-| [`examples/strategy/scd2-py`](../../../../../examples/strategy/scd2-py/store.py) | 2 (stateful/temporal) | the deliberately-divergent second reference: stateful SCD2 history over two temporal runs via format.scan × 2 + format.merge, no engine; different capability mix, same contract |
+| [`plugins/strategy/fullrefresh-py`](../../../../../plugins/strategy/fullrefresh-py/store.py) | 1 (capability composition) | the capability-composition showcase: read source via catalog → register target → engine.query → format.overwrite → commit-table, coupling to zero concrete providers; proven across the 4-combo composition cross-matrix |
+| [`plugins/strategy/scd2-py`](../../../../../plugins/strategy/scd2-py/store.py) | 2 (stateful/temporal) | the deliberately-divergent second reference: stateful SCD2 history over two temporal runs via format.scan × 2 + format.merge, no engine; different capability mix, same contract |
 
 ## Related
 

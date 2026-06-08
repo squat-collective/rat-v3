@@ -4,13 +4,13 @@
 > axes, 32 references, the cross-axis composition). Five specialist agents — `architect`,
 > `security`, `ecosystem`, `sre`, `contracts` — reviewed in parallel as a team, **cross-
 > consulting each other via direct messages** (the consults are noted inline; they changed
-> several findings). Each wrote a full report under [`reviews/board/`](board/); this is the
+> several findings). Each wrote a full report under [`reviews/board/`](archive/board/); this is the
 > lead's synthesis. Severity/class tags: **[V2-REGRET]** = frozen wire flaw, needs a `v2`;
 > **[ADDITIVE]** = real gap, closable with a new field/RPC/value; **[PROCESS]** = doc /
 > conformance / enforcement, no wire change.
 >
-> Individual reports: [architect](board/architect.md) · [security](board/security.md) ·
-> [ecosystem](board/ecosystem.md) · [sre](board/sre.md) · [contracts](board/contracts.md).
+> Individual reports: [architect](archive/board/architect.md) · [security](archive/board/security.md) ·
+> [ecosystem](archive/board/ecosystem.md) · [sre](archive/board/sre.md) · [contracts](archive/board/contracts.md).
 
 ## Verdict
 
@@ -169,4 +169,4 @@ D1–D5 stop being review findings and become acceptance tests.
 ## Related
 - [reviews/00-synthesis.md](00-synthesis.md) — the pre-build 5-perspective review this board echoes.
 - [reviews/07-freeze-review.md](07-freeze-review.md) — the freeze review; this board re-examined its residuals R1–R3 post-freeze.
-- [board/](board/) — the five full specialist reports.
+- [board/](archive/board/) — the five full specialist reports.

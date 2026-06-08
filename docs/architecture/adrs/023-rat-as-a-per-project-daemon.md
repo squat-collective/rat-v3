@@ -1,6 +1,6 @@
 # ADR-023: rat is a per-project daemon — poetry-style hybrid control over an external spec, isolated per instance
 
-## Status: Proposed (2026-06-03)
+## Status: Accepted (2026-06-03) — built + proven (see roadmap/done.md)
 
 ## Context
 

@@ -121,7 +121,7 @@ Pass [`identity-v1.json`](../../../../conformance/identity-v1.json) via `make co
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/identity/static-token-py`](../../../../../examples/identity/static-token-py) | 1 (control-plane reference) | constant-time auth, role-based coarse authz, subject from `rat-callmeta-bin`, `deny_code` branching |
+| [`plugins/identity/static-token-py`](../../../../../plugins/identity/static-token-py) | 1 (control-plane reference) | constant-time auth, role-based coarse authz, subject from `rat-callmeta-bin`, `deny_code` branching |
 
 ## Related
 

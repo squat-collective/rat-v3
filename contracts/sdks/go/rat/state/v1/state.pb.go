@@ -8,8 +8,9 @@
 // Capability mapping:
 //   rat://state/v1/get   -> Get
 //   rat://state/v1/put   -> Put
-//   rat://state/v1/list  -> List
-//   rat://state/v1/watch -> Watch
+//   rat://state/v1/list   -> List
+//   rat://state/v1/delete -> Delete   (ADR-035; additive, optional per backend)
+//   rat://state/v1/watch  -> Watch
 //
 // C3 — STATE-GATEWAY ISOLATION: every key is namespaced per-plugin and
 // per-tenant. The gateway derives the effective namespace from
@@ -182,7 +183,7 @@ func (x WatchResponse_Type) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WatchResponse_Type.Descriptor instead.
 func (WatchResponse_Type) EnumDescriptor() ([]byte, []int) {
-	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{7, 0}
+	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{9, 0}
 }
 
 type GetRequest struct {
@@ -498,6 +499,107 @@ func (x *ListResponse) GetKeys() []string {
 	return nil
 }
 
+// ADR-035 — additive Delete. Optional per backend (UNIMPLEMENTED allowed).
+type DeleteRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
+	Key string `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	// CAS: if > 0, delete only if the current revision matches (FAILED_PRECONDITION on mismatch).
+	// 0 == unconditional delete. Releasing a lease key is a Delete — same fencing rigor as Put-CAS.
+	IfRevision    int64 `protobuf:"varint,3,opt,name=if_revision,json=ifRevision,proto3" json:"if_revision,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteRequest) Reset() {
+	*x = DeleteRequest{}
+	mi := &file_rat_state_v1_state_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteRequest) ProtoMessage() {}
+
+func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_rat_state_v1_state_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
+func (*DeleteRequest) Descriptor() ([]byte, []int) {
+	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *DeleteRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *DeleteRequest) GetIfRevision() int64 {
+	if x != nil {
+		return x.IfRevision
+	}
+	return 0
+}
+
+type DeleteResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// true if the key existed and was removed; false if it was already absent (delete is idempotent).
+	Found         bool `protobuf:"varint,1,opt,name=found,proto3" json:"found,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteResponse) Reset() {
+	*x = DeleteResponse{}
+	mi := &file_rat_state_v1_state_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteResponse) ProtoMessage() {}
+
+func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rat_state_v1_state_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
+func (*DeleteResponse) Descriptor() ([]byte, []int) {
+	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *DeleteResponse) GetFound() bool {
+	if x != nil {
+		return x.Found
+	}
+	return false
+}
+
 type WatchRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Plugin-relative prefix; subject to KEY GRAMMAR (file header). MAY be empty.
@@ -510,7 +612,7 @@ type WatchRequest struct {
 
 func (x *WatchRequest) Reset() {
 	*x = WatchRequest{}
-	mi := &file_rat_state_v1_state_proto_msgTypes[6]
+	mi := &file_rat_state_v1_state_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -522,7 +624,7 @@ func (x *WatchRequest) String() string {
 func (*WatchRequest) ProtoMessage() {}
 
 func (x *WatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rat_state_v1_state_proto_msgTypes[6]
+	mi := &file_rat_state_v1_state_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -535,7 +637,7 @@ func (x *WatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchRequest.ProtoReflect.Descriptor instead.
 func (*WatchRequest) Descriptor() ([]byte, []int) {
-	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{6}
+	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *WatchRequest) GetPrefix() string {
@@ -564,7 +666,7 @@ type WatchResponse struct {
 
 func (x *WatchResponse) Reset() {
 	*x = WatchResponse{}
-	mi := &file_rat_state_v1_state_proto_msgTypes[7]
+	mi := &file_rat_state_v1_state_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -576,7 +678,7 @@ func (x *WatchResponse) String() string {
 func (*WatchResponse) ProtoMessage() {}
 
 func (x *WatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rat_state_v1_state_proto_msgTypes[7]
+	mi := &file_rat_state_v1_state_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -589,7 +691,7 @@ func (x *WatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchResponse.ProtoReflect.Descriptor instead.
 func (*WatchResponse) Descriptor() ([]byte, []int) {
-	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{7}
+	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *WatchResponse) GetType() WatchResponse_Type {
@@ -644,7 +746,13 @@ const file_rat_state_v1_state_proto_rawDesc = "" +
 	"\vListRequest\x12\x16\n" +
 	"\x06prefix\x18\x02 \x01(\tR\x06prefixJ\x04\b\x01\x10\x02\"\"\n" +
 	"\fListResponse\x12\x12\n" +
-	"\x04keys\x18\x01 \x03(\tR\x04keys\"Q\n" +
+	"\x04keys\x18\x01 \x03(\tR\x04keys\"H\n" +
+	"\rDeleteRequest\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x1f\n" +
+	"\vif_revision\x18\x03 \x01(\x03R\n" +
+	"ifRevisionJ\x04\b\x01\x10\x02\"&\n" +
+	"\x0eDeleteResponse\x12\x14\n" +
+	"\x05found\x18\x01 \x01(\bR\x05found\"Q\n" +
 	"\fWatchRequest\x12\x16\n" +
 	"\x06prefix\x18\x02 \x01(\tR\x06prefix\x12#\n" +
 	"\rfrom_revision\x18\x03 \x01(\x03R\ffromRevisionJ\x04\b\x01\x10\x02\"\xc6\x01\n" +
@@ -662,11 +770,12 @@ const file_rat_state_v1_state_proto_rawDesc = "" +
 	"\x17PUT_OUTCOME_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15PUT_OUTCOME_COMMITTED\x10\x01\x12\x18\n" +
 	"\x14PUT_OUTCOME_CONFLICT\x10\x02\x12\x17\n" +
-	"\x13PUT_OUTCOME_UNKNOWN\x10\x032\xec\x02\n" +
+	"\x13PUT_OUTCOME_UNKNOWN\x10\x032\xcc\x03\n" +
 	"\fStateService\x12R\n" +
 	"\x03Get\x12\x18.rat.state.v1.GetRequest\x1a\x19.rat.state.v1.GetResponse\"\x16\x8a\x97\"\x12rat://state/v1/get\x12R\n" +
 	"\x03Put\x12\x18.rat.state.v1.PutRequest\x1a\x19.rat.state.v1.PutResponse\"\x16\x8a\x97\"\x12rat://state/v1/put\x12V\n" +
-	"\x04List\x12\x19.rat.state.v1.ListRequest\x1a\x1a.rat.state.v1.ListResponse\"\x17\x8a\x97\"\x13rat://state/v1/list\x12\\\n" +
+	"\x04List\x12\x19.rat.state.v1.ListRequest\x1a\x1a.rat.state.v1.ListResponse\"\x17\x8a\x97\"\x13rat://state/v1/list\x12^\n" +
+	"\x06Delete\x12\x1b.rat.state.v1.DeleteRequest\x1a\x1c.rat.state.v1.DeleteResponse\"\x19\x8a\x97\"\x15rat://state/v1/delete\x12\\\n" +
 	"\x05Watch\x12\x1a.rat.state.v1.WatchRequest\x1a\x1b.rat.state.v1.WatchResponse\"\x18\x8a\x97\"\x14rat://state/v1/watch0\x01B1Z/github.com/rat-dev/rat/gen/rat/state/v1;statev1b\x06proto3"
 
 var (
@@ -682,7 +791,7 @@ func file_rat_state_v1_state_proto_rawDescGZIP() []byte {
 }
 
 var file_rat_state_v1_state_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_rat_state_v1_state_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_rat_state_v1_state_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_rat_state_v1_state_proto_goTypes = []any{
 	(PutOutcome)(0),         // 0: rat.state.v1.PutOutcome
 	(WatchResponse_Type)(0), // 1: rat.state.v1.WatchResponse.Type
@@ -692,25 +801,29 @@ var file_rat_state_v1_state_proto_goTypes = []any{
 	(*PutResponse)(nil),     // 5: rat.state.v1.PutResponse
 	(*ListRequest)(nil),     // 6: rat.state.v1.ListRequest
 	(*ListResponse)(nil),    // 7: rat.state.v1.ListResponse
-	(*WatchRequest)(nil),    // 8: rat.state.v1.WatchRequest
-	(*WatchResponse)(nil),   // 9: rat.state.v1.WatchResponse
+	(*DeleteRequest)(nil),   // 8: rat.state.v1.DeleteRequest
+	(*DeleteResponse)(nil),  // 9: rat.state.v1.DeleteResponse
+	(*WatchRequest)(nil),    // 10: rat.state.v1.WatchRequest
+	(*WatchResponse)(nil),   // 11: rat.state.v1.WatchResponse
 }
 var file_rat_state_v1_state_proto_depIdxs = []int32{
-	0, // 0: rat.state.v1.PutResponse.outcome:type_name -> rat.state.v1.PutOutcome
-	1, // 1: rat.state.v1.WatchResponse.type:type_name -> rat.state.v1.WatchResponse.Type
-	2, // 2: rat.state.v1.StateService.Get:input_type -> rat.state.v1.GetRequest
-	4, // 3: rat.state.v1.StateService.Put:input_type -> rat.state.v1.PutRequest
-	6, // 4: rat.state.v1.StateService.List:input_type -> rat.state.v1.ListRequest
-	8, // 5: rat.state.v1.StateService.Watch:input_type -> rat.state.v1.WatchRequest
-	3, // 6: rat.state.v1.StateService.Get:output_type -> rat.state.v1.GetResponse
-	5, // 7: rat.state.v1.StateService.Put:output_type -> rat.state.v1.PutResponse
-	7, // 8: rat.state.v1.StateService.List:output_type -> rat.state.v1.ListResponse
-	9, // 9: rat.state.v1.StateService.Watch:output_type -> rat.state.v1.WatchResponse
-	6, // [6:10] is the sub-list for method output_type
-	2, // [2:6] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	0,  // 0: rat.state.v1.PutResponse.outcome:type_name -> rat.state.v1.PutOutcome
+	1,  // 1: rat.state.v1.WatchResponse.type:type_name -> rat.state.v1.WatchResponse.Type
+	2,  // 2: rat.state.v1.StateService.Get:input_type -> rat.state.v1.GetRequest
+	4,  // 3: rat.state.v1.StateService.Put:input_type -> rat.state.v1.PutRequest
+	6,  // 4: rat.state.v1.StateService.List:input_type -> rat.state.v1.ListRequest
+	8,  // 5: rat.state.v1.StateService.Delete:input_type -> rat.state.v1.DeleteRequest
+	10, // 6: rat.state.v1.StateService.Watch:input_type -> rat.state.v1.WatchRequest
+	3,  // 7: rat.state.v1.StateService.Get:output_type -> rat.state.v1.GetResponse
+	5,  // 8: rat.state.v1.StateService.Put:output_type -> rat.state.v1.PutResponse
+	7,  // 9: rat.state.v1.StateService.List:output_type -> rat.state.v1.ListResponse
+	9,  // 10: rat.state.v1.StateService.Delete:output_type -> rat.state.v1.DeleteResponse
+	11, // 11: rat.state.v1.StateService.Watch:output_type -> rat.state.v1.WatchResponse
+	7,  // [7:12] is the sub-list for method output_type
+	2,  // [2:7] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_rat_state_v1_state_proto_init() }
@@ -724,7 +837,7 @@ func file_rat_state_v1_state_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rat_state_v1_state_proto_rawDesc), len(file_rat_state_v1_state_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

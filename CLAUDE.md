@@ -6,7 +6,7 @@ This project is a from-scratch reimagining of RAT (the v2 codebase living at `~/
 
 The premise: **a data platform is a minimal control plane that orchestrates self-describing plugins**. State backend, auth, scheduler, UI, engine, format, catalog, storage, deployment runtime — *all* are plugins. The core's job is to validate manifests, reconcile desired state, and route events. Nothing else.
 
-This repo holds the **architectural thinking, ADRs, design, and now the Phase-1 core** for RAT v3. **Phase 0 (contracts) and Phase 1 (the core) are sealed** — `rat/1.5` and `rat/2.0`; the frozen contracts live in `contracts/`, the built+tested core in `core/`, and reference plugins in `examples/`. Alongside the code: docs, decisions, conversations, captured ideas, prior-art notes, and the adversarial + Q02 reviews. Current state is always in [`roadmap/current.md`](roadmap/current.md).
+This repo holds the **architectural thinking, ADRs, design, and now the Phase-1 core** for RAT v3. **Phase 0 (contracts) and Phase 1 (the core) are sealed** — `rat/1.5` and `rat/2.0`; the frozen contracts live in `contracts/`, the built+tested core in `core/`, and reference plugins in `plugins/`. Alongside the code: docs, decisions, conversations, captured ideas, prior-art notes, and the adversarial + Q02 reviews. Current state is always in [`roadmap/current.md`](roadmap/current.md).
 
 ## What RAT v3 IS
 

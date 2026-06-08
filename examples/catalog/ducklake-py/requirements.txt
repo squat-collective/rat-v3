@@ -1,5 +1,0 @@
-# Runtime deps for rat-catalog-ducklake-py. sqlite3 is stdlib (the RAT bookkeeping).
-# duckdb drives the shared DuckLake (ducklake extension installed at runtime).
-grpcio==1.80.0
-protobuf==7.35.0
-duckdb==1.5.3

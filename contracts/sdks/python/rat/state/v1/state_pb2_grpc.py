@@ -49,6 +49,11 @@ class StateServiceStub(object):
                 request_serializer=rat_dot_state_dot_v1_dot_state__pb2.ListRequest.SerializeToString,
                 response_deserializer=rat_dot_state_dot_v1_dot_state__pb2.ListResponse.FromString,
                 _registered_method=True)
+        self.Delete = channel.unary_unary(
+                '/rat.state.v1.StateService/Delete',
+                request_serializer=rat_dot_state_dot_v1_dot_state__pb2.DeleteRequest.SerializeToString,
+                response_deserializer=rat_dot_state_dot_v1_dot_state__pb2.DeleteResponse.FromString,
+                _registered_method=True)
         self.Watch = channel.unary_stream(
                 '/rat.state.v1.StateService/Watch',
                 request_serializer=rat_dot_state_dot_v1_dot_state__pb2.WatchRequest.SerializeToString,
@@ -75,6 +80,17 @@ class StateServiceServicer(object):
 
     def List(self, request, context):
         """rat://state/v1/list — list keys under a plugin+tenant-relative prefix.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Delete(self, request, context):
+        """rat://state/v1/delete — remove one key (plugin+tenant relative), optionally compare-and-set.
+        ADDITIVE amendment (ADR-035): a state-backend MAY return UNIMPLEMENTED — Delete is optional;
+        a backend declares this capability in `provides` only if it supports it, and consumers MUST
+        handle UNIMPLEMENTED. Idempotent (absent key -> found=false, not an error). CAS via if_revision
+        with the same fencing rigor as Put (deleting a lease key releases the lease).
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -107,6 +123,11 @@ def add_StateServiceServicer_to_server(servicer, server):
                     servicer.List,
                     request_deserializer=rat_dot_state_dot_v1_dot_state__pb2.ListRequest.FromString,
                     response_serializer=rat_dot_state_dot_v1_dot_state__pb2.ListResponse.SerializeToString,
+            ),
+            'Delete': grpc.unary_unary_rpc_method_handler(
+                    servicer.Delete,
+                    request_deserializer=rat_dot_state_dot_v1_dot_state__pb2.DeleteRequest.FromString,
+                    response_serializer=rat_dot_state_dot_v1_dot_state__pb2.DeleteResponse.SerializeToString,
             ),
             'Watch': grpc.unary_stream_rpc_method_handler(
                     servicer.Watch,
@@ -195,6 +216,33 @@ class StateService(object):
             '/rat.state.v1.StateService/List',
             rat_dot_state_dot_v1_dot_state__pb2.ListRequest.SerializeToString,
             rat_dot_state_dot_v1_dot_state__pb2.ListResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Delete(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/rat.state.v1.StateService/Delete',
+            rat_dot_state_dot_v1_dot_state__pb2.DeleteRequest.SerializeToString,
+            rat_dot_state_dot_v1_dot_state__pb2.DeleteResponse.FromString,
             options,
             channel_credentials,
             insecure,

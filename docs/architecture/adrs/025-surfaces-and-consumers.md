@@ -1,6 +1,6 @@
 # ADR-025: Surfaces & consumers — plugins contribute per-surface interfaces; consumers are out-of-stack renderers
 
-## Status: Proposed (2026-06-03)
+## Status: Accepted (2026-06-03) — built + proven (see roadmap/done.md)
 
 ## Context
 

@@ -81,7 +81,7 @@ exercise `Send` for `INFO` and `CRITICAL` severities (expect `delivered = true`)
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/notifications/inmemory-py`](../../../../../examples/notifications/inmemory-py) | 1 (wire) | delivery-sink reference: captures messages in-memory so the harness can assert delivery without a real provider |
+| [`plugins/notifications/inmemory-py`](../../../../../plugins/notifications/inmemory-py) | 1 (wire) | delivery-sink reference: captures messages in-memory so the harness can assert delivery without a real provider |
 
 ## Related
 

@@ -70,8 +70,8 @@ run).
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/runtime/inmemory-go`](../../../../../examples/runtime/inmemory-go), [`inmemory-py`](../../../../../examples/runtime/inmemory-py) | 1 (wire) | in-thread work; the Go ref routes through the `InvokeServerStream` relay |
-| [`examples/runtime/subprocess-py`](../../../../../examples/runtime/subprocess-py) | 2 (real) | each work unit runs in a real CHILD OS PROCESS — process isolation (distinct PID per unit), the seed of the sandboxing story |
+| [`plugins/runtime/inmemory-go`](../../../../../plugins/runtime/inmemory-go), [`inmemory-py`](../../../../../plugins/runtime/inmemory-py) | 1 (wire) | in-thread work; the Go ref routes through the `InvokeServerStream` relay |
+| [`plugins/runtime/subprocess-py`](../../../../../plugins/runtime/subprocess-py) | 2 (real) | each work unit runs in a real CHILD OS PROCESS — process isolation (distinct PID per unit), the seed of the sandboxing story |
 
 ## Related
 

@@ -102,7 +102,7 @@ this axis).
 1. Implement `TenancyService` (`Decide`) in your language of choice.
 2. Read the caller's tenant **from the `rat-callmeta-bin` metadata header only** (via the
    `RequestContext.identity.tenant` field) — never from a request field. The reference
-   [`server.py`](../../../../../examples/tenancy/inmemory-py/server.py) shows the correct
+   [`server.py`](../../../../../plugins/tenancy/inmemory-py/server.py) shows the correct
    pattern; `store.py` shows the pure policy logic with no gRPC coupling.
 3. Return `allowed = true` + `DENY_CODE_UNSPECIFIED` on success. Return `allowed = false`
    + the appropriate `deny_code` on deny. Never set `deny_code` when `allowed = true`.
@@ -118,7 +118,7 @@ this axis).
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/tenancy/inmemory-py`](../../../../../examples/tenancy/inmemory-py) | 1 (control-plane reference) | in-memory policy engine — permission, cross-tenant allowlist (SHARING), stateful quota counter; tenant read from `rat-callmeta-bin` metadata |
+| [`plugins/tenancy/inmemory-py`](../../../../../plugins/tenancy/inmemory-py) | 1 (control-plane reference) | in-memory policy engine — permission, cross-tenant allowlist (SHARING), stateful quota counter; tenant read from `rat-callmeta-bin` metadata |
 
 ## Related
 

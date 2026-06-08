@@ -14,12 +14,12 @@ A repo sweep grounded the gap precisely. What already exists:
   `InvokeBidiStream`, ADR-005/008); the `(rat.common.v1.capability)` method annotation on every
   axis RPC (`annotations.proto`, field 70001); frozen manifests with `provides`/`requires`
   capability lists (real examples at `contracts/examples/*.plugin.yaml`).
-- **A faithful non-test gateway** — `examples/bench/latency-go/gateway.go` — that implements
+- **A faithful non-test gateway** — `plugins/bench/latency-go/gateway.go` — that implements
   `Invoke` + `InvokeServerStream`, routes `capability → (service, method)` by reading the proto
   annotation across multiple file descriptors, re-stamps the `rat-callmeta-bin` identity
   envelope, and relays opaque frames via a passthrough codec. **But it skips C5 entirely** (no
   authorization — it's a latency probe).
-- **Seven per-axis test stubs** (`examples/*/gateway_test.go`) that *do* enforce C5 — but against
+- **Seven per-axis test stubs** (`plugins/*/gateway_test.go`) that *do* enforce C5 — but against
   a **hardcoded allowlist** passed in by the test (`newGateway(conn, caller, allowed []string)`;
   `if !g.allowed[cap] { PermissionDenied }`). Single-provider, in `_test.go`, the allowlist
   fabricated by the test — it never reads a manifest.
@@ -50,7 +50,7 @@ A new Go package that:
 
 ### 2. Capability-invoke gateway (subset of core thing #6, the API gateway)
 
-Implement `CapabilityInvokeService`, **seeded from `examples/bench/latency-go/gateway.go`**, with
+Implement `CapabilityInvokeService`, **seeded from `plugins/bench/latency-go/gateway.go`**, with
 the one change that matters: the **C5 decision is derived from the registry**, not an allowlist.
 A call to capability `X` by caller `P`, resolved to provider `Q`, is allowed **iff**
 `X ∈ P.requires` **and** `X ∈ Q.provides`. Otherwise `PERMISSION_DENIED`. Keep the existing
@@ -134,7 +134,7 @@ full enforcer lands.
 
 ## Migration
 
-New `core/` module → seed the gateway from `examples/bench/latency-go/gateway.go` → add
+New `core/` module → seed the gateway from `plugins/bench/latency-go/gateway.go` → add
 `core/registry` (manifest loader + capability/route index) → wire the gateway's C5 decision to the
 registry → add the Go composition-equivalent test + the C5/C1/C2 cases → **CI from commit 1**
 (`buf breaking` + `make {conformance,composition,validate-manifests}` + `go test ./core/...`).
@@ -148,5 +148,5 @@ bump (or a `v2` for the affected axis), decided while the freeze is still local.
 - [ADR-001](001-everything-is-a-plugin.md) — the six things (registry + API gateway are the two this spike seeds).
 - [ADR-011](011-manifest-schema-freeze-and-per-kind-layer.md) — the manifest schema the registry parses.
 - [`core/v1/invoke.proto`](../../../contracts/proto/rat/core/v1/invoke.proto) · [`common/v1/annotations.proto`](../../../contracts/proto/rat/common/v1/annotations.proto) — the frozen wire.
-- `examples/bench/latency-go/gateway.go` — the seed gateway · `examples/*/gateway_test.go` — the C5 stub pattern · `examples/composition/` — the pipeline the Go gateway re-runs.
+- `plugins/bench/latency-go/gateway.go` — the seed gateway · `plugins/*/gateway_test.go` — the C5 stub pattern · `plugins/composition/` — the pipeline the Go gateway re-runs.
 - [reviews/09](../../../reviews/09-phase-1-gate-review.md) — the gate review that made C5 the spike's centerpiece.

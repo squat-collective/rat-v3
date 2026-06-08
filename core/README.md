@@ -15,11 +15,11 @@ stub into a decision *derived from declared plugin manifests*:
 - [`registry/`](registry/) — indexes manifests by name + provided capability, and answers
   the C5 decision: **`Authorize(caller, capability)` is allowed iff the caller's manifest
   `requires` it AND some registered plugin `provides` it.** No hardcoded allowlist — the
-  thing the throwaway `examples/*/gateway_test.go` stubs faked.
+  thing the throwaway `plugins/*/gateway_test.go` stubs faked.
 
 ## Coming next (this spike)
 
-- `gateway/` — the `CapabilityInvokeService` (seeded from `examples/bench/latency-go/gateway.go`),
+- `gateway/` — the `CapabilityInvokeService` (seeded from `plugins/bench/latency-go/gateway.go`),
   with its C5 decision wired to `registry.Authorize` + an audit record per decision (C4).
 - A composition-on-Go test that re-runs the pipeline through this gateway, plus the
   C5-negative / C1 crash-mid-strategy / C2 truncation cases (ADR-014 §5).

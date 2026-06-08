@@ -8,8 +8,9 @@
 // Capability mapping:
 //   rat://state/v1/get   -> Get
 //   rat://state/v1/put   -> Put
-//   rat://state/v1/list  -> List
-//   rat://state/v1/watch -> Watch
+//   rat://state/v1/list   -> List
+//   rat://state/v1/delete -> Delete   (ADR-035; additive, optional per backend)
+//   rat://state/v1/watch  -> Watch
 //
 // C3 — STATE-GATEWAY ISOLATION: every key is namespaced per-plugin and
 // per-tenant. The gateway derives the effective namespace from
@@ -68,10 +69,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	StateService_Get_FullMethodName   = "/rat.state.v1.StateService/Get"
-	StateService_Put_FullMethodName   = "/rat.state.v1.StateService/Put"
-	StateService_List_FullMethodName  = "/rat.state.v1.StateService/List"
-	StateService_Watch_FullMethodName = "/rat.state.v1.StateService/Watch"
+	StateService_Get_FullMethodName    = "/rat.state.v1.StateService/Get"
+	StateService_Put_FullMethodName    = "/rat.state.v1.StateService/Put"
+	StateService_List_FullMethodName   = "/rat.state.v1.StateService/List"
+	StateService_Delete_FullMethodName = "/rat.state.v1.StateService/Delete"
+	StateService_Watch_FullMethodName  = "/rat.state.v1.StateService/Watch"
 )
 
 // StateServiceClient is the client API for StateService service.
@@ -84,6 +86,12 @@ type StateServiceClient interface {
 	Put(ctx context.Context, in *PutRequest, opts ...grpc.CallOption) (*PutResponse, error)
 	// rat://state/v1/list — list keys under a plugin+tenant-relative prefix.
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
+	// rat://state/v1/delete — remove one key (plugin+tenant relative), optionally compare-and-set.
+	// ADDITIVE amendment (ADR-035): a state-backend MAY return UNIMPLEMENTED — Delete is optional;
+	// a backend declares this capability in `provides` only if it supports it, and consumers MUST
+	// handle UNIMPLEMENTED. Idempotent (absent key -> found=false, not an error). CAS via if_revision
+	// with the same fencing rigor as Put (deleting a lease key releases the lease).
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	// rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
 	// Each streamed message is a WatchResponse — named per the *Response convention
 	// buf STANDARD requires, even for streaming RPCs. Mediated via core
@@ -129,6 +137,16 @@ func (c *stateServiceClient) List(ctx context.Context, in *ListRequest, opts ...
 	return out, nil
 }
 
+func (c *stateServiceClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, StateService_Delete_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *stateServiceClient) Watch(ctx context.Context, in *WatchRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[WatchResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &StateService_ServiceDesc.Streams[0], StateService_Watch_FullMethodName, cOpts...)
@@ -158,6 +176,12 @@ type StateServiceServer interface {
 	Put(context.Context, *PutRequest) (*PutResponse, error)
 	// rat://state/v1/list — list keys under a plugin+tenant-relative prefix.
 	List(context.Context, *ListRequest) (*ListResponse, error)
+	// rat://state/v1/delete — remove one key (plugin+tenant relative), optionally compare-and-set.
+	// ADDITIVE amendment (ADR-035): a state-backend MAY return UNIMPLEMENTED — Delete is optional;
+	// a backend declares this capability in `provides` only if it supports it, and consumers MUST
+	// handle UNIMPLEMENTED. Idempotent (absent key -> found=false, not an error). CAS via if_revision
+	// with the same fencing rigor as Put (deleting a lease key releases the lease).
+	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	// rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
 	// Each streamed message is a WatchResponse — named per the *Response convention
 	// buf STANDARD requires, even for streaming RPCs. Mediated via core
@@ -181,6 +205,9 @@ func (UnimplementedStateServiceServer) Put(context.Context, *PutRequest) (*PutRe
 }
 func (UnimplementedStateServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method List not implemented")
+}
+func (UnimplementedStateServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedStateServiceServer) Watch(*WatchRequest, grpc.ServerStreamingServer[WatchResponse]) error {
 	return status.Error(codes.Unimplemented, "method Watch not implemented")
@@ -260,6 +287,24 @@ func _StateService_List_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StateService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StateServiceServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StateService_Delete_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StateServiceServer).Delete(ctx, req.(*DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _StateService_Watch_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(WatchRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -289,6 +334,10 @@ var StateService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "List",
 			Handler:    _StateService_List_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _StateService_Delete_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """run.py — trigger the medallion pipeline ONCE, through the rat serve gateway (ADR-020 S2).
 
-Invokes `rat://strategy/v1/apply` on the sql-pipeline strategy plugin — which runs
-bronze → silver → gold through the gateway and commits the gold snapshot to the DuckLake
-catalog — then verifies by reading the gold mart from the lake. This is the *same*
-capability the scheduler invokes on a cron; `run.py` is just the manual trigger.
+Invokes `rat://strategy/v1/apply` on whatever strategy plugin is bound (today the
+dbt-runner, ADR-021) — which runs bronze → silver → gold through the gateway and commits
+the gold snapshot to the DuckLake catalog — then verifies by reading the gold mart from the
+lake. This is the *same* capability the scheduler invokes on a cron; `run.py` is just the
+manual trigger. (run.py names no plugin — it dials the capability, not the impl.)
 
 Env-driven (the compose stack sets these; local-friendly defaults):
   RAT_GATEWAY            gateway addr               (default 127.0.0.1:7777)

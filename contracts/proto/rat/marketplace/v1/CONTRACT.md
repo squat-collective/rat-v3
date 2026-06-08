@@ -114,7 +114,7 @@ requirement.
 
 | ref | round | demonstrates |
 |---|---|---|
-| [`examples/marketplace/community-py`](../../../../../examples/marketplace/community-py) | 1 (wire) | capability-aware filter (the axis's load-bearing job); three real-ish RAT plugin listings; `NOT_FOUND` on unknown `plugin_id` |
+| [`plugins/marketplace/community-py`](../../../../../plugins/marketplace/community-py) | 1 (wire) | capability-aware filter (the axis's load-bearing job); three real-ish RAT plugin listings; `NOT_FOUND` on unknown `plugin_id` |
 
 ## Related
 

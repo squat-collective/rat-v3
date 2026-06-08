@@ -1,5 +1,5 @@
 {
-  "_comment": "RAT format/v1 conformance vectors — the ADR-003 shared golden data. This is the SINGLE source of truth for the format axis's expected behavior. Every independent format implementation's harness (Go: examples/format/inmemory-go, Python: examples/format/inmemory-py, ...) loads THIS file and drives its FormatService through these steps over real gRPC, asserting the expectations. 'Run against each other on golden data' (ADR-003) is satisfied by both impls passing the identical vectors from one shared artifact — not by re-typed-but-equal numbers. See docs/architecture/adrs/003-two-references-before-contract-freeze.md.",
+  "_comment": "RAT format/v1 conformance vectors — the ADR-003 shared golden data. This is the SINGLE source of truth for the format axis's expected behavior. Every independent format implementation's harness (Go: plugins/format/inmemory-go, Python: plugins/format/inmemory-py, ...) loads THIS file and drives its FormatService through these steps over real gRPC, asserting the expectations. 'Run against each other on golden data' (ADR-003) is satisfied by both impls passing the identical vectors from one shared artifact — not by re-typed-but-equal numbers. See docs/architecture/adrs/003-two-references-before-contract-freeze.md.",
   "axis": "format/v1",
   "table": "warehouse.sales.orders",
   "lifecycle": [

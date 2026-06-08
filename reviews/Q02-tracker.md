@@ -9,13 +9,13 @@
 
 | lens | reviewer | brief sent | status | findings doc |
 |---|---|---|---|---|
-| architect/contracts | _(tbd)_ | [architect](Q02-brief-architect.md) | **not started** | |
-| security | _(tbd)_ | [security](Q02-brief-security.md) | **not started** | |
-| SRE/operability | _(tbd)_ | [SRE](Q02-brief-sre.md) | **not started** | |
-| ecosystem _(optional)_ | _(tbd)_ | [ecosystem](Q02-brief-ecosystem.md) | **not started** | |
+| architect/contracts | _(tbd)_ | [architect](archive/Q02-brief-architect.md) | **not started** | |
+| security | _(tbd)_ | [security](archive/Q02-brief-security.md) | **not started** | |
+| SRE/operability | _(tbd)_ | [SRE](archive/Q02-brief-sre.md) | **not started** | |
+| ecosystem _(optional)_ | _(tbd)_ | [ecosystem](archive/Q02-brief-ecosystem.md) | **not started** | |
 
 Status flow: `not started` → `reached out` → `accepted` → `reviewing` → `findings in` → `synthesized`.
-Target: **architect + security** at minimum; + SRE comfortable. Sourcing: [Q02-reviewer-shortlist.md](Q02-reviewer-shortlist.md). The dry-run synthesis below is a **baseline for real reviewers to react to / falsify**, not a replacement.
+Target: **architect + security** at minimum; + SRE comfortable. Sourcing: [Q02-reviewer-shortlist.md](archive/Q02-reviewer-shortlist.md). The dry-run synthesis below is a **baseline for real reviewers to react to / falsify**, not a replacement.
 
 ## Simulated dry-run panel — findings in (2026-06-02)
 
@@ -95,7 +95,7 @@ Reviewer: <name / role>  ·  Lens: <architect|security|sre|ecosystem>  ·  Date:
 
 ## Ecosystem cold-start (GTM/impl — none freeze-reopen)
 
-- **EC-1 (ecosystem F1, 🔴 Critical-cold-start):** **no walkable `git clone → running third-party plugin` path** — `examples/**` ship *no* `plugin.yaml`, the 2 detached `contracts/examples/` manifests don't match runnable dirs, and ADR-006 D2's promised `examples/README.md` **doesn't exist** (a concrete doc-drift regression). Fix is P1, not Phase 4: co-locate real manifests + ship the README + pull `rat plugin validate` forward.
+- **EC-1 (ecosystem F1, 🔴 Critical-cold-start):** **no walkable `git clone → running third-party plugin` path** — `plugins/**` ship *no* `plugin.yaml`, the 2 detached `contracts/examples/` manifests don't match runnable dirs, and ADR-006 D2's promised `plugins/README.md` **doesn't exist** (a concrete doc-drift regression). Fix is P1, not Phase 4: co-locate real manifests + ship the README + pull `rat plugin validate` forward.
 - **EC-2 (ecosystem F2, High):** no inner dev loop, and the frozen manifest has **no `image`/`command`/`entrypoint`** field though ADR-016 builds the `LaunchSpec` "from the manifest." Decide if launch metadata is a manifest field (**additive — decide now**) or operator-config.
 - **EC-3 (ecosystem F4, High):** the conformance-trust chain is **broken in the middle** — core-load D4 *is* built (credit; do not re-flag), but the **issuance pipeline + marketplace install-check are paper** (`conformed` self-asserted; `plugin.v1.json:6` banner vs `verified.go` drift). Build runner→signer→publish as P1; render marketplace `conformed` as *unverified* until then.
 - **EC-4 (ecosystem F5, High-GTM):** **no cold-start wedge** — the celebrated properties are *maintainer* benefits, not *acquisition* levers (confirms reviews/05). Name one wedge axis (`format`/`catalog` on the Iceberg/Delta tailwind), seed it hand-to-hand with design partners.

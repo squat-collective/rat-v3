@@ -4,6 +4,7 @@ import (
 	catalogv1 "github.com/rat-dev/rat/gen/rat/catalog/v1"
 	enginev1 "github.com/rat-dev/rat/gen/rat/engine/v1"
 	formatv1 "github.com/rat-dev/rat/gen/rat/format/v1"
+	identityv1 "github.com/rat-dev/rat/gen/rat/identity/v1"
 	secretv1 "github.com/rat-dev/rat/gen/rat/secret/v1"
 	statev1 "github.com/rat-dev/rat/gen/rat/state/v1"
 	storagev1 "github.com/rat-dev/rat/gen/rat/storage/v1"
@@ -27,5 +28,6 @@ func routableDescriptors() []protoreflect.FileDescriptor {
 		storagev1.File_rat_storage_v1_storage_proto,
 		strategyv1.File_rat_strategy_v1_strategy_proto,
 		secretv1.File_rat_secret_v1_secret_proto,
+		identityv1.File_rat_identity_v1_identity_proto,
 	}
 }

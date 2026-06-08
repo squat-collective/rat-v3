@@ -26,13 +26,23 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [018](018-connectionless-codegen-local-plugins.md) | Connectionless codegen via local plugins | Accepted | 2026-06-02 |
 | [019](019-rat-serve-daemon.md) | `rat serve` — the runnable core daemon + the beginner compose stack | Accepted | 2026-06-02 |
 | [020](020-data-platform-bundle.md) | The data platform bundle — `platform/`, medallion conventions, VS Code + CLI (Phase 2) | Accepted | 2026-06-02 |
-| [021](021-orchestrator-pipelines-as-code.md) | rat is a pure orchestrator — pipelines as code (dbt), the pipeline-runner axis, infra declares only plugins | Proposed | 2026-06-02 |
-| [022](022-plugins-are-launched-not-composed.md) | Plugins are launched, not composed — adding a plugin is one declaration (socket-mount local, k8s prod) | Proposed | 2026-06-02 |
-| [023](023-rat-as-a-per-project-daemon.md) | rat is a per-project daemon — poetry-style hybrid control over an external spec, isolated per instance | Proposed | 2026-06-03 |
-| [024](024-ui-assembled-from-plugin-contributions.md) | The UI is assembled from plugin contributions, not hardcoded (the VSCode `contributes` model) | Proposed | 2026-06-03 |
-| [025](025-surfaces-and-consumers.md) | Surfaces & consumers — plugins contribute per-surface interfaces; consumers are out-of-stack renderers | Proposed | 2026-06-03 |
-| [026](026-plugin-authoring-and-packaging.md) | Plugin authoring & packaging — the `rat plugin` toolkit, the verified-plugin gate, scaffolded CI/CD | Proposed | 2026-06-03 |
+| [021](021-orchestrator-pipelines-as-code.md) | rat is a pure orchestrator — pipelines as code (dbt), the pipeline-runner axis, infra declares only plugins | Accepted | 2026-06-02 |
+| [022](022-plugins-are-launched-not-composed.md) | Plugins are launched, not composed — adding a plugin is one declaration (socket-mount local, k8s prod) | Accepted | 2026-06-02 |
+| [023](023-rat-as-a-per-project-daemon.md) | rat is a per-project daemon — poetry-style hybrid control over an external spec, isolated per instance | Accepted | 2026-06-03 |
+| [024](024-ui-assembled-from-plugin-contributions.md) | The UI is assembled from plugin contributions, not hardcoded (the VSCode `contributes` model) | Accepted | 2026-06-03 |
+| [025](025-surfaces-and-consumers.md) | Surfaces & consumers — plugins contribute per-surface interfaces; consumers are out-of-stack renderers | Accepted | 2026-06-03 |
+| [026](026-plugin-authoring-and-packaging.md) | Plugin authoring & packaging — the `rat plugin` toolkit, the verified-plugin gate, scaffolded CI/CD | Accepted | 2026-06-03 |
 | [027](027-live-plugin-control-rpc.md) | Live plugin control — the daemon's `ControlService` (Register/Deregister/List); live `rat add`/`remove` | Accepted | 2026-06-03 |
+| [028](028-local-marketplace-cached-index.md) | The local marketplace as a cached, digest-keyed index (delta refresh; daemonless floor) | Proposed | 2026-06-04 |
+| [029](029-plugin-runtime-sdk.md) | The plugin runtime SDK — `ratplugin` (Serve · Call · CallerTenant) | Accepted | 2026-06-04 |
+| [031](031-durable-local-storage.md) | Durable local storage — the per-project `/data` mount (configurable volumes later) | Accepted | 2026-06-04 |
+| [032](032-filesystem-axis.md) | The filesystem axis (`rat://fs/v1/…`) — a pluggable remote filesystem for collaborative code | Deferred | 2026-06-04 |
+| [033](033-workspace-federation-hub.md) | Workspace federation — the `rat hub` (a gateway-of-gateways) | Accepted | 2026-06-04 |
+| [034](034-security-responsibility-model.md) | The security responsibility model — what rat owns, plugins enforce, the environment provides | Accepted | 2026-06-04 |
+| [035](035-state-axis-delete.md) | Add `Delete` to the state axis (`rat://state/v1/delete`) — additive, optional-per-backend | Accepted | 2026-06-04 |
+| [036](036-reconciler-hosts-operators.md) | The reconciler hosts operators — generic resource reconciliation via operator plugins | Proposed | 2026-06-04 |
+| [037](037-trim-committed-sdks-to-consumed-languages.md) | Trim the committed SDKs to the consumed languages (Go + Python) | Accepted | 2026-06-08 |
+| [038](038-reference-plugins-live-under-plugins.md) | Reference plugins live under `plugins/`, not `examples/` | Accepted | 2026-06-08 |
 
 ## Template
 

@@ -4,7 +4,7 @@
 **Date:** 2026-05-31
 **Deciders:** Tom, Claude (architecture session)
 **Refines:** [ADR-005](005-capability-invocation-model.md) (upholds its generic-proxy guarantee). Relocates — does **not** discard — the carrier of the keystone `RequestContext` ([reviews/06](../../../reviews/06-proto-contract-review.md) C-1).
-**Surfaced by:** the 0d stub invoke-gateway (`examples/format/inmemory-go/gateway_test.go`) — the ADR-003 forcing function exposing a contract flaw a real implementation reveals. See [done.md 2026-05-31](../../../roadmap/done.md) + [ideas/inbox.md](../../../ideas/inbox.md).
+**Surfaced by:** the 0d stub invoke-gateway (`plugins/format/inmemory-go/gateway_test.go`) — the ADR-003 forcing function exposing a contract flaw a real implementation reveals. See [done.md 2026-05-31](../../../roadmap/done.md) + [ideas/inbox.md](../../../ideas/inbox.md).
 
 ---
 
