@@ -48,8 +48,8 @@ separate `rat-data-dev` repo**.
 
 ## Immediate next concrete step
 
-The restructure (steps 1–5) is **complete**. Remaining: optionally clean `backlog.md` (intermixes
-done + live items), then **seal Phase 10** to `main` + tag (`rat/6.x`). The `rat-data-dev` repo is
+The restructure (steps 1–5) is **complete**, and `backlog.md` is cleaned (301→109 lines, live items
+only). Remaining: **seal Phase 10** to `main` + tag (`rat/6.x`). The `rat-data-dev` repo is
 local/unpushed — push it when ready. After the seal, the Phase-10 follow-on (direct-gateway
 identity enforcement) or any backlog item by appetite.
 
