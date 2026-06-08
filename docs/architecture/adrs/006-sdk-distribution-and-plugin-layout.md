@@ -84,6 +84,11 @@ toolchain-dependent operation in an environment where the toolchain is itself fi
 
 ### D2 — Reference-plugin layout: `examples/<axis>/<impl>-<lang>/`
 
+> **Superseded (location only) by [ADR-038](038-reference-plugins-live-under-plugins.md)
+> (2026-06-08):** the reference plugins now live under **`plugins/`**, not `examples/` — they are
+> load-bearing conformance references, not samples. The layout shape below (`<axis>/<impl>-<lang>/`,
+> one module each) is unchanged; read `plugins/` for `examples/` throughout this section.
+
 Reference plugins live under a top-level `examples/` (the term ADR-001 + roadmap already use),
 one directory per (axis, implementation), language suffixed so the any-language story is visible
 in the tree:
