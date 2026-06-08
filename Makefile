@@ -34,11 +34,19 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-base-go plugin-base-py plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking release-build release-image release-checksums help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage data-dev-local data-dev-remote data-dev-remote-down data-dev-strategy data-dev-gateway data-dev-vsix validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-base-go plugin-base-py plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking release-build release-image release-checksums clean help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
 	  awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+
+clean: ## Remove all build output + caches (everything here is gitignored + regenerable)
+	@echo ">> cleaning build artifacts + caches"
+	@rm -rf bin dist core/bin
+	@find . -type d -name __pycache__ -not -path './.git/*' -prune -exec rm -rf {} + 2>/dev/null || true
+	@find . -type f -name '*.pyc' -not -path './.git/*' -delete 2>/dev/null || true
+	@find . -type d -name node_modules -not -path './.git/*' -prune -exec rm -rf {} + 2>/dev/null || true
+	@echo "   done — run 'make build' / npm install / go build to regenerate."
 
 ## --- fast gate (per-commit) --------------------------------------------------
 check: lint ## FAST per-commit gate — buf lint only (seconds)
