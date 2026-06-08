@@ -1,9 +1,0 @@
-# Rust SDK codegen (ADR-006 D1/D3; ADR-018 connectionless). LOCAL plugins — buf runs
-# protoc-gen-prost + protoc-gen-tonic from PATH (no BSR call), pinned in
-# contracts/codegen/Dockerfile.rust. prost (messages) + tonic (gRPC services).
-version: v2
-plugins:
-  - local: protoc-gen-prost
-    out: sdks/rust
-  - local: protoc-gen-tonic
-    out: sdks/rust
