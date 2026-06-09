@@ -17,6 +17,30 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-09 — `rat/6.6`: ported the clean-room DX improvements + ADR-039/040/041
+
+Forward-ported the reusable core/CLI/schema work from the **clean-room experiment** (a parallel
+from-scratch rebuild + remote dev flow, sealed on its own branch at tag `clean-room/1.0`) onto `main`'s
+reference-plugin corpus — **without** the experiment's `plugins/`+`platform/` wipe, its new plugins, or
+its guides. Conflict-free: `main`'s tree was the clean-room's fork base, so this is a clean forward-port
+of **18 files** (12 Go + 3 schema/example + 3 ADRs). Merged `--no-ff` → `main`, tagged **`rat/6.6`**.
+
+**What landed (the 10 DX gaps the clean-room found + fixed):** kind-aware `rat plugin init` (provides +
+servicer stub derived from the proto descriptors; all 18 axes linked); `init -h` shows the positional
+`<name>`; `rat add --manifest` name-derive; `rat add` insecure-localhost pull; `rat serve` 0.0.0.0
+callback companion on a loopback bind; the **authoring validation gate** in check/pack + the driver shape
+([ADR-039](../docs/architecture/adrs/039-driver-plugins-and-the-authoring-gate.md)); **published ports**
+for UI/HTTP plugins ([ADR-040](../docs/architecture/adrs/040-published-ports-for-ui-plugins.md)); the
+**pluggable CLI** — plugins contribute `rat <command>`s, nested arg-mapping
+([ADR-041](../docs/architecture/adrs/041-pluggable-cli-command-contributions.md)); and **`rat context`**
+(kubectl-style connection profiles). Additive, no wire change. Verified: core build + vet + cmd/rat +
+client tests pass; `validate-manifests` 32/32. (The 3 pre-existing `core/composition` failures — a stale
+`../../examples/` path — are unrelated.)
+
+> The clean-room itself (the full remote-dev-flow demo: a branching catalog, quality-gated merges, hub
+> federation, the 6 guides) stays sealed at tag **`clean-room/1.0`** — a parallel experiment line, not
+> merged (its wipe would have destroyed this corpus).
+
 ## 2026-06-08 — Professionalization restructure (steps 1–4) + Phase-10 consolidation
 
 On `phase-10` (11 commits, `49d08bd`→roadmap). **Goal:** reduce the repo to the essential + a
