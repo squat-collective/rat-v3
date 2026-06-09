@@ -37,7 +37,7 @@ func buildRef(t *testing.T, modRel string) string {
 	t.Helper()
 	bin := filepath.Join(t.TempDir(), strings.ReplaceAll(modRel, "/", "-"))
 	cmd := exec.Command("go", "build", "-o", bin, ".")
-	cmd.Dir = filepath.Join("..", "..", "examples", modRel) // this test runs in core/composition
+	cmd.Dir = filepath.Join("..", "..", "plugins", modRel) // this test runs in core/composition
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("build plugins/%s: %v\n%s", modRel, err, out)
 	}

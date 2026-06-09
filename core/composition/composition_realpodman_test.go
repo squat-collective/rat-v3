@@ -58,7 +58,7 @@ func buildSqliteCatalogImage(t *testing.T) string {
 	root := filepath.Join("..", "..") // repo root, from core/composition
 	ctx := t.TempDir()
 	for _, f := range []string{"main.py", "server.py", "store.py"} {
-		copyFile(t, filepath.Join(root, "examples", "catalog", "sqlite-py", f), filepath.Join(ctx, f))
+		copyFile(t, filepath.Join(root, "plugins", "catalog", "sqlite-py", f), filepath.Join(ctx, f))
 	}
 	if out, err := exec.Command("cp", "-r", filepath.Join(root, "contracts", "sdks", "python", "rat"), filepath.Join(ctx, "rat")).CombinedOutput(); err != nil {
 		t.Fatalf("copy python SDK: %v\n%s", err, out)
