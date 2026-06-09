@@ -85,13 +85,14 @@ func runCall(argv []string, out io.Writer) error {
 	}
 	capURI := argv[1]
 
+	ctx0 := CurrentContext() // flag defaults come from the current `rat context` (overridable)
 	fs := flag.NewFlagSet("ratctl call", flag.ContinueOnError)
-	addr := fs.String("addr", "127.0.0.1:7777", "rat serve gateway address")
-	caller := fs.String("as", "", "caller plugin identity (must `requires` the capability — C5)")
+	addr := fs.String("addr", ctx0.Addr, "rat serve gateway address")
+	caller := fs.String("as", ctx0.As, "caller plugin identity (must `requires` the capability — C5)")
 	tenant := fs.String("tenant", "", "optional tenant identity")
 	data := fs.String("data", "{}", "request body as protojson")
-	workspace := fs.String("workspace", "", "route via a hub to this workspace (use with --addr <hub>); ADR-033")
-	token := fs.String("token", "", "bearer credential for an authenticating hub (sent as rat-token); ADR-034")
+	workspace := fs.String("workspace", ctx0.Workspace, "route via a hub to this workspace (use with --addr <hub>); ADR-033")
+	token := fs.String("token", ctx0.Token, "bearer credential for an authenticating hub (sent as rat-token); ADR-034")
 	caCert := fs.String("cacert", "", "trust this PEM cert/CA when connecting over TLS")
 	tlsSkip := fs.Bool("tls-skip-verify", false, "skip TLS cert verification (DEV ONLY)")
 	timeout := fs.Duration("timeout", 10*time.Second, "call timeout")
@@ -244,9 +245,14 @@ func randHex(n int) string {
 // next run and executes YOUR code (not a baked-in copy). Re-apply overwrites it (a new
 // state revision); the next scheduled run picks it up.
 func runApply(argv []string, out io.Writer) error {
+	ctx0 := CurrentContext()
+	applyCaller := ctx0.As
+	if applyCaller == "" {
+		applyCaller = "platform-runner"
+	}
 	fs := flag.NewFlagSet("ratctl apply", flag.ContinueOnError)
-	addr := fs.String("addr", "127.0.0.1:7777", "rat serve gateway address")
-	caller := fs.String("as", "platform-runner", "caller identity (must `requires` rat://state/v1/put — C5)")
+	addr := fs.String("addr", ctx0.Addr, "rat serve gateway address")
+	caller := fs.String("as", applyCaller, "caller identity (must `requires` rat://state/v1/put — C5)")
 	tenant := fs.String("tenant", "", "optional tenant identity")
 	project := fs.String("project", "", "path to the project directory to ship")
 	name := fs.String("name", "", "project name (stored at projects/<name>)")

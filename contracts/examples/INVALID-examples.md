@@ -19,16 +19,22 @@ provides:
 ```
 **Expected rejection:** `resources` is required.
 
-## 2. Empty `provides` (a plugin must implement at least one capability)
+## 2. Empty `provides` — RECLASSIFIED as VALID (the driver shape, ADR-039)
 
 ```yaml
 api_version: rat/1
-kind: format
-metadata: { name: rat-format-empty, version: 0.1.0 }
+kind: ui
+metadata: { name: rat-ui-driver, version: 0.1.0 }
 provides: []
+requires: [{ capability: rat://strategy/v1/apply }]
 resources: { requests: { cpu: "100m" } }
 ```
-**Expected rejection:** `provides` must have at least 1 item.
+**No longer rejected.** [ADR-039](../../docs/architecture/adrs/039-driver-plugins-and-the-authoring-gate.md)
+relaxed the envelope `provides` to `minItems: 0` to bless **driver** plugins (they provide nothing
+and only `requires` capabilities they drive — a scheduler firing a pipeline, a ui fronting the
+gateway). The floor "a plugin must declare ≥1 `provides` OR ≥1 `requires`" is now enforced by the
+**CLI authoring gate** (`rat plugin check`/`pack`), not the envelope schema; per-kind schemas remain
+the PROVIDER contract.
 
 ## 3. Malformed capability URI (missing version segment)
 

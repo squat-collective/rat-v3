@@ -54,6 +54,90 @@ var kindProvides = map[string][]string{
 	},
 }
 
+// builtinVerbs are the top-level rat subcommands main() dispatches directly; a contributed command
+// (ADR-041) may not shadow one — checked at `rat plugin check`.
+var builtinVerbs = map[string]bool{
+	"help": true, "serve": true, "up": true, "down": true, "status": true, "hub": true,
+	"ls": true, "init": true, "add": true, "remove": true, "rm": true, "call": true,
+	"apply": true, "version": true, "ui": true, "plugin": true, "search": true,
+	"list": true, "marketplace": true, "market": true, "context": true, "ctx": true,
+}
+
+// validateCommands checks a plugin's contributed CLI commands (ADR-041): each names a real
+// capability (in a linked axis), maps args to fields that exist on that capability's request, and
+// does not shadow a built-in verb.
+func validateCommands(m *manifest.Manifest) error {
+	for _, c := range m.Contributes.Commands {
+		if c.Name == "" || c.Capability == "" {
+			return fmt.Errorf("check failed: %s contributes a command missing name or capability", m.Metadata.Name)
+		}
+		fields := strings.Fields(c.Name)
+		if builtinVerbs[fields[0]] {
+			return fmt.Errorf("check failed: %s command %q shadows the built-in verb %q", m.Metadata.Name, c.Name, fields[0])
+		}
+		if !linkedAxes()[capAxisOf(c.Capability)] {
+			continue // axis not compiled into this rat — can't verify the field mapping; skip (noted)
+		}
+		_, in, _, err := resolveMethod(c.Capability)
+		if err != nil {
+			return fmt.Errorf("check failed: %s command %q → %q is not a real capability", m.Metadata.Name, c.Name, c.Capability)
+		}
+		for _, a := range c.Args {
+			if !fieldPathExists(in, a.Field) {
+				return fmt.Errorf("check failed: %s command %q arg %q maps to field %q absent on %s", m.Metadata.Name, c.Name, a.Name, a.Field, in.FullName())
+			}
+		}
+	}
+	return nil
+}
+
+// fieldPathExists reports whether a (possibly dotted) field path resolves on a message descriptor —
+// e.g. "target.branch" descends into the `target` message field (ADR-041 nested arg-mapping).
+func fieldPathExists(md protoreflect.MessageDescriptor, path string) bool {
+	parts := strings.Split(path, ".")
+	for i, p := range parts {
+		fd := md.Fields().ByName(protoreflect.Name(p))
+		if fd == nil {
+			return false
+		}
+		if i == len(parts)-1 {
+			return true
+		}
+		if fd.Kind() != protoreflect.MessageKind {
+			return false
+		}
+		md = fd.Message()
+	}
+	return true
+}
+
+// validateAuthored is the authoring-gate validation `rat plugin check`/`pack` apply on top of the
+// structural manifest.Load — it enforces the plugin.v1.json constraints the CLI used to skip
+// (Gaps 3/8b), reconciled with the driver shape blessed by ADR-039:
+//   - a plugin must DO SOMETHING: declare ≥1 `provides` (a provider) OR ≥1 `requires` (a driver).
+//     This is the envelope's relaxed `provides` (minItems 0) + the "not empty" floor.
+//   - `resources.requests` is MANDATORY (C4) — the scaffold now emits a default, so authored
+//     plugins always carry it.
+func validateAuthored(m *manifest.Manifest) error {
+	if len(m.Provides) == 0 && len(m.Requires) == 0 {
+		return fmt.Errorf("check failed: %s declares neither `provides` nor `requires` — a plugin must do something (a provider provides capabilities; a driver requires them; see ADR-039)", m.Metadata.Name)
+	}
+	if !m.HasResources() {
+		return fmt.Errorf("check failed: %s is missing `resources.requests` (C4 — required by plugin.v1.json; declare cpu/memory asks)", m.Metadata.Name)
+	}
+	return nil
+}
+
+// manifestName loads a manifest file and returns its metadata.name (Gap 7: `rat add --manifest`
+// derives the plugin name the same way `--image` derives it from the stamped manifest).
+func manifestName(path string) (string, error) {
+	m, err := manifest.Load(path)
+	if err != nil {
+		return "", err
+	}
+	return m.Metadata.Name, nil
+}
+
 // runPlugin dispatches the `rat plugin` subcommands.
 func runPlugin(argv []string, out io.Writer) error {
 	if len(argv) == 0 {
@@ -107,6 +191,13 @@ Each subcommand: `+"`rat plugin <sub> -h`"+` for its flags.
 // Dockerfile + README + portable CI/CD. The generated folder passes `rat plugin check`.
 func runPluginInit(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("rat plugin init", flag.ContinueOnError)
+	// The plugin NAME is a leading positional, not a flag — spell that out in -h (Gap 1),
+	// since flag's default usage only lists flags and would hide the required <name>.
+	fs.Usage = func() {
+		fmt.Fprintln(fs.Output(), "Usage: rat plugin init <name> --kind <axis> [--lang python|go|typescript|rust] [--dir <path>]")
+		fmt.Fprintln(fs.Output(), "  <name>   plugin name (a leading positional argument, required)")
+		fs.PrintDefaults()
+	}
 	kind := fs.String("kind", "", "plugin kind (one of the 18 axes, e.g. state-backend, strategy)")
 	lang := fs.String("lang", "python", "plugin language: python | go | typescript | rust")
 	dir := fs.String("dir", "", "target directory (default: ./<name>)")
@@ -227,6 +318,13 @@ func runPluginCheck(args []string, out io.Writer) error {
 				return fmt.Errorf("check failed: a %q plugin provides %q (axis %q) — expected %q-axis capabilities", m.Kind, c, a, want)
 			}
 		}
+	}
+
+	if err := validateAuthored(m); err != nil {
+		return err
+	}
+	if err := validateCommands(m); err != nil {
+		return err
 	}
 
 	note := ""
@@ -466,7 +564,14 @@ func ensureImagePresent(out io.Writer, ref string) error {
 		return nil
 	}
 	fmt.Fprintf(out, "pulling %s …\n", ref)
-	if b, err := exec.Command("podman", "pull", ref).CombinedOutput(); err != nil {
+	pullArgs := []string{"pull"}
+	// Insecure localhost registry (Gap 10): mirror publish's push-side handling so the pull
+	// half doesn't fail with "http response to HTTPS client" on a plain local registry:2.
+	if isLocalRegistry(ref) {
+		pullArgs = append(pullArgs, "--tls-verify=false")
+	}
+	pullArgs = append(pullArgs, ref)
+	if b, err := exec.Command("podman", pullArgs...).CombinedOutput(); err != nil {
 		return fmt.Errorf("pull %s: %v\n%s", ref, err, tailString(string(b), 500))
 	}
 	return nil
@@ -513,6 +618,9 @@ func runPluginPack(args []string, out io.Writer) error {
 	}
 	if !knownKinds[m.Kind] {
 		return fmt.Errorf("pack: unknown kind %q", m.Kind)
+	}
+	if err := validateAuthored(m); err != nil {
+		return err
 	}
 	finalTag := *tag
 	if finalTag == "" {
@@ -601,22 +709,75 @@ func fill(tmpl, name, kind string) string {
 	return strings.NewReplacer("__NAME__", name, "__KIND__", kind).Replace(tmpl)
 }
 
+// kindToAxis maps a manifest kind to its capability-URI axis segment, for the kinds whose axis
+// name differs from the kind name. Everything else uses the kind name as the axis.
+var kindToAxis = map[string]string{
+	"state-backend":      "state",
+	"secret-backend":     "secret",
+	"scheduler-backend":  "scheduler",
+	"audit-log":          "auditlog",
+	"deployment-runtime": "deploymentruntime",
+}
+
+func axisForKind(kind string) string {
+	if a, ok := kindToAxis[kind]; ok {
+		return a
+	}
+	return kind
+}
+
+// axisCap is one (capability URI, RPC method) pair an axis service declares.
+type axisCap struct {
+	cap    string // rat://<axis>/v1/<verb>
+	method string // the RPC method name, e.g. "Get"
+}
+
+// axisServiceFromDescriptors finds, in the linked proto descriptors, the service that hosts an
+// axis's capabilities and the (capability, method) pairs it declares — so the scaffold can derive
+// the RIGHT provides + a kind-aware servicer stub instead of a hardcoded map (Gaps 4/8a). Returns
+// a nil service when the axis isn't compiled into this rat (the scaffold falls back to generic).
+func axisServiceFromDescriptors(axis string) (protoreflect.ServiceDescriptor, []axisCap) {
+	var svc protoreflect.ServiceDescriptor
+	var caps []axisCap
+	protoregistry.GlobalFiles.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
+		svcs := fd.Services()
+		for i := 0; i < svcs.Len(); i++ {
+			s := svcs.Get(i)
+			ms := s.Methods()
+			for j := 0; j < ms.Len(); j++ {
+				m := ms.Get(j)
+				if c, _ := proto.GetExtension(m.Options(), commonv1.E_Capability).(string); c != "" && capAxisOf(c) == axis {
+					svc = s
+					caps = append(caps, axisCap{cap: c, method: string(m.Name())})
+				}
+			}
+		}
+		return true
+	})
+	return svc, caps
+}
+
 // scaffold returns the generated files (relative path → content) for a plugin in `lang`. The
 // manifest + CI are language-independent; langFiles supplies the server stub, build manifest,
 // Dockerfile, and .gitignore. Every stub binds RAT_PLUGIN_ADDR and serves a gRPC server (so the
 // folder builds + launches HEALTHY); you implement the servicer to pass `rat plugin pack`'s
 // serves-gate.
 func scaffold(name, kind, lang string) map[string]string {
+	axis := axisForKind(kind)
+	svc, axisCaps := axisServiceFromDescriptors(axis)
+
 	var provides strings.Builder
-	caps := kindProvides[kind]
-	if len(caps) == 0 {
-		provides.WriteString("provides: []   # TODO: a driver kind serves no capability; declare `requires` below\n")
+	if len(axisCaps) == 0 {
+		provides.WriteString("provides: []   # this axis is a driver shape, or its proto isn't linked into rat\n")
 	} else {
-		provides.WriteString("provides:\n")
-		for _, c := range caps {
-			fmt.Fprintf(&provides, "  - capability: %s\n", c)
+		provides.WriteString("provides:   # the axis's capabilities — delete any you don't implement (a driver keeps none)\n")
+		for _, c := range axisCaps {
+			fmt.Fprintf(&provides, "  - capability: %s\n", c.cap)
 		}
 	}
+
+	// C4: resources is REQUIRED by plugin.v1.json — scaffold a sane default so `check` passes.
+	resources := "resources:\n  requests:\n    cpu: \"50m\"\n    memory: \"64Mi\"\n  limits:\n    cpu: \"500m\"\n    memory: \"256Mi\"\n"
 
 	m := fmt.Sprintf(`# %s — a rat %s plugin (%s). Scaffolded by `+"`rat plugin init`"+` (ADR-026).
 api_version: rat/1
@@ -625,11 +786,22 @@ metadata:
   name: %s
   version: 0.1.0
 compatible_core: ["rat/1"]
-%s`, name, kind, lang, kind, name, provides.String())
+%s%s`, name, kind, lang, kind, name, provides.String(), resources)
 
+	// README: point at the axis CONTRACT + the actual capabilities to implement — NOT at a
+	// sibling plugins/ tree that may not exist (Gap 2).
+	var capList string
+	for _, c := range axisCaps {
+		capList += "- `" + c.cap + "`\n"
+	}
+	if capList == "" {
+		capList = "(this axis serves no capability — it's a driver: declare `requires` in the manifest)\n"
+	}
 	readme := fmt.Sprintf("# %s\n\nA rat **%s** plugin in **%s** (scaffolded by `rat plugin init`, ADR-026).\n\n"+
 		"```sh\nrat plugin check     # validate the manifest (static gate)\nrat plugin pack      # build + verify (launches under I9, must SERVE its declared capability)\nrat plugin publish   # push to ghcr.io\n```\n\n"+
-		"Implement your servicer (see `plugins/` for a reference of the same kind), then `rat plugin pack`.\n", name, kind, lang)
+		"## Implement\n\nThis axis lives at `contracts/proto/rat/%s/v1/` (see its `CONTRACT.md`). Capabilities:\n\n%s\n"+
+		"The scaffolded server stub already imports the right axis stubs and lists each method — fill them in, then `rat plugin pack`.\n",
+		name, kind, lang, axis, capList)
 
 	ci := `#!/bin/sh
 # ci.sh — the portable plugin CI/CD steps (ADR-026). The logic lives in rat verbs, so this
@@ -668,7 +840,7 @@ jobs:
 		"ci.sh":                        ci,
 		".github/workflows/plugin.yml": workflow,
 	}
-	for rel, content := range langFiles(name, kind, lang) {
+	for rel, content := range langFiles(name, kind, lang, svc, axisCaps) {
 		files[rel] = content
 	}
 	return files
@@ -677,7 +849,7 @@ jobs:
 // langFiles returns the language-specific scaffold (server stub + build manifest + Dockerfile +
 // .gitignore). Compiled languages (Go, Rust) link the rat SDK in and ship a tiny static-ish
 // binary — no SDK base image; interpreted ones (Python, TS) get the SDK from a base / npm.
-func langFiles(name, kind, lang string) map[string]string {
+func langFiles(name, kind, lang string, svc protoreflect.ServiceDescriptor, caps []axisCap) map[string]string {
 	switch lang {
 	case "go":
 		return goFiles(name, kind)
@@ -686,22 +858,33 @@ func langFiles(name, kind, lang string) map[string]string {
 	case "rust":
 		return rustFiles(name, kind)
 	default:
-		return pyFiles(name, kind)
+		return pyFiles(name, kind, svc, caps)
 	}
 }
 
-func pyFiles(name, kind string) map[string]string {
-	server := fill(`"""__NAME__ — a rat __KIND__ plugin (Python). Implement your servicer + register it.
-The rat SDK (gen stubs + the rat.plugin runtime) is provided by the plugin-base-py image.
-See ADR-029 for rat.plugin."""
+// pyImportPath turns a service's proto file path into the Python SDK import coordinates:
+// "rat/state/v1/state.proto" → pkg "rat.state.v1", module base "state".
+func pyImportPath(svc protoreflect.ServiceDescriptor) (pkg, base string) {
+	p := svc.ParentFile().Path()
+	pkg = strings.ReplaceAll(filepath.Dir(p), "/", ".")
+	base = strings.TrimSuffix(filepath.Base(p), ".proto")
+	return pkg, base
+}
+
+// pyServerStub generates the Python server stub. When the axis service is linked into rat it is
+// KIND-AWARE: right imports, the real Servicer base class, one pre-stubbed method per capability,
+// and the matching registration call (Gap 4). Otherwise it falls back to a generic driver stub.
+func pyServerStub(name, kind string, svc protoreflect.ServiceDescriptor, caps []axisCap) string {
+	if svc == nil || len(caps) == 0 {
+		return fmt.Sprintf(`"""%s — a rat %s plugin (Python). A DRIVER: it serves no capability (or its axis
+isn't linked into rat). Drive other capabilities via plugin.Gateway() and declare them in the
+manifest's `+"`requires`"+`. The rat SDK is provided by the plugin-base-py image (ADR-029)."""
 
 from rat import plugin
-# TODO: from rat.<axis>.v1 import <axis>_pb2_grpc
 
 
 def register(server):
-    # TODO: <axis>_pb2_grpc.add_<Service>Servicer_to_server(MyServicer(), server)
-    pass
+    pass  # a driver serves nothing; its work runs in a background loop (see docs/guides/04)
 
 
 def serve():
@@ -711,6 +894,42 @@ def serve():
 if __name__ == "__main__":
     serve()
 `, name, kind)
+	}
+
+	pkg, base := pyImportPath(svc)
+	svcName := string(svc.Name()) // e.g. "StateService"
+	cls := "My" + svcName
+
+	var methods strings.Builder
+	for _, c := range caps {
+		fmt.Fprintf(&methods, "    def %s(self, request, context):\n        # %s\n        raise NotImplementedError(%q)\n\n", c.method, c.cap, c.method)
+	}
+
+	return fmt.Sprintf(`"""%s — a rat %s plugin (Python). Scaffolded kind-aware by `+"`rat plugin init`"+`.
+Contract: %s (see its CONTRACT.md). Fill in each method below, then `+"`rat plugin pack`"+`.
+The rat SDK is provided by the plugin-base-py image (ADR-029)."""
+
+from rat import plugin
+from %s import %s_pb2, %s_pb2_grpc  # noqa: F401 — %s_pb2 holds the request/response types
+
+
+class %s(%s_pb2_grpc.%sServicer):
+%s
+def register(server):
+    %s_pb2_grpc.add_%sServicer_to_server(%s(), server)
+
+
+def serve():
+    plugin.serve(register)
+
+
+if __name__ == "__main__":
+    serve()
+`, name, kind, svc.ParentFile().Path(), pkg, base, base, base, cls, base, svcName, strings.TrimRight(methods.String(), "\n")+"\n", base, svcName, cls)
+}
+
+func pyFiles(name, kind string, svc protoreflect.ServiceDescriptor, caps []axisCap) map[string]string {
+	server := pyServerStub(name, kind, svc, caps)
 
 	dockerfile := `# __NAME__ plugin image — FROM the rat python base (the rat SDK + grpc are baked in, ADR-026).
 # Your plugin repo carries only its OWN code; the SDK arrives via the base image, not vendored.

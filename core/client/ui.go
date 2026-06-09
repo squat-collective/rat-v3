@@ -62,9 +62,14 @@ func RunUI(argv []string, out io.Writer) error {
 	} else if len(argv) > 0 && argv[0] == "list" {
 		rest = argv[1:]
 	}
+	ctx0 := CurrentContext()
+	uiCaller := ctx0.As
+	if uiCaller == "" {
+		uiCaller = "platform-runner"
+	}
 	fs := flag.NewFlagSet("rat ui", flag.ContinueOnError)
-	addr := fs.String("addr", "127.0.0.1:7777", "gateway address")
-	caller := fs.String("as", "platform-runner", "consumer identity (must `requires` state read + the command capabilities)")
+	addr := fs.String("addr", ctx0.Addr, "gateway address")
+	caller := fs.String("as", uiCaller, "consumer identity (must `requires` state read + the command capabilities)")
 	surface := fs.String("surface", "cli", "the surface to render")
 	if err := fs.Parse(rest); err != nil {
 		return err

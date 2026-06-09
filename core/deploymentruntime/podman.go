@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -176,7 +177,20 @@ func (r *Podman) Launch(ctx context.Context, req *deploymentruntimev1.LaunchRequ
 	if s := iso.GetSeccompProfile(); s != "" && s != "RuntimeDefault" {
 		args = append(args, "--security-opt=seccomp="+s)
 	}
+	var publishPorts []string
 	for k, v := range spec.GetEnv() {
+		if k == "RAT_PUBLISH_PORTS" {
+			// Gap 9 / ADR-040: extra browser-reachable ports the plugin declares in its manifest
+			// `ports` (carried via this reserved env key — a launch directive, not a -e). Publish
+			// each to an ephemeral host port on all interfaces so a browser can reach it.
+			for _, p := range strings.Split(v, ",") {
+				if p = strings.TrimSpace(p); p != "" {
+					publishPorts = append(publishPorts, p)
+					args = append(args, "-p", "0.0.0.0::"+p)
+				}
+			}
+			continue
+		}
 		args = append(args, "-e", k+"="+v) // NEVER secrets (secret-backend axis)
 	}
 	args = append(args, spec.GetImage())
@@ -186,6 +200,16 @@ func (r *Podman) Launch(ctx context.Context, req *deploymentruntimev1.LaunchRequ
 		return nil, status.Errorf(codes.Internal, "podman run %q: %v: %s", spec.GetImage(), err, out)
 	}
 	cid := strings.TrimSpace(out)
+
+	// Surface the host mapping of any published UI/HTTP ports so the operator can reach them
+	// (Gap 9). HOST mode only — in SIBLING mode the port is reachable by container name.
+	if r.Network == "" {
+		for _, p := range publishPorts {
+			if hp, e := r.publishedHostPort(ctx, cid, p); e == nil {
+				log.Printf("🌐 %s: container port %s published → http://localhost:%s", req.GetPluginId(), p, hp)
+			}
+		}
+	}
 
 	// HOST mode: resolve the ephemeral loopback port podman published. SIBLING mode: the
 	// endpoint IS the stable name on the shared network (podman DNS), no publish to inspect.
@@ -277,6 +301,21 @@ func (r *Podman) publishedEndpoint(ctx context.Context, cid string) (string, err
 		return "", fmt.Errorf("no published host port for %s/tcp", podmanContainerPort)
 	}
 	return "127.0.0.1:" + port, nil
+}
+
+// publishedHostPort returns the ephemeral host port podman mapped a given container port to
+// (HOST mode) — used to surface a UI plugin's published port (Gap 9 / ADR-040).
+func (r *Podman) publishedHostPort(ctx context.Context, cid, containerPort string) (string, error) {
+	format := `{{ (index (index .NetworkSettings.Ports "` + containerPort + `/tcp") 0).HostPort }}`
+	out, err := r.podman(ctx, "inspect", "--format", format, cid)
+	if err != nil {
+		return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(out))
+	}
+	port := strings.TrimSpace(out)
+	if port == "" || port == "<no value>" {
+		return "", fmt.Errorf("no published host port for %s/tcp", containerPort)
+	}
+	return port, nil
 }
 
 func (r *Podman) containerRunning(ctx context.Context, cid string) (bool, error) {
