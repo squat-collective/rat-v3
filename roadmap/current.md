@@ -11,7 +11,11 @@ platform · surfaces · distribution · authoring · authoring↔runtime · depe
 marketplace · live control). Everything ≤ `rat/2.0` is the **frozen wire**; every phase since
 has been additive. **Phase 10 (workspace federation + the security model) is IN-FLIGHT**,
 consolidated on the `phase-10` integration branch (not yet sealed). `main` is the sealed line
-at `rat/6.0`.
+at **`rat/6.6`** — most recently the port of the clean-room DX improvements + ADR-039/040/041
+(kind-aware scaffold · authoring gate · published ports · pluggable CLI · `rat context`; see
+[done.md](done.md) 2026-06-09). The from-scratch rebuild + remote-dev-flow experiment those came
+from is sealed separately at tag **`clean-room/1.0`** (a parallel line, not merged — its
+`plugins/`+`platform/` wipe would destroy this corpus).
 
 ## 🔵 Phase 10 — workspace federation + security (in-flight)
 
@@ -63,7 +67,7 @@ identity enforcement) or any backlog item by appetite.
 
 ## Branching (in force)
 
-`main` is the sealed line (`rat/6.0`). Work on `phase-10` (integration) or `phase-10-<slug>`
+`main` is the sealed line (`rat/6.6`). Work on `phase-10` (integration) or `phase-10-<slug>`
 (topic) — **never commit to `main`** (a `PreToolUse` hook blocks it). Full rules:
 [`.claude/rules/git-branching.md`](../.claude/rules/git-branching.md).
 
