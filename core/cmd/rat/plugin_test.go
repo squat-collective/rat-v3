@@ -30,7 +30,9 @@ func TestPluginInitCheck(t *testing.T) {
 	if err := runPluginCheck([]string{"demo-state"}, &out); err != nil {
 		t.Fatalf("check (scaffolded) should pass: %v", err)
 	}
-	if !strings.Contains(out.String(), "state-backend") || !strings.Contains(out.String(), "3 provides") {
+	// the kind-aware scaffold derives all of the state axis's capabilities from the linked
+	// descriptors (get/put/list/delete/watch), so check reports 5 provides.
+	if !strings.Contains(out.String(), "state-backend") || !strings.Contains(out.String(), "5 provides") {
 		t.Errorf("check output unexpected: %q", out.String())
 	}
 
@@ -58,7 +60,9 @@ func TestPluginCheckDeps(t *testing.T) {
 		_ = os.WriteFile(filepath.Join(name, "manifest.yaml"), []byte(body), 0o644)
 	}
 	hdr := func(kind, name string) string {
-		return "api_version: rat/1\nkind: " + kind + "\nmetadata:\n  name: " + name + "\n  version: 0.1.0\ncompatible_core: [\"rat/1\"]\n"
+		// resources.requests is required by the authoring gate (ADR-039); include it so these
+		// dep-coherence fixtures exercise the dep checks, not the resources check.
+		return "api_version: rat/1\nkind: " + kind + "\nmetadata:\n  name: " + name + "\n  version: 0.1.0\ncompatible_core: [\"rat/1\"]\nresources:\n  requests:\n    cpu: \"50m\"\n    memory: \"32Mi\"\n"
 	}
 	var out bytes.Buffer
 
@@ -78,6 +82,24 @@ func TestPluginCheckDeps(t *testing.T) {
 	write("mismatch", hdr("state-backend", "mismatch")+"provides:\n  - capability: rat://strategy/v1/apply\n")
 	if err := runPluginCheck([]string{"mismatch"}, &out); err == nil {
 		t.Error("a state-backend providing a strategy cap should fail kind coherence")
+	}
+
+	// ADR-039 authoring gate: neither provides nor requires → fail (a plugin must do something).
+	write("empty", hdr("ui", "empty"))
+	if err := runPluginCheck([]string{"empty"}, &out); err == nil {
+		t.Error("a manifest with no provides and no requires should fail (ADR-039)")
+	}
+
+	// ADR-039 authoring gate: a driver (provides:[] but requires≥1) PASSES.
+	write("driver", hdr("ui", "driver")+"requires:\n  - capability: rat://strategy/v1/apply\n")
+	if err := runPluginCheck([]string{"driver"}, &out); err != nil {
+		t.Errorf("a driver (provides:[] + requires) should pass: %v", err)
+	}
+
+	// Gap 3: a manifest missing resources fails the authoring gate.
+	write("nores", "api_version: rat/1\nkind: strategy\nmetadata:\n  name: nores\n  version: 0.1.0\ncompatible_core: [\"rat/1\"]\nprovides:\n  - capability: rat://strategy/v1/apply\n")
+	if err := runPluginCheck([]string{"nores"}, &out); err == nil {
+		t.Error("a manifest missing resources.requests should fail the authoring gate (Gap 3)")
 	}
 }
 

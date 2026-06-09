@@ -205,8 +205,17 @@ func runAdd(args []string, out io.Writer) error {
 		*manifest = rel
 		fmt.Fprintf(out, "read manifest from %s → %s\n", *image, rel)
 	}
+	// With --manifest and no positional name, derive the name from metadata.name (Gap 7) — the
+	// same self-describing principle the --image path uses on the stamped manifest above.
+	if name == "" && *manifest != "" {
+		n, err := manifestName(*manifest)
+		if err != nil {
+			return fmt.Errorf("read --manifest %s: %w", *manifest, err)
+		}
+		name = n
+	}
 	if name == "" {
-		return fmt.Errorf("usage: rat add <name> --manifest <path> [--image <ref>]  (or `rat add --image <packed-ref>` to read the stamped manifest)")
+		return fmt.Errorf("usage: rat add [<name>] --manifest <path> [--image <ref>]  (or `rat add --image <packed-ref>` to read the stamped manifest)")
 	}
 	if *manifest == "" {
 		return fmt.Errorf("--manifest <path> required (or pass --image a packed image whose manifest is stamped in)")

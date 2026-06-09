@@ -10,6 +10,7 @@ package main
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/rat-dev/rat/core/manifest"
@@ -73,7 +74,7 @@ func (c *controlService) RegisterPlugin(ctx context.Context, req *corev1.Registe
 		return nil, status.Errorf(codes.InvalidArgument, "isolation: %v", err)
 	}
 	spec := &deploymentruntimev1.LaunchSpec{Image: ls.GetImage(), Isolation: profile, Env: ls.GetEnv()}
-	injectLaunchEnv(spec, name, c.gwAddr)
+	injectLaunchEnv(spec, name, c.gwAddr, m.PublishPorts())
 
 	if err := c.rec.AddDesired(reconciler.Desired{Name: name, Launch: spec}); err != nil {
 		c.reg.Deregister(name)
@@ -146,7 +147,7 @@ func (c *controlService) ListPlugins(_ context.Context, _ *corev1.ListPluginsReq
 // identity) — as DEFAULTS (an explicit plane/request env still wins). Shared by launchPlane
 // (the initial set) and the live RegisterPlugin path, so a live-added plugin is wired
 // identically to a booted one.
-func injectLaunchEnv(spec *deploymentruntimev1.LaunchSpec, name, gwAddr string) {
+func injectLaunchEnv(spec *deploymentruntimev1.LaunchSpec, name, gwAddr string, publishPorts []string) {
 	if spec.Env == nil {
 		spec.Env = map[string]string{}
 	}
@@ -155,5 +156,12 @@ func injectLaunchEnv(spec *deploymentruntimev1.LaunchSpec, name, gwAddr string) 
 	}
 	if _, set := spec.Env["RAT_PLUGIN_NAME"]; !set {
 		spec.Env["RAT_PLUGIN_NAME"] = name
+	}
+	// ADR-040 (Gap 9): browser/HTTP ports the plugin declares in its manifest `ports`, passed to
+	// the deployment-runtime as a launch directive so it publishes them to the host.
+	if len(publishPorts) > 0 {
+		if _, set := spec.Env["RAT_PUBLISH_PORTS"]; !set {
+			spec.Env["RAT_PUBLISH_PORTS"] = strings.Join(publishPorts, ",")
+		}
 	}
 }

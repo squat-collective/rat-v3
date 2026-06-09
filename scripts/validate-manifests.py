@@ -114,15 +114,19 @@ expect("format scan-only is valid", KIND_SCHEMAS["format"],
        base("format", ["rat://format/v1/scan"]), True)
 
 # --- 4. negative: the existing INVALID-examples classes the ENVELOPE catches ------
-print(">> envelope rejections (INVALID-examples #1,#2,#3,#5)")
+print(">> envelope rejections (INVALID-examples #1,#3,#5)")
 expect("#1 missing resources", ENVELOPE,
        {"api_version": "rat/1", "kind": "strategy",
         "metadata": {"name": "rat-strategy-bad", "version": "0.1.0"},
         "provides": [{"capability": "rat://strategy/v1/apply"}]}, False)
-expect("#2 empty provides", ENVELOPE,
-       {"api_version": "rat/1", "kind": "format",
-        "metadata": {"name": "rat-format-empty", "version": "0.1.0"},
-        "provides": [], "resources": {"requests": {"cpu": "100m"}}}, False)
+# ADR-039: empty `provides` is VALID at the envelope — it's the DRIVER shape (provides nothing,
+# only requires). The envelope relaxed minItems 1->0; the "provides>=1 OR requires>=1" floor is the
+# CLI authoring gate, not the envelope. (Was INVALID-examples #2; reclassified by ADR-039.)
+expect("#2 empty provides is a valid driver (ADR-039)", ENVELOPE,
+       {"api_version": "rat/1", "kind": "ui",
+        "metadata": {"name": "rat-ui-driver", "version": "0.1.0"},
+        "provides": [], "requires": [{"capability": "rat://strategy/v1/apply"}],
+        "resources": {"requests": {"cpu": "100m"}}}, True)
 expect("#3 malformed capability URI", ENVELOPE,
        {"api_version": "rat/1", "kind": "strategy",
         "metadata": {"name": "rat-strategy-baduri", "version": "0.1.0"},

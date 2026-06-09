@@ -35,6 +35,51 @@ type Metadata struct {
 	Version string `yaml:"version"`
 }
 
+// ResourceQuantities mirrors plugin.v1.json $defs/resourceQuantities (cpu/memory asks).
+type ResourceQuantities struct {
+	CPU    string `yaml:"cpu"`
+	Memory string `yaml:"memory"`
+}
+
+// Resources is the C4 resource asks/limits block (plugin.v1.json requires `requests`).
+type Resources struct {
+	Requests ResourceQuantities `yaml:"requests"`
+	Limits   ResourceQuantities `yaml:"limits"`
+}
+
+// Port is a browser/HTTP port a plugin publishes for out-of-band (non-gateway) access — e.g. a
+// ui plugin's web port. ADR-040 (Gap 9): the deployment-runtime publishes these to the host so a
+// UI plugin is launched + reconciled like any other plugin instead of run as a sidecar.
+type Port struct {
+	Name          string `yaml:"name"`
+	ContainerPort int    `yaml:"container_port"`
+}
+
+// CommandArg maps one CLI token (a positional or a --flag) onto a field of the capability's
+// request message (ADR-041).
+type CommandArg struct {
+	Name       string `yaml:"name" json:"name"`
+	Field      string `yaml:"field" json:"field"`
+	Positional bool   `yaml:"positional" json:"positional"`
+	Required   bool   `yaml:"required" json:"required"`
+	Default    string `yaml:"default" json:"default"`
+}
+
+// Command is a CLI command a plugin contributes — the `rat` client surfaces it as `rat <name>`
+// and dispatches it onto `capability` through the gateway (ADR-041).
+type Command struct {
+	Name       string       `yaml:"name" json:"name"`
+	Capability string       `yaml:"capability" json:"capability"`
+	Help       string       `yaml:"help" json:"help"`
+	Args       []CommandArg `yaml:"args" json:"args"`
+}
+
+// Contributes is what a plugin contributes into shared surfaces — UI slots (ADR-024/025) and CLI
+// commands (ADR-041).
+type Contributes struct {
+	Commands []Command `yaml:"commands"`
+}
+
 // Manifest is a parsed plugin manifest (subset of plugin.v1.json the spike needs).
 type Manifest struct {
 	APIVersion     string          `yaml:"api_version"`
@@ -44,9 +89,31 @@ type Manifest struct {
 	Provides       []CapabilityRef `yaml:"provides"`
 	Requires       []CapabilityRef `yaml:"requires"`
 	Suggests       []CapabilityRef `yaml:"suggests"`
+	Resources      Resources       `yaml:"resources"`
+	Ports          []Port          `yaml:"ports"`
+	Contributes    Contributes     `yaml:"contributes"`
 
 	// Path is the file the manifest was loaded from (diagnostics only; not on the wire).
 	Path string `yaml:"-"`
+}
+
+// PublishPorts returns the declared container ports as strings (for the RAT_PUBLISH_PORTS launch
+// directive the deployment-runtime reads, ADR-040).
+func (m *Manifest) PublishPorts() []string {
+	out := make([]string, 0, len(m.Ports))
+	for _, p := range m.Ports {
+		if p.ContainerPort > 0 {
+			out = append(out, fmt.Sprintf("%d", p.ContainerPort))
+		}
+	}
+	return out
+}
+
+// HasResources reports whether the C4 resources.requests block declares at least one quantity.
+// (Parsing-presence only — the wire/runtime Validate() stays lenient so minimal runtime manifests
+// still load; the authoring gate `rat plugin check`/`pack` is where this is required.)
+func (m *Manifest) HasResources() bool {
+	return m.Resources.Requests.CPU != "" || m.Resources.Requests.Memory != ""
 }
 
 // ProvidesCaps returns the capability URIs this plugin provides.

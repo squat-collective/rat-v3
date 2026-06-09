@@ -122,9 +122,16 @@ func main() {
 	case "marketplace", "market":
 		// manage the added marketplaces (add | list).
 		err = runMarketplace(args, os.Stdout)
+	case "context", "ctx":
+		// kubectl-style connection profiles: pin {addr, as, token, workspace} so commands
+		// target a remote rat without retyping flags (ADR remote-dev-flow).
+		err = client.RunContext(args, os.Stdout)
 	default:
-		fmt.Fprintf(os.Stderr, "rat: unknown command %q — run `rat help`\n", cmd)
-		os.Exit(1)
+		// Not a built-in verb → try a plugin-CONTRIBUTED command (ADR-041): the rat CLI is a thin
+		// dispatcher; commands like `rat run`/`rat branch` come from plugins, surfaced from the
+		// connected (possibly remote) gateway. The leading token may be the first of a multi-token
+		// command name (e.g. `branch create`), so pass the whole argv.
+		err = client.RunCommand(append([]string{cmd}, args...), os.Stdout)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "rat:", err)
@@ -221,13 +228,21 @@ func serveResolved(pl *Plane) error {
 	}
 	var cbLis net.Listener
 	cbPort := tcpPort(ctlLis) // "" when the control listener is a unix socket
-	if cbPort == "" {
+	// Plugin callbacks must reach the gateway from inside a container. They can't when control
+	// is a unix socket (cbPort==""), OR when control is TCP bound to LOOPBACK under a container
+	// runtime — host.containers.internal can't reach a 127.0.0.1-only listener (Gap 6). In both
+	// cases open a 0.0.0.0 companion so launched plugins can dial the gateway back.
+	loopbackTCP := cbPort != "" && isLoopbackBind(pl.Addr) && isContainerRuntime(pl.Runtime)
+	if cbPort == "" || loopbackTCP {
 		cbLis, err = net.Listen("tcp", "0.0.0.0:0")
 		if err != nil {
 			_ = ctlLis.Close()
 			return fmt.Errorf("open plugin-callback listener: %w", err)
 		}
 		cbPort = tcpPort(cbLis)
+		if loopbackTCP {
+			log.Printf("note: control is loopback (%s) under the %q runtime — opened a 0.0.0.0 plugin-callback companion so launched plugins can reach the gateway (Gap 6)", pl.Addr, pl.Runtime)
+		}
 	}
 	pl.CallbackAddr = gatewayCallbackAddr(pl, cbPort)
 
@@ -384,7 +399,7 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 		if s.Launch != nil {
 			// Inject the topology-dependent gateway-callback env (RAT_GATEWAY) + the caller
 			// identity (RAT_PLUGIN_NAME) the SAME way the live RegisterPlugin path does.
-			injectLaunchEnv(s.Launch, s.Manifest.Metadata.Name, gwAddr)
+			injectLaunchEnv(s.Launch, s.Manifest.Metadata.Name, gwAddr, s.Manifest.PublishPorts())
 			desired = append(desired, reconciler.Desired{Name: s.Manifest.Metadata.Name, Launch: s.Launch})
 		}
 	}
@@ -439,6 +454,18 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 	// client can register/deregister a plugin against this running daemon — no restart.
 	control := &controlService{reg: reg, rec: rec, gwAddr: gwAddr, readyTO: pl.HealthTimeout}
 	return &runningPlane{Gateway: gw, Control: control, shutdown: shutdown}, nil
+}
+
+// isLoopbackBind reports whether a TCP listen address binds only the loopback interface — so a
+// launched container can't reach it via host.containers.internal (Gap 6).
+func isLoopbackBind(addr string) bool {
+	return strings.HasPrefix(addr, "127.0.0.1") || strings.HasPrefix(addr, "localhost") || strings.HasPrefix(addr, "[::1]")
+}
+
+// isContainerRuntime reports whether the deployment runtime launches plugins in containers (so the
+// host/container boundary applies to gateway callbacks).
+func isContainerRuntime(rt string) bool {
+	return rt == "podman" || rt == "docker"
 }
 
 // gatewayCallbackAddr computes the address a LAUNCHED plugin uses to call the gateway back,
