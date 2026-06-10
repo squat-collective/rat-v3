@@ -34,7 +34,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-image stateplugin-image plugin-base-go plugin-base-py plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking release-build release-image release-checksums clean help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-build rat-image stateplugin-image plugin-base-go plugin-base-py plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking release-build release-image release-checksums clean help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -133,6 +133,14 @@ rat-image: ## ADR-019: build the rat control-plane daemon image (run `rat serve`
 # The release pipeline (.github/workflows/release.yml) is a thin wrapper over these two
 # REPRODUCIBLE targets, so a release is exactly what `make release-build`/`release-image`
 # produce locally — no CI-only magic.
+rat-build: ## build the rat CLI for this machine → dist/rat (the QUICKSTART entry point)
+	@mkdir -p dist
+	@echo ">> rat $(VERSION) → dist/rat (static, CGO-free)"
+	@$(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e CGO_ENABLED=0 -e GOTOOLCHAIN=local -e GOSUMDB=off -e GOFLAGS=-mod=mod \
+	  -v "$(CURDIR):/work:Z" -v rat-gocache:/go/pkg/mod -w /work/core \
+	  $(GO_IMAGE) go build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" -o /work/dist/rat ./cmd/rat
+	@echo ">> built dist/rat — try: ./dist/rat --help"
+
 release-build: ## build a static, versioned rat binary → dist/ (set RELEASE_OS/RELEASE_ARCH to cross-compile)
 	@mkdir -p dist
 	@echo ">> rat $(VERSION) → dist/rat-$(VERSION)-$(RELEASE_OS)-$(RELEASE_ARCH) (static, CGO-free)"
@@ -173,7 +181,7 @@ plugin-images: ## ADR-022: build the launchable Python plugin images (rat/<name>
 	@#  the launch-mode platform embeds engine+catalog in the dbt-runner, not standalone plugins.)
 
 ## --- the data platform bundle (ADR-020) --------------------------------------
-platform-up: rat-image ## ADR-020 S1: bring up the always-on data platform stack (Postgres+MinIO+engine+catalog+rat serve)
+platform-up: rat-image ## ADR-020 S1: bring up the always-on data platform stack (Postgres+MinIO + dbt-runner/state/scheduler/bff + rat serve)
 	@echo ">> platform: $(notdir $(RUNTIME)) compose up — the always-on stack (rat serve attaches to the plugins)"
 	@$(RUNTIME) compose -f platform/compose.yaml up -d
 
