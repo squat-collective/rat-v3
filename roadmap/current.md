@@ -2,7 +2,18 @@
 
 > **Always read this first when opening a Claude session.** Concise by design — the full
 > completion history lives in [`done.md`](done.md); the phase map in [`phases.md`](phases.md).
-> Updated: 2026-06-08.
+> Updated: 2026-06-10.
+
+## 🛡️ Latest — `rat/6.7`: core hardenings ported from the clean-room (ADRs 042–048)
+
+The 7 production-hardening gap fixes (sealed on the clean-room as `clean-room/2.0`) are now on `main`:
+channel-auth plugin identity (042) · state-CAS HA lease + AV-1 (043) · bounded reconciler RPCs +
+decoupled status (044) · label/selector provider selection (045) · native `/metrics` + durable audit
+(046) · hub transparent proxy + pooling (047) · arrow-ticket shared single-use store (048). Cherry-picked
+onto the reference corpus (no branch merge — the wipe stays off `main`); full `core` suite `-race`-green
+**including `composition` against the real Go providers**. No wire change, six-thing count held, no new
+dependency. Per-ADR follow-ons (mTLS · `state/v1` create-if-absent · parallel reconcile · selector
+v1.5/v2 · OTel spans · NATS-leaf) remain open. See [done.md](done.md) for the table.
 
 ## Status one-liner
 
