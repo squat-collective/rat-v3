@@ -109,10 +109,14 @@ Four patterns coexist in the demo platform. Know which one you're looking at:
 | **`ref://` resolution** | consumers carry only refs (`RAT_STATE_PG_REF=ref://state/pg-dsn`, `RAT_LAKE_PG_REF`, …) and resolve them via `rat://secret/v1/resolve` — gateway-routed, C5-authorized, audited | **the production contract.** No credential in any plane file or consumer env. |
 | **dbt `env_var()` interpolation** | [platform/dbt-project/profiles.yml](../../platform/dbt-project/profiles.yml): `{{ env_var('RAT_S3_KEY', 'minioadmin') }}` — the dbt-runner resolves refs, then exports the values as env vars for dbt | a bridge into dbt's own config language; the committed *defaults* are demo creds. |
 
-Plainly: **a production secret backend does not exist yet.** The `secret/v1/resolve`
-contract is what production swaps in behind (Vault, KMS, cloud secret managers); the env-py
-store is the only implementation today. Pattern 3 is the one to build on — patterns 1 and 4's
-literal values are demo conveniences, and pattern 2 is the seed mechanism for the demo store.
+**The production backend exists: [`plugins/secret/vault-py`](../../plugins/secret/vault-py/)**
+(DX-6) — HashiCorp Vault KV v2 behind the same `rat://secret/v1/resolve`. It fetches **at
+resolve time**, so rotating a secret in Vault is visible on the next resolve with **zero
+restarts** (verified live: resolve → rotate → re-resolve against one uninterrupted plugin
+process; its README has the exact commands). Pattern 3 + vault-py is the production shape;
+patterns 1 and 4's literal values are demo conveniences (now deduplicated into
+[`platform/.env`](../../platform/.env), ADR-050), and pattern 2 is the seed mechanism for
+the demo env-py store only.
 
 ## Durability & `.rat/`
 
