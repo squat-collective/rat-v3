@@ -62,19 +62,46 @@ func saveContexts(cf contextFile) error {
 	return os.WriteFile(p, b, 0o600) // 0600 — may hold a token
 }
 
-// CurrentContext returns the active profile's connection defaults; addr falls back to the local
-// daemon. Commands use these as flag defaults (so an explicit flag still wins).
+// CurrentContext returns the active profile's connection defaults; addr falls back to the
+// enclosing project's daemon socket (the `rat up` flow), then to the local TCP gateway.
+// Commands use these as flag defaults (so an explicit flag still wins).
 func CurrentContext() RatContext {
 	cf := loadContexts()
 	for _, c := range cf.Contexts {
 		if c.Name == cf.Current {
 			if c.Addr == "" {
-				c.Addr = localGateway
+				c.Addr = defaultGateway()
 			}
 			return c
 		}
 	}
-	return RatContext{Addr: localGateway}
+	return RatContext{Addr: defaultGateway()}
+}
+
+// defaultGateway prefers the enclosing project's daemon socket: walk up from cwd to the
+// dir holding rat.toml; if that project's daemon is up (.rat/daemon.sock exists), target
+// it — so `rat call` works inside a project with zero flags, the same reachability-trust
+// door `rat status`/`rat down` use. Outside a project (or daemon down) fall back to the
+// local TCP gateway. A named context or an explicit --addr always wins (handled above).
+func defaultGateway() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return localGateway
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "rat.toml")); err == nil {
+			sock := filepath.Join(dir, ".rat", "daemon.sock")
+			if _, err := os.Stat(sock); err == nil {
+				return "unix://" + sock
+			}
+			return localGateway
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return localGateway
+		}
+		dir = parent
+	}
 }
 
 // RunContext implements `rat context <add|use|list|show|remove>`.
