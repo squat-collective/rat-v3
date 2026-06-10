@@ -80,6 +80,19 @@ service StateService {
     option (rat.common.v1.capability) = "rat://state/v1/delete";
   }
 
+  // rat://state/v1/create-if-absent — atomically create one key (plugin+tenant relative) ONLY if it
+  // does not already exist. ADDITIVE amendment (ADR-049, modeled on ADR-035's Delete): a state-backend
+  // MAY leave it UNIMPLEMENTED — create-if-absent is OPTIONAL; a backend declares this capability in
+  // `provides` only if it implements it ATOMICALLY (two concurrent creates of one key yield exactly
+  // one COMMITTED), and consumers MUST handle its absence. Capability PRESENCE is the negotiation, so
+  // an old backend can never be silently misused. This is the primitive the leader-election lease
+  // BOOTSTRAP (ADR-043 Q01, the cold-start create race) and the Arrow-ticket single-use store (ADR-048)
+  // require — without it, neither can be backed by state/v1. It belongs to the multi-replica-eligibility
+  // conformance tier (linearizable CAS + ordered Watch + atomic create-if-absent), golden-vector gated.
+  rpc CreateIfAbsent(CreateIfAbsentRequest) returns (CreateIfAbsentResponse) {
+    option (rat.common.v1.capability) = "rat://state/v1/create-if-absent";
+  }
+
   // rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
   // Each streamed message is a WatchResponse — named per the *Response convention
   // buf STANDARD requires, even for streaming RPCs. Mediated via core
@@ -163,6 +176,25 @@ message DeleteRequest {
 message DeleteResponse {
   // true if the key existed and was removed; false if it was already absent (delete is idempotent).
   bool found = 1;
+}
+
+// ADR-049 — additive CreateIfAbsent. Optional per backend (UNIMPLEMENTED allowed). Distinct
+// request/response messages satisfy buf RPC_REQUEST_RESPONSE_UNIQUE; the PutOutcome enum is reused.
+message CreateIfAbsentRequest {
+  reserved 1; // RequestContext travels in the rat-callmeta-bin metadata header (ADR-007)
+  // Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
+  string key = 2;
+  // The value stored iff the key is created.
+  bytes value = 3;
+}
+
+message CreateIfAbsentResponse {
+  // Reuses PutOutcome: COMMITTED == created (revision = the new key's revision); CONFLICT == the key
+  // ALREADY EXISTED (the create did not happen; revision = the existing key's revision); UNKNOWN ==
+  // the backend could not confirm — the caller MUST NOT assume it created the key (same fencing
+  // discipline as Put — reviews/06 C-4).
+  PutOutcome outcome = 1;
+  int64 revision = 2;
 }
 
 message WatchRequest {

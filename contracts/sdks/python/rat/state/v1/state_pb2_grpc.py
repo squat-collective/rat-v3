@@ -54,6 +54,11 @@ class StateServiceStub(object):
                 request_serializer=rat_dot_state_dot_v1_dot_state__pb2.DeleteRequest.SerializeToString,
                 response_deserializer=rat_dot_state_dot_v1_dot_state__pb2.DeleteResponse.FromString,
                 _registered_method=True)
+        self.CreateIfAbsent = channel.unary_unary(
+                '/rat.state.v1.StateService/CreateIfAbsent',
+                request_serializer=rat_dot_state_dot_v1_dot_state__pb2.CreateIfAbsentRequest.SerializeToString,
+                response_deserializer=rat_dot_state_dot_v1_dot_state__pb2.CreateIfAbsentResponse.FromString,
+                _registered_method=True)
         self.Watch = channel.unary_stream(
                 '/rat.state.v1.StateService/Watch',
                 request_serializer=rat_dot_state_dot_v1_dot_state__pb2.WatchRequest.SerializeToString,
@@ -96,6 +101,21 @@ class StateServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def CreateIfAbsent(self, request, context):
+        """rat://state/v1/create-if-absent — atomically create one key (plugin+tenant relative) ONLY if it
+        does not already exist. ADDITIVE amendment (ADR-049, modeled on ADR-035's Delete): a state-backend
+        MAY leave it UNIMPLEMENTED — create-if-absent is OPTIONAL; a backend declares this capability in
+        `provides` only if it implements it ATOMICALLY (two concurrent creates of one key yield exactly
+        one COMMITTED), and consumers MUST handle its absence. Capability PRESENCE is the negotiation, so
+        an old backend can never be silently misused. This is the primitive the leader-election lease
+        BOOTSTRAP (ADR-043 Q01, the cold-start create race) and the Arrow-ticket single-use store (ADR-048)
+        require — without it, neither can be backed by state/v1. It belongs to the multi-replica-eligibility
+        conformance tier (linearizable CAS + ordered Watch + atomic create-if-absent), golden-vector gated.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def Watch(self, request, context):
         """rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
         Each streamed message is a WatchResponse — named per the *Response convention
@@ -128,6 +148,11 @@ def add_StateServiceServicer_to_server(servicer, server):
                     servicer.Delete,
                     request_deserializer=rat_dot_state_dot_v1_dot_state__pb2.DeleteRequest.FromString,
                     response_serializer=rat_dot_state_dot_v1_dot_state__pb2.DeleteResponse.SerializeToString,
+            ),
+            'CreateIfAbsent': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateIfAbsent,
+                    request_deserializer=rat_dot_state_dot_v1_dot_state__pb2.CreateIfAbsentRequest.FromString,
+                    response_serializer=rat_dot_state_dot_v1_dot_state__pb2.CreateIfAbsentResponse.SerializeToString,
             ),
             'Watch': grpc.unary_stream_rpc_method_handler(
                     servicer.Watch,
@@ -243,6 +268,33 @@ class StateService(object):
             '/rat.state.v1.StateService/Delete',
             rat_dot_state_dot_v1_dot_state__pb2.DeleteRequest.SerializeToString,
             rat_dot_state_dot_v1_dot_state__pb2.DeleteResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateIfAbsent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/rat.state.v1.StateService/CreateIfAbsent',
+            rat_dot_state_dot_v1_dot_state__pb2.CreateIfAbsentRequest.SerializeToString,
+            rat_dot_state_dot_v1_dot_state__pb2.CreateIfAbsentResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -40,6 +40,21 @@ func (s *stateServer) Put(_ context.Context, req *statev1.PutRequest) (*statev1.
 	return &statev1.PutResponse{Outcome: outcome, Revision: rev}, nil
 }
 
+// CreateIfAbsent atomically creates the key only if absent (ADR-049). COMMITTED == created;
+// CONFLICT == the key already existed (no write). The atomicity (exactly-one-creator under
+// contention) lives in the store; an in-memory backend never returns UNKNOWN.
+func (s *stateServer) CreateIfAbsent(_ context.Context, req *statev1.CreateIfAbsentRequest) (*statev1.CreateIfAbsentResponse, error) {
+	if err := validateKey(req.GetKey(), false); err != nil {
+		return nil, err
+	}
+	created, rev := s.store.createIfAbsent(req.GetKey(), req.GetValue())
+	outcome := statev1.PutOutcome_PUT_OUTCOME_COMMITTED
+	if !created {
+		outcome = statev1.PutOutcome_PUT_OUTCOME_CONFLICT
+	}
+	return &statev1.CreateIfAbsentResponse{Outcome: outcome, Revision: rev}, nil
+}
+
 func (s *stateServer) List(_ context.Context, req *statev1.ListRequest) (*statev1.ListResponse, error) {
 	if err := validateKey(req.GetPrefix(), true); err != nil {
 		return nil, err

@@ -31,8 +31,8 @@ func TestPluginInitCheck(t *testing.T) {
 		t.Fatalf("check (scaffolded) should pass: %v", err)
 	}
 	// the kind-aware scaffold derives all of the state axis's capabilities from the linked
-	// descriptors (get/put/list/delete/watch), so check reports 5 provides.
-	if !strings.Contains(out.String(), "state-backend") || !strings.Contains(out.String(), "5 provides") {
+	// descriptors (get/put/list/delete/watch + create-if-absent, ADR-049), so check reports 6 provides.
+	if !strings.Contains(out.String(), "state-backend") || !strings.Contains(out.String(), "6 provides") {
 		t.Errorf("check output unexpected: %q", out.String())
 	}
 

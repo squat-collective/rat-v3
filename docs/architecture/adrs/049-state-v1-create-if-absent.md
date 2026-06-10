@@ -1,6 +1,14 @@
 # ADR-049: `state/v1` create-if-absent — an additive, capability-gated atomic primitive
 
-## Status: Proposed (2026-06-10)
+## Status: Accepted (2026-06-10)
+
+> **Implemented (v1):** the RPC + messages are in the frozen-additive `state/v1` (buf-breaking-clean),
+> Go + Python SDKs regenerated, and the **`inmemory-go` reference backend** implements it atomically
+> with an in-suite **concurrency test** (32 racers → exactly one COMMITTED) + an RPC contract test.
+> **Staged follow-up (the consumer adoption, per Migration):** wire the lease bootstrap (ADR-043 Q01)
+> + the Arrow-ticket store (ADR-048) to feature-detect and prefer it; implement it in the Python state
+> backends + add a cross-language golden vector to `state-v1.json` (kept out of the shared vector file
+> for now so the optional capability doesn't force every reference backend to implement it at once).
 
 > Decision-first. This amends the **frozen** `state/v1` wire, so it is written and reviewed before any
 > code (CLAUDE.md #3). It follows the exact precedent of [ADR-035](035-state-axis-delete.md) (the
@@ -128,19 +136,18 @@ One primitive, both caveats closed, and the state axis can natively back both.
 - **A new capability to govern.** `rat://state/v1/create-if-absent` is another entry in the conformance
   surface (versioning, golden vectors, the eligibility doc).
 
-## Open questions
+## Decisions settled (Q01–Q04 accepted 2026-06-10, with the recommendations)
 
-- **Q01 — reuse `PutOutcome` vs a dedicated `CreateOutcome`.** *Recommend reuse* (COMMITTED=created,
-  CONFLICT=existed) — fewer symbols, the consumers already handle it. A dedicated `{CREATED, EXISTS,
-  UNKNOWN}` reads clearer but adds an enum; decide at proto-review.
-- **Q02 — fold into the conformance tier now, or ship the RPC first + gate later?** *Recommend* ship the
-  RPC + the concurrency golden vector together (the vector is the whole point — an "atomic" create
-  without a race test is honor-system).
-- **Q03 — a symmetric `DeleteIfRevision`-style "delete only if absent"?** Not needed by 043/048; out of
-  scope — raise separately if a use case appears.
-- **Q04 — should the lease's `StateStore` (ADR-043) prefer `CreateIfAbsent` when available and keep the
-  unconditional-create fallback otherwise?** *Recommend yes* — feature-detect via the capability, use
-  the safe path when present. Implementation detail for the 043 follow-up, noted here for traceability.
+- **Q01 — RESOLVED: reuse `PutOutcome`** (COMMITTED=created, CONFLICT=existed, UNKNOWN=unconfirmed) —
+  fewer symbols; the lease/ticket consumers already handle the trichotomy. Implemented as such.
+- **Q02 — RESOLVED: ship the RPC + the concurrency vector together.** The `inmemory-go` reference has a
+  32-racer concurrency test asserting exactly-one-creator (the atomicity property). The cross-language
+  *golden* vector in `state-v1.json` is deferred to consumer adoption (adding it now would force every
+  reference backend — incl. the Python ones — to implement the optional capability at once).
+- **Q03 — RESOLVED: no symmetric "delete-if-absent".** Not needed by 043/048; out of scope.
+- **Q04 — RESOLVED: yes, the lease feature-detects + prefers it** (keeps the unconditional-create
+  fallback when the capability is absent). Scheduled as the 043 follow-up alongside the ticket-store
+  adapter — see the Status note.
 
 ## Alternatives considered
 
