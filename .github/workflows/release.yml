@@ -74,7 +74,7 @@ jobs:
             or grab the right `rat-<version>-<os>-<arch>` below, `chmod +x`, and `./rat version`.
 
   image:
-    name: ghcr.io image
+    name: ghcr.io images
     needs: binaries
     runs-on: ubuntu-latest
     steps:
@@ -86,14 +86,39 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # The git tag is rat/N.M — "/" is invalid in an image tag, so strip to N.M
+      # (the binaries job already does; this job had never actually run pre-ADR-051).
+      - id: v
+        name: Bare version from the tag
+        run: echo "version=${GITHUB_REF_NAME##*/}" >> "$GITHUB_OUTPUT"
       - name: Build + push the daemon image (multi-arch)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: core/Dockerfile
           platforms: linux/amd64,linux/arm64
-          build-args: VERSION=${{ github.ref_name }}
+          build-args: VERSION=${{ steps.v.outputs.version }}
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/rat:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/rat:${{ steps.v.outputs.version }}
             ghcr.io/${{ github.repository_owner }}/rat:latest
+      # The plugin-base images ARE the SDK distribution (ADR-051 / DX-2: "defer PyPI,
+      # use GHCR") — plugin authors FROM these with no clone of this repo.
+      - name: Build + push rat-plugin-base-go
+        uses: docker/build-push-action@v6
+        with:
+          context: contracts/sdks/go
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/rat-plugin-base-go:${{ steps.v.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/rat-plugin-base-go:latest
+      - name: Build + push rat-plugin-base-py
+        uses: docker/build-push-action@v6
+        with:
+          context: contracts/sdks/python
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/rat-plugin-base-py:${{ steps.v.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/rat-plugin-base-py:latest

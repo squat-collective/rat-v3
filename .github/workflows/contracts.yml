@@ -45,55 +45,26 @@ jobs:
         run: buf breaking --against "https://github.com/${{ github.repository }}.git#branch=${{ github.base_ref }},subdir=contracts"
         working-directory: contracts
 
-  # ---- SDK freshness + compile (PRs: verify only; main push: regen + commit) --
+  # ---- SDK freshness (ADR-018: the pinned local codegen IS the canonical regen) ----
+  # The job that used to live here regenerated FOUR languages via remote buf plugins
+  # and auto-committed to main from CI — it predated ADR-018 (pinned connectionless
+  # codegen), ADR-037 (Go + Python only), and the sealed-main discipline. CI now runs
+  # the exact gate a contributor runs (`scripts/gen-sdks.sh --check`, which builds the
+  # pinned codegen images via the runner's docker) and NEVER commits (ADR-051).
   sdks:
     runs-on: ubuntu-latest
     needs: validate
     steps:
       - uses: actions/checkout@v4
-      - uses: bufbuild/buf-action@v1
-        with:
-          setup_only: true
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25'
-
-      - name: Regenerate all SDKs (Go, Python, TypeScript, Rust)
-        working-directory: contracts
-        run: |
-          for lang in go python typescript rust; do
-            echo ">> buf generate --template buf.gen.$lang.yaml"
-            buf generate --template "buf.gen.$lang.yaml"
-          done
-
+      - name: SDK freshness gate (pinned local codegen)
+        run: ./scripts/gen-sdks.sh --check
       - name: Compile Go SDK
+        env:
+          GOFLAGS: -mod=mod
+          GOSUMDB: off
         run: |
           cd contracts/sdks/go
           go build ./...
-
-      # On PRs / non-main pushes: fail if the committed SDK is stale (author must
-      # run `make gen-sdks` and commit). This is the freshness gate.
-      - name: Fail if committed SDK is stale
-        if: github.ref != 'refs/heads/main'
-        run: |
-          if ! git diff --quiet -- contracts/sdks; then
-            echo "::error::contracts/sdks is stale — run 'make gen-sdks' and commit."
-            git --no-pager diff --stat -- contracts/sdks
-            exit 1
-          fi
-          echo "OK: committed SDKs are up to date."
-
-      # On push to main: auto-commit the regenerated SDKs (the "autogenerate on
-      # GitHub" requirement). No-op if nothing changed.
-      - name: Commit regenerated SDKs (main only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          if git diff --quiet -- contracts/sdks; then
-            echo "SDKs already up to date; nothing to commit."
-            exit 0
-          fi
-          git config user.name  "rat-contracts-bot"
-          git config user.email "rat-contracts-bot@users.noreply.github.com"
-          git add contracts/sdks
-          git commit -m "chore(sdks): regenerate from contracts/proto [skip ci]"
-          git push
