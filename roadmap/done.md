@@ -17,6 +17,45 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-10 — `rat/6.14`: the DX sweep — docs-truth, guides, and a real first-success path
+
+A four-journey DX frustration review (plugin author · platform operator · contract
+evolution · onboarding) found the entry docs systematically **understating reality** —
+and a broken first-touch flow. Fixed the same day on `dx-sweep` → sealed `rat/6.14`:
+
+- **Docs-truth:** README/CLAUDE.md now state phases 0–9 sealed at `rat/6.13` (was: "Phase 0+1
+  sealed, next gate Q02"); the CLAUDE.md directory map matches the real tree (was: the Phase-0
+  doc-only tree); `contracts/README.md`'s status table reflects the freeze (was: "0d–0h ⬜ not
+  started" — the project's own shipped work unrecorded, which misled even the review's audit
+  agent); all **18 `CONTRACT.md` banners** corrected (claimed "the core is NOT built yet" —
+  8 phases stale); `state/v1` CONTRACT gained its ADR-035 `delete` + ADR-049
+  `create-if-absent` rows; `overview.md` got an ADR-wins status banner; `git-branching.md`
+  got the post-phase-era note; `platform/README.md` rewritten to the dbt reality (its folder
+  map listed deleted dirs, and its `rat call` example used a flag order that doesn't parse).
+- **New docs:** [`QUICKSTART.md`](../QUICKSTART.md) (five minutes; every command executed
+  before being written down — C5 allow + deny + the audit tail as the payoff),
+  [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`contracts/AMENDING.md`](../contracts/AMENDING.md)
+  (the additive-amendment procedure + ADR-049's measured cost: 6 commits / ~20 files /
+  ~1,100 LOC / 2 languages / 4 backends), [`docs/guides/authoring-a-plugin.md`](../docs/guides/authoring-a-plugin.md)
+  + [`docs/guides/building-a-platform.md`](../docs/guides/building-a-platform.md) (the
+  four-topology signpost).
+- **Code/tooling:** `rat call`/`rat apply` now default to the **enclosing project's daemon
+  socket** (`core/client/context.go` + test) — the documented `rat init && rat up && rat call`
+  flow dialed `127.0.0.1:7777` while the daemon listened on `.rat/daemon.sock`, i.e. the
+  primary solo flow was broken out-of-the-box; `make conformance` failures now print the
+  failing harness's output tail (stderr was swallowed → a bare `FAIL`); new `make rat-build`
+  → `dist/rat` (the QUICKSTART entry); stale platform help-text fixed.
+- **.claude:** the commit hook now hard-gates by reading the tool JSON from stdin (the
+  settings `if` filter is best-effort/fails-open per the official hooks docs — it fired on
+  non-commit commands mentioning `contracts/`); permissions allowlist 20 → 39 entries
+  (make gates + git workflow verbs).
+- **Verified:** `make core-test` green (incl. the new client test), conformance **32/32**,
+  the QUICKSTART executed end-to-end against the rebuilt binary, **0 broken links** across
+  all touched docs.
+- **Queued, not dropped:** the engineering residue is backlog **⑤ DX-1…DX-9** (preflight
+  validate, distribution/publishing, `rat capabilities`, vector schema + harness codegen,
+  config dedup, secrets prod story, watch mode, ADR-018 Q01, call flag order).
+
 ## 2026-06-10 — `rat/6.13`: postgres-py create-if-absent — production HA backend (ADR-049)
 
 Implemented `CreateIfAbsent` in `postgres-py` — the backend you actually point `RAT_LEASE_STATE_ADDR`

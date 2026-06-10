@@ -41,6 +41,24 @@ Core-impl, **no wire change**. From the Q02 simulated panel ([reviews/Q02-tracke
 - **EC-5 (Med)** — publish a **governance commitment** before recruiting external authors: who may propose a `rat://` axis/capability, how a community plugin contests a first-party one, the trust-root model for conformance authorities (plural/federated?), and a contract + reference-marketplace relicense pledge.
 - **EC-6 (Low)** — a "versioning for authors" CONTRACT.md section (two version axes + `compatible_core`); consider a manifest sidecar resolvable without re-imaging. Plus the architect F8 doc fix: regenerate `overview.md`'s manifest example from a real validating `contracts/examples/*.plugin.yaml`.
 
+## ⑤ DX cluster — engineering residue of the 2026-06-10 frustration review
+
+The review's doc-shaped findings were fixed the same day (`rat/6.14`, see [done.md](done.md)):
+docs-truth sweep, QUICKSTART/CONTRIBUTING/AMENDING, the two guides, the project-socket
+`rat call` fix, conformance failure output. These are the items that need real engineering.
+Cross-refs: **EC-1/EC-2/EC-6** above already track manifest co-location, the dev inner
+loop, and author versioning; **federation #5** tracks new-axis-without-recompile.
+
+- **DX-1 (High)** — `rat validate --plane <file>` preflight (+ a serve fail-fast flag): manifest schemas, every `requires` has a provider, launch images resolvable — today a typo'd image silently backoff-retries to Degraded while serve proceeds with N<desired plugins, and an unsatisfied `requires` only warns (`logUnsatisfied`) until a call returns NOT_FOUND.
+- **DX-2 (High; blocked on the publish decision)** — distribution: push the repo, cut binary releases (un-404 `scripts/install.sh`), publish `plugin-base-{go,py}` to ghcr, the Python SDK to PyPI, the Go SDK as a fetchable module. Until then **external plugin authors are structurally impossible** (the guides say so honestly).
+- **DX-3 (Med)** — `rat capabilities [--kind <axis>]`: list capability URIs from the linked descriptors (today: proto-scanning or CONTRACT.md reading; pairs with the schema README's "curated capability registry + lint" gap).
+- **DX-4 (Med)** — a conformance-vector **JSON Schema + lint gate** (a typo'd `op`/`expect` key is silently skipped by every harness today) + a harness **template/codegen** so new references stop copy-pasting ~200 lines.
+- **DX-5 (Med)** — platform-bundle config dedup: one source of env facts (the Postgres DSN appears ~6×, the gateway address 4× across compose/plugins.yaml/profiles.yml/bff), or generate compose/plane entries from manifests.
+- **DX-6 (Med)** — the secrets production story: a Vault/KMS reference secret-backend behind `rat://secret/v1/resolve` + credential rotation without a full-daemon restart (today: edit plugins.yaml `RAT_SECRETS` blob, restart everything).
+- **DX-7 (Low-Med)** — `rat plugin dev` watch mode (rebuild + relaunch on change); until then the three-loop pattern in [the authoring guide](../docs/guides/authoring-a-plugin.md#iterating-fast) is the documented workflow.
+- **DX-8 (Low)** — settle ADR-018 Q01 (Python codegen shape: buf-native vs the pinned standalone-protoc hybrid) — its failure mode reads as "my proto is wrong" when it's the toolchain image.
+- **DX-9 (Low)** — `rat call` flag ergonomics: accept flags before the positional capability (`rat call --as x rat://…` fails today; the platform README shipped that broken order for weeks, which proves the trap).
+
 ---
 
 ## Remote access, federation & security (from the 2026-06-04 dogfooding session)

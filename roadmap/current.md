@@ -4,7 +4,22 @@
 > completion history lives in [`done.md`](done.md); the phase map in [`phases.md`](phases.md).
 > Updated: 2026-06-10.
 
-## ✅ Latest — `rat/6.13`: the code-level review arc is COMPLETE
+## ✅ Latest — `rat/6.14`: the DX sweep (docs-truth + guides + first-success)
+
+A four-journey DX frustration review (author / operator / contract-evolution / onboarding)
+found the entry docs systematically understating reality — README claimed "Phase 0+1
+sealed, Q02 next"; all 18 `CONTRACT.md` banners said "the core is NOT built yet";
+`platform/README.md` mapped deleted dirs — and the documented solo flow broken first-touch
+(`rat call` dialed `:7777` while the project daemon listened on `.rat/daemon.sock`).
+Fixed in one sweep: entry docs truth-synced; **[QUICKSTART.md](../QUICKSTART.md)**
+(verified end-to-end: C5 allow + deny + the audit tail), **CONTRIBUTING.md**,
+**[contracts/AMENDING.md](../contracts/AMENDING.md)**, **docs/guides/** (authoring +
+platform topologies); `rat call`/`apply` default to the project daemon socket;
+`make conformance` failures print their harness output; `make rat-build`; hook stdin-gating
++ allowlist 20→39. Engineering residue queued as backlog **⑤ DX-1…9**. All green:
+core-test, conformance 32/32, 0 broken links. Details: [done.md](done.md).
+
+## ✅ `rat/6.13`: the code-level review arc is COMPLETE
 
 A from-scratch code-level review of `core/` + the protos (deliberately ignoring docs/roadmap) found
 **7 structural gaps** between the contracts (which describe a security-complete platform) and the spike
@@ -35,9 +50,10 @@ replicas · fully-parallel per-plugin reconcile. See [done.md](done.md) for the 
 
 **Phases 0–9 are SEALED** (`rat/1.5` contracts → `rat/2.0` core → `rat/2.5`–`6.0`). Everything ≤
 `rat/2.0` is the **frozen wire**; every tag since is additive. `main` is the sealed line at
-**`rat/6.13`**: `rat/6.6` ported the clean-room DX improvements (ADR-039/040/041), `rat/6.7` the 7 core
-hardenings (ADRs 042–048), and `rat/6.8`–`6.13` the `state/v1` create-if-absent amendment (ADR-049) +
-its full adoption (lease · ticket store · all four state backends). The from-scratch rebuild +
+**`rat/6.14`**: `rat/6.6` ported the clean-room DX improvements (ADR-039/040/041), `rat/6.7` the 7 core
+hardenings (ADRs 042–048), `rat/6.8`–`6.13` the `state/v1` create-if-absent amendment (ADR-049) +
+its full adoption (lease · ticket store · all four state backends), and `rat/6.14` the DX sweep
+(docs-truth + guides + the project-socket `rat call` fix). The from-scratch rebuild +
 remote-dev-flow experiment the hardenings came from is sealed separately at **`clean-room/2.0`** (a
 parallel line, not merged — its `plugins/`+`platform/` wipe would destroy this corpus). **ADR-042's
 channel-authenticated identity also closes most of the Phase-10 "direct-gateway `--as` trust" debt
@@ -81,9 +97,11 @@ separate `rat-data-dev` repo**.
 
 ## Immediate next concrete step
 
-**No pressing thread.** The code-level review arc (7 gaps + the full ADR-049 create-if-absent line) is
-complete on `main` through `rat/6.13`, all green. Genuinely-open work is optional / longer-horizon —
-pick by appetite:
+**No pressing thread.** The code-level review arc (7 gaps + ADR-049) and the DX sweep are complete on
+`main` through `rat/6.14`, all green. Genuinely-open work is optional / longer-horizon — pick by appetite:
+- **DX engineering (newest queue):** backlog **⑤ DX-1…9** — preflight `rat validate`, the publish/
+  distribution decision (DX-2 unblocks external authors), `rat capabilities`, vector schema + harness
+  codegen, config dedup, secrets prod story, watch mode.
 - **Security keystone (highest value):** mTLS on the core↔plugin channel + `SubjectAssertion` signing
   (the second half of ADR-042 — the end-user principal is still an unsigned passthrough).
 - **Observability:** OTel spans + latency histograms; signed/rotated durable audit (`common/v1.AuditRecord`).
@@ -102,7 +120,7 @@ pick by appetite:
 
 ## Branching (in force)
 
-`main` is the sealed line (**`rat/6.13`**); additive increments land via `--no-ff` merges of topic
+`main` is the sealed line (**`rat/6.14`**); additive increments land via `--no-ff` merges of topic
 branches + an annotated `rat/N.M` tag. **Never commit directly to `main`** (a `PreToolUse` hook blocks
 it) — work on a topic branch. Full rules: [`.claude/rules/git-branching.md`](../.claude/rules/git-branching.md).
 
