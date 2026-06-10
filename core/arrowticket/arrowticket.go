@@ -14,8 +14,10 @@ package arrowticket
 
 import (
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -39,6 +41,11 @@ type claims struct {
 	CallerPlugin  string `json:"c"`
 	Tenant        string `json:"t"`
 	ExpiresUnixMs int64  `json:"e"`
+	// Nonce makes every minted ticket UNIQUE even when {stream,caller,tenant,expiry} are identical
+	// (e.g. two tickets for one stream minted in the same millisecond). The single-use id is derived
+	// from the signature, which covers the nonce, so two distinct mints can never collide on the
+	// single-use set — without it, same-millisecond re-mints would falsely trip replay detection.
+	Nonce string `json:"n"`
 }
 
 type wireTicket struct {
@@ -76,10 +83,25 @@ func NewMinterWithStore(key []byte, store SingleUseStore) *Minter {
 	return &Minter{key: key, now: time.Now, store: store}
 }
 
-// Mint issues a ticket bound to {streamID, caller, tenant}, valid for ttl.
+// Mint issues a UNIQUE ticket bound to {streamID, caller, tenant}, valid for ttl. Each call gets a
+// fresh random nonce, so two tickets minted with identical binding + expiry (same millisecond) are
+// still distinct single-use credentials.
 func (m *Minter) Mint(streamID, caller, tenant string, ttl time.Duration) ([]byte, error) {
-	c := claims{StreamID: streamID, CallerPlugin: caller, Tenant: tenant, ExpiresUnixMs: m.now().Add(ttl).UnixMilli()}
+	nonce, err := newNonce()
+	if err != nil {
+		return nil, err
+	}
+	c := claims{StreamID: streamID, CallerPlugin: caller, Tenant: tenant, ExpiresUnixMs: m.now().Add(ttl).UnixMilli(), Nonce: nonce}
 	return json.Marshal(wireTicket{Claims: c, Sig: m.sign(c)})
+}
+
+// newNonce returns a 128-bit random hex nonce.
+func newNonce() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("arrowticket: nonce: %w", err)
+	}
+	return hex.EncodeToString(b), nil
 }
 
 // Validate checks signature, expiry, and binding, then consumes the ticket
@@ -110,10 +132,10 @@ func (m *Minter) Validate(ticket []byte, streamID, caller, tenant string) error 
 }
 
 // sign is a deterministic HMAC over the claims (NUL-separated scalars — injective,
-// no map ordering to worry about).
+// no map ordering to worry about). The nonce is covered, so each mint signs uniquely.
 func (m *Minter) sign(c claims) []byte {
 	h := hmac.New(sha256.New, m.key)
-	fmt.Fprintf(h, "%s\x00%s\x00%s\x00%d", c.StreamID, c.CallerPlugin, c.Tenant, c.ExpiresUnixMs)
+	fmt.Fprintf(h, "%s\x00%s\x00%s\x00%d\x00%s", c.StreamID, c.CallerPlugin, c.Tenant, c.ExpiresUnixMs, c.Nonce)
 	return h.Sum(nil)
 }
 

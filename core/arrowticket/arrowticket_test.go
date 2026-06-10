@@ -143,3 +143,25 @@ func TestStoreErrorFailsClosed(t *testing.T) {
 type errStore struct{}
 
 func (errStore) Consume(string) (bool, error) { return false, errors.New("backend unavailable") }
+
+// TestDistinctMintsAreIndependentSingleUse pins the same-millisecond uniqueness bug behind the
+// bulk-leg flake: tickets minted back-to-back with IDENTICAL {stream,caller,tenant}+ttl are DISTINCT
+// single-use credentials (a random nonce makes each signature/id unique), so consuming one must not
+// falsely replay-block another. Before the nonce, mints landing in the same millisecond shared an id.
+func TestDistinctMintsAreIndependentSingleUse(t *testing.T) {
+	m := NewMinter([]byte("k"))
+	const n = 500
+	tickets := make([][]byte, n)
+	for i := range tickets {
+		tk, err := m.Mint("s", "c", "t", time.Minute) // identical binding+ttl, tight loop → same ms
+		if err != nil {
+			t.Fatalf("mint %d: %v", i, err)
+		}
+		tickets[i] = tk
+	}
+	for i, tk := range tickets {
+		if err := m.Validate(tk, "s", "c", "t"); err != nil {
+			t.Fatalf("ticket %d: a distinct mint was rejected (%v) — same-millisecond uniqueness regressed", i, err)
+		}
+	}
+}
