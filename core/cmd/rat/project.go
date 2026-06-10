@@ -26,7 +26,7 @@ import (
 	"regexp"
 	"strings"
 
-	manifestpkg "github.com/le-squat/rat/core/manifest"
+	manifestpkg "github.com/squat-collective/rat-v3/core/manifest"
 	toml "github.com/pelletier/go-toml/v2"
 )
 

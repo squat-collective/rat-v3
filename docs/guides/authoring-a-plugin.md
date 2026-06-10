@@ -148,7 +148,7 @@ The `ratplugin` runtime SDK ([ADR-029](../architecture/adrs/029-plugin-runtime-s
 kills the two chunks of boilerplate every plugin repeats — serving and consuming —
 and gets the cross-cutting envelope (identity + trace, ADR-007) right once.
 
-**Go** (`github.com/le-squat/rat/gen/ratplugin`, in [`contracts/sdks/go/ratplugin/`](../../contracts/sdks/go/ratplugin/plugin.go)):
+**Go** (`github.com/squat-collective/rat-v3/gen/ratplugin`, in [`contracts/sdks/go/ratplugin/`](../../contracts/sdks/go/ratplugin/plugin.go)):
 
 ```go
 ratplugin.Serve(func(s grpc.ServiceRegistrar) {        // RAT_PLUGIN_ADDR + graceful SIGTERM drain
@@ -184,10 +184,10 @@ server against the generated stubs is always a valid plugin.
 
 **Where the SDK comes from.** Three ways (ADR-051):
 
-- **Go, as a module:** `go get github.com/le-squat/rat/gen` — the committed SDK is
+- **Go, as a module:** `go get github.com/squat-collective/rat-v3/gen` — the committed SDK is
   fetchable directly (the `ratplugin` runtime SDK rides in the same module).
 - **Either language, via the published base images:** every release pushes
-  `ghcr.io/le-squat/rat-plugin-base-{go,py}` — `FROM` those with no clone of this repo.
+  `ghcr.io/squat-collective/rat-v3-plugin-base-{go,py}` — `FROM` those with no clone of this repo.
 - **From a clone:** `make plugin-base-py` / `make plugin-base-go` build the same bases
   locally (`localhost/rat/plugin-base-{go,py}:dev`).
 
@@ -254,7 +254,7 @@ re-runs `check` + `test` on every save (`--check-only` for just the instant stat
 ## Current limitations (honest)
 
 - **The Python SDK is not on PyPI** (the one DX-2 residual, ADR-051) — it ships inside
-  `ghcr.io/le-squat/rat-plugin-base-py` instead; pip-only environments must wait for the
+  `ghcr.io/squat-collective/rat-v3-plugin-base-py` instead; pip-only environments must wait for the
   packaging follow-up. (The Go SDK *is* `go get`-able.)
 - **`rat plugin test` doesn't run the golden vectors.** It launch+smoke-verifies
   serving; behavioral conformance is the separate harness path (ADR-026 Q03).

@@ -11,7 +11,7 @@ tests run in containers.
 No clone needed:
 
 ```bash
-curl -fsSL https://github.com/le-squat/rat/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/squat-collective/rat-v3/releases/latest/download/install.sh | sh
 ./rat --help          # the verb map: PROJECT / DAEMON / AUTHOR / MARKETPLACE / CLIENT
 ```
 

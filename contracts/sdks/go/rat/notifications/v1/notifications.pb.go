@@ -17,7 +17,7 @@
 package notificationsv1
 
 import (
-	_ "github.com/le-squat/rat/gen/rat/common/v1"
+	_ "github.com/squat-collective/rat-v3/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -247,7 +247,7 @@ const file_rat_notifications_v1_notifications_proto_rawDesc = "" +
 	"\x0eSEVERITY_ERROR\x10\x03\x12\x15\n" +
 	"\x11SEVERITY_CRITICAL\x10\x042\x86\x01\n" +
 	"\x14NotificationsService\x12n\n" +
-	"\x04Send\x12!.rat.notifications.v1.SendRequest\x1a\".rat.notifications.v1.SendResponse\"\x1f\x8a\x97\"\x1brat://notifications/v1/sendBBZ@github.com/le-squat/rat/gen/rat/notifications/v1;notificationsv1b\x06proto3"
+	"\x04Send\x12!.rat.notifications.v1.SendRequest\x1a\".rat.notifications.v1.SendResponse\"\x1f\x8a\x97\"\x1brat://notifications/v1/sendBMZKgithub.com/squat-collective/rat-v3/gen/rat/notifications/v1;notificationsv1b\x06proto3"
 
 var (
 	file_rat_notifications_v1_notifications_proto_rawDescOnce sync.Once

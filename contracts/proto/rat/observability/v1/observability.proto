@@ -19,7 +19,7 @@ package rat.observability.v1;
 
 import "rat/common/v1/annotations.proto";
 
-option go_package = "github.com/le-squat/rat/gen/rat/observability/v1;observabilityv1";
+option go_package = "github.com/squat-collective/rat-v3/gen/rat/observability/v1;observabilityv1";
 
 service ObservabilityService {
   // rat://observability/v1/ingest — stream telemetry into the sink.

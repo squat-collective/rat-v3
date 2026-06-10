@@ -55,7 +55,7 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [048](048-arrow-ticket-shared-single-use-store.md) | Arrow ticket single-use store is pluggable (shared/durable, not per-process) | Accepted | 2026-06-10 |
 | [049](049-state-v1-create-if-absent.md) | `state/v1` create-if-absent — an additive, capability-gated atomic primitive | Accepted | 2026-06-10 |
 | [050](050-plane-file-env-interpolation.md) | Plane-file env interpolation (`${VAR}`) | Accepted | 2026-06-10 |
-| [051](051-publish-apache2-le-squat.md) | Publish RAT v3: Apache-2.0, `github.com/le-squat/rat`, GHCR distribution | Accepted | 2026-06-10 |
+| [051](051-publish-apache2-squat-collective.md) | Publish RAT v3: Apache-2.0, `github.com/squat-collective/rat-v3`, GHCR distribution | Accepted | 2026-06-10 |
 
 ## Template
 

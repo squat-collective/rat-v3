@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/le-squat/rat/core/deploymentruntime"
-	"github.com/le-squat/rat/core/gateway"
-	"github.com/le-squat/rat/core/manifest"
-	"github.com/le-squat/rat/core/supervisor"
-	catalogv1 "github.com/le-squat/rat/gen/rat/catalog/v1"
-	corev1 "github.com/le-squat/rat/gen/rat/core/v1"
-	deploymentruntimev1 "github.com/le-squat/rat/gen/rat/deploymentruntime/v1"
+	"github.com/squat-collective/rat-v3/core/deploymentruntime"
+	"github.com/squat-collective/rat-v3/core/gateway"
+	"github.com/squat-collective/rat-v3/core/manifest"
+	"github.com/squat-collective/rat-v3/core/supervisor"
+	catalogv1 "github.com/squat-collective/rat-v3/gen/rat/catalog/v1"
+	corev1 "github.com/squat-collective/rat-v3/gen/rat/core/v1"
+	deploymentruntimev1 "github.com/squat-collective/rat-v3/gen/rat/deploymentruntime/v1"
 	"google.golang.org/grpc"
 )
 

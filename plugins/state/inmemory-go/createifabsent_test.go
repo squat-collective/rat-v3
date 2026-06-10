@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	statev1 "github.com/le-squat/rat/gen/rat/state/v1"
+	statev1 "github.com/squat-collective/rat-v3/gen/rat/state/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

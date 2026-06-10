@@ -22,7 +22,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/le-squat/rat/core/manifest"
+	"github.com/squat-collective/rat-v3/core/manifest"
 )
 
 // Decision is the result of a C5 authorization + ADR-045 selection check. The gateway turns

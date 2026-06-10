@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	catalogv1 "github.com/le-squat/rat/gen/rat/catalog/v1"
-	commonv1 "github.com/le-squat/rat/gen/rat/common/v1"
-	corev1 "github.com/le-squat/rat/gen/rat/core/v1"
+	catalogv1 "github.com/squat-collective/rat-v3/gen/rat/catalog/v1"
+	commonv1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
+	corev1 "github.com/squat-collective/rat-v3/gen/rat/core/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"

@@ -1,14 +1,14 @@
 #!/bin/sh
 # install.sh — fetch the latest `rat` binary from GitHub Releases (Phase 4 distribution).
 #
-#   curl -fsSL https://github.com/le-squat/rat/releases/latest/download/install.sh | sh
+#   curl -fsSL https://github.com/squat-collective/rat-v3/releases/latest/download/install.sh | sh
 #
 # Downloads the right rat-<version>-<os>-<arch> for this machine, verifies its sha256
 # against SHA256SUMS, and drops a `./rat` you can run immediately (the `chmod +x ./rat`
 # vision). Override the repo with $RAT_REPO and the install dir with $RAT_BIN_DIR.
 set -eu
 
-REPO="${RAT_REPO:-le-squat/rat}"
+REPO="${RAT_REPO:-squat-collective/rat-v3}"
 BIN_DIR="${RAT_BIN_DIR:-.}"
 
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"

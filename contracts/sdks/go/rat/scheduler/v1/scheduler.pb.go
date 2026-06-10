@@ -19,7 +19,7 @@
 package schedulerv1
 
 import (
-	_ "github.com/le-squat/rat/gen/rat/common/v1"
+	_ "github.com/squat-collective/rat-v3/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -344,7 +344,7 @@ const file_rat_scheduler_v1_scheduler_proto_rawDesc = "" +
 	"\x10SchedulerService\x12r\n" +
 	"\bSchedule\x12!.rat.scheduler.v1.ScheduleRequest\x1a\".rat.scheduler.v1.ScheduleResponse\"\x1f\x8a\x97\"\x1brat://scheduler/v1/schedule\x12j\n" +
 	"\x06Cancel\x12\x1f.rat.scheduler.v1.CancelRequest\x1a .rat.scheduler.v1.CancelResponse\"\x1d\x8a\x97\"\x19rat://scheduler/v1/cancel\x12u\n" +
-	"\bWatchDue\x12!.rat.scheduler.v1.WatchDueRequest\x1a\".rat.scheduler.v1.WatchDueResponse\" \x8a\x97\"\x1crat://scheduler/v1/watch-due0\x01B:Z8github.com/le-squat/rat/gen/rat/scheduler/v1;schedulerv1b\x06proto3"
+	"\bWatchDue\x12!.rat.scheduler.v1.WatchDueRequest\x1a\".rat.scheduler.v1.WatchDueResponse\" \x8a\x97\"\x1crat://scheduler/v1/watch-due0\x01BEZCgithub.com/squat-collective/rat-v3/gen/rat/scheduler/v1;schedulerv1b\x06proto3"
 
 var (
 	file_rat_scheduler_v1_scheduler_proto_rawDescOnce sync.Once

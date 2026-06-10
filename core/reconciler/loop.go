@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/le-squat/rat/core/lease"
+	"github.com/squat-collective/rat-v3/core/lease"
 )
 
 // Loop is the running reconciler on one core replica: each tick it advances leader

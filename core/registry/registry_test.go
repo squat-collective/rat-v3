@@ -3,7 +3,7 @@ package registry
 import (
 	"testing"
 
-	"github.com/le-squat/rat/core/manifest"
+	"github.com/squat-collective/rat-v3/core/manifest"
 )
 
 // exampleManifestsDir is the repo's frozen example manifests, relative to this

@@ -18,7 +18,7 @@ import (
 	"sort"
 	"strings"
 
-	commonv1 "github.com/le-squat/rat/gen/rat/common/v1"
+	commonv1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"

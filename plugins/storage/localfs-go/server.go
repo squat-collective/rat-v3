@@ -9,8 +9,8 @@ package main
 import (
 	"context"
 
-	commonv1 "github.com/le-squat/rat/gen/rat/common/v1"
-	storagev1 "github.com/le-squat/rat/gen/rat/storage/v1"
+	commonv1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
+	storagev1 "github.com/squat-collective/rat-v3/gen/rat/storage/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"

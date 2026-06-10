@@ -19,9 +19,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/le-squat/rat/core/registry"
-	commonv1 "github.com/le-squat/rat/gen/rat/common/v1"
-	corev1 "github.com/le-squat/rat/gen/rat/core/v1"
+	"github.com/squat-collective/rat-v3/core/registry"
+	commonv1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
+	corev1 "github.com/squat-collective/rat-v3/gen/rat/core/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"

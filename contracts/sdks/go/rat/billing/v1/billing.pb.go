@@ -21,7 +21,7 @@
 package billingv1
 
 import (
-	_ "github.com/le-squat/rat/gen/rat/common/v1"
+	_ "github.com/squat-collective/rat-v3/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -217,7 +217,7 @@ const file_rat_billing_v1_billing_proto_rawDesc = "" +
 	"\x0eRecordResponse\x12\x1a\n" +
 	"\brecorded\x18\x01 \x01(\x03R\brecorded2v\n" +
 	"\x0eBillingService\x12d\n" +
-	"\x06Record\x12\x1d.rat.billing.v1.RecordRequest\x1a\x1e.rat.billing.v1.RecordResponse\"\x1b\x8a\x97\"\x17rat://billing/v1/recordB6Z4github.com/le-squat/rat/gen/rat/billing/v1;billingv1b\x06proto3"
+	"\x06Record\x12\x1d.rat.billing.v1.RecordRequest\x1a\x1e.rat.billing.v1.RecordResponse\"\x1b\x8a\x97\"\x17rat://billing/v1/recordBAZ?github.com/squat-collective/rat-v3/gen/rat/billing/v1;billingv1b\x06proto3"
 
 var (
 	file_rat_billing_v1_billing_proto_rawDescOnce sync.Once

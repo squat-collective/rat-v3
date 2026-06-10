@@ -16,7 +16,7 @@ package main
 import (
 	"encoding/json"
 
-	storagev1 "github.com/le-squat/rat/gen/rat/storage/v1"
+	storagev1 "github.com/squat-collective/rat-v3/gen/rat/storage/v1"
 )
 
 // credentialTTLms is the documented short-TTL these creds carry. A real plugin

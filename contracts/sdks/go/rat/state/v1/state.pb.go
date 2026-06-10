@@ -57,7 +57,7 @@
 package statev1
 
 import (
-	_ "github.com/le-squat/rat/gen/rat/common/v1"
+	_ "github.com/squat-collective/rat-v3/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -895,7 +895,7 @@ const file_rat_state_v1_state_proto_rawDesc = "" +
 	"\x04List\x12\x19.rat.state.v1.ListRequest\x1a\x1a.rat.state.v1.ListResponse\"\x17\x8a\x97\"\x13rat://state/v1/list\x12^\n" +
 	"\x06Delete\x12\x1b.rat.state.v1.DeleteRequest\x1a\x1c.rat.state.v1.DeleteResponse\"\x19\x8a\x97\"\x15rat://state/v1/delete\x12\x80\x01\n" +
 	"\x0eCreateIfAbsent\x12#.rat.state.v1.CreateIfAbsentRequest\x1a$.rat.state.v1.CreateIfAbsentResponse\"#\x8a\x97\"\x1frat://state/v1/create-if-absent\x12\\\n" +
-	"\x05Watch\x12\x1a.rat.state.v1.WatchRequest\x1a\x1b.rat.state.v1.WatchResponse\"\x18\x8a\x97\"\x14rat://state/v1/watch0\x01B2Z0github.com/le-squat/rat/gen/rat/state/v1;statev1b\x06proto3"
+	"\x05Watch\x12\x1a.rat.state.v1.WatchRequest\x1a\x1b.rat.state.v1.WatchResponse\"\x18\x8a\x97\"\x14rat://state/v1/watch0\x01B=Z;github.com/squat-collective/rat-v3/gen/rat/state/v1;statev1b\x06proto3"
 
 var (
 	file_rat_state_v1_state_proto_rawDescOnce sync.Once

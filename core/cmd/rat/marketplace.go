@@ -25,9 +25,9 @@ import (
 
 // officialIndexURL is the canonical home of the reference RAT marketplace — `rat
 // marketplace add official` (no URL) registers it. It tracks marketplace/rat-official.json
-// in this repo, published as a static file (GitHub Pages for the le-squat org). Placeholder
+// in this repo, published as a static file (GitHub Pages for the squat-collective org). Placeholder
 // host until the org's Pages site is live; the file format is what's load-bearing.
-const officialIndexURL = "https://le-squat.github.io/marketplace/official.json"
+const officialIndexURL = "https://squat-collective.github.io/marketplace/official.json"
 
 // wellKnownMarketplaces maps a short name → its canonical URL, so `rat marketplace add
 // <name>` needs no URL for the built-ins.

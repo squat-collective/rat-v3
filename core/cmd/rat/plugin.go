@@ -18,10 +18,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/le-squat/rat/core/deploymentruntime"
-	"github.com/le-squat/rat/core/manifest"
-	commonv1 "github.com/le-squat/rat/gen/rat/common/v1"
-	deploymentruntimev1 "github.com/le-squat/rat/gen/rat/deploymentruntime/v1"
+	"github.com/squat-collective/rat-v3/core/deploymentruntime"
+	"github.com/squat-collective/rat-v3/core/manifest"
+	commonv1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
+	deploymentruntimev1 "github.com/squat-collective/rat-v3/gen/rat/deploymentruntime/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -813,7 +813,7 @@ compatible_core: ["rat/1"]
 # ci.sh — the portable plugin CI/CD steps (ADR-026). The logic lives in rat verbs, so this
 # runs unchanged on GitHub Actions, GitLab CI, or anywhere that can install rat + run shell.
 set -eu
-curl -fsSL https://github.com/le-squat/rat/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/squat-collective/rat-v3/releases/latest/download/install.sh | sh
 ./rat plugin check
 ./rat plugin pack
 # CD (on a tag): ./rat plugin publish
@@ -832,7 +832,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: install rat
-        run: curl -fsSL https://github.com/le-squat/rat/releases/latest/download/install.sh | sh
+        run: curl -fsSL https://github.com/squat-collective/rat-v3/releases/latest/download/install.sh | sh
       - name: check + pack
         run: ./rat plugin check && ./rat plugin pack
       - name: publish (tag → ghcr.io)            # CD: only on a version tag
@@ -963,9 +963,9 @@ func goFiles(name, kind string) map[string]string {
 package main
 
 import (
-	"github.com/le-squat/rat/gen/ratplugin"
+	"github.com/squat-collective/rat-v3/gen/ratplugin"
 	"google.golang.org/grpc"
-	// TODO: import your axis stubs, e.g. secretv1 "github.com/le-squat/rat/gen/rat/secret/v1"
+	// TODO: import your axis stubs, e.g. secretv1 "github.com/squat-collective/rat-v3/gen/rat/secret/v1"
 )
 
 func main() {
@@ -996,8 +996,8 @@ go 1.25
 require google.golang.org/grpc v1.81.1
 
 // the rat Go SDK — provided at /sdk by the plugin-base-go build image. Import the axis stubs
-// you need, e.g. secretv1 "github.com/le-squat/rat/gen/rat/secret/v1"; ` + "`rat plugin pack`" + ` resolves it.
-replace github.com/le-squat/rat/gen => /sdk
+// you need, e.g. secretv1 "github.com/squat-collective/rat-v3/gen/rat/secret/v1"; ` + "`rat plugin pack`" + ` resolves it.
+replace github.com/squat-collective/rat-v3/gen => /sdk
 `
 	return map[string]string{
 		"main.go":    main,

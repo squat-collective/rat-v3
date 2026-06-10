@@ -41,7 +41,7 @@ package rat.tenancy.v1;
 
 import "rat/common/v1/annotations.proto";
 
-option go_package = "github.com/le-squat/rat/gen/rat/tenancy/v1;tenancyv1";
+option go_package = "github.com/squat-collective/rat-v3/gen/rat/tenancy/v1;tenancyv1";
 
 service TenancyService {
   // rat://tenancy/v1/decide — answer a policy decision the core poses at a hook
