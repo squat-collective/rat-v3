@@ -23,6 +23,8 @@ __pycache__/
 .venv/
 .env
 .env.local
+# …but the platform DEMO fact sheet is committed on purpose (ADR-050: demo creds only)
+!platform/.env
 
 # Generated artefacts
 # NOTE: the vendored SDKs under contracts/sdks/<lang>/ ARE committed (ADR-006 D1).

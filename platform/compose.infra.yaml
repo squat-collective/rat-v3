@@ -10,16 +10,17 @@
 name: rat-platform-infra
 
 services:
+  # All credentials/ports come from ./.env — the single fact sheet (ADR-050 / DX-5).
   postgres:
     image: docker.io/library/postgres:16
     environment:
-      POSTGRES_USER: ducklake
-      POSTGRES_PASSWORD: ducklake
-      POSTGRES_DB: ducklake
+      POSTGRES_USER: ${PLATFORM_PG_USER}
+      POSTGRES_PASSWORD: ${PLATFORM_PG_PASSWORD}
+      POSTGRES_DB: ${PLATFORM_PG_DB}
     ports:
-      - "55440:5432"                 # rat-launched plugins reach host.containers.internal:55432
+      - "${PLATFORM_INFRA_PG_PORT}:5432"   # rat-launched plugins reach ${PLATFORM_INFRA_HOST}:${PLATFORM_INFRA_PG_PORT}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ducklake -d ducklake"]
+      test: ["CMD-SHELL", "pg_isready -U ${PLATFORM_PG_USER} -d ${PLATFORM_PG_DB}"]
       interval: 3s
       timeout: 3s
       retries: 30
@@ -28,10 +29,10 @@ services:
     image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${PLATFORM_S3_USER}
+      MINIO_ROOT_PASSWORD: ${PLATFORM_S3_PASSWORD}
     ports:
-      - "59010:9000"                 # for the dbt→shared-DuckLake path (Q2); idle for the local-DuckDB demo
+      - "${PLATFORM_INFRA_S3_PORT}:9000"   # for the dbt→shared-DuckLake path (Q2); idle for the local-DuckDB demo
 
   minio-setup:
     image: quay.io/minio/mc
@@ -40,5 +41,5 @@ services:
     entrypoint:
       - sh
       - -lc
-      - "until mc alias set m http://minio:9000 minioadmin minioadmin; do sleep 1; done; mc mb --ignore-existing m/rat; echo bucket-ready"
+      - "until mc alias set m http://minio:9000 ${PLATFORM_S3_USER} ${PLATFORM_S3_PASSWORD}; do sleep 1; done; mc mb --ignore-existing m/rat; echo bucket-ready"
     restart: "no"

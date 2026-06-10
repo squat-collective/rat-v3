@@ -38,6 +38,7 @@ up() {
     -e CONTAINER_HOST=unix:///run/podman/podman.sock \
     -e RAT_PODMAN_BIN=podman-remote \
     -e RAT_PODMAN_NETWORK="$NET" \
+    --env-file "$PWD/platform/.env" \
     -v "$PWD/platform:/plane:ro" \
     -p 7777:7777 \
     rat/serve:dev serve --plane /plane/plugins.yaml

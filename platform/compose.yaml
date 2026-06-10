@@ -11,14 +11,15 @@
 name: rat-platform
 
 services:
+  # All credentials/knobs come from ./.env — the single fact sheet (ADR-050 / DX-5).
   postgres:
     image: docker.io/library/postgres:16
     environment:
-      POSTGRES_USER: ducklake
-      POSTGRES_PASSWORD: ducklake
-      POSTGRES_DB: ducklake
+      POSTGRES_USER: ${PLATFORM_PG_USER}
+      POSTGRES_PASSWORD: ${PLATFORM_PG_PASSWORD}
+      POSTGRES_DB: ${PLATFORM_PG_DB}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ducklake -d ducklake"]
+      test: ["CMD-SHELL", "pg_isready -U ${PLATFORM_PG_USER} -d ${PLATFORM_PG_DB}"]
       interval: 3s
       timeout: 3s
       retries: 30
@@ -27,8 +28,8 @@ services:
     image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${PLATFORM_S3_USER}
+      MINIO_ROOT_PASSWORD: ${PLATFORM_S3_PASSWORD}
     # No host ports — the plugins + runner reach MinIO by service name on the network.
 
   # One-shot: create the lake bucket at stack-up (infra provisioning), so the pipeline
@@ -40,7 +41,7 @@ services:
     entrypoint:
       - sh
       - -lc
-      - "until mc alias set m http://minio:9000 minioadmin minioadmin; do sleep 1; done; mc mb --ignore-existing m/rat; echo bucket-ready"
+      - "until mc alias set m http://minio:9000 ${PLATFORM_S3_USER} ${PLATFORM_S3_PASSWORD}; do sleep 1; done; mc mb --ignore-existing m/rat; echo bucket-ready"
     restart: "no"
 
   # NOTE: the medallion's engine + catalog are EMBEDDED in the dbt-runner (dbt-duckdb +
@@ -63,11 +64,11 @@ services:
       RAT_DBT_PROJECT: "/work/platform/dbt-project"
       RAT_DBT_PROFILES: "/work/platform/dbt-project"
       RAT_LANDING: "/work/platform/landing"
-      RAT_DUCKLAKE_META: "postgres:host=postgres port=5432 dbname=ducklake user=ducklake password=ducklake"
+      RAT_DUCKLAKE_META: "postgres:host=postgres port=5432 dbname=${PLATFORM_PG_DB} user=${PLATFORM_PG_USER} password=${PLATFORM_PG_PASSWORD}"
       RAT_DUCKLAKE_DATA: "s3://rat/platform/"
       RAT_S3_ENDPOINT: "minio:9000"
-      RAT_S3_KEY_ID: "minioadmin"
-      RAT_S3_SECRET: "minioadmin"
+      RAT_S3_KEY_ID: ${PLATFORM_S3_USER}
+      RAT_S3_SECRET: ${PLATFORM_S3_PASSWORD}
     volumes:
       - ../:/work:z
       - pipcache:/root/.cache/pip
@@ -89,7 +90,7 @@ services:
     environment:
       PYTHONPATH: /work/contracts/sdks/python
       RAT_PLUGIN_ADDR: "0.0.0.0:50051"
-      RAT_STATE_PG: "host=postgres port=5432 dbname=ducklake user=ducklake password=ducklake"
+      RAT_STATE_PG: "host=postgres port=5432 dbname=${PLATFORM_PG_DB} user=${PLATFORM_PG_USER} password=${PLATFORM_PG_PASSWORD}"
     volumes:
       - ../:/work:z
       - pipcache:/root/.cache/pip
@@ -124,9 +125,9 @@ services:
     environment:
       PYTHONPATH: /work/contracts/sdks/python
       RAT_PLUGIN_NAME: "rat-scheduler"
-      RAT_GATEWAY: "rat-serve:7777"
-      RAT_SCHEDULE_INTERVAL: "20"     # the demo fires every 20s; a real plane would use hourly
-      RAT_PIPELINE_TARGET: "gold_daily_revenue"
+      RAT_GATEWAY: ${PLATFORM_GATEWAY}
+      RAT_SCHEDULE_INTERVAL: ${PLATFORM_SCHEDULE_INTERVAL}
+      RAT_PIPELINE_TARGET: ${PLATFORM_PIPELINE_TARGET}
     volumes:
       - ../:/work:z
       - pipcache:/root/.cache/pip
@@ -143,8 +144,8 @@ services:
     environment:
       PYTHONPATH: /work/contracts/sdks/python
       RAT_PLUGIN_NAME: "platform-bff"
-      RAT_GATEWAY: "rat-serve:7777"     # the UI's control calls go through the REAL gateway
-      RAT_PIPELINE_TARGET: "gold_daily_revenue"
+      RAT_GATEWAY: ${PLATFORM_GATEWAY}  # the UI's control calls go through the REAL gateway
+      RAT_PIPELINE_TARGET: ${PLATFORM_PIPELINE_TARGET}
       BFF_ADDR: "0.0.0.0:8080"
     ports:
       - "8088:8080"                     # the VS Code / web UI talks JSON here (host :8088)
@@ -164,14 +165,14 @@ services:
       - "pip install -q --root-user-action=ignore grpcio==1.80.0 protobuf==7.35.0 duckdb==1.5.3 pyarrow==24.0.0 numpy==2.2.6 boto3==1.40.0 pyyaml && exec python run.py"
     environment:
       PYTHONPATH: /work/contracts/sdks/python
-      RAT_GATEWAY: "rat-serve:7777"
+      RAT_GATEWAY: ${PLATFORM_GATEWAY}
       RAT_PLATFORM_LANDING: "/work/platform/landing"
-      RAT_DUCKLAKE_META: "postgres:host=postgres port=5432 dbname=ducklake user=ducklake password=ducklake"
+      RAT_DUCKLAKE_META: "postgres:host=postgres port=5432 dbname=${PLATFORM_PG_DB} user=${PLATFORM_PG_USER} password=${PLATFORM_PG_PASSWORD}"
       RAT_DUCKLAKE_DATA: "s3://rat/platform/"
       RAT_DUCKLAKE_ALIAS: "lake"
       RAT_S3_ENDPOINT: "minio:9000"
-      RAT_S3_KEY_ID: "minioadmin"
-      RAT_S3_SECRET: "minioadmin"
+      RAT_S3_KEY_ID: ${PLATFORM_S3_USER}
+      RAT_S3_SECRET: ${PLATFORM_S3_PASSWORD}
       RAT_S3_USE_SSL: "false"
     volumes:
       - ../:/work:z
