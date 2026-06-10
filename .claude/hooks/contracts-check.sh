@@ -10,10 +10,31 @@
 #   0  — no objection; proceed normally
 #   2  — block the commit; stderr becomes Claude's feedback
 #
-# Invoked by: .claude/settings.json PreToolUse / Bash / if: "Bash(git commit *)"
+# Invoked by: .claude/settings.json PreToolUse / matcher: "Bash"
+# The hook reads tool_input.command from stdin and exits 0 immediately unless
+# the command starts with "git commit". This is the correct gating pattern per
+# https://code.claude.com/docs/en/hooks-guide.md#read-input-and-return-output —
+# the "if" field in settings.json fails open on unparseable shell constructs
+# (compound commands, subshells, loops) so content-based filtering must live
+# inside the script, not in the "if" field.
 # Doc: https://code.claude.com/docs/en/hooks-guide.md
 
 set -euo pipefail
+
+# ── gate: only act on `git commit` commands ───────────────────────────────────
+# Read the JSON hook input from stdin; extract tool_input.command.
+# Exit 0 immediately for anything that is not a `git commit` invocation so
+# every other Bash command (reads, make targets, loops, etc.) passes through
+# without any check.
+INPUT=$(cat)
+COMMAND=$(printf '%s' "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_input',{}).get('command',''))" 2>/dev/null || true)
+
+# Substring match, not prefix: real commits often arrive as compound commands
+# ("git add … && git commit …", "cd … && git commit"). False positives are fine —
+# the guards below exit 0 cheaply when nothing relevant is staged.
+if [[ "$COMMAND" != *"git commit"* ]]; then
+  exit 0
+fi
 
 # ── guard: never commit directly to main ─────────────────────────────────────
 # main is the sealed-state line (see .claude/rules/git-branching.md). Active work

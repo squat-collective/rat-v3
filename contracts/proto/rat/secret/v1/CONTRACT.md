@@ -1,11 +1,13 @@
 # `secret-backend/v1` — plugin contract (author guide)
 
-> ⚠️ **Status (2026-06-01) — the orchestrating core is NOT built yet (Phase 1).** The C2/C5/C7
-> enforcement, capability routing, and audit emission this guide describes are the contract the
-> core MUST implement — they do **not** run today. The wire contract + reference plugin here are
-> real and frozen (`rat/1`); the core is *designed, not running*, and `make conformance` tests
-> the reference against golden vectors, **not** a live deployment. See
-> [reviews/08](../../../../../reviews/08-post-freeze-board-review.md).
+> **Status (2026-06-10) — the core is built and sealed.** What this guide describes **runs
+> today**: capability routing, channel-authenticated plugin identity (C2, ADR-042), C5
+> capability authz, deadline-bounding, and mandatory audit emission are enforced by the
+> sealed core (`rat/2.0`, hardened through `rat/6.13`). `make conformance` checks the
+> references against the golden vectors; `make composition` runs the cross-axis suite
+> against real providers. The wire stays frozen (`rat/1`); post-freeze changes land as
+> additive, capability-gated amendments (e.g. ADR-035 `delete` + ADR-049
+> `create-if-absent` on `state/v1`).
 
 > Canonical guide for implementing a `kind: secret-backend` plugin. Pairs with the wire
 > contract [`secret.proto`](secret.proto) and the golden vectors

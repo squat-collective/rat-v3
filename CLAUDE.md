@@ -6,7 +6,7 @@ This project is a from-scratch reimagining of RAT (the v2 codebase living at `~/
 
 The premise: **a data platform is a minimal control plane that orchestrates self-describing plugins**. State backend, auth, scheduler, UI, engine, format, catalog, storage, deployment runtime — *all* are plugins. The core's job is to validate manifests, reconcile desired state, and route events. Nothing else.
 
-This repo holds the **architectural thinking, ADRs, design, and now the Phase-1 core** for RAT v3. **Phase 0 (contracts) and Phase 1 (the core) are sealed** — `rat/1.5` and `rat/2.0`; the frozen contracts live in `contracts/`, the built+tested core in `core/`, and reference plugins in `plugins/`. Alongside the code: docs, decisions, conversations, captured ideas, prior-art notes, and the adversarial + Q02 reviews. Current state is always in [`roadmap/current.md`](roadmap/current.md).
+This repo holds the architecture, the contracts, the core, the plugins, and the platform demo for RAT v3. **Phases 0–9 are sealed; `main` is the sealed line at `rat/6.13`** — the frozen contracts live in `contracts/` (frozen `rat/1`, additively amended since), the built+hardened core in `core/`, 40 plugins in `plugins/`, the data-platform demo in `platform/`. Alongside the code: docs, decisions, conversations, captured ideas, prior-art notes, and the adversarial + Q02 reviews. Current state is always in [`roadmap/current.md`](roadmap/current.md) — **read it at the start of every session**; this header only gets refreshed when the directory shape changes.
 
 ## What RAT v3 IS
 
@@ -30,7 +30,7 @@ This repo holds the **architectural thinking, ADRs, design, and now the Phase-1 
 2. **Six-thing-core discipline.** Resist adding anything to the core. When tempted, write an ADR proving why it can't be a plugin. Track the temptation count — that's a leading indicator of architectural drift.
 3. **ADR-first for architectural decisions.** Numbered ADRs in `docs/architecture/adrs/`. No "we'll figure it out in code" — write the decision down, including the rejected alternatives.
 4. **Honest tradeoff documentation.** Every decision has a cost. Write the cost down in the ADR's `Consequences` section. No design is free.
-5. **Reference prior art before reinventing.** OSGi, VSCode, K8s, NATS, Temporal, Cargo, npm — all solved adjacent problems. Read their docs. Cite in `research/prior-art/`. Don't waste cycles re-discovering well-trodden patterns.
+5. **Reference prior art before reinventing.** OSGi, VSCode, K8s, NATS, Temporal, Cargo, npm — all solved adjacent problems. Read their docs. Cite in `docs/research/prior-art/`. Don't waste cycles re-discovering well-trodden patterns.
 6. **Capture ideas where they're born.** Anything that sparks during a conversation → `ideas/inbox.md`. Ideas that become real → promoted to an ADR or design doc. Don't trust memory.
 7. **Save the conversations that matter.** Long Claude sessions where architectural shape emerged → distill into `docs/conversations/YYYY-MM-DD-<topic>.md`. Future-us needs to know how we got here.
 8. **Test the deployment topology, not the feature.** When we ship code, the test is "can a solo user `chmod +x && ./rat` AND can a hybrid-cloud team compose a plane?" — not "does feature X work." Architecture proves itself across topologies.
@@ -43,40 +43,32 @@ This repo holds the **architectural thinking, ADRs, design, and now the Phase-1 
 rat/
 ├── CLAUDE.md                 # this file
 ├── README.md                 # human-facing project overview
-├── .claude/                  # Claude Code configuration
-│   ├── README.md             # explains the .claude/ layout
-│   ├── settings.json         # project permissions allowlist (committed)
-│   ├── agents/
-│   │   └── claude-engineer.md  # specialized agent for Claude Code config work
-│   └── rules/
-│       ├── plugin-architecture.md  # founding invariant (always-load)
-│       └── claude-environment.md   # discipline for .claude/ itself (always-load)
+├── QUICKSTART.md             # RAT in five minutes (verified commands)
+├── CONTRIBUTING.md           # the practical rules: gates, branching, commits
+├── Makefile                  # ALL builds/tests/gates, container-only (`make help`)
+├── .claude/                  # Claude Code configuration (settings, hooks, agents, rules)
+├── contracts/                # the FROZEN wire: protos + per-axis CONTRACT.md author
+│   │                         # guides + schemas + golden vectors + committed SDKs
+│   └── AMENDING.md           # how to amend a frozen axis (procedure + measured cost)
+├── core/                     # the Go core: the six things + cross-cutting enforcement
+│   └── cmd/rat/              # the one binary: project/daemon/author/marketplace/client
+├── plugins/                  # 40 reference + demo plugins across the 18 axes
+├── platform/                 # the batteries-included data-platform demo (dbt medallion)
+├── marketplace/              # the local marketplace index (signing, distribution)
+├── scripts/                  # conformance/composition/codegen/install runners
+├── dist/                     # build output (gitignored): `make rat-build` → dist/rat
 ├── docs/
-│   ├── vision.md             # the core thesis (read this first)
+│   ├── vision.md             # the core thesis
+│   ├── guides/               # how-to: authoring-a-plugin, building-a-platform
 │   ├── architecture/
 │   │   ├── overview.md       # the full architecture in one document
-│   │   └── adrs/             # numbered architectural decisions
-│   │       ├── README.md     # ADR index + template
-│   │       ├── 001-everything-is-a-plugin.md
-│   │       ├── 002-founding-tech-stack.md
-│   │       └── 003-two-references-before-contract-freeze.md
-│   └── conversations/        # distilled Claude sessions
-│       └── YYYY-MM-DD-*.md
-├── reviews/                  # adversarial reviews of the architecture
-│   └── 00-synthesis.md       # multi-perspective synthesis (read second to vision.md)
-├── roadmap/                  # what we're doing, what's done, what's next
-│   ├── CLAUDE.md             # roadmap maintenance rules
-│   ├── README.md             # entry point
-│   ├── current.md            # ← always-current; read on every new session
-│   ├── phases.md             # phased plan (Phase 0 → 5)
-│   ├── done.md               # completion log (reverse chronological)
-│   └── backlog.md            # queued work
-├── ideas/
-│   ├── inbox.md              # capture-as-you-go
-│   └── CLAUDE.md             # ideas rules
-└── research/
-    ├── prior-art/            # K8s, OSGi, etc. — what to learn from
-    └── competitors.md        # data platform landscape
+│   │   └── adrs/             # 49+ numbered decisions (001/002/003 are load-bearing)
+│   ├── conversations/        # distilled Claude sessions
+│   ├── research/             # prior-art + competitor landscape
+│   └── restructure/          # the repo-professionalization audit + target tree
+├── reviews/                  # adversarial reviews + the Q02 kit (+ archive/)
+├── roadmap/                  # current.md ← read on every new session; phases/done/backlog
+└── ideas/                    # inbox.md — capture-as-you-go
 ```
 
 ## How to work on it
@@ -84,17 +76,19 @@ rat/
 **Reading order for a new session:**
 1. This file (you're here).
 2. **[`roadmap/current.md`](roadmap/current.md)** — what's in flight + the immediate next step. Always read this; it tells you what to do.
-3. `docs/vision.md` — the *why*.
-4. `docs/architecture/overview.md` — the *what*.
-5. Latest entry in `docs/conversations/` — the *how we got here*.
-6. `reviews/00-synthesis.md` — adversarial review findings that shaped the current direction.
-7. `ideas/inbox.md` — the *what's bubbling*.
+3. `QUICKSTART.md` — the five-minute hands-on (if you've never run it).
+4. `docs/vision.md` — the *why*.
+5. `docs/architecture/overview.md` — the *what*.
+6. `docs/guides/` + `contracts/AMENDING.md` — the *how* (authoring, platform-building, amending).
+7. Latest entry in `docs/conversations/` — the *how we got here*.
+8. `reviews/00-synthesis.md` — adversarial review findings that shaped the current direction.
+9. `ideas/inbox.md` — the *what's bubbling*.
 
 **Capture flow:**
 - New idea? → `ideas/inbox.md`.
 - New architectural decision? → new ADR in `docs/architecture/adrs/`.
 - Long session that shaped the design? → new entry in `docs/conversations/`.
-- New research finding? → `research/prior-art/<topic>.md`.
+- New research finding? → `docs/research/prior-art/<topic>.md`.
 
 **Commit discipline:**
 - Doc-only commits are fine + encouraged. Land thinking as it solidifies.
@@ -102,10 +96,11 @@ rat/
 - Conventional commits: `docs(adr):`, `docs(vision):`, `docs(arch):`, `ideas:`, `research:`.
 - Co-author Claude where Claude did the writing (we do here).
 
-**When code finally lands:**
-- Contracts first: `.proto` + `plugin.yaml` schemas before any implementation.
+**Code discipline (the order that built this repo, still binding for new axes):**
+- Contracts first: `.proto` + `plugin.yaml` schemas before any implementation — amendments via [`contracts/AMENDING.md`](contracts/AMENDING.md).
 - Reference plugin per axis as forcing functions for the contracts.
-- Core last: implement the core only after enough plugins exist to stress-test it.
+- Core last: the core only grows to enforce what plugins already exercise.
+- Branching: **never commit to `main`** — topic branch → `--no-ff` seal-merge + `rat/N.M` tag ([CONTRIBUTING.md](CONTRIBUTING.md)).
 
 ## Relationship to the v2 codebase
 
