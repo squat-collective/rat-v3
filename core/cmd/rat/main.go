@@ -30,6 +30,7 @@ import (
 	"github.com/rat-dev/rat/core/gateway"
 	"github.com/rat-dev/rat/core/lease"
 	"github.com/rat-dev/rat/core/manifest"
+	"github.com/rat-dev/rat/core/metrics"
 	"github.com/rat-dev/rat/core/reconciler"
 	"github.com/rat-dev/rat/core/registry"
 	"github.com/rat-dev/rat/core/supervisor"
@@ -213,7 +214,24 @@ func serveResolved(pl *Plane) error {
 	if err != nil {
 		return err
 	}
-	auditor := NewStdoutAuditor(os.Stdout)
+	// Mandatory audit (plugin-architecture.md). It always tees to stdout (container logs); when the
+	// project has a runtime dir it ALSO appends to a DURABLE JSONL file (gap #6) that survives
+	// restart — so the decision trail isn't lost with the process. No project → stdout only.
+	auditW := io.Writer(os.Stdout)
+	var auditClose func()
+	if pl.RuntimeDir != "" {
+		f, ferr := os.OpenFile(filepath.Join(pl.RuntimeDir, "audit.jsonl"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+		if ferr != nil {
+			return fmt.Errorf("open durable audit log: %w", ferr)
+		}
+		auditW = io.MultiWriter(os.Stdout, f)
+		auditClose = func() { _ = f.Close() }
+		log.Printf("durable audit → %s", filepath.Join(pl.RuntimeDir, "audit.jsonl"))
+	}
+	if auditClose != nil {
+		defer auditClose() // flush+close the durable audit file on any exit (after drain)
+	}
+	auditor := NewStdoutAuditor(auditW)
 
 	// Open the listeners BEFORE assembling, so the gateway-callback address (the port a
 	// launched DRIVER plugin dials back on) is known in time to inject RAT_GATEWAY. The
@@ -278,6 +296,36 @@ func serveResolved(pl *Plane) error {
 		corev1.RegisterCapabilityInvokeServiceServer(cbSrv, plane.Gateway)
 		servers = append(servers, cbSrv)
 	}
+
+	// Native observability (plugin-architecture.md / gap #6): a dependency-free metrics registry,
+	// fed by the gateway's per-call outcomes and a live plugin-state gauge pulled from the control
+	// plane at scrape. Served at /metrics when RAT_METRICS_ADDR is set (core-native — no plugin
+	// required; an observability-axis plugin layers richer telemetry on top).
+	reg := metrics.NewRegistry()
+	plane.Gateway.OnCall = func(capability, outcome string) {
+		reg.Inc("rat_gateway_calls_total", "capability-invoke decisions by outcome",
+			map[string]string{"capability": capability, "outcome": outcome})
+	}
+	if plane.Control != nil {
+		ctrl := plane.Control
+		reg.RegisterGaugeFunc("rat_plugin_up", "1 if the plugin is Healthy, else 0", func() []metrics.Sample {
+			resp, lerr := ctrl.ListPlugins(context.Background(), &corev1.ListPluginsRequest{})
+			if lerr != nil {
+				return nil
+			}
+			out := make([]metrics.Sample, 0, len(resp.GetPlugins()))
+			for _, p := range resp.GetPlugins() {
+				up := 0.0
+				if p.GetState() == "Healthy" {
+					up = 1
+				}
+				out = append(out, metrics.Sample{Labels: map[string]string{"plugin": p.GetName(), "kind": p.GetKind()}, Value: up})
+			}
+			return out
+		})
+	}
+	stopMetrics := serveMetrics(os.Getenv("RAT_METRICS_ADDR"), reg)
+	defer stopMetrics()
 
 	// Publish this daemon's pid + global registry entry (slice 2c) so `rat down`/`ls`/
 	// `status` can find it; retract both on drain. No-op when the plane has no project

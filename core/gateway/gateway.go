@@ -121,6 +121,12 @@ type Gateway struct {
 	// gateway starts serving. <= 0 falls back to the default.
 	StreamIdleTimeout time.Duration
 
+	// OnCall, if set, is invoked once per authorization+selection decision with the capability
+	// and an outcome ("allow" | "permission_denied" | "selection_failed" | "invalid_trace") —
+	// the hook the daemon wires to the native /metrics counter (gap #6). Optional + nil-safe;
+	// the gateway has no dependency on the metrics package.
+	OnCall func(capability, outcome string)
+
 	// tokMu guards the per-plugin token registry + the requireAuth toggle (C2). The
 	// reconciler/control plane mutates it as plugins are launched/torn down while the
 	// plugin-auth interceptor reads it on every call.
@@ -316,6 +322,13 @@ func (g *Gateway) provider(name string) *grpc.ClientConn {
 }
 
 // idleTimeout is the effective server-stream idle backstop (guards a zero value).
+// observe reports a call outcome to the optional metrics hook (gap #6). Nil-safe.
+func (g *Gateway) observe(capability, outcome string) {
+	if g.OnCall != nil {
+		g.OnCall(capability, outcome)
+	}
+}
+
 func (g *Gateway) idleTimeout() time.Duration {
 	if g.StreamIdleTimeout > 0 {
 		return g.StreamIdleTimeout
@@ -388,6 +401,7 @@ type openedCall struct {
 func (g *Gateway) openCall(ctx context.Context, capURI string) (*openedCall, error) {
 	in := readCallMeta(ctx)
 	if !wellFormedTraceparent(in.GetTrace().GetTraceparent()) {
+		g.observe(capURI, "invalid_trace")
 		return nil, status.Error(codes.InvalidArgument, "C1: missing or ill-formed traceparent")
 	}
 	// caller_plugin is the CHANNEL-authenticated identity when present (C2): the plugin-door
@@ -411,10 +425,13 @@ func (g *Gateway) openCall(ctx context.Context, capURI string) (*openedCall, err
 		if d.Authorized {
 			// Authorized, but the selector matched zero or >1 providers — a selection failure
 			// (fail closed, ADR-045), not an authz denial.
+			g.observe(capURI, "selection_failed")
 			return nil, status.Error(codes.FailedPrecondition, d.Reason)
 		}
+		g.observe(capURI, "permission_denied")
 		return nil, status.Error(codes.PermissionDenied, d.Reason)
 	}
+	g.observe(capURI, "allow")
 
 	method, ok := g.routes[capURI]
 	if !ok {
