@@ -39,11 +39,19 @@ trap 'rm -f "$RESULTS"' EXIT
 echo ">> conformance suite — ${#GO_REFS[@]} Go + ${#PY_REFS[@]} Python references"
 
 # --- Go references (each ref's harness_test.go drives gRPC against its vectors) ---
+# A FAIL prints the harness output tail to stderr (stdout stays clean for the matrix) —
+# a bare FAIL with the diagnostics swallowed was a top DX frustration.
 if [ "${#GO_REFS[@]}" -gt 0 ]; then
   echo ">> running Go references (golang container)…"
   $RUNTIME run --rm -v "$ROOT":/work:Z -v rat-gocache:/go/pkg/mod -w /work "$GO_IMAGE" bash -c '
     for ref in '"${GO_REFS[*]}"'; do
-      if (cd "/work/$ref" && go test ./... >/dev/null 2>&1); then s=PASS; else s=FAIL; fi
+      out="$(cd "/work/$ref" && go test ./... 2>&1)"
+      if [ $? -eq 0 ]; then s=PASS; else
+        s=FAIL
+        { echo; echo "── FAIL: $ref — harness output (last 40 lines) ──"
+          printf "%s\n" "$out" | tail -40
+          echo "─────────────────────────────────────────────────"; } >&2
+      fi
       echo "RESULT|$ref|go|$s"
     done' >> "$RESULTS"
 fi
@@ -53,9 +61,16 @@ if [ "${#PY_REFS[@]}" -gt 0 ]; then
   echo ">> running Python references (python container)…"
   $RUNTIME run --rm -v "$ROOT":/work:Z -v rat-pipcache:/root/.cache/pip \
     -e PYTHONPATH=/work/contracts/sdks/python -e GRPC_VERBOSITY=NONE "$PY_IMAGE" bash -c '
-    pip install -q --root-user-action=ignore '"$PY_DEPS"' >/dev/null 2>&1
+    pip install -q --root-user-action=ignore '"$PY_DEPS"' >/dev/null 2>&1 \
+      || echo ">> pip install failed — FAILs below are likely import errors" >&2
     for ref in '"${PY_REFS[*]}"'; do
-      if (cd "/work/$ref" && python harness_test.py >/dev/null 2>&1); then s=PASS; else s=FAIL; fi
+      out="$(cd "/work/$ref" && python harness_test.py 2>&1)"
+      if [ $? -eq 0 ]; then s=PASS; else
+        s=FAIL
+        { echo; echo "── FAIL: $ref — harness output (last 40 lines) ──"
+          printf "%s\n" "$out" | tail -40
+          echo "─────────────────────────────────────────────────"; } >&2
+      fi
       echo "RESULT|$ref|py|$s"
     done' >> "$RESULTS"
 fi
