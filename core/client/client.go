@@ -76,6 +76,28 @@ func Run(argv []string, out io.Writer) error {
 	}
 }
 
+// parseWithPositional parses fs from args while lifting out ONE positional argument,
+// wherever it sits relative to the flags. Go's flag package stops at the first non-flag
+// token, so we pull that token out and keep parsing the remainder; a second positional
+// is an error. Returns "" when no positional was given.
+func parseWithPositional(fs *flag.FlagSet, args []string) (string, error) {
+	positional := ""
+	for {
+		if err := fs.Parse(args); err != nil {
+			return "", err
+		}
+		rest := fs.Args()
+		if len(rest) == 0 {
+			return positional, nil
+		}
+		if positional != "" {
+			return "", fmt.Errorf("unexpected extra argument %q (exactly one capability expected)", rest[0])
+		}
+		positional = rest[0]
+		args = rest[1:]
+	}
+}
+
 // runCall issues one capability command against the gateway and writes the response (as
 // protojson) to out. It returns the raw invocation error on failure so a caller can
 // inspect the gRPC status code (e.g. PermissionDenied for a C5 deny).
@@ -83,7 +105,6 @@ func runCall(argv []string, out io.Writer) error {
 	if len(argv) < 2 || argv[0] != "call" {
 		return fmt.Errorf("usage: rat call <capability> --as <caller> [--data '<protojson>'] [--addr host:port]")
 	}
-	capURI := argv[1]
 
 	ctx0 := CurrentContext() // flag defaults come from the current `rat context` (overridable)
 	fs := flag.NewFlagSet("ratctl call", flag.ContinueOnError)
@@ -96,8 +117,15 @@ func runCall(argv []string, out io.Writer) error {
 	caCert := fs.String("cacert", "", "trust this PEM cert/CA when connecting over TLS")
 	tlsSkip := fs.Bool("tls-skip-verify", false, "skip TLS cert verification (DEV ONLY)")
 	timeout := fs.Duration("timeout", 10*time.Second, "call timeout")
-	if err := fs.Parse(argv[2:]); err != nil {
+	// Flags may come before OR after the capability — `rat call --as dev rat://…` and
+	// `rat call rat://… --as dev` both parse (DX-9: Go's flag package stops at the first
+	// non-flag, and the platform README shipped the flags-first order while it didn't work).
+	capURI, err := parseWithPositional(fs, argv[1:])
+	if err != nil {
 		return err
+	}
+	if capURI == "" {
+		return fmt.Errorf("usage: rat call <capability> --as <caller> [--data '<protojson>'] [--addr host:port]")
 	}
 	if *caller == "" {
 		return fmt.Errorf("--as <caller> is required (the gateway authorizes the command against the caller's declared `requires`)")

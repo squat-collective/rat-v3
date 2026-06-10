@@ -154,6 +154,9 @@ func runPlugin(argv []string, out io.Writer) error {
 		return runPluginInit(rest, out)
 	case "check":
 		return runPluginCheck(rest, out)
+	case "dev":
+		// the watch loop (DX-7): re-run check (+ test) on every change.
+		return runPluginDev(rest, out)
 	case "test":
 		return runPluginTest(rest, out)
 	case "pack":
@@ -173,6 +176,8 @@ func printPluginHelp(out io.Writer) {
             rat plugin init <name> --kind <axis> --lang go|python|typescript|rust [--dir <path>]
   check     validate the manifest (static gate: schema + per-kind + dep coherence)
             rat plugin check [<dir>]
+  dev       WATCH the dir; re-run check + test on every change (the inner loop)
+            rat plugin dev [<dir>] [--interval 1s] [--check-only]
   test      launch the plugin + run its conformance vectors
             rat plugin test [<dir>] [--image <ref>]
   pack      build the image, STAMP the manifest in, verify it serves what it declares

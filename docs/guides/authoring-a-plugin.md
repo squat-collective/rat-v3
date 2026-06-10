@@ -246,7 +246,9 @@ Three loops, fastest first — spend your time in the first one:
    an I9 launch. Treat it as the integration gate before a commit or publish, not as
    the edit loop. If the image hasn't changed, `--image <ref>` skips the rebuild.
 
-There is no watch mode; the loop above is the workflow.
+And the loop automates itself: **`rat plugin dev [<dir>]`** watches the directory and
+re-runs `check` + `test` on every save (`--check-only` for just the instant static gate;
+`--interval` to tune the poll). Failures print and keep watching — fix and save again.
 
 ## Current limitations (honest)
 
@@ -260,8 +262,9 @@ There is no watch mode; the loop above is the workflow.
 - **The conformance harness is still hand-assembled.** No codegen — but there is now one
   canonical template (`contracts/conformance/harness_template.py`) + the `rat.vectors`
   helpers, instead of "copy whichever sibling you found first".
-- **No watch mode.** Every `test`/`pack` is a full image rebuild; the fast loop is your
-  language's own unit tests.
+- **`rat plugin dev` polls (1s default), it doesn't fsnotify** — deliberate (no new core
+  dependency). Every triggered `test` is still a full image rebuild; the sub-second loop
+  remains your language's own unit tests.
 - **`ratplugin` is Go + Python only.** TypeScript/Rust scaffolds work but hand-roll the
   serve/consume boilerplate (TS/Rust SDKs are next per ADR-029).
 

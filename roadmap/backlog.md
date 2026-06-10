@@ -43,21 +43,17 @@ Core-impl, **no wire change**. From the Q02 simulated panel ([reviews/Q02-tracke
 
 ## ⑤ DX cluster — engineering residue of the 2026-06-10 frustration review
 
-The review's doc-shaped findings were fixed the same day (`rat/6.14`, see [done.md](done.md)):
-docs-truth sweep, QUICKSTART/CONTRIBUTING/AMENDING, the two guides, the project-socket
-`rat call` fix, conformance failure output. These are the items that need real engineering.
-Cross-refs: **EC-1/EC-2/EC-6** above already track manifest co-location, the dev inner
-loop, and author versioning; **federation #5** tracks new-axis-without-recompile.
+**Nine of ten items closed** across `rat/6.14`–`6.17` (the full log per item is in
+[done.md](done.md)): the docs-truth sweep + guides + first-success path (6.14),
+`rat validate` + `--strict` (DX-1, 6.15), `rat capabilities` + the vector lint gate
+(DX-3/4, 6.16), and plane env interpolation + the vault secret-backend + `rat plugin dev`
++ ADR-018 Q01 + the `rat call` flag order (DX-5…9, 6.17). Cross-refs: **EC-1/EC-2/EC-6**
+above still track manifest co-location, the localhost-attach inner loop, and author
+versioning; **federation #5** tracks new-axis-without-recompile.
 
-- ~~DX-1~~ — **done at `rat/6.15`**: `rat validate` + `rat up/serve --strict` (see [done.md](done.md)).
+The one that remains:
+
 - **DX-2 (High; blocked on the publish decision)** — distribution: push the repo, cut binary releases (un-404 `scripts/install.sh`), publish `plugin-base-{go,py}` to ghcr, the Python SDK to PyPI, the Go SDK as a fetchable module. Until then **external plugin authors are structurally impossible** (the guides say so honestly).
-- ~~DX-3~~ — **done at `rat/6.16`**: `rat capabilities [<axis>|<kind>]` (see [done.md](done.md)).
-- ~~DX-4~~ — **done at `rat/6.16`**: vector envelope schema + key registry + `make validate-vectors` (in `verify`) + `harness_template.py` + `rat.vectors` helpers. Residual: a full harness *codegen* stays unqueued until a third+ reference per axis makes it pay.
-- **DX-5 (Med)** — platform-bundle config dedup: one source of env facts (the Postgres DSN appears ~6×, the gateway address 4× across compose/plugins.yaml/profiles.yml/bff), or generate compose/plane entries from manifests.
-- **DX-6 (Med)** — the secrets production story: a Vault/KMS reference secret-backend behind `rat://secret/v1/resolve` + credential rotation without a full-daemon restart (today: edit plugins.yaml `RAT_SECRETS` blob, restart everything).
-- **DX-7 (Low-Med)** — `rat plugin dev` watch mode (rebuild + relaunch on change); until then the three-loop pattern in [the authoring guide](../docs/guides/authoring-a-plugin.md#iterating-fast) is the documented workflow.
-- **DX-8 (Low)** — settle ADR-018 Q01 (Python codegen shape: buf-native vs the pinned standalone-protoc hybrid) — its failure mode reads as "my proto is wrong" when it's the toolchain image.
-- **DX-9 (Low)** — `rat call` flag ergonomics: accept flags before the positional capability (`rat call --as x rat://…` fails today; the platform README shipped that broken order for weeks, which proves the trap).
 
 ---
 

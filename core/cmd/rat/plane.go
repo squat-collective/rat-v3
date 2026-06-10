@@ -105,12 +105,16 @@ func LoadPlane(path string) (*Plane, error) {
 // reduce to rawPlane) and builds the ready-to-bring-up Plane. Manifest and (local) image
 // paths resolve relative to the file's directory, so a plane/project is relocatable.
 func planeFromRaw(rp *rawPlane, path string) (*Plane, error) {
+	addr, err := expandEnvRefs(orDefault(rp.Addr, defaultAddr)) // ADR-050
+	if err != nil {
+		return nil, fmt.Errorf("plane %s: addr: %w", path, err)
+	}
 	pl := &Plane{
 		// The instance id (ADR-023) namespaces this daemon's runtime resources (podman
 		// network + container names) so many rats coexist on one machine. Explicit `name:`
 		// wins; else derive from the plane file's directory (a project is a directory).
 		Instance:      instanceID(orDefault(rp.Name, filepath.Base(filepath.Dir(absPath(path))))),
-		Addr:          orDefault(rp.Addr, defaultAddr),
+		Addr:          addr,
 		Runtime:       orDefault(rp.Runtime, defaultRuntime),
 		HealthTimeout: defaultHealthTimeout,
 	}
@@ -164,7 +168,11 @@ func (pl *Plane) specFor(dir string, rpl rawPlugin) (supervisor.PluginSpec, erro
 	case rpl.Endpoint != "":
 		// Attach mode: the daemon dials an already-running plugin (the orchestrator —
 		// e.g. compose — started it). supervisor.Attach handles these; no launch.
-		return supervisor.PluginSpec{Manifest: m, Endpoint: rpl.Endpoint}, nil
+		ep, err := expandEnvRefs(rpl.Endpoint) // ADR-050
+		if err != nil {
+			return zero, fmt.Errorf("endpoint: %w", err)
+		}
+		return supervisor.PluginSpec{Manifest: m, Endpoint: ep}, nil
 
 	case rpl.Launch != nil:
 		if rpl.Launch.Image == "" {
@@ -174,16 +182,32 @@ func (pl *Plane) specFor(dir string, rpl rawPlugin) (supervisor.PluginSpec, erro
 		if err != nil {
 			return zero, err
 		}
-		image := rpl.Launch.Image
+		image, err := expandEnvRefs(rpl.Launch.Image) // ADR-050
+		if err != nil {
+			return zero, fmt.Errorf("launch.image: %w", err)
+		}
 		// For the local-process runtime the image is a filesystem path the daemon
 		// execs; resolve a relative one against the plane dir so the plane is
 		// relocatable. For podman the image is an OCI reference — left verbatim.
 		if pl.Runtime == "local" {
 			image = resolve(dir, image)
 		}
+		// ADR-050: every launch env VALUE may carry ${VAR} refs (this is how the
+		// platform's fact sheet reaches the plane without inlining credentials).
+		var env map[string]string
+		if len(rpl.Launch.Env) > 0 {
+			env = make(map[string]string, len(rpl.Launch.Env))
+			for k, v := range rpl.Launch.Env {
+				ev, err := expandEnvRefs(v)
+				if err != nil {
+					return zero, fmt.Errorf("launch.env[%s]: %w", k, err)
+				}
+				env[k] = ev
+			}
+		}
 		return supervisor.PluginSpec{
 			Manifest: m,
-			Launch:   &deploymentruntimev1.LaunchSpec{Image: image, Isolation: iso, Env: rpl.Launch.Env},
+			Launch:   &deploymentruntimev1.LaunchSpec{Image: image, Isolation: iso, Env: env},
 		}, nil
 
 	default:
@@ -214,6 +238,42 @@ func isolationProfile(name string) (*deploymentruntimev1.IsolationProfile, error
 	default:
 		return nil, fmt.Errorf("unknown isolation profile %q (only \"i9\" is supported in v1)", name)
 	}
+}
+
+// expandEnvRefs expands ${VAR} from the process environment in plane string values
+// (ADR-050). Braced form ONLY — a bare $ stays literal; "$${" escapes a literal "${".
+// An undefined variable is a hard error naming it: fail-loud, so `rat validate` (which
+// runs this same loader) reports a typo'd var as a preflight finding instead of letting
+// it become an empty string at runtime.
+func expandEnvRefs(s string) (string, error) {
+	if !strings.Contains(s, "${") {
+		return s, nil
+	}
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] == '$' && strings.HasPrefix(s[i+1:], "${") {
+			b.WriteString("${")
+			i += 3
+			continue
+		}
+		if strings.HasPrefix(s[i:], "${") {
+			end := strings.IndexByte(s[i+2:], '}')
+			if end < 0 {
+				return "", fmt.Errorf("unterminated ${ in %q", s)
+			}
+			name := s[i+2 : i+2+end]
+			v, ok := os.LookupEnv(name)
+			if !ok {
+				return "", fmt.Errorf("undefined env var ${%s} (ADR-050: export it, or `set -a; . ./.env; set +a` next to the plane first)", name)
+			}
+			b.WriteString(v)
+			i += 2 + end + 1
+			continue
+		}
+		b.WriteByte(s[i])
+		i++
+	}
+	return b.String(), nil
 }
 
 func resolve(dir, path string) string {

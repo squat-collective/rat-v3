@@ -4,8 +4,12 @@
 #
 # Run it (rat on the host, the proven podman runtime, launches the plugin containers):
 #   make plugin-images
-#   go build -o ./bin/rat ./core/cmd/rat   (or use ./bin/rat)
-#   ( cd platform && /path/to/bin/rat serve --plane plugins.yaml )
+#   make rat-build
+#   ( cd platform && set -a && . ./.env && set +a && /path/to/dist/rat serve --plane plugins.yaml )
+#
+# ${VAR} references interpolate from the environment at load (ADR-050) — the facts live
+# once in ./.env. A missing var fails loud by name; `rat validate --plane plugins.yaml`
+# checks it all pre-boot.
 addr: 0.0.0.0:7777
 runtime: podman
 health_timeout: 90s
@@ -26,7 +30,7 @@ plugins:
         RAT_S3_KEY_REF: "ref://lake/s3-key"
         RAT_S3_SECRET_REF: "ref://lake/s3-secret"
         RAT_LAKE_DATA: "s3://rat/lake/"
-        RAT_S3_ENDPOINT: "host.containers.internal:59010"
+        RAT_S3_ENDPOINT: "${PLATFORM_INFRA_HOST}:${PLATFORM_INFRA_S3_PORT}"
 
   - name: rat-secret
     manifest: ./manifests/secret.plugin.yaml
@@ -35,8 +39,10 @@ plugins:
       isolation: i9
       env:
         # The platform's secrets live HERE only (tenant -> ref -> value). Consumers hold a ref,
-        # never the value. Production swaps this env store for Vault/KMS behind the same Resolve.
-        RAT_SECRETS: '{"acme": {"ref://state/pg-dsn": "host=host.containers.internal port=55440 dbname=ducklake user=ducklake password=ducklake", "ref://lake/pg-dsn": "dbname=ducklake host=host.containers.internal port=55440 user=ducklake password=ducklake", "ref://lake/s3-key": "minioadmin", "ref://lake/s3-secret": "minioadmin"}}'
+        # never the value. The STRUCTURE stays visible here; the facts come from ./.env
+        # (ADR-050). Production swaps this env store for a resolve-time backend like
+        # plugins/secret/vault-py behind the same rat://secret/v1/resolve.
+        RAT_SECRETS: '{"acme": {"ref://state/pg-dsn": "host=${PLATFORM_INFRA_HOST} port=${PLATFORM_INFRA_PG_PORT} dbname=${PLATFORM_PG_DB} user=${PLATFORM_PG_USER} password=${PLATFORM_PG_PASSWORD}", "ref://lake/pg-dsn": "dbname=${PLATFORM_PG_DB} host=${PLATFORM_INFRA_HOST} port=${PLATFORM_INFRA_PG_PORT} user=${PLATFORM_PG_USER} password=${PLATFORM_PG_PASSWORD}", "ref://lake/s3-key": "${PLATFORM_S3_USER}", "ref://lake/s3-secret": "${PLATFORM_S3_PASSWORD}"}}'
 
   - name: rat-state
     manifest: ./manifests/state.plugin.yaml
@@ -56,8 +62,8 @@ plugins:
       env:
         RAT_PLUGIN_NAME: "rat-scheduler"
         # RAT_GATEWAY is injected by rat per topology (host.containers.internal | <rat>:7777 | loopback)
-        RAT_SCHEDULE_INTERVAL: "20"
-        RAT_PIPELINE_TARGET: "gold_daily_revenue"
+        RAT_SCHEDULE_INTERVAL: "${PLATFORM_SCHEDULE_INTERVAL}"
+        RAT_PIPELINE_TARGET: "${PLATFORM_PIPELINE_TARGET}"
 
   - name: platform-bff
     manifest: ./manifests/bff.plugin.yaml
@@ -73,7 +79,7 @@ plugins:
         RAT_S3_KEY_REF: "ref://lake/s3-key"
         RAT_S3_SECRET_REF: "ref://lake/s3-secret"
         RAT_LAKE_DATA: "s3://rat/lake/"
-        RAT_S3_ENDPOINT: "host.containers.internal:59010"
+        RAT_S3_ENDPOINT: "${PLATFORM_INFRA_HOST}:${PLATFORM_INFRA_S3_PORT}"
 
   - name: platform-runner
     manifest: ./manifests/runner.plugin.yaml

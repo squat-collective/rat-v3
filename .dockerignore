@@ -2,10 +2,12 @@
 # plugin images (plugins/<plugin>/Dockerfile, platform/bff → plugins/platform + the
 # python SDK). Allow those trees; aggressively exclude the heavy junk (plugins/ alone is
 # ~59M of node_modules/__pycache__ otherwise).
+# (`!examples` became `!plugins` with the ADR-038 move — the stale allowlist had silently
+# broken every plugin-image build; found while packaging vault-py, DX-6.)
 *
 !core
 !contracts
-!examples
+!plugins
 !platform
 plugins/**/node_modules
 plugins/**/__pycache__

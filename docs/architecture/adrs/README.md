@@ -43,6 +43,18 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [036](036-reconciler-hosts-operators.md) | The reconciler hosts operators — generic resource reconciliation via operator plugins | Proposed | 2026-06-04 |
 | [037](037-trim-committed-sdks-to-consumed-languages.md) | Trim the committed SDKs to the consumed languages (Go + Python) | Accepted | 2026-06-08 |
 | [038](038-reference-plugins-live-under-plugins.md) | Reference plugins live under `plugins/`, not `examples/` | Accepted | 2026-06-08 |
+| [039](039-driver-plugins-and-the-authoring-gate.md) | Driver plugins (empty `provides`) and the authoring validation gate | Accepted | 2026-06-09 |
+| [040](040-published-ports-for-ui-plugins.md) | Published ports — a launch lifecycle for UI / HTTP plugins | Accepted | 2026-06-09 |
+| [041](041-pluggable-cli-command-contributions.md) | A pluggable CLI — plugins contribute commands the `rat` client surfaces | Accepted | 2026-06-09 |
+| [042](042-channel-authenticated-plugin-identity.md) | Channel-authenticated plugin identity — close the C5 forgery gap with a per-launch token | Accepted | 2026-06-10 |
+| [043](043-leader-election-over-the-state-axis.md) | Leader election over the state axis — make multi-replica HA real | Accepted | 2026-06-10 |
+| [044](044-reconciler-bounded-rpcs-and-decoupled-status.md) | Bounded reconciler RPCs + a decoupled status read path | Accepted | 2026-06-10 |
+| [045](045-provider-selection.md) | Provider selection — N coexisting providers of a capability, chosen by label | Accepted | 2026-06-10 |
+| [046](046-native-observability.md) | Native observability — core `/metrics` + durable audit, dependency-free | Accepted | 2026-06-10 |
+| [047](047-hub-transparent-proxy-and-pooling.md) | Hub as a transparent proxy with connection pooling (resolves ADR-033 Q02) | Accepted | 2026-06-10 |
+| [048](048-arrow-ticket-shared-single-use-store.md) | Arrow ticket single-use store is pluggable (shared/durable, not per-process) | Accepted | 2026-06-10 |
+| [049](049-state-v1-create-if-absent.md) | `state/v1` create-if-absent — an additive, capability-gated atomic primitive | Accepted | 2026-06-10 |
+| [050](050-plane-file-env-interpolation.md) | Plane-file env interpolation (`${VAR}`) | Accepted | 2026-06-10 |
 
 ## Template
 
