@@ -17,6 +17,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-10 — `rat/6.10`: fix the Arrow-ticket same-millisecond replay collision (flake root cause)
+
+`TestBulkLegTicketIsTheOnlyGate` flaked ~25% (in isolation too). **Root cause (a real bug, not a test
+issue):** the single-use id is `base64(HMAC(claims))` and the claims were `{stream,caller,tenant,
+expiresMs}` with **no nonce** — so two tickets for the same binding minted in the **same millisecond**
+got identical claims → identical signature → identical single-use id. In the test, `s` and `leaked`
+collided: `s` was consumed on the happy path, then `leaked` (same id) was falsely rejected as a replay.
+In production, a stream re-minting in the same ms would have one ticket wrongly refused.
+
+**Fix:** add a 128-bit random **nonce** to the claims (covered by the HMAC), so every `Mint` is a
+unique single-use credential regardless of timestamp collision. **Regression test:** 500 tickets minted
+back-to-back with identical binding+ttl all validate independently. `arrowticket` now passes 20×
+`-race`; full core suite green. Pure Go (no proto/SDK change).
+
 ## 2026-06-10 — `rat/6.9`: lease bootstrap uses create-if-absent — ADR-043 Q01 CLOSED
 
 Wired the HA lease's cold-start to the new `state/v1` `CreateIfAbsent` (ADR-049), closing the
