@@ -53,16 +53,31 @@ class Gateway:
     def __init__(self):
         self.addr = os.environ.get("RAT_GATEWAY", "127.0.0.1:7777")
         self.name = os.environ.get("RAT_PLUGIN_NAME", "")
+        # C2: the per-launch bearer token rat injected. The gateway derives caller_plugin from
+        # it on the plugin door (the wire identity below is no longer trusted for authz).
+        self.token = os.environ.get("RAT_PLUGIN_TOKEN", "")
+        # ADR-045: a default provider-selection label selector ("k=v,k=v") the operator set via
+        # this driver's config (RAT_SELECT) — e.g. "compute=big". Per-call `select=` overrides it.
+        self.select = os.environ.get("RAT_SELECT", "")
         self._chan = grpc.insecure_channel(self.addr)
         self._stub = invoke_pb2_grpc.CapabilityInvokeServiceStub(self._chan)
 
-    def call(self, capability: str, req, resp_type, tenant: str = "default"):
-        """Stamp the rat-callmeta-bin envelope (identity + trace), Invoke, parse into resp_type."""
+    def call(self, capability: str, req, resp_type, tenant: str = "default", select: str = ""):
+        """Stamp the rat-callmeta-bin envelope (identity + trace), Invoke, parse into resp_type.
+
+        `select` is a per-call label selector ("k=v,k=v", ADR-045) choosing among multiple
+        providers of `capability`; it overrides the driver-default RAT_SELECT when given.
+        """
         rc = context_pb2.RequestContext(
             trace=context_pb2.TraceContext(traceparent=_traceparent(), correlation_id=self.name),
             identity=context_pb2.Identity(caller_plugin=self.name, tenant=tenant),
         )
         md = [("rat-callmeta-bin", rc.SerializeToString())]
+        if self.token:
+            md.append(("rat-plugin-token", self.token))
+        selector = select or self.select
+        if selector:
+            md.append(("rat-select", selector))
         out = self._stub.Invoke(
             invoke_pb2.InvokeRequest(capability=capability, payload=req.SerializeToString()),
             metadata=md,

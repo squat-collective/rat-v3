@@ -33,6 +33,11 @@ type CapabilityRef struct {
 type Metadata struct {
 	Name    string `yaml:"name"`
 	Version string `yaml:"version"`
+	// Labels are open key=value attributes a plugin SELF-DESCRIBES (e.g. {compute: big,
+	// gpu: "true"}); the plane may add/override them. They are the basis of provider
+	// selection (ADR-045): a call's selector is matched against a provider's labels. Additive
+	// + optional — absent == no labels.
+	Labels map[string]string `yaml:"labels"`
 }
 
 // ResourceQuantities mirrors plugin.v1.json $defs/resourceQuantities (cpu/memory asks).

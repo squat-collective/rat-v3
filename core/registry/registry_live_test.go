@@ -59,25 +59,25 @@ func TestRegisterDeregister(t *testing.T) {
 	reg.Deregister("nope") // absent → no-op, no panic
 }
 
-// TestRegisterRejectsDuplicates: the runtime path keeps New's invariants (no dup name, no
-// dup provider) — and a rejected register leaves NO partial state.
-func TestRegisterRejectsDuplicates(t *testing.T) {
+// TestRegisterRejectsDuplicateName: the runtime path still rejects a duplicate plugin NAME and
+// leaves NO partial state. A second PROVIDER of an existing capability is now ACCEPTED (ADR-045):
+// providers coexist and selection disambiguates.
+func TestRegisterRejectsDuplicateName(t *testing.T) {
 	reg, _ := New([]*manifest.Manifest{
 		man("a", "engine", []string{"rat://engine/v1/execute"}, nil),
 	})
 	if err := reg.Register(man("a", "engine", nil, nil)); err == nil {
 		t.Fatal("duplicate plugin name should be rejected")
 	}
-	// A second provider of an existing capability is rejected, and must not corrupt the
-	// existing mapping (atomic insert).
-	if err := reg.Register(man("b", "engine", []string{"rat://engine/v1/execute"}, nil)); err == nil {
-		t.Fatal("duplicate capability provider should be rejected")
+	if reg.Plugin("a") == nil {
+		t.Fatal("rejected dup-name register corrupted the existing plugin")
 	}
-	if got := reg.ProviderOf("rat://engine/v1/execute"); got != "a" {
-		t.Fatalf("rejected register corrupted the provider index: got %q, want a", got)
+	// A second provider of the same capability now coexists (ADR-045).
+	if err := reg.Register(man("b", "engine", []string{"rat://engine/v1/execute"}, nil)); err != nil {
+		t.Fatalf("second provider of a capability should be accepted (ADR-045): %v", err)
 	}
-	if reg.Plugin("b") != nil {
-		t.Fatal("rejected register must not leave the plugin in byName")
+	if got := reg.ProvidersOf("rat://engine/v1/execute"); len(got) != 2 {
+		t.Fatalf("ProvidersOf after coexisting register = %v, want [a b]", got)
 	}
 }
 

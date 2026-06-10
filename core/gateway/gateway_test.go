@@ -501,3 +501,207 @@ func TestInvokeServerStreamRespectsSoftDeadline(t *testing.T) {
 		t.Errorf("terminal record = %+v, want {timeout}", term)
 	}
 }
+
+// --- C2: channel-authenticated identity on the plugin door (#2 forgery fix) -----------
+
+// bufServerAuth boots an in-process gateway server WITH the plugin-door auth interceptors
+// (the 0.0.0.0 callback door), so caller_plugin is derived from the bearer token, not the wire.
+func bufServerAuth(t *testing.T, gw *Gateway) corev1.CapabilityInvokeServiceClient {
+	t.Helper()
+	lis := bufconn.Listen(1 << 20)
+	srv := grpc.NewServer(
+		grpc.UnaryInterceptor(gw.PluginAuthUnaryInterceptor),
+		grpc.StreamInterceptor(gw.PluginAuthStreamInterceptor),
+	)
+	corev1.RegisterCapabilityInvokeServiceServer(srv, gw)
+	go func() { _ = srv.Serve(lis) }()
+	t.Cleanup(srv.Stop)
+	conn, err := grpc.NewClient(
+		"passthrough:///bufnet",
+		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return lis.DialContext(ctx) }),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	return corev1.NewCapabilityInvokeServiceClient(conn)
+}
+
+// authGateway builds a token-authenticating gateway over the fakeState provider.
+func authGateway(t *testing.T) (*Gateway, *MemAuditor) {
+	t.Helper()
+	providerConn := bufServer(t, func(s *grpc.Server) { statev1.RegisterStateServiceServer(s, fakeState{}) })
+	audit := &MemAuditor{}
+	gw := New(testRegistry(t), map[string]*grpc.ClientConn{"rat-test-state": providerConn}, audit,
+		statev1.File_rat_state_v1_state_proto)
+	gw.RequirePluginAuth(true)
+	return gw, audit
+}
+
+// tokenCtx is callerCtx plus a bearer token header — a plugin presenting its token while the
+// envelope claims to be `caller`.
+func tokenCtx(caller, token string) context.Context {
+	return metadata.AppendToOutgoingContext(callerCtx(caller), pluginTokenHeader, token)
+}
+
+// TestPluginAuthTokenIdentityWinsOverEnvelope: the gateway derives caller_plugin from the
+// bearer token, NOT the wire envelope. A plugin holding rat-test-caller's token but forging an
+// envelope that claims to be rat-test-state is authorized AS rat-test-caller — so its declared
+// `requires state/get` lets the call through, and the audit records the token identity.
+func TestPluginAuthTokenIdentityWinsOverEnvelope(t *testing.T) {
+	gw, audit := authGateway(t)
+	gw.SetPluginToken("tok-caller", "rat-test-caller")
+	client := bufServerAuth(t, gw)
+
+	payload, _ := proto.Marshal(&statev1.GetRequest{Key: "k1"})
+	// Envelope LIES: claims caller is rat-test-state; token says rat-test-caller.
+	_, err := client.Invoke(tokenCtx("rat-test-state", "tok-caller"), &corev1.InvokeRequest{
+		Capability: "rat://state/v1/get", Payload: payload,
+	})
+	if err != nil {
+		t.Fatalf("Invoke(get) err = %v, want nil (token identity rat-test-caller requires get)", err)
+	}
+	recs := audit.Records()
+	if len(recs) != 1 || !recs[0].Allowed || recs[0].Caller != "rat-test-caller" {
+		t.Errorf("audit = %+v, want one allow record with caller=rat-test-caller (token, not envelope)", recs)
+	}
+}
+
+// TestPluginAuthForgedEnvelopeCannotEscalate: the inverse — a plugin holding rat-test-state's
+// token (which `requires` nothing) cannot borrow rat-test-caller's grants by forging the
+// envelope. The gateway authorizes AS rat-test-state, which does not declare get → DENIED.
+func TestPluginAuthForgedEnvelopeCannotEscalate(t *testing.T) {
+	gw, audit := authGateway(t)
+	gw.SetPluginToken("tok-state", "rat-test-state")
+	client := bufServerAuth(t, gw)
+
+	payload, _ := proto.Marshal(&statev1.GetRequest{Key: "k1"})
+	// Envelope claims to be the privileged rat-test-caller; token says rat-test-state.
+	_, err := client.Invoke(tokenCtx("rat-test-caller", "tok-state"), &corev1.InvokeRequest{
+		Capability: "rat://state/v1/get", Payload: payload,
+	})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("Invoke(get) code = %v, want PermissionDenied (rat-test-state does not require get)", status.Code(err))
+	}
+	recs := audit.Records()
+	if len(recs) != 1 || recs[0].Allowed || recs[0].Caller != "rat-test-state" {
+		t.Errorf("audit = %+v, want one DENY record with caller=rat-test-state (token, not envelope)", recs)
+	}
+}
+
+// TestPluginAuthMissingTokenRejected: the plugin door requires a token in launch mode — a call
+// with none is Unauthenticated before any capability decision (no audit record).
+func TestPluginAuthMissingTokenRejected(t *testing.T) {
+	gw, audit := authGateway(t)
+	client := bufServerAuth(t, gw)
+
+	payload, _ := proto.Marshal(&statev1.GetRequest{Key: "k1"})
+	_, err := client.Invoke(callerCtx("rat-test-caller"), &corev1.InvokeRequest{
+		Capability: "rat://state/v1/get", Payload: payload,
+	})
+	if status.Code(err) != codes.Unauthenticated {
+		t.Fatalf("Invoke(get) with no token code = %v, want Unauthenticated", status.Code(err))
+	}
+	if recs := audit.Records(); len(recs) != 0 {
+		t.Errorf("audit = %+v, want none (rejected before the capability decision)", recs)
+	}
+}
+
+// TestPluginAuthInvalidTokenRejected: an unknown bearer token is Unauthenticated.
+func TestPluginAuthInvalidTokenRejected(t *testing.T) {
+	gw, _ := authGateway(t)
+	gw.SetPluginToken("tok-caller", "rat-test-caller")
+	client := bufServerAuth(t, gw)
+
+	payload, _ := proto.Marshal(&statev1.GetRequest{Key: "k1"})
+	_, err := client.Invoke(tokenCtx("rat-test-caller", "bogus"), &corev1.InvokeRequest{
+		Capability: "rat://state/v1/get", Payload: payload,
+	})
+	if status.Code(err) != codes.Unauthenticated {
+		t.Fatalf("Invoke(get) with bogus token code = %v, want Unauthenticated", status.Code(err))
+	}
+}
+
+// TestPluginTokenRevoked: RemovePluginToken drops a plugin's identity (live-deregister) — its
+// previously valid token no longer authenticates.
+func TestPluginTokenRevoked(t *testing.T) {
+	gw, _ := authGateway(t)
+	gw.SetPluginToken("tok-caller", "rat-test-caller")
+	client := bufServerAuth(t, gw)
+	payload, _ := proto.Marshal(&statev1.GetRequest{Key: "k1"})
+
+	if _, err := client.Invoke(tokenCtx("rat-test-caller", "tok-caller"), &corev1.InvokeRequest{
+		Capability: "rat://state/v1/get", Payload: payload,
+	}); err != nil {
+		t.Fatalf("before revoke: Invoke(get) err = %v, want nil", err)
+	}
+	gw.RemovePluginToken("rat-test-caller")
+	if _, err := client.Invoke(tokenCtx("rat-test-caller", "tok-caller"), &corev1.InvokeRequest{
+		Capability: "rat://state/v1/get", Payload: payload,
+	}); status.Code(err) != codes.Unauthenticated {
+		t.Fatalf("after revoke: code = %v, want Unauthenticated", status.Code(err))
+	}
+}
+
+// --- ADR-045: provider selection by label ---------------------------------------------
+
+// selectCtx is callerCtx plus a rat-select label selector header.
+func selectCtx(caller, selector string) context.Context {
+	return metadata.AppendToOutgoingContext(callerCtx(caller), selectHeader, selector)
+}
+
+// TestSelectRoutesByLabel (ADR-045): two providers of ONE capability coexist, labeled
+// compute=small/big; a call's selector routes to the matching provider's connection. No
+// selector → FailedPrecondition (ambiguous, fail closed). A non-matching selector → likewise.
+func TestSelectRoutesByLabel(t *testing.T) {
+	connSmall := bufServer(t, func(s *grpc.Server) { statev1.RegisterStateServiceServer(s, fakeState{}) })  // "v:"+key
+	connBig := bufServer(t, func(s *grpc.Server) { statev1.RegisterStateServiceServer(s, fakeStateB{}) })   // "REBOUND:"+key
+
+	small := &manifest.Manifest{
+		Kind: "state-backend", Metadata: manifest.Metadata{Name: "state-small", Labels: map[string]string{"compute": "small"}},
+		Provides: []manifest.CapabilityRef{{Capability: "rat://state/v1/get"}},
+	}
+	big := &manifest.Manifest{
+		Kind: "state-backend", Metadata: manifest.Metadata{Name: "state-big", Labels: map[string]string{"compute": "big"}},
+		Provides: []manifest.CapabilityRef{{Capability: "rat://state/v1/get"}},
+	}
+	caller := &manifest.Manifest{
+		Kind: "strategy", Metadata: manifest.Metadata{Name: "rat-test-caller"},
+		Requires: []manifest.CapabilityRef{{Capability: "rat://state/v1/get"}},
+	}
+	reg, err := registry.New([]*manifest.Manifest{small, big, caller})
+	if err != nil {
+		t.Fatalf("registry.New: %v", err)
+	}
+	gw := New(reg, map[string]*grpc.ClientConn{"state-small": connSmall, "state-big": connBig}, &MemAuditor{},
+		statev1.File_rat_state_v1_state_proto)
+	client := corev1.NewCapabilityInvokeServiceClient(
+		bufServer(t, func(s *grpc.Server) { corev1.RegisterCapabilityInvokeServiceServer(s, gw) }))
+
+	get := func(ctx context.Context) (string, error) {
+		payload, _ := proto.Marshal(&statev1.GetRequest{Key: "k1"})
+		resp, err := client.Invoke(ctx, &corev1.InvokeRequest{Capability: "rat://state/v1/get", Payload: payload})
+		if err != nil {
+			return "", err
+		}
+		var gr statev1.GetResponse
+		_ = proto.Unmarshal(resp.GetResult(), &gr)
+		return string(gr.GetValue()), nil
+	}
+
+	if v, err := get(selectCtx("rat-test-caller", "compute=big")); err != nil || v != "REBOUND:k1" {
+		t.Fatalf("select compute=big = (%q, %v), want (REBOUND:k1, nil) — routed to state-big", v, err)
+	}
+	if v, err := get(selectCtx("rat-test-caller", "compute=small")); err != nil || v != "v:k1" {
+		t.Fatalf("select compute=small = (%q, %v), want (v:k1, nil) — routed to state-small", v, err)
+	}
+	// No selector with two providers → ambiguous → fail closed.
+	if _, err := get(callerCtx("rat-test-caller")); status.Code(err) != codes.FailedPrecondition {
+		t.Fatalf("no selector code = %v, want FailedPrecondition (ambiguous, fail closed)", status.Code(err))
+	}
+	// A selector matching no provider → fail closed.
+	if _, err := get(selectCtx("rat-test-caller", "compute=gpu")); status.Code(err) != codes.FailedPrecondition {
+		t.Fatalf("non-matching selector code = %v, want FailedPrecondition", status.Code(err))
+	}
+}

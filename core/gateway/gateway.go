@@ -32,6 +32,20 @@ import (
 
 const callMetaHeader = "rat-callmeta-bin"
 
+// pluginTokenHeader carries a launched plugin's per-launch bearer token on the plugin
+// door (C2). rat mints one secret token per plugin it launches, injects it as
+// RAT_PLUGIN_TOKEN, and registers token→name here; the plugin presents it on every
+// gateway call. The gateway derives caller_plugin from the token, NEVER from the wire
+// envelope — closing the self-asserted-identity forgery (context.proto keystone). The
+// operator door (rat call) carries no token and keeps its reachability trust.
+const pluginTokenHeader = "rat-plugin-token"
+
+// selectHeader carries the call's provider-selection label selector (ADR-045) as "k=v,k=v"
+// — e.g. "compute=big,region=eu". The gateway matches it against providers' labels to pick
+// which of several providers of a capability serves this call. Absent == no selector (a
+// single provider routes; multiple providers without a selector fail closed as ambiguous).
+const selectHeader = "rat-select"
+
 // AuditRecord is emitted for EVERY capability decision (C4) — allow or deny — and,
 // for STREAMS, once more when the stream closes (the terminal record). The decision
 // record carries Allowed/Reason; the terminal record carries Terminal/Outcome/Frames/
@@ -106,6 +120,152 @@ type Gateway struct {
 	// defaultStreamIdleTimeout). New sets it to the default; override it before the
 	// gateway starts serving. <= 0 falls back to the default.
 	StreamIdleTimeout time.Duration
+
+	// OnCall, if set, is invoked once per authorization+selection decision with the capability
+	// and an outcome ("allow" | "permission_denied" | "selection_failed" | "invalid_trace") —
+	// the hook the daemon wires to the native /metrics counter (gap #6). Optional + nil-safe;
+	// the gateway has no dependency on the metrics package.
+	OnCall func(capability, outcome string)
+
+	// tokMu guards the per-plugin token registry + the requireAuth toggle (C2). The
+	// reconciler/control plane mutates it as plugins are launched/torn down while the
+	// plugin-auth interceptor reads it on every call.
+	tokMu        sync.RWMutex
+	pluginTokens map[string]string // bearer token -> authenticated plugin name
+	requireAuth  bool              // when true, the plugin-door interceptor REJECTS an unauthenticated call
+}
+
+// callerKey tags a context with the channel-authenticated caller name the plugin-door
+// interceptor derived from the bearer token. openCall prefers it over the wire envelope.
+type callerKey struct{}
+
+func withAuthenticatedCaller(ctx context.Context, name string) context.Context {
+	return context.WithValue(ctx, callerKey{}, name)
+}
+
+func authenticatedCaller(ctx context.Context) string {
+	if v, ok := ctx.Value(callerKey{}).(string); ok {
+		return v
+	}
+	return ""
+}
+
+// SetPluginToken registers (or replaces) the bearer token that authenticates a launched
+// plugin as name on the plugin door. Concurrency-safe; called by the reconciler/control
+// plane at launch + live-add.
+func (g *Gateway) SetPluginToken(token, name string) {
+	g.tokMu.Lock()
+	defer g.tokMu.Unlock()
+	if g.pluginTokens == nil {
+		g.pluginTokens = map[string]string{}
+	}
+	g.pluginTokens[token] = name
+}
+
+// RemovePluginToken drops every token registered for name (live-deregister/rollback).
+func (g *Gateway) RemovePluginToken(name string) {
+	g.tokMu.Lock()
+	defer g.tokMu.Unlock()
+	for tok, n := range g.pluginTokens {
+		if n == name {
+			delete(g.pluginTokens, tok)
+		}
+	}
+}
+
+// RequirePluginAuth toggles plugin-door enforcement. rat sets it true in launch mode
+// (every plugin it launches carries a token); attach mode leaves it false (no tokens to
+// mint), so the interceptor falls back to the envelope unchanged.
+func (g *Gateway) RequirePluginAuth(on bool) {
+	g.tokMu.Lock()
+	defer g.tokMu.Unlock()
+	g.requireAuth = on
+}
+
+// authenticatePlugin resolves the channel-authenticated caller from the bearer token (C2).
+// A valid token → its plugin name. An invalid token → Unauthenticated. No token → "" with
+// Unauthenticated only when requireAuth is on (the plugin door in launch mode); otherwise
+// "" lets openCall fall back to the wire envelope (operator door / attach mode).
+func (g *Gateway) authenticatePlugin(ctx context.Context) (string, error) {
+	tok := firstHeader(ctx, pluginTokenHeader)
+	g.tokMu.RLock()
+	name, ok := g.pluginTokens[tok]
+	require := g.requireAuth
+	g.tokMu.RUnlock()
+	if tok != "" {
+		if ok {
+			return name, nil
+		}
+		return "", status.Error(codes.Unauthenticated, "C2: invalid plugin token")
+	}
+	if require {
+		return "", status.Error(codes.Unauthenticated, "C2: missing "+pluginTokenHeader+" on the plugin door")
+	}
+	return "", nil
+}
+
+// PluginAuthUnaryInterceptor authenticates a unary call on the plugin door and stamps the
+// derived caller onto the context for openCall. Wire it onto the gRPC server that fronts
+// the 0.0.0.0 plugin-callback listener — NOT the operator/control listener.
+func (g *Gateway) PluginAuthUnaryInterceptor(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	name, err := g.authenticatePlugin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if name != "" {
+		ctx = withAuthenticatedCaller(ctx, name)
+	}
+	return handler(ctx, req)
+}
+
+// PluginAuthStreamInterceptor is the streaming counterpart: it authenticates at stream
+// open and threads the derived caller through a wrapped ServerStream.
+func (g *Gateway) PluginAuthStreamInterceptor(srv any, ss grpc.ServerStream, _ *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	name, err := g.authenticatePlugin(ss.Context())
+	if err != nil {
+		return err
+	}
+	if name != "" {
+		ss = &authStream{ServerStream: ss, ctx: withAuthenticatedCaller(ss.Context(), name)}
+	}
+	return handler(srv, ss)
+}
+
+// authStream overrides Context() so the handler (and openCall) see the authenticated caller.
+type authStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (s *authStream) Context() context.Context { return s.ctx }
+
+func firstHeader(ctx context.Context, key string) string {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		if v := md.Get(key); len(v) > 0 {
+			return v[0]
+		}
+	}
+	return ""
+}
+
+// parseSelector parses a "k=v,k=v" label selector (the rat-select header, ADR-045) into a map.
+// Empty/blank → nil (matches every provider). Malformed pairs (no "=") are skipped.
+func parseSelector(s string) map[string]string {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	out := map[string]string{}
+	for _, kv := range strings.Split(s, ",") {
+		k, v, ok := strings.Cut(kv, "=")
+		k, v = strings.TrimSpace(k), strings.TrimSpace(v)
+		if ok && k != "" {
+			out[k] = v
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // New builds a gateway. The route table (capability -> method) is derived from the
@@ -162,6 +322,13 @@ func (g *Gateway) provider(name string) *grpc.ClientConn {
 }
 
 // idleTimeout is the effective server-stream idle backstop (guards a zero value).
+// observe reports a call outcome to the optional metrics hook (gap #6). Nil-safe.
+func (g *Gateway) observe(capability, outcome string) {
+	if g.OnCall != nil {
+		g.OnCall(capability, outcome)
+	}
+}
+
 func (g *Gateway) idleTimeout() time.Duration {
 	if g.StreamIdleTimeout > 0 {
 		return g.StreamIdleTimeout
@@ -234,20 +401,37 @@ type openedCall struct {
 func (g *Gateway) openCall(ctx context.Context, capURI string) (*openedCall, error) {
 	in := readCallMeta(ctx)
 	if !wellFormedTraceparent(in.GetTrace().GetTraceparent()) {
+		g.observe(capURI, "invalid_trace")
 		return nil, status.Error(codes.InvalidArgument, "C1: missing or ill-formed traceparent")
 	}
-	// caller_plugin is derived from the inbound envelope. NOTE: real channel
-	// authentication (C2) is deferred (ADR-014) — for the spike the caller is taken
-	// from the call-meta; the full core re-derives it from the authenticated channel.
-	caller := in.GetIdentity().GetCallerPlugin()
+	// caller_plugin is the CHANNEL-authenticated identity when present (C2): the plugin-door
+	// interceptor derived it from the per-launch bearer token and stamped it on the context,
+	// so the wire envelope's self-asserted caller_plugin is ignored — closing the forgery the
+	// context.proto keystone forbids. It is "" only on the operator door (rat call, trusted by
+	// listener reachability) or attach mode, where we fall back to the wire value (ADR-034).
+	caller := authenticatedCaller(ctx)
+	if caller == "" {
+		caller = in.GetIdentity().GetCallerPlugin()
+	}
 	correlation := in.GetTrace().GetCorrelationId()
 
-	// C5 — the decision DERIVED from declared manifests; audited either way (C4).
-	d := g.reg.Authorize(caller, capURI)
+	// C5 authorization + ADR-045 provider selection — DERIVED from declared manifests; audited
+	// either way (C4). The optional rat-select header carries the call's label selector; the
+	// registry authorizes the caller and selects the matching provider.
+	selector := parseSelector(firstHeader(ctx, selectHeader))
+	d := g.reg.Select(caller, capURI, selector)
 	g.auditor.Record(AuditRecord{Capability: capURI, Caller: caller, Provider: d.Provider, Correlation: correlation, Allowed: d.Allowed, Reason: d.Reason})
 	if !d.Allowed {
+		if d.Authorized {
+			// Authorized, but the selector matched zero or >1 providers — a selection failure
+			// (fail closed, ADR-045), not an authz denial.
+			g.observe(capURI, "selection_failed")
+			return nil, status.Error(codes.FailedPrecondition, d.Reason)
+		}
+		g.observe(capURI, "permission_denied")
 		return nil, status.Error(codes.PermissionDenied, d.Reason)
 	}
+	g.observe(capURI, "allow")
 
 	method, ok := g.routes[capURI]
 	if !ok {

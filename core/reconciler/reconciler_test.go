@@ -279,3 +279,68 @@ func TestLaunchErrorCrashLoops(t *testing.T) {
 		t.Fatalf("state=%s after %d launch errors, want Degraded", st, cfg.CrashLoopCap)
 	}
 }
+
+// blockingRuntime's Healthcheck blocks until released OR the call's deadline fires — so a
+// test can simulate a wedged plugin and assert the reconciler bounds it (AV-3).
+type blockingRuntime struct {
+	deploymentruntimev1.UnimplementedDeploymentRuntimeServiceServer
+	mu      sync.Mutex
+	seq     int
+	release chan struct{}
+}
+
+func (f *blockingRuntime) Launch(_ context.Context, _ *deploymentruntimev1.LaunchRequest) (*deploymentruntimev1.LaunchResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.seq++
+	return &deploymentruntimev1.LaunchResponse{InstanceId: fmt.Sprintf("inst-%d", f.seq), Endpoint: "127.0.0.1:9000"}, nil
+}
+
+func (f *blockingRuntime) Healthcheck(ctx context.Context, _ *deploymentruntimev1.HealthcheckRequest) (*deploymentruntimev1.HealthcheckResponse, error) {
+	select {
+	case <-f.release:
+		return &deploymentruntimev1.HealthcheckResponse{Status: healthy}, nil
+	case <-ctx.Done():
+		return nil, ctx.Err() // the per-call deadline (AV-3) cut us
+	}
+}
+
+func (f *blockingRuntime) Terminate(_ context.Context, _ *deploymentruntimev1.TerminateRequest) (*deploymentruntimev1.TerminateResponse, error) {
+	return &deploymentruntimev1.TerminateResponse{Terminated: true}, nil
+}
+
+// TestStatusReadPathUnblockedByHungHealthcheck (AV-3): a reconcile pass wedged in a runtime
+// RPC must neither (1) blind Status — it reads the published snapshot, off the reconcile
+// mutex — nor (2) pin the loop forever — the per-call deadline cuts the hung RPC and the pass
+// completes on its own (we never release it).
+func TestStatusReadPathUnblockedByHungHealthcheck(t *testing.T) {
+	fake := &blockingRuntime{release: make(chan struct{})}
+	cfg := testCfg()
+	cfg.RPCTimeout = 50 * time.Millisecond
+	r := New(fake, desiredP(), cfg)
+	ctx := context.Background()
+	t0 := time.Unix(0, 0)
+
+	r.Reconcile(ctx, t0) // launch (fast) → P Pending with an instance
+
+	done := make(chan struct{})
+	go func() { r.Reconcile(ctx, t0); close(done) }() // pass 2: Healthcheck blocks, holding the reconcile mutex
+	time.Sleep(10 * time.Millisecond)                 // let the pass enter the hung healthcheck
+
+	// (1) Status returns promptly from the snapshot despite the pass holding the reconcile mutex.
+	start := time.Now()
+	if st, _, _ := r.Status("P"); st != Pending {
+		t.Fatalf("Status during hung healthcheck = %s, want Pending (from the snapshot)", st)
+	}
+	if d := time.Since(start); d > 25*time.Millisecond {
+		t.Fatalf("Status blocked %s behind the hung healthcheck — read path not decoupled", d)
+	}
+
+	// (2) The RPC deadline cuts the hung healthcheck, so the pass completes without us releasing it.
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		close(fake.release)
+		t.Fatal("reconcile pass never completed — the RPC deadline did not bound the hung Healthcheck")
+	}
+}

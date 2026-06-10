@@ -46,17 +46,34 @@ type wireTicket struct {
 	Sig    []byte `json:"sig"`
 }
 
-// Minter mints + validates tickets under one secret key, enforcing single-use.
-type Minter struct {
-	key  []byte
-	now  func() time.Time // injectable clock (tests)
-	mu   sync.Mutex
-	used map[string]bool // signature (b64) -> consumed
+// SingleUseStore records consumed ticket ids so a ticket is redeemable at most once. The
+// default is in-memory + per-process; a SHARED implementation (NewCASStore over a backend with
+// atomic create-if-absent) closes the replay window across producer RESTART and REPLICAS — gap
+// #7: a per-process set lets a restarted/replicated producer reopen replay.
+type SingleUseStore interface {
+	// Consume atomically marks id used, returning firstUse=false if it was ALREADY consumed (a
+	// replay). A non-nil err means the store could NOT confirm — the caller fails CLOSED
+	// (rejects the ticket), since an unconfirmable single-use check can't guarantee no replay.
+	Consume(id string) (firstUse bool, err error)
 }
 
-// NewMinter returns a Minter signing with key.
+// Minter mints + validates tickets under one secret key, enforcing single-use via its store.
+type Minter struct {
+	key   []byte
+	now   func() time.Time // injectable clock (tests)
+	store SingleUseStore
+}
+
+// NewMinter returns a Minter signing with key, using an in-memory (per-process) single-use
+// store. Sufficient for a single producer; use NewMinterWithStore for restart/replica safety.
 func NewMinter(key []byte) *Minter {
-	return &Minter{key: key, now: time.Now, used: map[string]bool{}}
+	return NewMinterWithStore(key, NewMemStore())
+}
+
+// NewMinterWithStore returns a Minter backed by a caller-supplied single-use store — e.g. a
+// shared CAS store so replay can't be reopened by a restart or a second replica.
+func NewMinterWithStore(key []byte, store SingleUseStore) *Minter {
+	return &Minter{key: key, now: time.Now, store: store}
 }
 
 // Mint issues a ticket bound to {streamID, caller, tenant}, valid for ttl.
@@ -82,12 +99,13 @@ func (m *Minter) Validate(ticket []byte, streamID, caller, tenant string) error 
 		return ErrNotBound
 	}
 	id := base64.StdEncoding.EncodeToString(wt.Sig)
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.used[id] {
+	firstUse, err := m.store.Consume(id)
+	if err != nil {
+		return fmt.Errorf("arrowticket: single-use store: %w", err) // fail closed
+	}
+	if !firstUse {
 		return ErrReplay
 	}
-	m.used[id] = true
 	return nil
 }
 
@@ -97,4 +115,54 @@ func (m *Minter) sign(c claims) []byte {
 	h := hmac.New(sha256.New, m.key)
 	fmt.Fprintf(h, "%s\x00%s\x00%s\x00%d", c.StreamID, c.CallerPlugin, c.Tenant, c.ExpiresUnixMs)
 	return h.Sum(nil)
+}
+
+// MemStore is the default in-memory SingleUseStore (per-process). A restart or a second replica
+// starts with an empty set, so it cannot detect a ticket consumed elsewhere — use a shared
+// CASStore when a producer is restarted or replicated.
+type MemStore struct {
+	mu   sync.Mutex
+	used map[string]bool
+}
+
+// NewMemStore returns an empty in-memory single-use store.
+func NewMemStore() *MemStore { return &MemStore{used: map[string]bool{}} }
+
+// Consume marks id used; firstUse=false on a second call. Never errors.
+func (s *MemStore) Consume(id string) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.used[id] {
+		return false, nil
+	}
+	s.used[id] = true
+	return true, nil
+}
+
+// SingleUseCAS is the minimal primitive a SHARED single-use store needs: an ATOMIC
+// create-if-absent. Note: the frozen state/v1 lacks this (ADR-043 Q01); a shared store therefore
+// rides a backend that has it natively — etcd txn, Redis SETNX, or a DB unique constraint — until
+// a create-if-absent amendment lands. Atomicity is the whole point: two concurrent redemptions of
+// one ticket must yield exactly one created=true.
+type SingleUseCAS interface {
+	// PutIfAbsent atomically stores key, returning created=false if it already existed.
+	PutIfAbsent(key string) (created bool, err error)
+}
+
+// CASStore is the SHARED, durable SingleUseStore: it records consumed ticket ids in a backend with
+// atomic create-if-absent, so replay can't be reopened by a producer restart or a second replica
+// (gap #7). keyPrefix namespaces the ticket keys within the backend.
+type CASStore struct {
+	cas       SingleUseCAS
+	keyPrefix string
+}
+
+// NewCASStore returns a single-use store over cas, prefixing ticket keys with keyPrefix.
+func NewCASStore(cas SingleUseCAS, keyPrefix string) *CASStore {
+	return &CASStore{cas: cas, keyPrefix: keyPrefix}
+}
+
+// Consume create-if-absents the ticket key: created=true is the first (only) valid redemption.
+func (s *CASStore) Consume(id string) (bool, error) {
+	return s.cas.PutIfAbsent(s.keyPrefix + id)
 }

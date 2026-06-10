@@ -17,6 +17,31 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-10 — `rat/6.7`: ported the clean-room core hardenings (7 gaps, ADRs 042–048)
+
+Ported the **production-hardening wave** (sealed on the clean-room as `clean-room/2.0`) onto `main`'s
+reference-plugin corpus — cherry-picked the 7 gap-fix commits (code + ADRs), **not** a branch merge
+(the clean-room's `plugins/`+`platform/` wipe stays off `main`). All 7 structural gaps from the
+code-level review of `core/` + protos:
+
+| # | Fix | ADR |
+|---|---|---|
+| 2 | channel-authenticated plugin identity (per-launch bearer token; identity from the channel, not the wire) | [042](../docs/architecture/adrs/042-channel-authenticated-plugin-identity.md) |
+| 1 | leader-election lease over the state-backend CAS (real multi-replica HA) + AV-1 transient-hold | [043](../docs/architecture/adrs/043-leader-election-over-the-state-axis.md) |
+| 4 | bounded reconciler RPCs + decoupled status read path | [044](../docs/architecture/adrs/044-reconciler-bounded-rpcs-and-decoupled-status.md) |
+| 3 | label/selector provider selection (N providers per cap coexist; flow picks by label) | [045](../docs/architecture/adrs/045-provider-selection.md) |
+| 6 | native `/metrics` (dependency-free) + durable audit JSONL | [046](../docs/architecture/adrs/046-native-observability.md) |
+| 5 | hub transparent proxy (forwards every method incl. streams + ControlService) + connection pooling | [047](../docs/architecture/adrs/047-hub-transparent-proxy-and-pooling.md) |
+| 7 | arrow-ticket pluggable shared single-use store (restart/replica replay closed) | [048](../docs/architecture/adrs/048-arrow-ticket-shared-single-use-store.md) |
+
+**Cherry-picked cleanly** (only roadmap conflicts, discarded — `main`'s core matched the clean-room's
+pre-2.0 state). **Crucially the full `core` suite is `-race`-green INCLUDING `composition` against the
+REAL Go providers** (`inmemory-go` catalog, `localfs-go` storage, …) — the C1/C5/D3 validation the
+clean-room couldn't run (its `examples/` were wiped). So the gateway/registry/reconciler hardenings are
+proven against the real reference corpus, not just fakes. No wire/contract change, six-thing count held,
+no new dependency. Open follow-ons live in each ADR (mTLS + SubjectAssertion · `state/v1`
+create-if-absent · parallel reconcile · selector v1.5/v2 · OTel spans + signed audit · NATS-leaf).
+
 ## 2026-06-09 — `rat/6.6`: ported the clean-room DX improvements + ADR-039/040/041
 
 Forward-ported the reusable core/CLI/schema work from the **clean-room experiment** (a parallel

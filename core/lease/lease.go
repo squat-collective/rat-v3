@@ -16,9 +16,34 @@ import (
 	"time"
 )
 
-// Store is a single-key, linearizable CAS lease. The fencing token (version) is
-// monotonic and bumped on every ACQUISITION (a new leadership term), never on a
-// renewal — so a stale holder that lost and regained the lease is distinguishable.
+// Backend is the lease substrate the Elector drives: a single-key, linearizable
+// compare-and-set lease. Two implementations satisfy it — the in-memory Store (solo,
+// the default) and StateStore (a CAS over the state-backend axis, the multi-replica HA
+// path). Both expose the same fencing contract:
+//
+//   - Acquire succeeds only if the lease is unheld or EXPIRED at now; on success the
+//     caller holds it until now+ttl under a fresh token.
+//   - Renew extends the lease iff candidate still holds it under `token`; it returns the
+//     token to carry into the next Renew (unchanged for the in-memory store; the new CAS
+//     revision for StateStore, which re-stamps the key every write).
+//
+// THE err RETURN IS LOAD-BEARING (sre AV-1). ok=false with err==nil means the lease was
+// genuinely LOST (a deterministic CAS conflict / expiry) — step down. A non-nil err means
+// the backend could not CONFIRM the outcome (timeout/partition — the state/v1
+// PUT_OUTCOME_UNKNOWN case): the holder must NOT treat that as lost, but hold leadership
+// until its LOCAL ttl genuinely expires (the Elector does this). Collapsing the two into a
+// bare bool — as the spike did — turns every transient backend blip into a leadership
+// flap, the exact split-brain-adjacent thrash a durable backend makes real.
+type Backend interface {
+	Acquire(candidate string, now time.Time, ttl time.Duration) (ok bool, token uint64, err error)
+	Renew(candidate string, token uint64, now time.Time, ttl time.Duration) (ok bool, newToken uint64, err error)
+}
+
+// Store is the in-memory Backend: a single-key, linearizable CAS lease behind a mutex
+// (the solo default — no external dependency). The fencing token (version) is monotonic
+// and bumped on every ACQUISITION (a new leadership term), never on a renewal — so a stale
+// holder that lost and regained the lease is distinguishable. It never errors (the backend
+// is local), so it always returns a nil err.
 type Store struct {
 	mu      sync.Mutex
 	holder  string
@@ -32,30 +57,31 @@ func NewStore() *Store { return &Store{} }
 // Acquire is the compare-and-set: it succeeds only if the lease is unheld or has
 // EXPIRED at now. On success the caller holds it until now+ttl with a new (higher)
 // fencing token. A caller that already holds a live lease gets ok=false (it must
-// Renew, not re-Acquire).
-func (s *Store) Acquire(candidate string, now time.Time, ttl time.Duration) (ok bool, token uint64) {
+// Renew, not re-Acquire). The in-memory store never errors.
+func (s *Store) Acquire(candidate string, now time.Time, ttl time.Duration) (ok bool, token uint64, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.holder != "" && now.Before(s.expiry) {
-		return false, 0
+		return false, 0, nil
 	}
 	s.holder = candidate
 	s.expiry = now.Add(ttl)
 	s.version++
-	return true, s.version
+	return true, s.version, nil
 }
 
 // Renew extends the lease iff candidate still holds it under the same token and it
-// has not expired. It does NOT bump the token (same term). ok=false means the lease
-// was lost (it expired and/or was taken over) — the caller must step down.
-func (s *Store) Renew(candidate string, token uint64, now time.Time, ttl time.Duration) (ok bool) {
+// has not expired. It does NOT bump the token (same term), so newToken == token. ok=false
+// (err==nil) means the lease was genuinely lost (expired and/or taken over) — the caller
+// must step down. The in-memory store never errors.
+func (s *Store) Renew(candidate string, token uint64, now time.Time, ttl time.Duration) (ok bool, newToken uint64, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.holder != candidate || s.version != token || !now.Before(s.expiry) {
-		return false
+		return false, 0, nil
 	}
 	s.expiry = now.Add(ttl)
-	return true
+	return true, token, nil
 }
 
 // Holder reports the live holder at now ("" if none/expired). For tests/observability.
@@ -78,34 +104,50 @@ func (s *Store) Holder(now time.Time) string {
 // keeps leadership for at least ttl of quiet, and is displaced only by true expiry.
 type Elector struct {
 	id    string
-	store *Store
+	store Backend
 	ttl   time.Duration
 
-	leader     bool
-	token      uint64
-	acquiredAt time.Time
+	leader      bool
+	token       uint64
+	acquiredAt  time.Time
+	leaseExpiry time.Time // local view of when our lease lapses (the AV-1 transient-hold bound)
 }
 
-// NewElector returns a candidate for the shared store. ttl is the lease lifetime;
+// NewElector returns a candidate for the shared Backend. ttl is the lease lifetime;
 // drive Step more often than ttl (the Run loop uses ttl/renewDivisor) so the margin
-// absorbs latency spikes.
-func NewElector(id string, store *Store, ttl time.Duration) *Elector {
+// absorbs latency spikes. The Backend may be the in-memory Store (solo) or StateStore
+// (multi-replica HA over the state axis).
+func NewElector(id string, store Backend, ttl time.Duration) *Elector {
 	return &Elector{id: id, store: store, ttl: ttl}
 }
 
 // Step advances election at now and reports whether this candidate is leader after.
-// A leader renews (keeping leadership across transient gaps via the TTL margin); if
-// renewal fails it steps down. A non-leader tries to acquire — which the Store only
-// permits once any prior lease has expired.
+//
+// A leader renews. A renewal that COMMITS keeps leadership and carries the (possibly new)
+// fencing token forward. A renewal that is genuinely REFUSED (ok=false, err==nil — a CAS
+// conflict / expiry) steps down. A renewal that is UNCERTAIN (err!=nil — the backend
+// couldn't confirm) does NOT step down while our LOCAL lease is still valid: we hold
+// leadership until leaseExpiry, then step down (AV-1 — transient backend errors must not
+// thrash leadership). A non-leader tries to acquire, which the Backend permits only once
+// any prior lease has genuinely expired; an acquire error leaves it a follower.
 func (e *Elector) Step(now time.Time) bool {
 	if e.leader {
-		if e.store.Renew(e.id, e.token, now, e.ttl) {
+		ok, newToken, err := e.store.Renew(e.id, e.token, now, e.ttl)
+		switch {
+		case ok:
+			e.token = newToken
+			e.leaseExpiry = now.Add(e.ttl)
 			return true
+		case err != nil && now.Before(e.leaseExpiry):
+			// Uncertain renewal, but our local lease has not lapsed — hold leadership.
+			return true
+		default:
+			// Genuinely lost (conflict/expiry), or uncertain AND our local lease has lapsed.
+			e.leader = false
 		}
-		e.leader = false // lost the lease (renewed too late / taken over)
 	}
-	if ok, token := e.store.Acquire(e.id, now, e.ttl); ok {
-		e.leader, e.token, e.acquiredAt = true, token, now
+	if ok, token, err := e.store.Acquire(e.id, now, e.ttl); err == nil && ok {
+		e.leader, e.token, e.acquiredAt, e.leaseExpiry = true, token, now, now.Add(e.ttl)
 		return true
 	}
 	return false
