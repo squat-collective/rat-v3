@@ -1,6 +1,8 @@
 package arrowticket
 
 import (
+	"errors"
+	"sync"
 	"testing"
 	"time"
 )
@@ -60,3 +62,84 @@ func TestTamperOrWrongKey(t *testing.T) {
 		t.Errorf("malformed err = %v, want ErrMalformed", err)
 	}
 }
+
+// --- gap #7: shared single-use store closes replay across restart/replicas -------------
+
+// fakeCAS is an atomic create-if-absent set (etcd-txn / Redis-SETNX semantics) for tests.
+type fakeCAS struct {
+	mu   sync.Mutex
+	seen map[string]bool
+}
+
+func newFakeCAS() *fakeCAS { return &fakeCAS{seen: map[string]bool{}} }
+
+func (f *fakeCAS) PutIfAbsent(key string) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.seen[key] {
+		return false, nil
+	}
+	f.seen[key] = true
+	return true, nil
+}
+
+// TestSharedStoreClosesReplayAcrossMinters is the gap-#7 property: two minters (a restart, or a
+// second replica — same key, SHARED single-use store) cannot both redeem one ticket. A ticket
+// consumed via minter A is a replay via minter B. With the default per-process store, B would NOT
+// catch it — which is the gap.
+func TestSharedStoreClosesReplayAcrossMinters(t *testing.T) {
+	key := []byte("producer-key")
+	store := NewCASStore(newFakeCAS(), "arrowticket/used/")
+	a := NewMinterWithStore(key, store)
+	b := NewMinterWithStore(key, store) // a restarted / second-replica producer, same shared store
+
+	tk, err := a.Mint("stream-1", "rat-format", "tenantA", time.Minute)
+	if err != nil {
+		t.Fatalf("Mint: %v", err)
+	}
+	if err := a.Validate(tk, "stream-1", "rat-format", "tenantA"); err != nil {
+		t.Fatalf("first redemption (A) rejected: %v", err)
+	}
+	if err := b.Validate(tk, "stream-1", "rat-format", "tenantA"); err != ErrReplay {
+		t.Fatalf("replay via B err = %v, want ErrReplay (shared store must close it)", err)
+	}
+}
+
+// TestCASStoreAtomicSingleUse: two concurrent redemptions of ONE ticket id yield exactly one
+// firstUse — the atomic create-if-absent is what prevents a double-spend race (run under -race).
+func TestCASStoreAtomicSingleUse(t *testing.T) {
+	store := NewCASStore(newFakeCAS(), "p/")
+	var wins int32
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if firstUse, _ := store.Consume("ticket-xyz"); firstUse {
+				mu.Lock()
+				wins++
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+	if wins != 1 {
+		t.Fatalf("concurrent Consume firstUse count = %d, want exactly 1", wins)
+	}
+}
+
+// TestStoreErrorFailsClosed: an unconfirmable single-use check rejects the ticket (fail closed) —
+// never silently accepts a possible replay.
+func TestStoreErrorFailsClosed(t *testing.T) {
+	m := NewMinterWithStore([]byte("k"), errStore{})
+	tk, _ := m.Mint("stream-1", "rat-format", "tenantA", time.Minute)
+	err := m.Validate(tk, "stream-1", "rat-format", "tenantA")
+	if err == nil || err == ErrReplay {
+		t.Fatalf("store-error Validate err = %v, want a fail-closed error", err)
+	}
+}
+
+type errStore struct{}
+
+func (errStore) Consume(string) (bool, error) { return false, errors.New("backend unavailable") }
