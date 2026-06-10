@@ -17,6 +17,46 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-10 — `rat/6.17`: DX-5…9 — interpolation, the vault secret-backend, the watch loop
+
+The last engineering batch of the DX review (only DX-2, the publish decision, remains):
+
+- **DX-5 — [ADR-050](../docs/architecture/adrs/050-plane-file-env-interpolation.md), plane-file
+  `${VAR}` interpolation + `platform/.env`.** `planeFromRaw` expands `${VAR}` from the process
+  env in `addr` / `endpoint` / `launch.image` / `launch.env` values — braced form only, `$${`
+  escapes, **undefined var = load error naming the variable** (so `rat validate` reports it
+  pre-boot). The platform's facts (creds, infra host/ports, knobs) now live ONCE in
+  `platform/.env`: compose reads it natively, launch mode sources it, socket-mount gets
+  `--env-file`. The `RAT_SECRETS` blob keeps its structure, composed from the tokens.
+  **Verified:** `podman compose config` renders **byte-identical** to the pre-refactor
+  baseline for both compose files; `rat validate` with the env sourced reproduces the exact
+  pre-refactor findings, and without it fails loud on `${PLATFORM_INFRA_HOST}`. (Plus a
+  gitignore carve-out: `.env` was globally ignored; the demo fact sheet is committed.)
+- **DX-6 — `plugins/secret/vault-py`, the production secret-backend.** Vault KV v2 behind the
+  frozen `rat://secret/v1/resolve`, fetching **at resolve time** — **proven live** against a
+  dev Vault container: resolve (tenant `acme`) → cross-tenant denial (`evil`, found=false) →
+  unknown-ref denial → `kv put` v2 → **re-resolve against the same uninterrupted process
+  returns the rotated value. Zero restarts.** Anti-enumeration semantics held (404 AND 403 →
+  found=false, logged); Vault-down is `UNAVAILABLE`, never not-found. Stdlib urllib only.
+  `rat plugin check` passes; the image builds; no `harness_test.py` on purpose (the
+  postgres-py precedent — the in-process matrix stays 32/32).
+- **DX-7 — `rat plugin dev`, the watch loop.** Mtime-digest polling (no fsnotify — the
+  no-new-dependency discipline holds); on change: `check` then `test` (`--check-only` for the
+  instant loop); failures print and keep watching; tooling litter (`.rat/`, `__pycache__`)
+  can't retrigger it. Digest unit-tested; loop verified live (scaffold → ✓ → corrupt the
+  manifest → ✗ with the yaml error in ~1s → still watching).
+- **DX-8 — ADR-018 Q01 resolved in place:** the protoc-35 hybrid IS the settled python
+  codegen shape (nothing buf-native exists to pin); failure modes documented as the
+  toolchain's, not the proto's.
+- **DX-9 — `rat call` accepts flags in any order** (`parseWithPositional` lifts the one
+  positional out wherever it sits); the order the platform README used to ship now works.
+- **Found + fixed en route:** `.dockerignore`'s allowlist still said `!examples` after the
+  ADR-038 move — **every `make plugin-images` build had been silently broken since the
+  restructure** (vault-py AND postgres-py images verified building after `!plugins`); and the
+  **ADR index had stopped at 038** — rows 039–050 restored.
+- **Gates:** full `make verify` end-to-end + conformance 32/32 + the cmd/rat suite with 9 new
+  tests across the five items.
+
 ## 2026-06-10 — `rat/6.16`: `rat capabilities` + the vector lint gate (backlog DX-3 + DX-4)
 
 Two more DX-review engineering items, plus a broken gate found and fixed along the way:
