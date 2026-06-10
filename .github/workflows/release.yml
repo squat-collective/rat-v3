@@ -3,7 +3,7 @@
 # On a phase-seal tag (rat/N.M) this ships rat two ways, so getting started is
 # `curl … && chmod +x ./rat` (no clone, no make):
 #   1. a STATIC, versioned `rat` binary per OS/arch → a GitHub Release (+ SHA256SUMS + install.sh)
-#   2. the multi-arch DAEMON IMAGE → ghcr.io/<owner>/rat:<version> (+ :latest)
+#   2. the multi-arch DAEMON IMAGE + plugin-base images → ghcr.io/<owner>/<repo>[-plugin-base-*]:<version> (+ :latest)
 #
 # The build steps mirror `make release-build` / `make release-image` (reproducible locally),
 # only run directly on the runner here for speed (the runner's job is to host toolchains).
@@ -100,8 +100,8 @@ jobs:
           build-args: VERSION=${{ steps.v.outputs.version }}
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/rat:${{ steps.v.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/rat:latest
+            ghcr.io/${{ github.repository }}:${{ steps.v.outputs.version }}
+            ghcr.io/${{ github.repository }}:latest
       # The plugin-base images ARE the SDK distribution (ADR-051 / DX-2: "defer PyPI,
       # use GHCR") — plugin authors FROM these with no clone of this repo.
       - name: Build + push rat-plugin-base-go
@@ -111,8 +111,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/rat-plugin-base-go:${{ steps.v.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/rat-plugin-base-go:latest
+            ghcr.io/${{ github.repository }}-plugin-base-go:${{ steps.v.outputs.version }}
+            ghcr.io/${{ github.repository }}-plugin-base-go:latest
       - name: Build + push rat-plugin-base-py
         uses: docker/build-push-action@v6
         with:
@@ -120,5 +120,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/rat-plugin-base-py:${{ steps.v.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/rat-plugin-base-py:latest
+            ghcr.io/${{ github.repository }}-plugin-base-py:${{ steps.v.outputs.version }}
+            ghcr.io/${{ github.repository }}-plugin-base-py:latest
