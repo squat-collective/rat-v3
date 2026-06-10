@@ -53,7 +53,7 @@ package rat.state.v1;
 
 import "rat/common/v1/annotations.proto";
 
-option go_package = "github.com/rat-dev/rat/gen/rat/state/v1;statev1";
+option go_package = "github.com/le-squat/rat/gen/rat/state/v1;statev1";
 
 service StateService {
   // rat://state/v1/get — read one key (plugin+tenant relative).

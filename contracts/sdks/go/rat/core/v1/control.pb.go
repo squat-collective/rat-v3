@@ -548,7 +548,7 @@ const file_rat_core_v1_control_proto_rawDesc = "" +
 	"\x0eControlService\x12Y\n" +
 	"\x0eRegisterPlugin\x12\".rat.core.v1.RegisterPluginRequest\x1a#.rat.core.v1.RegisterPluginResponse\x12_\n" +
 	"\x10DeregisterPlugin\x12$.rat.core.v1.DeregisterPluginRequest\x1a%.rat.core.v1.DeregisterPluginResponse\x12P\n" +
-	"\vListPlugins\x12\x1f.rat.core.v1.ListPluginsRequest\x1a .rat.core.v1.ListPluginsResponseB/Z-github.com/rat-dev/rat/gen/rat/core/v1;corev1b\x06proto3"
+	"\vListPlugins\x12\x1f.rat.core.v1.ListPluginsRequest\x1a .rat.core.v1.ListPluginsResponseB0Z.github.com/le-squat/rat/gen/rat/core/v1;corev1b\x06proto3"
 
 var (
 	file_rat_core_v1_control_proto_rawDescOnce sync.Once

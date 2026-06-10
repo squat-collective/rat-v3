@@ -25,14 +25,14 @@ _sym_db = _symbol_database.Default()
 from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1crat/billing/v1/billing.proto\x12\x0erat.billing.v1\x1a\x1frat/common/v1/annotations.proto\"\xbb\x01\n\nUsageEvent\x12\r\n\x05meter\x18\x01 \x01(\t\x12\x10\n\x08quantity\x18\x02 \x01(\x01\x12\x19\n\x11timestamp_unix_ms\x18\x03 \x01(\x03\x12>\n\ndimensions\x18\x04 \x03(\x0b\x32*.rat.billing.v1.UsageEvent.DimensionsEntry\x1a\x31\n\x0f\x44imensionsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"A\n\rRecordRequest\x12*\n\x06\x65vents\x18\x02 \x03(\x0b\x32\x1a.rat.billing.v1.UsageEventJ\x04\x08\x01\x10\x02\"\"\n\x0eRecordResponse\x12\x10\n\x08recorded\x18\x01 \x01(\x03\x32v\n\x0e\x42illingService\x12\x64\n\x06Record\x12\x1d.rat.billing.v1.RecordRequest\x1a\x1e.rat.billing.v1.RecordResponse\"\x1b\x8a\x97\"\x17rat://billing/v1/recordB5Z3github.com/rat-dev/rat/gen/rat/billing/v1;billingv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1crat/billing/v1/billing.proto\x12\x0erat.billing.v1\x1a\x1frat/common/v1/annotations.proto\"\xbb\x01\n\nUsageEvent\x12\r\n\x05meter\x18\x01 \x01(\t\x12\x10\n\x08quantity\x18\x02 \x01(\x01\x12\x19\n\x11timestamp_unix_ms\x18\x03 \x01(\x03\x12>\n\ndimensions\x18\x04 \x03(\x0b\x32*.rat.billing.v1.UsageEvent.DimensionsEntry\x1a\x31\n\x0f\x44imensionsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"A\n\rRecordRequest\x12*\n\x06\x65vents\x18\x02 \x03(\x0b\x32\x1a.rat.billing.v1.UsageEventJ\x04\x08\x01\x10\x02\"\"\n\x0eRecordResponse\x12\x10\n\x08recorded\x18\x01 \x01(\x03\x32v\n\x0e\x42illingService\x12\x64\n\x06Record\x12\x1d.rat.billing.v1.RecordRequest\x1a\x1e.rat.billing.v1.RecordResponse\"\x1b\x8a\x97\"\x17rat://billing/v1/recordB6Z4github.com/le-squat/rat/gen/rat/billing/v1;billingv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rat.billing.v1.billing_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z3github.com/rat-dev/rat/gen/rat/billing/v1;billingv1'
+  _globals['DESCRIPTOR']._serialized_options = b'Z4github.com/le-squat/rat/gen/rat/billing/v1;billingv1'
   _globals['_USAGEEVENT_DIMENSIONSENTRY']._loaded_options = None
   _globals['_USAGEEVENT_DIMENSIONSENTRY']._serialized_options = b'8\001'
   _globals['_BILLINGSERVICE'].methods_by_name['Record']._loaded_options = None

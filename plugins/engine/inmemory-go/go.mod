@@ -1,9 +1,9 @@
-module github.com/rat-dev/rat/plugins/engine/inmemory-go
+module github.com/le-squat/rat/plugins/engine/inmemory-go
 
 go 1.25.0
 
 require (
-	github.com/rat-dev/rat/gen v0.0.0
+	github.com/le-squat/rat/gen v0.0.0
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
 )
@@ -15,4 +15,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
 )
 
-replace github.com/rat-dev/rat/gen => ../../../contracts/sdks/go
+replace github.com/le-squat/rat/gen => ../../../contracts/sdks/go

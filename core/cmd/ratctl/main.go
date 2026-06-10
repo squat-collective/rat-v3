@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rat-dev/rat/core/client"
+	"github.com/le-squat/rat/core/client"
 )
 
 func main() {

@@ -27,7 +27,7 @@ syntax = "proto3";
 
 package rat.common.v1;
 
-option go_package = "github.com/rat-dev/rat/gen/rat/common/v1;commonv1";
+option go_package = "github.com/le-squat/rat/gen/rat/common/v1;commonv1";
 
 enum AuditOutcome {
   AUDIT_OUTCOME_UNSPECIFIED = 0;

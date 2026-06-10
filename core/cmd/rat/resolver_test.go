@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/rat-dev/rat/core/manifest"
+	"github.com/le-squat/rat/core/manifest"
 )
 
 func mkManifest(name string, provides, requires []string) *manifest.Manifest {

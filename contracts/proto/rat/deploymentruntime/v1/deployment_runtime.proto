@@ -23,7 +23,7 @@ package rat.deploymentruntime.v1;
 
 import "rat/common/v1/annotations.proto";
 
-option go_package = "github.com/rat-dev/rat/gen/rat/deploymentruntime/v1;deploymentruntimev1";
+option go_package = "github.com/le-squat/rat/gen/rat/deploymentruntime/v1;deploymentruntimev1";
 
 service DeploymentRuntimeService {
   // rat://deployment-runtime/v1/launch — start a plugin instance from an image.

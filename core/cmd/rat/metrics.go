@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rat-dev/rat/core/metrics"
+	"github.com/le-squat/rat/core/metrics"
 )
 
 // serveMetrics starts the /metrics endpoint on addr (Prometheus text exposition), returning a

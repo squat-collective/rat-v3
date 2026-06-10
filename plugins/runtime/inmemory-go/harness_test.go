@@ -22,9 +22,9 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/rat-dev/rat/gen/rat/common/v1"
-	corev1 "github.com/rat-dev/rat/gen/rat/core/v1"
-	runtimev1 "github.com/rat-dev/rat/gen/rat/runtime/v1"
+	commonv1 "github.com/le-squat/rat/gen/rat/common/v1"
+	corev1 "github.com/le-squat/rat/gen/rat/core/v1"
+	runtimev1 "github.com/le-squat/rat/gen/rat/runtime/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"

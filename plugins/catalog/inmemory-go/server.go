@@ -10,8 +10,8 @@ package main
 import (
 	"context"
 
-	commonv1 "github.com/rat-dev/rat/gen/rat/common/v1"
-	catalogv1 "github.com/rat-dev/rat/gen/rat/catalog/v1"
+	commonv1 "github.com/le-squat/rat/gen/rat/common/v1"
+	catalogv1 "github.com/le-squat/rat/gen/rat/catalog/v1"
 )
 
 type catalogServer struct {

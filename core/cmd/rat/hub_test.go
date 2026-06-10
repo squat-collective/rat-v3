@@ -6,7 +6,7 @@ import (
 	"net"
 	"testing"
 
-	corev1 "github.com/rat-dev/rat/gen/rat/core/v1"
+	corev1 "github.com/le-squat/rat/gen/rat/core/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"

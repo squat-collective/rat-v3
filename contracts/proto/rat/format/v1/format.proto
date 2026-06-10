@@ -31,7 +31,7 @@ package rat.format.v1;
 import "rat/common/v1/annotations.proto";
 import "rat/common/v1/data.proto";
 
-option go_package = "github.com/rat-dev/rat/gen/rat/format/v1;formatv1";
+option go_package = "github.com/le-squat/rat/gen/rat/format/v1;formatv1";
 
 service FormatService {
   // Resolve a table ref to a readable Arrow stream descriptor. Bulk bytes flow

@@ -19,7 +19,7 @@
 package strategyv1
 
 import (
-	v1 "github.com/rat-dev/rat/gen/rat/common/v1"
+	v1 "github.com/le-squat/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -169,7 +169,7 @@ const file_rat_strategy_v1_strategy_proto_rawDesc = "" +
 	"\rApplyResponse\x122\n" +
 	"\x06result\x18\x01 \x01(\v2\x1a.rat.common.v1.WriteResultR\x06result2v\n" +
 	"\x0fStrategyService\x12c\n" +
-	"\x05Apply\x12\x1d.rat.strategy.v1.ApplyRequest\x1a\x1e.rat.strategy.v1.ApplyResponse\"\x1b\x8a\x97\"\x17rat://strategy/v1/applyB7Z5github.com/rat-dev/rat/gen/rat/strategy/v1;strategyv1b\x06proto3"
+	"\x05Apply\x12\x1d.rat.strategy.v1.ApplyRequest\x1a\x1e.rat.strategy.v1.ApplyResponse\"\x1b\x8a\x97\"\x17rat://strategy/v1/applyB8Z6github.com/le-squat/rat/gen/rat/strategy/v1;strategyv1b\x06proto3"
 
 var (
 	file_rat_strategy_v1_strategy_proto_rawDescOnce sync.Once

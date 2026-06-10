@@ -11,8 +11,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/rat-dev/rat/core/testplugins/catalogsvc"
-	catalogv1 "github.com/rat-dev/rat/gen/rat/catalog/v1"
+	"github.com/le-squat/rat/core/testplugins/catalogsvc"
+	catalogv1 "github.com/le-squat/rat/gen/rat/catalog/v1"
 	"google.golang.org/grpc"
 )
 

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/rat-dev/rat/core/manifest"
+	"github.com/le-squat/rat/core/manifest"
 )
 
 func man(name, kind string, provides, requires []string) *manifest.Manifest {

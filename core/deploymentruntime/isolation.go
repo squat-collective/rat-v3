@@ -1,7 +1,7 @@
 package deploymentruntime
 
 import (
-	deploymentruntimev1 "github.com/rat-dev/rat/gen/rat/deploymentruntime/v1"
+	deploymentruntimev1 "github.com/le-squat/rat/gen/rat/deploymentruntime/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

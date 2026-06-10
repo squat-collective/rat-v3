@@ -5,8 +5,8 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/rat-dev/rat/core/conformance"
-	"github.com/rat-dev/rat/core/manifest"
+	"github.com/le-squat/rat/core/conformance"
+	"github.com/le-squat/rat/core/manifest"
 )
 
 func vcaps(uris ...string) []manifest.CapabilityRef {

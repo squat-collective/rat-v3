@@ -16,7 +16,7 @@ package rat.strategy.v1;
 import "rat/common/v1/annotations.proto";
 import "rat/common/v1/data.proto";
 
-option go_package = "github.com/rat-dev/rat/gen/rat/strategy/v1;strategyv1";
+option go_package = "github.com/le-squat/rat/gen/rat/strategy/v1;strategyv1";
 
 service StrategyService {
   // rat://strategy/v1/apply — apply the strategy for one pipeline run. The

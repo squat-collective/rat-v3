@@ -13,7 +13,7 @@ package rat.notifications.v1;
 
 import "rat/common/v1/annotations.proto";
 
-option go_package = "github.com/rat-dev/rat/gen/rat/notifications/v1;notificationsv1";
+option go_package = "github.com/le-squat/rat/gen/rat/notifications/v1;notificationsv1";
 
 service NotificationsService {
   // rat://notifications/v1/send — deliver one notification.

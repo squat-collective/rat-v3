@@ -11,7 +11,7 @@ import (
 	"net"
 	"os"
 
-	statev1 "github.com/rat-dev/rat/gen/rat/state/v1"
+	statev1 "github.com/le-squat/rat/gen/rat/state/v1"
 	"google.golang.org/grpc"
 )
 

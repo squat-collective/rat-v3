@@ -18,8 +18,8 @@ import (
 	"os"
 	"sync"
 
-	commonv1 "github.com/rat-dev/rat/gen/rat/common/v1"
-	formatv1 "github.com/rat-dev/rat/gen/rat/format/v1"
+	commonv1 "github.com/le-squat/rat/gen/rat/common/v1"
+	formatv1 "github.com/le-squat/rat/gen/rat/format/v1"
 	"google.golang.org/protobuf/proto"
 )
 

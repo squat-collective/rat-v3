@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	corev1 "github.com/rat-dev/rat/gen/rat/core/v1"
-	statev1 "github.com/rat-dev/rat/gen/rat/state/v1"
+	corev1 "github.com/le-squat/rat/gen/rat/core/v1"
+	statev1 "github.com/le-squat/rat/gen/rat/state/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"

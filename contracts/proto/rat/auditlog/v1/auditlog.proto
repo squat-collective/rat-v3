@@ -53,7 +53,7 @@ package rat.auditlog.v1;
 import "rat/common/v1/annotations.proto";
 import "rat/common/v1/audit.proto";
 
-option go_package = "github.com/rat-dev/rat/gen/rat/auditlog/v1;auditlogv1";
+option go_package = "github.com/le-squat/rat/gen/rat/auditlog/v1;auditlogv1";
 
 // NOTE (0c): the cross-cutting audit RECORD — common.v1.AuditRecord +
 // common.v1.AuditOutcome — lives in common/v1/audit.proto, because the CORE authors

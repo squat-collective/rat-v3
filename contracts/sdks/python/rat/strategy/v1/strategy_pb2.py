@@ -26,14 +26,14 @@ from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotatio
 from rat.common.v1 import data_pb2 as rat_dot_common_dot_v1_dot_data__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1erat/strategy/v1/strategy.proto\x12\x0frat.strategy.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"\x90\x01\n\x0c\x41pplyRequest\x12\'\n\x06source\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.TableRef\x12\'\n\x06target\x18\x03 \x01(\x0b\x32\x17.rat.common.v1.TableRef\x12\x0f\n\x07options\x18\x04 \x01(\x0c\x12\x17\n\x0fidempotency_key\x18\x05 \x01(\tJ\x04\x08\x01\x10\x02\";\n\rApplyResponse\x12*\n\x06result\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.WriteResult2v\n\x0fStrategyService\x12\x63\n\x05\x41pply\x12\x1d.rat.strategy.v1.ApplyRequest\x1a\x1e.rat.strategy.v1.ApplyResponse\"\x1b\x8a\x97\"\x17rat://strategy/v1/applyB7Z5github.com/rat-dev/rat/gen/rat/strategy/v1;strategyv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1erat/strategy/v1/strategy.proto\x12\x0frat.strategy.v1\x1a\x1frat/common/v1/annotations.proto\x1a\x18rat/common/v1/data.proto\"\x90\x01\n\x0c\x41pplyRequest\x12\'\n\x06source\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.TableRef\x12\'\n\x06target\x18\x03 \x01(\x0b\x32\x17.rat.common.v1.TableRef\x12\x0f\n\x07options\x18\x04 \x01(\x0c\x12\x17\n\x0fidempotency_key\x18\x05 \x01(\tJ\x04\x08\x01\x10\x02\";\n\rApplyResponse\x12*\n\x06result\x18\x01 \x01(\x0b\x32\x1a.rat.common.v1.WriteResult2v\n\x0fStrategyService\x12\x63\n\x05\x41pply\x12\x1d.rat.strategy.v1.ApplyRequest\x1a\x1e.rat.strategy.v1.ApplyResponse\"\x1b\x8a\x97\"\x17rat://strategy/v1/applyB8Z6github.com/le-squat/rat/gen/rat/strategy/v1;strategyv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rat.strategy.v1.strategy_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z5github.com/rat-dev/rat/gen/rat/strategy/v1;strategyv1'
+  _globals['DESCRIPTOR']._serialized_options = b'Z6github.com/le-squat/rat/gen/rat/strategy/v1;strategyv1'
   _globals['_STRATEGYSERVICE'].methods_by_name['Apply']._loaded_options = None
   _globals['_STRATEGYSERVICE'].methods_by_name['Apply']._serialized_options = b'\212\227\"\027rat://strategy/v1/apply'
   _globals['_APPLYREQUEST']._serialized_start=111

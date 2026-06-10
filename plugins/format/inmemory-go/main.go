@@ -13,7 +13,7 @@ import (
 	"os"
 	"strconv"
 
-	formatv1 "github.com/rat-dev/rat/gen/rat/format/v1"
+	formatv1 "github.com/le-squat/rat/gen/rat/format/v1"
 	"google.golang.org/grpc"
 )
 

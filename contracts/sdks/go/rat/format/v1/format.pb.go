@@ -34,7 +34,7 @@
 package formatv1
 
 import (
-	v1 "github.com/rat-dev/rat/gen/rat/common/v1"
+	v1 "github.com/le-squat/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -613,7 +613,7 @@ const file_rat_format_v1_format_proto_rawDesc = "" +
 	"\x06Append\x12\x1c.rat.format.v1.AppendRequest\x1a\x1d.rat.format.v1.AppendResponse\"\x1a\x8a\x97\"\x16rat://format/v1/append\x12]\n" +
 	"\x05Merge\x12\x1b.rat.format.v1.MergeRequest\x1a\x1c.rat.format.v1.MergeResponse\"\x19\x8a\x97\"\x15rat://format/v1/merge\x12m\n" +
 	"\tOverwrite\x12\x1f.rat.format.v1.OverwriteRequest\x1a .rat.format.v1.OverwriteResponse\"\x1d\x8a\x97\"\x19rat://format/v1/overwrite\x12i\n" +
-	"\bMaintain\x12\x1e.rat.format.v1.MaintainRequest\x1a\x1f.rat.format.v1.MaintainResponse\"\x1c\x8a\x97\"\x18rat://format/v1/maintainB3Z1github.com/rat-dev/rat/gen/rat/format/v1;formatv1b\x06proto3"
+	"\bMaintain\x12\x1e.rat.format.v1.MaintainRequest\x1a\x1f.rat.format.v1.MaintainResponse\"\x1c\x8a\x97\"\x18rat://format/v1/maintainB4Z2github.com/le-squat/rat/gen/rat/format/v1;formatv1b\x06proto3"
 
 var (
 	file_rat_format_v1_format_proto_rawDescOnce sync.Once

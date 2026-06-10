@@ -30,7 +30,7 @@ import (
 	"sync"
 	"time"
 
-	deploymentruntimev1 "github.com/rat-dev/rat/gen/rat/deploymentruntime/v1"
+	deploymentruntimev1 "github.com/le-squat/rat/gen/rat/deploymentruntime/v1"
 )
 
 // defaultRPCTimeout bounds a single runtime RPC when Config.RPCTimeout is unset.
