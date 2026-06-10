@@ -85,6 +85,26 @@
           {"type": "PUT", "key": "sys/leader", "revision": 4}
         ]
       }
+    },
+    {
+      "step": "create_if_absent_new",
+      "op": "create-if-absent",
+      "key": "cia/lease",
+      "value": "first",
+      "expect": { "outcome": "COMMITTED" }
+    },
+    {
+      "step": "create_if_absent_conflict",
+      "op": "create-if-absent",
+      "key": "cia/lease",
+      "value": "second",
+      "expect": { "outcome": "CONFLICT" }
+    },
+    {
+      "step": "create_if_absent_no_overwrite",
+      "op": "get",
+      "key": "cia/lease",
+      "expect": { "found": true, "value": "first" }
     }
   ],
   "errors": [

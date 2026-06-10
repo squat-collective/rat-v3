@@ -98,6 +98,9 @@ class Rig:
         if op == "watch":
             return list(self.stub.Watch(
                 state_pb2.WatchRequest(prefix=s.get("prefix", ""), from_revision=s.get("from_revision", 0))))
+        if op == "create-if-absent":
+            return self.stub.CreateIfAbsent(state_pb2.CreateIfAbsentRequest(
+                key=_resolve_key(s), value=s.get("value", "").encode("utf-8")))
         raise AssertionError(f'unknown op {op!r}')
 
 
@@ -110,7 +113,7 @@ def _assert_success(s, resp):
             assert resp.value.decode("utf-8") == e["value"], f'value = {resp.value!r}, want {e["value"]!r}'
         if "revision" in e:
             assert resp.revision == e["revision"], f'revision = {resp.revision}, want {e["revision"]}'
-    elif op == "put":
+    elif op in ("put", "create-if-absent"):
         if "outcome" in e:
             assert resp.outcome == _OUTCOME[e["outcome"]], f'outcome = {resp.outcome}, want {e["outcome"]}'
         if "revision" in e:

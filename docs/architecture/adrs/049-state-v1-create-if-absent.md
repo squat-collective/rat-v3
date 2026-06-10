@@ -14,9 +14,14 @@
 >   etcd/Redis). Tested end-to-end (Minter → CASStore → adapter) + shared-across-minters (replay closed
 >   across restart/replicas).
 >
-> **Remaining (Go-side adoption complete):** Python state-backend impl + a cross-language golden vector
-> in `state-v1.json` (kept out of the shared vector file for now so the optional capability doesn't
-> force every reference backend to implement it at once).
+> **Cross-language conformance DONE (2026-06-10):** the two Python references — `inmemory-py` and
+> `sqlite-py` (the latter atomic via `BEGIN IMMEDIATE`) — implement `CreateIfAbsent` and pass the shared
+> `state-v1.json` golden vector (now carrying create→COMMITTED, re-create→CONFLICT, get→no-overwrite)
+> alongside `inmemory-go`. All three references conform. **ADR-049 is fully adopted.** Note: the vector
+> steps live in the mandatory `lifecycle` and the reference backends all implement the full
+> multi-replica tier; a genuinely solo-only third-party backend (not implementing the optional
+> capability) would carry its own conformance profile. `memory-py`/`postgres-py` (not vector-harnessed)
+> can add it for production HA backends — `postgres-py` via `INSERT … ON CONFLICT DO NOTHING`.
 
 > Decision-first. This amends the **frozen** `state/v1` wire, so it is written and reviewed before any
 > code (CLAUDE.md #3). It follows the exact precedent of [ADR-035](035-state-axis-delete.md) (the

@@ -37,6 +37,20 @@ class StateServicer(state_pb2_grpc.StateServiceServicer):
         )
         return state_pb2.PutResponse(outcome=outcome, revision=rev)
 
+    def CreateIfAbsent(self, request, context):
+        """Atomically create the key only if absent (ADR-049), serialized by BEGIN IMMEDIATE.
+        COMMITTED == created; CONFLICT == already existed (no write)."""
+        try:
+            validate_key(request.key, False)
+        except GrammarError as e:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+        created, rev = self.store.create_if_absent(request.key, request.value)
+        outcome = (
+            state_pb2.PutOutcome.PUT_OUTCOME_COMMITTED if created
+            else state_pb2.PutOutcome.PUT_OUTCOME_CONFLICT
+        )
+        return state_pb2.CreateIfAbsentResponse(outcome=outcome, revision=rev)
+
     def List(self, request, context):
         try:
             validate_key(request.prefix, True)
