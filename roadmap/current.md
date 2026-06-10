@@ -4,29 +4,44 @@
 > completion history lives in [`done.md`](done.md); the phase map in [`phases.md`](phases.md).
 > Updated: 2026-06-10.
 
-## 🛡️ Latest — `rat/6.7`: core hardenings ported from the clean-room (ADRs 042–048)
+## ✅ Latest — `rat/6.13`: the code-level review arc is COMPLETE
 
-The 7 production-hardening gap fixes (sealed on the clean-room as `clean-room/2.0`) are now on `main`:
-channel-auth plugin identity (042) · state-CAS HA lease + AV-1 (043) · bounded reconciler RPCs +
-decoupled status (044) · label/selector provider selection (045) · native `/metrics` + durable audit
-(046) · hub transparent proxy + pooling (047) · arrow-ticket shared single-use store (048). Cherry-picked
-onto the reference corpus (no branch merge — the wipe stays off `main`); full `core` suite `-race`-green
-**including `composition` against the real Go providers**. No wire change, six-thing count held, no new
-dependency. Per-ADR follow-ons (mTLS · `state/v1` create-if-absent · parallel reconcile · selector
-v1.5/v2 · OTel spans · NATS-leaf) remain open. See [done.md](done.md) for the table.
+A from-scratch code-level review of `core/` + the protos (deliberately ignoring docs/roadmap) found
+**7 structural gaps** between the contracts (which describe a security-complete platform) and the spike
+core (candid in its comments about what was deferred). All 7 were fixed, sealed on the clean-room
+(`clean-room/2.0`), **ported to `main`**, and then a frozen-contract amendment + its full adoption
+followed — `main` advanced `rat/6.7` → `rat/6.13`, each step **additive, six-thing core held, no new
+dependency, `-race`-green throughout** (incl. `composition` against the real Go providers).
+
+**The 7 hardenings (ADRs 042–048, on `main` at `rat/6.7`):** #2 channel-authenticated plugin identity ·
+#1 state-CAS HA lease (+ AV-1 transient-hold) · #4 bounded reconciler RPCs + decoupled status · #3
+label/selector provider selection · #6 native `/metrics` + durable audit · #5 hub transparent proxy +
+connection pooling · #7 arrow-ticket shared single-use store.
+
+**The create-if-absent line ([ADR-049](../docs/architecture/adrs/049-state-v1-create-if-absent.md)):**
+`state/v1` gained an additive, optional, capability-gated `CreateIfAbsent` RPC (`6.8`) → adopted by the
+HA lease bootstrap, closing the 043 cold-start race (`6.9`) → fixed an arrow-ticket same-millisecond
+replay bug the flaky test exposed (`6.10`) → adopted by the arrow-ticket store (`6.11`) → implemented in
+both Python references + a cross-language golden vector (`6.12`) → implemented in `postgres-py` for
+production HA, verified against a real Postgres incl. 16-connection concurrency (`6.13`). **Every state
+backend on `main` — `inmemory-go`, `inmemory-py`, `sqlite-py`, `postgres-py` — now has it.**
+
+**Nothing from the review remains open.** The only follow-ons are longer-horizon ADR items: mTLS +
+`SubjectAssertion` signing (the full identity keystone) · OTel spans + signed/rotated audit · NATS-leaf
+cross-machine federation · richer selector operators + plane `select:` ergonomics + load-balanced
+replicas · fully-parallel per-plugin reconcile. See [done.md](done.md) for the per-tag log.
 
 ## Status one-liner
 
-**Phases 0–9 are SEALED** (`rat/1.5` contracts → `rat/2.0` core → `rat/2.5`–`6.0` across
-platform · surfaces · distribution · authoring · authoring↔runtime · dependency resolution ·
-marketplace · live control). Everything ≤ `rat/2.0` is the **frozen wire**; every phase since
-has been additive. **Phase 10 (workspace federation + the security model) is IN-FLIGHT**,
-consolidated on the `phase-10` integration branch (not yet sealed). `main` is the sealed line
-at **`rat/6.6`** — most recently the port of the clean-room DX improvements + ADR-039/040/041
-(kind-aware scaffold · authoring gate · published ports · pluggable CLI · `rat context`; see
-[done.md](done.md) 2026-06-09). The from-scratch rebuild + remote-dev-flow experiment those came
-from is sealed separately at tag **`clean-room/1.0`** (a parallel line, not merged — its
-`plugins/`+`platform/` wipe would destroy this corpus).
+**Phases 0–9 are SEALED** (`rat/1.5` contracts → `rat/2.0` core → `rat/2.5`–`6.0`). Everything ≤
+`rat/2.0` is the **frozen wire**; every tag since is additive. `main` is the sealed line at
+**`rat/6.13`**: `rat/6.6` ported the clean-room DX improvements (ADR-039/040/041), `rat/6.7` the 7 core
+hardenings (ADRs 042–048), and `rat/6.8`–`6.13` the `state/v1` create-if-absent amendment (ADR-049) +
+its full adoption (lease · ticket store · all four state backends). The from-scratch rebuild +
+remote-dev-flow experiment the hardenings came from is sealed separately at **`clean-room/2.0`** (a
+parallel line, not merged — its `plugins/`+`platform/` wipe would destroy this corpus). **ADR-042's
+channel-authenticated identity also closes most of the Phase-10 "direct-gateway `--as` trust" debt
+below** (the plugin door now authenticates by token; the wire `--as` is no longer trusted there).
 
 ## 🔵 Phase 10 — workspace federation + security (in-flight)
 
@@ -39,9 +54,12 @@ Built on `phase-10` (ADRs [029](../docs/architecture/adrs/029-plugin-runtime-sdk
   **`state/v1 Delete`** (ADR-035, additive wire method) · **RatFS** — `rat://` as a native
   editable VS Code folder over the state axis through the hub.
 
-**Still owed in Phase 10:** gateway-level identity enforcement for *direct* (non-hub) access
-(today the per-plane gateway still trusts the wire `--as`; the hub closes it at the edge);
-subject-stamping onto the forwarded envelope. Then seal → cut a `rat/6.x` tag.
+**Still owed in Phase 10 (largely addressed on `main`):** plugin-to-plugin identity forgery is **closed**
+by [ADR-042](../docs/architecture/adrs/042-channel-authenticated-plugin-identity.md) (`rat/6.7`) — the
+plugin door authenticates by per-launch token, so the wire `--as` is no longer trusted there. What
+remains is the *end-user* principal: `SubjectAssertion` signing + mTLS on the core↔plugin channel (the
+ADR-042 follow-on). The `phase-10` integration branch itself was never formally "sealed"; its reusable
+outputs reached `main` via the clean-room ports instead (`rat/6.6`–`6.13`).
 
 ## 🧹 Active: the professionalization restructure
 
@@ -63,10 +81,16 @@ separate `rat-data-dev` repo**.
 
 ## Immediate next concrete step
 
-The restructure (steps 1–5) is **complete**, and `backlog.md` is cleaned (301→109 lines, live items
-only). Remaining: **seal Phase 10** to `main` + tag (`rat/6.x`). The `rat-data-dev` repo is
-local/unpushed — push it when ready. After the seal, the Phase-10 follow-on (direct-gateway
-identity enforcement) or any backlog item by appetite.
+**No pressing thread.** The code-level review arc (7 gaps + the full ADR-049 create-if-absent line) is
+complete on `main` through `rat/6.13`, all green. Genuinely-open work is optional / longer-horizon —
+pick by appetite:
+- **Security keystone (highest value):** mTLS on the core↔plugin channel + `SubjectAssertion` signing
+  (the second half of ADR-042 — the end-user principal is still an unsigned passthrough).
+- **Observability:** OTel spans + latency histograms; signed/rotated durable audit (`common/v1.AuditRecord`).
+- **Selection v1.5/v2:** richer selector operators (`in`/`!=`/preference) + plane `select:` ergonomics;
+  then load-balanced replicas (the reconciler-replica change).
+- **Federation:** NATS-leaf cross-machine transport (ADR-033 Q01 / ADR-047 follow-on).
+- **Housekeeping:** the `rat-data-dev` repo is local/unpushed — push when ready.
 
 ## What's NOT in flight
 
@@ -78,9 +102,9 @@ identity enforcement) or any backlog item by appetite.
 
 ## Branching (in force)
 
-`main` is the sealed line (`rat/6.6`). Work on `phase-10` (integration) or `phase-10-<slug>`
-(topic) — **never commit to `main`** (a `PreToolUse` hook blocks it). Full rules:
-[`.claude/rules/git-branching.md`](../.claude/rules/git-branching.md).
+`main` is the sealed line (**`rat/6.13`**); additive increments land via `--no-ff` merges of topic
+branches + an annotated `rat/N.M` tag. **Never commit directly to `main`** (a `PreToolUse` hook blocks
+it) — work on a topic branch. Full rules: [`.claude/rules/git-branching.md`](../.claude/rules/git-branching.md).
 
 ## Maintenance reminder
 
