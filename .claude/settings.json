@@ -5,27 +5,44 @@
   },
   "permissions": {
     "allow": [
-      "Bash(go build *)",
-      "Bash(go test *)",
-      "Bash(go vet *)",
-      "Bash(go mod *)",
-      "Bash(go generate *)",
-      "Bash(go run *)",
-      "Bash(go fmt *)",
+      "Bash(buf breaking *)",
+      "Bash(buf build *)",
+      "Bash(buf format *)",
       "Bash(buf generate *)",
       "Bash(buf lint *)",
-      "Bash(buf breaking *)",
-      "Bash(buf format *)",
-      "Bash(podman build *)",
-      "Bash(podman run *)",
-      "Bash(podman compose *)",
-      "Bash(git commit *)",
+      "Bash(go build *)",
+      "Bash(go fmt *)",
+      "Bash(go generate *)",
+      "Bash(go mod *)",
+      "Bash(go run *)",
+      "Bash(go test *)",
+      "Bash(go vet *)",
       "Bash(git add *)",
+      "Bash(git branch *)",
+      "Bash(git checkout *)",
+      "Bash(git commit *)",
       "Bash(git diff *)",
       "Bash(git log *)",
+      "Bash(git merge *)",
+      "Bash(git stash *)",
       "Bash(git status)",
+      "Bash(git tag *)",
+      "Bash(make breaking)",
+      "Bash(make build)",
       "Bash(make check)",
-      "Bash(make check *)"
+      "Bash(make check *)",
+      "Bash(make composition)",
+      "Bash(make conformance)",
+      "Bash(make core-test)",
+      "Bash(make gen-check)",
+      "Bash(make gen-sdks)",
+      "Bash(make help)",
+      "Bash(make lint)",
+      "Bash(make validate-manifests)",
+      "Bash(make verify)",
+      "Bash(podman build *)",
+      "Bash(podman compose *)",
+      "Bash(podman run *)"
     ]
   },
   "hooks": {
@@ -35,7 +52,6 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(git commit *)",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/contracts-check.sh"
           }
         ]
