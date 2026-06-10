@@ -13,7 +13,7 @@ import (
 	"os"
 	"strconv"
 
-	enginev1 "github.com/squat-collective/rat-v3/gen/rat/engine/v1"
+	enginev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/engine/v1"
 	"google.golang.org/grpc"
 )
 

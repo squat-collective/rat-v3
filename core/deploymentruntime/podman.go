@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	deploymentruntimev1 "github.com/squat-collective/rat-v3/gen/rat/deploymentruntime/v1"
+	deploymentruntimev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/deploymentruntime/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	storagev1 "github.com/squat-collective/rat-v3/gen/rat/storage/v1"
+	storagev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/storage/v1"
 	"google.golang.org/grpc"
 )
 

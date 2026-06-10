@@ -8,7 +8,7 @@ import (
 	"net"
 	"os"
 
-	runtimev1 "github.com/squat-collective/rat-v3/gen/rat/runtime/v1"
+	runtimev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/runtime/v1"
 	"google.golang.org/grpc"
 )
 

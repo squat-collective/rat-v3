@@ -33,7 +33,7 @@ package rat.identity.v1;
 
 import "rat/common/v1/annotations.proto";
 
-option go_package = "github.com/squat-collective/rat-v3/gen/rat/identity/v1;identityv1";
+option go_package = "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/identity/v1;identityv1";
 
 service IdentityService {
   // rat://identity/v1/authenticate — validate a credential, resolve the subject.

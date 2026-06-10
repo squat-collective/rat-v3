@@ -61,7 +61,7 @@ const file_rat_common_v1_annotations_proto_rawDesc = "" +
 	"\x1frat/common/v1/annotations.proto\x12\rrat.common.v1\x1a google/protobuf/descriptor.proto:@\n" +
 	"\n" +
 	"capability\x12\x1e.google.protobuf.MethodOptions\x18\xf1\xa2\x04 \x01(\tR\n" +
-	"capabilityB?Z=github.com/squat-collective/rat-v3/gen/rat/common/v1;commonv1b\x06proto3"
+	"capabilityBMZKgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1;commonv1b\x06proto3"
 
 var file_rat_common_v1_annotations_proto_goTypes = []any{
 	(*descriptorpb.MethodOptions)(nil), // 0: google.protobuf.MethodOptions

@@ -12,7 +12,7 @@ import (
 	"os"
 
 	"github.com/squat-collective/rat-v3/core/testplugins/catalogsvc"
-	catalogv1 "github.com/squat-collective/rat-v3/gen/rat/catalog/v1"
+	catalogv1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/catalog/v1"
 	"google.golang.org/grpc"
 )
 

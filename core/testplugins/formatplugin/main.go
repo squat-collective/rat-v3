@@ -12,7 +12,7 @@ import (
 	"os"
 
 	"github.com/squat-collective/rat-v3/core/testplugins/formatsvc"
-	formatv1 "github.com/squat-collective/rat-v3/gen/rat/format/v1"
+	formatv1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/format/v1"
 	"google.golang.org/grpc"
 )
 

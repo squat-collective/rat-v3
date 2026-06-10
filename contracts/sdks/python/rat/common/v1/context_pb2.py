@@ -24,14 +24,14 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1brat/common/v1/context.proto\x12\rrat.common.v1\"\x81\x01\n\x0eRequestContext\x12*\n\x05trace\x18\x01 \x01(\x0b\x32\x1b.rat.common.v1.TraceContext\x12)\n\x08identity\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.Identity\x12\x18\n\x10\x64\x65\x61\x64line_unix_ms\x18\x03 \x01(\x03\"O\n\x0cTraceContext\x12\x13\n\x0btraceparent\x18\x01 \x01(\t\x12\x12\n\ntracestate\x18\x02 \x01(\t\x12\x16\n\x0e\x63orrelation_id\x18\x03 \x01(\t\"c\n\x08Identity\x12\x15\n\rcaller_plugin\x18\x01 \x01(\t\x12\x30\n\x07subject\x18\x02 \x01(\x0b\x32\x1f.rat.common.v1.SubjectAssertion\x12\x0e\n\x06tenant\x18\x03 \x01(\t\"\x7f\n\x10SubjectAssertion\x12\x11\n\tprincipal\x18\x01 \x01(\t\x12\x11\n\tsignature\x18\x02 \x01(\x0c\x12\x1c\n\x14\x62ound_correlation_id\x18\x03 \x01(\t\x12\x17\n\x0f\x65xpires_unix_ms\x18\x04 \x01(\x03\x12\x0e\n\x06key_id\x18\x05 \x01(\tB?Z=github.com/squat-collective/rat-v3/gen/rat/common/v1;commonv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1brat/common/v1/context.proto\x12\rrat.common.v1\"\x81\x01\n\x0eRequestContext\x12*\n\x05trace\x18\x01 \x01(\x0b\x32\x1b.rat.common.v1.TraceContext\x12)\n\x08identity\x18\x02 \x01(\x0b\x32\x17.rat.common.v1.Identity\x12\x18\n\x10\x64\x65\x61\x64line_unix_ms\x18\x03 \x01(\x03\"O\n\x0cTraceContext\x12\x13\n\x0btraceparent\x18\x01 \x01(\t\x12\x12\n\ntracestate\x18\x02 \x01(\t\x12\x16\n\x0e\x63orrelation_id\x18\x03 \x01(\t\"c\n\x08Identity\x12\x15\n\rcaller_plugin\x18\x01 \x01(\t\x12\x30\n\x07subject\x18\x02 \x01(\x0b\x32\x1f.rat.common.v1.SubjectAssertion\x12\x0e\n\x06tenant\x18\x03 \x01(\t\"\x7f\n\x10SubjectAssertion\x12\x11\n\tprincipal\x18\x01 \x01(\t\x12\x11\n\tsignature\x18\x02 \x01(\x0c\x12\x1c\n\x14\x62ound_correlation_id\x18\x03 \x01(\t\x12\x17\n\x0f\x65xpires_unix_ms\x18\x04 \x01(\x03\x12\x0e\n\x06key_id\x18\x05 \x01(\tBMZKgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1;commonv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rat.common.v1.context_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z=github.com/squat-collective/rat-v3/gen/rat/common/v1;commonv1'
+  _globals['DESCRIPTOR']._serialized_options = b'ZKgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1;commonv1'
   _globals['_REQUESTCONTEXT']._serialized_start=47
   _globals['_REQUESTCONTEXT']._serialized_end=176
   _globals['_TRACECONTEXT']._serialized_start=178

@@ -17,7 +17,7 @@ package rat.billing.v1;
 
 import "rat/common/v1/annotations.proto";
 
-option go_package = "github.com/squat-collective/rat-v3/gen/rat/billing/v1;billingv1";
+option go_package = "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/billing/v1;billingv1";
 
 service BillingService {
   // rat://billing/v1/record — record one meterable usage event.

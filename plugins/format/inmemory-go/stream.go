@@ -18,7 +18,7 @@ import (
 	"encoding/hex"
 	"sync"
 
-	commonv1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
+	commonv1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1"
 )
 
 // streamRegistry holds row batches keyed by ticket. Single-use: a pull deletes.

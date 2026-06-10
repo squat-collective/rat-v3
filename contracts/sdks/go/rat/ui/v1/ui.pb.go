@@ -24,7 +24,7 @@
 package uiv1
 
 import (
-	_ "github.com/squat-collective/rat-v3/gen/rat/common/v1"
+	_ "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -311,7 +311,7 @@ const file_rat_ui_v1_ui_proto_rawDesc = "" +
 	"\tUiService\x12]\n" +
 	"\bDescribe\x12\x1a.rat.ui.v1.DescribeRequest\x1a\x1b.rat.ui.v1.DescribeResponse\"\x18\x8a\x97\"\x14rat://ui/v1/describe\x12f\n" +
 	"\n" +
-	"RenderSlot\x12\x1c.rat.ui.v1.RenderSlotRequest\x1a\x1d.rat.ui.v1.RenderSlotResponse\"\x1b\x8a\x97\"\x17rat://ui/v1/render-slotB7Z5github.com/squat-collective/rat-v3/gen/rat/ui/v1;uiv1b\x06proto3"
+	"RenderSlot\x12\x1c.rat.ui.v1.RenderSlotRequest\x1a\x1d.rat.ui.v1.RenderSlotResponse\"\x1b\x8a\x97\"\x17rat://ui/v1/render-slotBEZCgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/ui/v1;uiv1b\x06proto3"
 
 var (
 	file_rat_ui_v1_ui_proto_rawDescOnce sync.Once

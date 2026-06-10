@@ -18,8 +18,8 @@ import (
 	"os"
 	"sync"
 
-	catalogv1 "github.com/squat-collective/rat-v3/gen/rat/catalog/v1"
-	commonv1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
+	catalogv1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/catalog/v1"
+	commonv1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

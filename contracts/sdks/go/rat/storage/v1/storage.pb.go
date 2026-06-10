@@ -37,7 +37,7 @@
 package storagev1
 
 import (
-	_ "github.com/squat-collective/rat-v3/gen/rat/common/v1"
+	_ "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -444,7 +444,7 @@ const file_rat_storage_v1_storage_proto_rawDesc = "" +
 	"\x0eStorageService\x12\x89\x01\n" +
 	"\x0fVendCredentials\x12&.rat.storage.v1.VendCredentialsRequest\x1a'.rat.storage.v1.VendCredentialsResponse\"%\x8a\x97\"!rat://storage/v1/vend-credentials\x12\x9a\x01\n" +
 	"\x13VendReadCredentials\x12*.rat.storage.v1.VendReadCredentialsRequest\x1a+.rat.storage.v1.VendReadCredentialsResponse\"*\x8a\x97\"&rat://storage/v1/vend-credentials-read\x12\x9e\x01\n" +
-	"\x14VendWriteCredentials\x12+.rat.storage.v1.VendWriteCredentialsRequest\x1a,.rat.storage.v1.VendWriteCredentialsResponse\"+\x8a\x97\"'rat://storage/v1/vend-credentials-writeBAZ?github.com/squat-collective/rat-v3/gen/rat/storage/v1;storagev1b\x06proto3"
+	"\x14VendWriteCredentials\x12+.rat.storage.v1.VendWriteCredentialsRequest\x1a,.rat.storage.v1.VendWriteCredentialsResponse\"+\x8a\x97\"'rat://storage/v1/vend-credentials-writeBOZMgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/storage/v1;storagev1b\x06proto3"
 
 var (
 	file_rat_storage_v1_storage_proto_rawDescOnce sync.Once

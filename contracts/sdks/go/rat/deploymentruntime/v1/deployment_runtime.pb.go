@@ -27,7 +27,7 @@
 package deploymentruntimev1
 
 import (
-	_ "github.com/squat-collective/rat-v3/gen/rat/common/v1"
+	_ "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -657,7 +657,7 @@ const file_rat_deploymentruntime_v1_deployment_runtime_proto_rawDesc = "" +
 	"\x18DeploymentRuntimeService\x12\x83\x01\n" +
 	"\x06Launch\x12'.rat.deploymentruntime.v1.LaunchRequest\x1a(.rat.deploymentruntime.v1.LaunchResponse\"&\x8a\x97\"\"rat://deployment-runtime/v1/launch\x12\x8f\x01\n" +
 	"\tTerminate\x12*.rat.deploymentruntime.v1.TerminateRequest\x1a+.rat.deploymentruntime.v1.TerminateResponse\")\x8a\x97\"%rat://deployment-runtime/v1/terminate\x12\x97\x01\n" +
-	"\vHealthcheck\x12,.rat.deploymentruntime.v1.HealthcheckRequest\x1a-.rat.deploymentruntime.v1.HealthcheckResponse\"+\x8a\x97\"'rat://deployment-runtime/v1/healthcheckBUZSgithub.com/squat-collective/rat-v3/gen/rat/deploymentruntime/v1;deploymentruntimev1b\x06proto3"
+	"\vHealthcheck\x12,.rat.deploymentruntime.v1.HealthcheckRequest\x1a-.rat.deploymentruntime.v1.HealthcheckResponse\"+\x8a\x97\"'rat://deployment-runtime/v1/healthcheckBcZagithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/deploymentruntime/v1;deploymentruntimev1b\x06proto3"
 
 var (
 	file_rat_deploymentruntime_v1_deployment_runtime_proto_rawDescOnce sync.Once
