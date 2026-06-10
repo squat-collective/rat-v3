@@ -94,10 +94,15 @@ if [[ "${1:-}" == "--check" ]]; then
   rm -rf "$TMP"/sdks
   run_buf_generate "$TMP"
   for lang in "${LANGS[@]}"; do
-    # Ignore hand-added, non-generated module files (e.g. sdks/go/go.mod) — they
-    # are not produced by buf and would otherwise read as a spurious diff.
+    # Ignore hand-WRITTEN files that live inside sdks/ but are not produced by codegen
+    # (they'd read as a spurious "Only in committed" diff): the module files, the
+    # plugin-base Dockerfiles, the ADR-029 runtime SDKs (go ratplugin/, python
+    # plugin.py + contrib.py), the DX-4 vectors.py helper, and python bytecode litter.
     if ! diff -r \
-        --exclude=go.mod --exclude=go.sum \
+        --exclude=go.mod --exclude=go.sum --exclude=Dockerfile \
+        --exclude=ratplugin \
+        --exclude=plugin.py --exclude=contrib.py --exclude=vectors.py \
+        --exclude=__pycache__ --exclude='*.pyc' \
         "$CONTRACTS/sdks/$lang" "$TMP/sdks/$lang" >/dev/null 2>&1; then
       echo "error: contracts/sdks/$lang is stale — run 'make gen-sdks' and commit." >&2
       exit 1
