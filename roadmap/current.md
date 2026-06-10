@@ -6,8 +6,8 @@
 
 ## ✅ Latest — `rat/6.18`: PUBLISHED 🐀 (DX-2 — the review is fully closed)
 
-**`github.com/le-squat/rat`, public, Apache-2.0** ([ADR-051](../docs/architecture/adrs/051-publish-apache2-le-squat.md)).
-Module paths renamed `rat-dev`→`le-squat` (go-get works; wire proven held — suite +
+**`github.com/squat-collective/rat-v3`, public, Apache-2.0** ([ADR-051](../docs/architecture/adrs/051-publish-apache2-squat-collective.md)).
+Module paths renamed `rat-dev`→`squat-collective/rat-v3` (go-get works; wire proven held — suite +
 conformance green; one conscious FILE_SAME_GO_PACKAGE waiver). Both CI workflows repaired
 *before* first run (contracts.yml auto-committed to main from CI; release.yml's image tag
 contained a `/`), and release.yml now also ships `rat-plugin-base-{go,py}` to GHCR — the
@@ -99,7 +99,7 @@ hardenings (ADRs 042–048), `rat/6.8`–`6.13` the `state/v1` create-if-absent 
 its full adoption, and the `rat/6.14`–`6.18` **DX line**: docs-truth + guides + first-success (6.14),
 `rat validate` + `--strict` (6.15), `rat capabilities` + the vector lint gate + the gen-check repair
 (6.16), plane `${VAR}` interpolation (ADR-050) + the vault-py secret-backend + `rat plugin dev` (6.17),
-and the **publication** — Apache-2.0, `github.com/le-squat/rat`, GHCR distribution (ADR-051, 6.18). The from-scratch rebuild +
+and the **publication** — Apache-2.0, `github.com/squat-collective/rat-v3`, GHCR distribution (ADR-051, 6.18). The from-scratch rebuild +
 remote-dev-flow experiment the hardenings came from is sealed separately at **`clean-room/2.0`** (a
 parallel line, not merged — its `plugins/`+`platform/` wipe would destroy this corpus). **ADR-042's
 channel-authenticated identity also closes most of the Phase-10 "direct-gateway `--as` trust" debt
@@ -162,13 +162,13 @@ separate `rat-data-dev` repo**.
   before broad new product phases; **Gate C/D** beyond. **Q02** (external *human* peer review)
   is still owed but set aside as impractical for a solo dev — validated practically instead
   (the data-dev-plane experiment, principle #8).
-- ~~The freeze stays local/unpushed~~ — **PUBLISHED** at `github.com/le-squat/rat`
-  (Apache-2.0, [ADR-051](../docs/architecture/adrs/051-publish-apache2-le-squat.md), `rat/6.18`).
+- ~~The freeze stays local/unpushed~~ — **PUBLISHED** at `github.com/squat-collective/rat-v3`
+  (Apache-2.0, [ADR-051](../docs/architecture/adrs/051-publish-apache2-squat-collective.md), `rat/6.18`).
   The real Q02 is now simply… public review.
 
 ## Branching (in force)
 
-`main` is the sealed line (**`rat/6.18`**, pushed to `github.com/le-squat/rat`); additive increments
+`main` is the sealed line (**`rat/6.18`**, pushed to `github.com/squat-collective/rat-v3`); additive increments
 land via `--no-ff` merges of topic branches + an annotated `rat/N.M` tag. **Never commit directly to `main`** (a `PreToolUse` hook blocks
 it) — work on a topic branch. Full rules: [`.claude/rules/git-branching.md`](../.claude/rules/git-branching.md).
 

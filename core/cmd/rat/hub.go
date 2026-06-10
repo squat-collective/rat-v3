@@ -24,7 +24,7 @@ import (
 	"strings"
 	"sync"
 
-	identityv1 "github.com/le-squat/rat/gen/rat/identity/v1"
+	identityv1 "github.com/squat-collective/rat-v3/gen/rat/identity/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"

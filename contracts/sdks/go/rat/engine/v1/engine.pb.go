@@ -27,7 +27,7 @@
 package enginev1
 
 import (
-	v1 "github.com/le-squat/rat/gen/rat/common/v1"
+	v1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -366,7 +366,7 @@ const file_rat_engine_v1_engine_proto_rawDesc = "" +
 	"\rEngineService\x12e\n" +
 	"\aExecute\x12\x1d.rat.engine.v1.ExecuteRequest\x1a\x1e.rat.engine.v1.ExecuteResponse\"\x1b\x8a\x97\"\x17rat://engine/v1/execute\x12]\n" +
 	"\x05Query\x12\x1b.rat.engine.v1.QueryRequest\x1a\x1c.rat.engine.v1.QueryResponse\"\x19\x8a\x97\"\x15rat://engine/v1/query\x12e\n" +
-	"\aPreview\x12\x1d.rat.engine.v1.PreviewRequest\x1a\x1e.rat.engine.v1.PreviewResponse\"\x1b\x8a\x97\"\x17rat://engine/v1/previewB4Z2github.com/le-squat/rat/gen/rat/engine/v1;enginev1b\x06proto3"
+	"\aPreview\x12\x1d.rat.engine.v1.PreviewRequest\x1a\x1e.rat.engine.v1.PreviewResponse\"\x1b\x8a\x97\"\x17rat://engine/v1/previewB?Z=github.com/squat-collective/rat-v3/gen/rat/engine/v1;enginev1b\x06proto3"
 
 var (
 	file_rat_engine_v1_engine_proto_rawDescOnce sync.Once

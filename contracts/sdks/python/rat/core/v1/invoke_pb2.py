@@ -24,14 +24,14 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18rat/core/v1/invoke.proto\x12\x0brat.core.v1\":\n\rInvokeRequest\x12\x12\n\ncapability\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\x0cJ\x04\x08\x01\x10\x02\" \n\x0eInvokeResponse\x12\x0e\n\x06result\x18\x01 \x01(\x0c\"F\n\x19InvokeServerStreamRequest\x12\x12\n\ncapability\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\x0cJ\x04\x08\x01\x10\x02\",\n\x1aInvokeServerStreamResponse\x12\x0e\n\x06result\x18\x01 \x01(\x0c\"D\n\x17InvokeBidiStreamRequest\x12\x12\n\ncapability\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\x0cJ\x04\x08\x01\x10\x02\"*\n\x18InvokeBidiStreamResponse\x12\x0e\n\x06result\x18\x01 \x01(\x0c\x32\xaa\x02\n\x17\x43\x61pabilityInvokeService\x12\x41\n\x06Invoke\x12\x1a.rat.core.v1.InvokeRequest\x1a\x1b.rat.core.v1.InvokeResponse\x12g\n\x12InvokeServerStream\x12&.rat.core.v1.InvokeServerStreamRequest\x1a\'.rat.core.v1.InvokeServerStreamResponse0\x01\x12\x63\n\x10InvokeBidiStream\x12$.rat.core.v1.InvokeBidiStreamRequest\x1a%.rat.core.v1.InvokeBidiStreamResponse(\x01\x30\x01\x42\x30Z.github.com/le-squat/rat/gen/rat/core/v1;corev1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18rat/core/v1/invoke.proto\x12\x0brat.core.v1\":\n\rInvokeRequest\x12\x12\n\ncapability\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\x0cJ\x04\x08\x01\x10\x02\" \n\x0eInvokeResponse\x12\x0e\n\x06result\x18\x01 \x01(\x0c\"F\n\x19InvokeServerStreamRequest\x12\x12\n\ncapability\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\x0cJ\x04\x08\x01\x10\x02\",\n\x1aInvokeServerStreamResponse\x12\x0e\n\x06result\x18\x01 \x01(\x0c\"D\n\x17InvokeBidiStreamRequest\x12\x12\n\ncapability\x18\x02 \x01(\t\x12\x0f\n\x07payload\x18\x03 \x01(\x0cJ\x04\x08\x01\x10\x02\"*\n\x18InvokeBidiStreamResponse\x12\x0e\n\x06result\x18\x01 \x01(\x0c\x32\xaa\x02\n\x17\x43\x61pabilityInvokeService\x12\x41\n\x06Invoke\x12\x1a.rat.core.v1.InvokeRequest\x1a\x1b.rat.core.v1.InvokeResponse\x12g\n\x12InvokeServerStream\x12&.rat.core.v1.InvokeServerStreamRequest\x1a\'.rat.core.v1.InvokeServerStreamResponse0\x01\x12\x63\n\x10InvokeBidiStream\x12$.rat.core.v1.InvokeBidiStreamRequest\x1a%.rat.core.v1.InvokeBidiStreamResponse(\x01\x30\x01\x42;Z9github.com/squat-collective/rat-v3/gen/rat/core/v1;corev1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rat.core.v1.invoke_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z.github.com/le-squat/rat/gen/rat/core/v1;corev1'
+  _globals['DESCRIPTOR']._serialized_options = b'Z9github.com/squat-collective/rat-v3/gen/rat/core/v1;corev1'
   _globals['_INVOKEREQUEST']._serialized_start=41
   _globals['_INVOKEREQUEST']._serialized_end=99
   _globals['_INVOKERESPONSE']._serialized_start=101

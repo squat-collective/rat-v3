@@ -274,7 +274,7 @@ const file_rat_common_v1_audit_proto_rawDesc = "" +
 	"\x19AUDIT_OUTCOME_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15AUDIT_OUTCOME_SUCCESS\x10\x01\x12\x18\n" +
 	"\x14AUDIT_OUTCOME_DENIED\x10\x02\x12\x17\n" +
-	"\x13AUDIT_OUTCOME_ERROR\x10\x03B4Z2github.com/le-squat/rat/gen/rat/common/v1;commonv1b\x06proto3"
+	"\x13AUDIT_OUTCOME_ERROR\x10\x03B?Z=github.com/squat-collective/rat-v3/gen/rat/common/v1;commonv1b\x06proto3"
 
 var (
 	file_rat_common_v1_audit_proto_rawDescOnce sync.Once

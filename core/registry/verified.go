@@ -3,8 +3,8 @@ package registry
 import (
 	"fmt"
 
-	"github.com/le-squat/rat/core/conformance"
-	"github.com/le-squat/rat/core/manifest"
+	"github.com/squat-collective/rat-v3/core/conformance"
+	"github.com/squat-collective/rat-v3/core/manifest"
 )
 
 // NewVerified is the D4 registry: like New, but a plugin's declared `provides` are

@@ -37,7 +37,7 @@ syntax = "proto3";
 
 package rat.common.v1;
 
-option go_package = "github.com/le-squat/rat/gen/rat/common/v1;commonv1";
+option go_package = "github.com/squat-collective/rat-v3/gen/rat/common/v1;commonv1";
 
 // RequestContext is carried in the `rat-callmeta-bin` transport-metadata header
 // (ADR-007), not as a request field. Its shape is the keystone design, unchanged.

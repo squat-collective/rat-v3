@@ -26,7 +26,7 @@
 package marketplacev1
 
 import (
-	_ "github.com/le-squat/rat/gen/rat/common/v1"
+	_ "github.com/squat-collective/rat-v3/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -426,7 +426,7 @@ const file_rat_marketplace_v1_marketplace_proto_rawDesc = "" +
 	"\alisting\x18\x01 \x01(\v2\x1b.rat.marketplace.v1.ListingR\alisting2\xec\x01\n" +
 	"\x12MarketplaceService\x12p\n" +
 	"\x06Search\x12!.rat.marketplace.v1.SearchRequest\x1a\".rat.marketplace.v1.SearchResponse\"\x1f\x8a\x97\"\x1brat://marketplace/v1/search\x12d\n" +
-	"\x03Get\x12\x1e.rat.marketplace.v1.GetRequest\x1a\x1f.rat.marketplace.v1.GetResponse\"\x1c\x8a\x97\"\x18rat://marketplace/v1/getB>Z<github.com/le-squat/rat/gen/rat/marketplace/v1;marketplacev1b\x06proto3"
+	"\x03Get\x12\x1e.rat.marketplace.v1.GetRequest\x1a\x1f.rat.marketplace.v1.GetResponse\"\x1c\x8a\x97\"\x18rat://marketplace/v1/getBIZGgithub.com/squat-collective/rat-v3/gen/rat/marketplace/v1;marketplacev1b\x06proto3"
 
 var (
 	file_rat_marketplace_v1_marketplace_proto_rawDescOnce sync.Once

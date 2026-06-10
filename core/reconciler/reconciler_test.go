@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	deploymentruntimev1 "github.com/le-squat/rat/gen/rat/deploymentruntime/v1"
+	deploymentruntimev1 "github.com/squat-collective/rat-v3/gen/rat/deploymentruntime/v1"
 )
 
 // fakeRuntime is a controllable deployment-runtime: Healthcheck returns whatever

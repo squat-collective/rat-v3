@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/le-squat/rat/gen/rat/common/v1"
+	commonv1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
 )
 
 // Q02 PU-1 (ADR-017) — the bytes-leg producer-channel-auth MUST (common/v1/data.proto

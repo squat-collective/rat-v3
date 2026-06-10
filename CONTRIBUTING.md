@@ -67,5 +67,5 @@ certainly can). See [.claude/rules/plugin-architecture.md](.claude/rules/plugin-
 
 ## License
 
-[Apache-2.0](LICENSE) ([ADR-051](docs/architecture/adrs/051-publish-apache2-le-squat.md)).
+[Apache-2.0](LICENSE) ([ADR-051](docs/architecture/adrs/051-publish-apache2-squat-collective.md)).
 Contributions are accepted under the same license (inbound = outbound).

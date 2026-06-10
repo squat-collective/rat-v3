@@ -4,7 +4,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/le-squat/rat/core/gateway"
+	"github.com/squat-collective/rat-v3/core/gateway"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

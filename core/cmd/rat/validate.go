@@ -33,7 +33,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/le-squat/rat/core/manifest"
+	"github.com/squat-collective/rat-v3/core/manifest"
 )
 
 // vIssue is one preflight finding. Error-level issues make `rat validate` exit non-zero

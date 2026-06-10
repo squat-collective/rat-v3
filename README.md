@@ -5,14 +5,14 @@ A from-scratch reimagining of the RAT data platform.
 **Premise:** a data platform is a minimal control plane that orchestrates self-describing plugins. The core does six things; everything else — state backend, auth, scheduler, UI, engine, format, catalog, storage, deployment runtime, tenancy, billing, observability — is a plugin.
 
 **⚡ Want to see it run first? [QUICKSTART.md](QUICKSTART.md) — five minutes, every command verified.**
-No clone needed: `curl -fsSL https://github.com/le-squat/rat/releases/latest/download/install.sh | sh` → `./rat --help`.
+No clone needed: `curl -fsSL https://github.com/squat-collective/rat-v3/releases/latest/download/install.sh | sh` → `./rat --help`.
 
 **Status (2026-06-10):** **Phases 0–9 are SEALED**; `main` is the sealed line at **`rat/6.13`**.
 - **Phase 0** (`rat/1.5`) froze the 18-axis contract surface (`.proto` + per-kind manifest schemas + the `rat://` capability grammar), with two technologically-divergent reference implementations per data-plane axis before freeze (ADR-003) and golden-data conformance vectors.
 - **Phase 1** (`rat/2.0`) built a real, tested control-plane core that enforces all nine board exit criteria **against real launched plugins** — capability authz + audit + deadline-bounding at the gateway, two enforcing deployment-runtimes (incl. podman full-isolation), a supervisor, a reconciler with leader-election + crash-loop backoff, conformance attestation, and the Arrow bytes-leg ticket.
 - **Phases 2–9** (`rat/2.5`–`6.0`) made it a product: the one `rat` binary (projects, plugin authoring + packaging, marketplace with ed25519 signing, live control), three platform topologies (launch / attach / socket-mount), and the data-platform bundle. The `rat/6.x` line then landed the **7 core hardenings** (ADRs 042–048) and the `state/v1` **create-if-absent** amendment + its full adoption (ADR-049) — every change additive on the frozen wire (`make breaking` clean throughout).
 
-**Gates:** the user-pull gates still bind ([roadmap/phases.md](roadmap/phases.md), Gate B+) before broad new product phases. Q02 (external *human* peer review) is owed but set aside as impractical for a solo dev — validated practically instead (the data-dev-plane experiment, since extracted to the `rat-data-dev` repo). **Published** at `github.com/le-squat/rat` under Apache-2.0 ([ADR-051](docs/architecture/adrs/051-publish-apache2-le-squat.md)) — releases ship 4-platform binaries + the daemon and plugin-base images on GHCR. Live state is always in [roadmap/current.md](roadmap/current.md).
+**Gates:** the user-pull gates still bind ([roadmap/phases.md](roadmap/phases.md), Gate B+) before broad new product phases. Q02 (external *human* peer review) is owed but set aside as impractical for a solo dev — validated practically instead (the data-dev-plane experiment, since extracted to the `rat-data-dev` repo). **Published** at `github.com/squat-collective/rat-v3` under Apache-2.0 ([ADR-051](docs/architecture/adrs/051-publish-apache2-squat-collective.md)) — releases ship 4-platform binaries + the daemon and plugin-base images on GHCR. Live state is always in [roadmap/current.md](roadmap/current.md).
 
 ## What's here
 
@@ -48,4 +48,4 @@ The currently-shipping RAT (`~/sandbox/ratatouille-v2/ratatouille/`) continues i
 
 ## License
 
-[Apache-2.0](LICENSE) ([ADR-051](docs/architecture/adrs/051-publish-apache2-le-squat.md) — chosen for the plugin-ecosystem bet: permissive + patent grant).
+[Apache-2.0](LICENSE) ([ADR-051](docs/architecture/adrs/051-publish-apache2-squat-collective.md) — chosen for the plugin-ecosystem bet: permissive + patent grant).

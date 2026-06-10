@@ -1,6 +1,6 @@
 // Package ratplugin is the rat plugin runtime SDK (ADR-029): the thin helper layer that kills the
 // serve + consume boilerplate. It lives in the gen module, so it rides in the plugin-base-go image
-// (the SDK at /sdk) — a Go plugin imports "github.com/le-squat/rat/gen/ratplugin" with no setup.
+// (the SDK at /sdk) — a Go plugin imports "github.com/squat-collective/rat-v3/gen/ratplugin" with no setup.
 //
 //	func main() {
 //	    k := &keyring{secrets: ratplugin.EnvMap("RAT_SECRETS")}
@@ -19,8 +19,8 @@ import (
 	"strings"
 	"syscall"
 
-	commonv1 "github.com/le-squat/rat/gen/rat/common/v1"
-	corev1 "github.com/le-squat/rat/gen/rat/core/v1"
+	commonv1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
+	corev1 "github.com/squat-collective/rat-v3/gen/rat/core/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"

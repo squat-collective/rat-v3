@@ -1,4 +1,4 @@
-# ADR-051 — Publish RAT v3: Apache-2.0, `github.com/le-squat/rat`, GHCR distribution
+# ADR-051 — Publish RAT v3: Apache-2.0, `github.com/squat-collective/rat-v3`, GHCR distribution
 
 **Status:** Accepted (2026-06-10)
 
@@ -21,10 +21,14 @@ precondition.
    The platform's thesis is a third-party plugin ecosystem; Apache-2.0 is the
    K8s/NATS/Temporal-tier norm for exactly that: permissive, explicit patent grant,
    no enterprise-adoption friction.
-2. **Home: `github.com/le-squat/rat`, public.** The `le-squat` GitHub org is the
-   maintainer's chosen home (over the placeholder `rat-dev` baked in at Phase 0).
-3. **The module-path rename `rat-dev` → `le-squat` lands with the publication** —
-   `go get github.com/le-squat/rat/gen` must actually work, so the Go module paths, the
+2. **Home: `github.com/squat-collective/rat-v3`, public.** The maintainer's org is
+   `squat-collective` ("le squat"), over the placeholder `rat-dev` baked in at Phase 0.
+   *(Same-day correction: first transcribed as a `le-squat` org; the real handle is
+   `squat-collective`, and `rat` there is the LIVE v2 — so v3 is the sibling repo
+   `rat-v3`. See Alternatives #6 for the v3-as-a-branch-of-v2 idea, considered and
+   rejected.)*
+3. **The module-path rename `rat-dev` → `squat-collective/rat-v3` lands with the publication** —
+   `go get github.com/squat-collective/rat-v3/gen` must actually work, so the Go module paths, the
    proto `go_package` options, the committed SDKs (regenerated), `install.sh`'s default
    repo, and the GHCR image refs all follow the org. **This consciously trips
    `buf breaking`'s `FILE_SAME_GO_PACKAGE` rule against the pre-rename baseline — once,
@@ -33,8 +37,8 @@ precondition.
    Historical ADRs keep their `rat-dev` mentions (they were true when written).
 4. **Distribution is GitHub Releases + GHCR** (the existing `release.yml`, repaired +
    extended): per `rat/N.M` tag — 4-platform static binaries + `SHA256SUMS` +
-   `install.sh` on the Release, and `ghcr.io/le-squat/rat` (daemon) **plus
-   `ghcr.io/le-squat/rat-plugin-base-{go,py}`** (the SDK distribution for plugin
+   `install.sh` on the Release, and `ghcr.io/squat-collective/rat-v3` (daemon) **plus
+   `ghcr.io/squat-collective/rat-v3-plugin-base-{go,py}`** (the SDK distribution for plugin
    authors, per the user's "defer PyPI, use GHCR" call).
 5. **PyPI is deferred** — the Python SDK ships inside `rat-plugin-base-py`; a pip
    package needs packaging work (pyproject) + a PyPI account, recorded as the residual
@@ -50,7 +54,7 @@ precondition.
 ## Consequences
 
 **Positive.** `curl …install.sh | sh` works as documented; the Go SDK is `go get`-able;
-plugin authors `FROM ghcr.io/le-squat/rat-plugin-base-py` with no clone; the license
+plugin authors `FROM ghcr.io/squat-collective/rat-v3-plugin-base-py` with no clone; the license
 question stops blocking everything ecosystem-shaped.
 
 **Negative — accepted.** Publication is one-way (public code is cached/indexed forever);
@@ -74,6 +78,15 @@ ADR changes where the bytes live, not what they are.
    whose moat is *pluggability*, not the code.
 5. **Publish private first.** One-click reversible caution, but it keeps DX-2's actual
    goal (external authors) blocked. The repo had four seals of grooming; declined.
+6. **v3 as a branch of the live v2 repo (`squat-collective/rat`)** — the maintainer's
+   idea, invited for challenge. Rejected on mechanics, not taste: Go modules resolve
+   from a repo's *shared* tag/default-branch namespace, so v2 owning
+   `github.com/squat-collective/rat` makes a branch-hosted v3 SDK never cleanly
+   `go get`-able; GitHub Releases are repo-global, so `releases/latest/download/install.sh`
+   becomes a race between v2's and v3's installers (breaking BOTH distributions); and
+   v2's real users' issue tracker absorbs parallel-design noise. The ecosystem precedent
+   for a parallel rewrite is the sibling repo (vuejs/vue + the separate v3 repo); if/when
+   v3 graduates (the CLAUDE.md long arc), repos get renamed and GitHub redirects.
 
 ## Related
 

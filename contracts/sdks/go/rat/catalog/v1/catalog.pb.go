@@ -42,7 +42,7 @@
 package catalogv1
 
 import (
-	v1 "github.com/le-squat/rat/gen/rat/common/v1"
+	v1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -699,7 +699,7 @@ const file_rat_catalog_v1_catalog_proto_rawDesc = "" +
 	"\fCreateBranch\x12#.rat.catalog.v1.CreateBranchRequest\x1a$.rat.catalog.v1.CreateBranchResponse\"\"\x8a\x97\"\x1erat://catalog/v1/create-branch\x12y\n" +
 	"\vMergeBranch\x12\".rat.catalog.v1.MergeBranchRequest\x1a#.rat.catalog.v1.MergeBranchResponse\"!\x8a\x97\"\x1drat://catalog/v1/merge-branch\x12\x81\x01\n" +
 	"\rRegisterTable\x12$.rat.catalog.v1.RegisterTableRequest\x1a%.rat.catalog.v1.RegisterTableResponse\"#\x8a\x97\"\x1frat://catalog/v1/register-table\x12y\n" +
-	"\vCommitTable\x12\".rat.catalog.v1.CommitTableRequest\x1a#.rat.catalog.v1.CommitTableResponse\"!\x8a\x97\"\x1drat://catalog/v1/commit-tableB6Z4github.com/le-squat/rat/gen/rat/catalog/v1;catalogv1b\x06proto3"
+	"\vCommitTable\x12\".rat.catalog.v1.CommitTableRequest\x1a#.rat.catalog.v1.CommitTableResponse\"!\x8a\x97\"\x1drat://catalog/v1/commit-tableBAZ?github.com/squat-collective/rat-v3/gen/rat/catalog/v1;catalogv1b\x06proto3"
 
 var (
 	file_rat_catalog_v1_catalog_proto_rawDescOnce sync.Once

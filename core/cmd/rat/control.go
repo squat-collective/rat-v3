@@ -15,12 +15,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/le-squat/rat/core/gateway"
-	"github.com/le-squat/rat/core/manifest"
-	"github.com/le-squat/rat/core/reconciler"
-	"github.com/le-squat/rat/core/registry"
-	corev1 "github.com/le-squat/rat/gen/rat/core/v1"
-	deploymentruntimev1 "github.com/le-squat/rat/gen/rat/deploymentruntime/v1"
+	"github.com/squat-collective/rat-v3/core/gateway"
+	"github.com/squat-collective/rat-v3/core/manifest"
+	"github.com/squat-collective/rat-v3/core/reconciler"
+	"github.com/squat-collective/rat-v3/core/registry"
+	corev1 "github.com/squat-collective/rat-v3/gen/rat/core/v1"
+	deploymentruntimev1 "github.com/squat-collective/rat-v3/gen/rat/deploymentruntime/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

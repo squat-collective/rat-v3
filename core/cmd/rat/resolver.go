@@ -12,7 +12,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/le-squat/rat/core/manifest"
+	"github.com/squat-collective/rat-v3/core/manifest"
 )
 
 // missingDep is one unsatisfied dependency: <plugin> requires <capability>, nobody provides it.
