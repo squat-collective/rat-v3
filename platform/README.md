@@ -66,6 +66,7 @@ plugin is one entry + an image, and the reconciler self-heals crashes
 
 ```
 make plugin-images                                      # build rat/{state,secret,scheduler,dbt-runner,bff}:dev
+rat validate --plane platform/plugins.yaml              # preflight: images present, deps satisfied
 podman compose -f platform/compose.infra.yaml up -d     # Postgres + MinIO only
 ( cd platform && /path/to/bin/rat serve --plane plugins.yaml )
 podman compose -f platform/compose.infra.yaml down -v   # teardown (Ctrl-C rat first)
@@ -74,6 +75,12 @@ podman compose -f platform/compose.infra.yaml down -v   # teardown (Ctrl-C rat f
 This mode adds the **secret plugin**: plugin entries carry only `ref://` strings
 (`RAT_STATE_PG_REF`, `RAT_LAKE_PG_REF`, …) and resolve them via `rat://secret/v1/resolve` —
 no credentials in the plane file.
+
+> **Known asymmetry (flagged by `rat validate`):** the attach-mode `plane.yaml` ships
+> **no secret provider** — its compose services get literal env credentials instead, so
+> the manifests' `requires: rat://secret/v1/resolve` is unsatisfied there by design
+> (the plugins fall back to env literals and never call it). The preflight reports it;
+> launch mode (above) is the self-consistent topology.
 
 **3. Socket-mount (everything containerized):** rat itself runs as a container, drives the
 **host's** podman over the mounted user socket, and launches the plugins as siblings on a

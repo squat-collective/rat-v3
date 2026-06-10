@@ -49,7 +49,7 @@ docs-truth sweep, QUICKSTART/CONTRIBUTING/AMENDING, the two guides, the project-
 Cross-refs: **EC-1/EC-2/EC-6** above already track manifest co-location, the dev inner
 loop, and author versioning; **federation #5** tracks new-axis-without-recompile.
 
-- **DX-1 (High)** — `rat validate --plane <file>` preflight (+ a serve fail-fast flag): manifest schemas, every `requires` has a provider, launch images resolvable — today a typo'd image silently backoff-retries to Degraded while serve proceeds with N<desired plugins, and an unsatisfied `requires` only warns (`logUnsatisfied`) until a call returns NOT_FOUND.
+- ~~DX-1~~ — **done at `rat/6.15`**: `rat validate` + `rat up/serve --strict` (see [done.md](done.md)).
 - **DX-2 (High; blocked on the publish decision)** — distribution: push the repo, cut binary releases (un-404 `scripts/install.sh`), publish `plugin-base-{go,py}` to ghcr, the Python SDK to PyPI, the Go SDK as a fetchable module. Until then **external plugin authors are structurally impossible** (the guides say so honestly).
 - **DX-3 (Med)** — `rat capabilities [--kind <axis>]`: list capability URIs from the linked descriptors (today: proto-scanning or CONTRACT.md reading; pairs with the schema README's "curated capability registry + lint" gap).
 - **DX-4 (Med)** — a conformance-vector **JSON Schema + lint gate** (a typo'd `op`/`expect` key is silently skipped by every harness today) + a harness **template/codegen** so new references stop copy-pasting ~200 lines.

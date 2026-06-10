@@ -44,10 +44,19 @@ The topology changes who *starts* plugins, never how they're *called*.
 
 ## Adding a plugin to a platform
 
-The honest checklist, per topology. There is **no cross-file validator yet** — nothing
-checks that the manifest, plane entry, image tag, and secret refs agree (a thin
-`rat plugin validate` and a `rat preflight` are queued — backlog EC-1 / O-2). A typo
-surfaces at boot or at first call, not at edit time. Budget for that.
+The honest checklist, per topology. After any edit, run the **preflight**:
+
+```sh
+rat validate                       # the project's rat.toml, else ./plane.yaml
+rat validate --plane plugins.yaml  # an explicit plane
+rat up --strict / rat serve --strict   # same checks; refuse to boot on any error
+```
+
+It statically checks: manifests load · names unique · every capability URI is real ·
+every `requires` has a provider · every launch image is present (the podman runtime
+does **not** pull at launch) · providers declare `resources.requests`. What it can't
+see: attach endpoints aren't dialed, and env/secret *values* aren't checked — a wrong
+DSN still surfaces at first call.
 
 **`rat.toml` project — one command:**
 
@@ -85,8 +94,9 @@ plugin's `ref://` env vars point at.
    plugin's `env`.
 
 In every topology the same fact can live in 2–4 places (image tag in Makefile + plane;
-endpoint in compose + plane; ref names in secret store + consumer env). Until the
-validator lands, change them together and grep before you boot.
+endpoint in compose + plane; ref names in secret store + consumer env). `rat validate`
+catches the plane-side mismatches (names, capabilities, requires coverage, images);
+the env/compose side still needs a grep before you boot (backlog DX-5).
 
 ## Secrets today
 
@@ -142,12 +152,12 @@ literal values are demo conveniences, and pattern 2 is the seed mechanism for th
   exponential, capped backoff; at the crash-loop cap the plugin is marked **Degraded** and
   left alone (no relaunch hammering). A Degraded plugin shows up in status/metrics; fix the
   cause and bring the plane up again.
-- **The honest wart: misconfig surfaces late.** A bad manifest path fails at boot with an
-  error; but a wrong capability in `requires`, a missing secret ref, or a mismatched image
-  tag surfaces only at first call (a C5 deny, a resolve failure, a launch error). There is
-  no preflight validation pass yet — it's queued work (see the backlog). Until then, the
-  audit log's `"allowed":false` lines and `podman logs` on the failing plugin are your
-  debugging front line.
+- **Misconfig is now catchable up front: `rat validate`** (or `--strict` on `up`/`serve`)
+  flags typo'd capabilities, requires-without-provider, and missing launch images *before*
+  boot. What remains late-surfacing: wrong secret *values* (a resolve failure at first
+  use) and dead attach endpoints (validate doesn't dial). For those, the audit log's
+  `"allowed":false` lines and `podman logs` on the failing plugin are the debugging
+  front line.
 
 ## Federation
 

@@ -66,12 +66,15 @@ rat add state --image rat/stateplugin:dev --manifest state.plugin.yaml
 rat add dev --manifest dev.plugin.yaml       # driver: no image, just an identity
 ```
 
-## 3 · Up
+## 3 · Preflight, then up
 
 ```bash
+rat validate  # static checks: capabilities real · requires satisfied · image present
 rat up -d     # launches the plugin container (I9 isolation), wires the gateway
 rat status    # project — running · socket: .rat/daemon.sock · plugins (2)
 ```
+
+(`rat up --strict` runs the same preflight and refuses to boot on any error.)
 
 ## 4 · Call through the gateway
 
