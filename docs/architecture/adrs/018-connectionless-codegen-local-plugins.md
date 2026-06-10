@@ -88,9 +88,21 @@ unchanged. `buf.yaml` (lint/breaking rules, the local module) is untouched.
 
 ## Open questions
 
-- **Q01** — Python local codegen shape: `protoc_builtin: python` + a local `protoc` + a
-  standalone `grpc_python_plugin`, vs the `grpc_tools.protoc` fallback (bypassing buf for
-  python only). Decided at python-rollout time.
+- **Q01 — ✅ RESOLVED (2026-06-10, the DX-8 review): the protoc-35 hybrid IS the settled
+  shape.** `rat-codegen-python`'s ENTRYPOINT runs a pinned standalone `protoc` v35.0
+  (matching buf's `protocolbuffers/python` 7.35.0 gencode) for messages +
+  `grpcio-tools==1.80.0` (matching the references) for the gRPC stubs — no buf in the
+  python leg, fully offline. The "clean" buf shape is not deferred, it's **impossible to
+  pin**: the python message generator is a protoc *builtin* (no standalone
+  `protoc-gen-python` to install), and `grpc_python_plugin` ships only inside
+  grpcio-tools — so bypassing buf for python is the design, not a fallback.
+  Operationally: the failure modes are the **toolchain's, not your proto's** (a protoc
+  download-URL break at `make gen-images` time, or a protobuf/grpcio-tools pin drift) —
+  if `make gen-sdks` fails on python and `make lint` passes, suspect
+  `contracts/codegen/Dockerfile.python`, where both pins live. Upgrades = bump the pins,
+  regen, commit (the ADR-006 D1 committed SDKs make the diff reviewable). The gen-check
+  freshness gate exercises this leg every `make verify` (repaired at `rat/6.16` — protoc
+  creates no output dirs, which had silently killed check mode).
 - **Q02** — Converge the four per-language images into one combined codegen image later (one
   build, simpler `gen-sdks`) once the per-language shapes are settled?
 
