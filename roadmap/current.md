@@ -4,7 +4,18 @@
 > completion history lives in [`done.md`](done.md); the phase map in [`phases.md`](phases.md).
 > Updated: 2026-06-10.
 
-## ✅ Latest — `rat/6.17`: the DX line is COMPLETE (DX-5…9; only DX-2 remains)
+## ✅ Latest — `rat/6.18`: PUBLISHED 🐀 (DX-2 — the review is fully closed)
+
+**`github.com/le-squat/rat`, public, Apache-2.0** ([ADR-051](../docs/architecture/adrs/051-publish-apache2-le-squat.md)).
+Module paths renamed `rat-dev`→`le-squat` (go-get works; wire proven held — suite +
+conformance green; one conscious FILE_SAME_GO_PACKAGE waiver). Both CI workflows repaired
+*before* first run (contracts.yml auto-committed to main from CI; release.yml's image tag
+contained a `/`), and release.yml now also ships `rat-plugin-base-{go,py}` to GHCR — the
+SDK distribution. Verified from the outside: install.sh → `./rat version`, `go get`,
+`podman pull`. **External plugin authors are now structurally possible.** Residual: PyPI
+packaging (backlog). Details: [done.md](done.md).
+
+## ✅ `rat/6.17`: the DX line is COMPLETE (DX-5…9; only DX-2 remains)
 
 The last engineering batch of the frustration review: **[ADR-050](../docs/architecture/adrs/050-plane-file-env-interpolation.md)**
 plane-file `${VAR}` interpolation + `platform/.env` (compose renders verified
@@ -83,12 +94,12 @@ replicas · fully-parallel per-plugin reconcile. See [done.md](done.md) for the 
 
 **Phases 0–9 are SEALED** (`rat/1.5` contracts → `rat/2.0` core → `rat/2.5`–`6.0`). Everything ≤
 `rat/2.0` is the **frozen wire**; every tag since is additive. `main` is the sealed line at
-**`rat/6.17`**: `rat/6.6` ported the clean-room DX improvements (ADR-039/040/041), `rat/6.7` the 7 core
+**`rat/6.18`**: `rat/6.6` ported the clean-room DX improvements (ADR-039/040/041), `rat/6.7` the 7 core
 hardenings (ADRs 042–048), `rat/6.8`–`6.13` the `state/v1` create-if-absent amendment (ADR-049) +
-its full adoption, and the `rat/6.14`–`6.17` **DX line**: docs-truth + guides + first-success (6.14),
+its full adoption, and the `rat/6.14`–`6.18` **DX line**: docs-truth + guides + first-success (6.14),
 `rat validate` + `--strict` (6.15), `rat capabilities` + the vector lint gate + the gen-check repair
-(6.16), and plane `${VAR}` interpolation (ADR-050) + the vault-py secret-backend + `rat plugin dev` +
-ADR-018 Q01 + call flag order + the plugin-image-build repair (6.17). The from-scratch rebuild +
+(6.16), plane `${VAR}` interpolation (ADR-050) + the vault-py secret-backend + `rat plugin dev` (6.17),
+and the **publication** — Apache-2.0, `github.com/le-squat/rat`, GHCR distribution (ADR-051, 6.18). The from-scratch rebuild +
 remote-dev-flow experiment the hardenings came from is sealed separately at **`clean-room/2.0`** (a
 parallel line, not merged — its `plugins/`+`platform/` wipe would destroy this corpus). **ADR-042's
 channel-authenticated identity also closes most of the Phase-10 "direct-gateway `--as` trust" debt
@@ -151,12 +162,14 @@ separate `rat-data-dev` repo**.
   before broad new product phases; **Gate C/D** beyond. **Q02** (external *human* peer review)
   is still owed but set aside as impractical for a solo dev — validated practically instead
   (the data-dev-plane experiment, principle #8).
-- The freeze stays **local/unpushed** pending the Q02 punch-list (complete) + the real Q02.
+- ~~The freeze stays local/unpushed~~ — **PUBLISHED** at `github.com/le-squat/rat`
+  (Apache-2.0, [ADR-051](../docs/architecture/adrs/051-publish-apache2-le-squat.md), `rat/6.18`).
+  The real Q02 is now simply… public review.
 
 ## Branching (in force)
 
-`main` is the sealed line (**`rat/6.17`**); additive increments land via `--no-ff` merges of topic
-branches + an annotated `rat/N.M` tag. **Never commit directly to `main`** (a `PreToolUse` hook blocks
+`main` is the sealed line (**`rat/6.18`**, pushed to `github.com/le-squat/rat`); additive increments
+land via `--no-ff` merges of topic branches + an annotated `rat/N.M` tag. **Never commit directly to `main`** (a `PreToolUse` hook blocks
 it) — work on a topic branch. Full rules: [`.claude/rules/git-branching.md`](../.claude/rules/git-branching.md).
 
 ## Maintenance reminder

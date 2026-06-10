@@ -4,15 +4,18 @@ A control plane, one plugin, one authorized call, one refused call, and the audi
 that proves it. Every command below was run against this repo as written.
 
 **Prereqs:** `podman` (or docker) + `make`. Nothing installs on the host — builds and
-tests run in containers. (There are no public releases yet — the repo is the
-distribution; `scripts/install.sh` activates when it publishes.)
+tests run in containers.
 
-## 0 · Build the CLI (~1 min)
+## 0 · Get the CLI
+
+No clone needed:
 
 ```bash
-make rat-build        # containerized go build → dist/rat
-./dist/rat --help     # the verb map: PROJECT / DAEMON / AUTHOR / MARKETPLACE / CLIENT
+curl -fsSL https://github.com/le-squat/rat/releases/latest/download/install.sh | sh
+./rat --help          # the verb map: PROJECT / DAEMON / AUTHOR / MARKETPLACE / CLIENT
 ```
+
+(From a clone, `make rat-build` builds the same thing into `dist/rat`.)
 
 ## 1 · Build the demo plugin image (~1 min)
 

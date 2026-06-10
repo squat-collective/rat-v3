@@ -17,6 +17,36 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-10 — `rat/6.18`: PUBLISHED — Apache-2.0, `github.com/le-squat/rat` (DX-2, ADR-051)
+
+The last DX item, and the big one-way door, taken deliberately
+([ADR-051](../docs/architecture/adrs/051-publish-apache2-le-squat.md); license/org/visibility
+chosen by Tom):
+
+- **License: Apache-2.0** (canonical LICENSE + NOTICE) — the ecosystem bet: permissive +
+  patent grant, the K8s/NATS/Temporal-tier norm.
+- **Module-path rename `rat-dev` → `le-squat`** so `go get github.com/le-squat/rat/gen`
+  actually works: 25 protos' `go_package`, full SDK regen, 89 core Go files + every Go
+  reference plugin's module, Makefile/install.sh/marketplace-URL. **Consciously trips
+  `buf breaking`'s FILE_SAME_GO_PACKAGE once** — metadata-only; the wire is proven held
+  (full core suite + conformance 32/32 green under the new paths). Historical ADRs keep
+  their `rat-dev` mentions (true when written).
+- **CI repaired before it ever ran:** `contracts.yml`'s SDK job regenerated FOUR languages
+  via remote buf plugins and **auto-committed to `main` from CI** (pre-ADR-018/037; sealed-
+  main violation) → now runs `scripts/gen-sdks.sh --check`, never commits. `release.yml`'s
+  image job tagged images with `rat/N.M` (a `/` is invalid in an image tag — it would have
+  failed its first run) → version stripped; **and it now also publishes
+  `ghcr.io/le-squat/rat-plugin-base-{go,py}`** (the SDK distribution — Tom's "defer PyPI,
+  use GHCR" call) alongside the daemon image.
+- **Pushed public** (`main` + the `rat/6.18` tag only — each pushed tag cuts a Release, so
+  the 17 historical tags stay local archaeology), release pipeline run, and **verified
+  live from the outside**: `curl …/install.sh | sh` → `./rat version`, `go get` of the gen
+  module, `podman pull ghcr.io/le-squat/rat`.
+- Docs truth-flipped with it: README (install one-liner, license, "published"), QUICKSTART
+  step 0 = the curl, authoring guide's SDK-distribution story, CONTRIBUTING
+  (inbound=outbound). **Residual (backlog):** PyPI packaging for the Python SDK; the
+  marketplace Pages index.
+
 ## 2026-06-10 — `rat/6.17`: DX-5…9 — interpolation, the vault secret-backend, the watch loop
 
 The last engineering batch of the DX review (only DX-2, the publish decision, remains):

@@ -67,5 +67,5 @@ certainly can). See [.claude/rules/plugin-architecture.md](.claude/rules/plugin-
 
 ## License
 
-TBD (the license decision is itself a future ADR) — which is the honest reason external
-PRs can't be accepted yet.
+[Apache-2.0](LICENSE) ([ADR-051](docs/architecture/adrs/051-publish-apache2-le-squat.md)).
+Contributions are accepted under the same license (inbound = outbound).
