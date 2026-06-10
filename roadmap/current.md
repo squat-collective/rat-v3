@@ -4,7 +4,18 @@
 > completion history lives in [`done.md`](done.md); the phase map in [`phases.md`](phases.md).
 > Updated: 2026-06-10.
 
-## ✅ Latest — `rat/6.15`: `rat validate`, the static preflight (DX-1)
+## ✅ Latest — `rat/6.16`: `rat capabilities` + the vector lint gate (DX-3 + DX-4)
+
+The capability registry is now a verb — `rat capabilities [<axis>|<kind>]` renders what
+the binary links (URI · method · cardinality · messages · CONTRACT.md pointer; cannot
+drift from enforcement). And the golden vectors can no longer lie: an envelope schema +
+per-file key registry (`make validate-vectors`, now in `verify`) catches the typo'd keys
+every harness silently skips, with `rat.vectors.run_expect` + `harness_template.py` as
+the runtime half. Bonus: **`make gen-check`/`verify` had been silently broken on `main`**
+(python codegen output dir + hand-written-SDK false-stales) — found, fixed, and `verify`
+passes end-to-end again. Backlog **⑤ DX-3 + DX-4 cut**. Details: [done.md](done.md).
+
+## ✅ `rat/6.15`: `rat validate`, the static preflight (DX-1)
 
 Boot misconfig now surfaces **before** boot: `rat validate [--plane <file>]` statically
 checks manifests · unique names · launch-xor-attach · capability URIs are real ·
@@ -60,11 +71,11 @@ replicas · fully-parallel per-plugin reconcile. See [done.md](done.md) for the 
 
 **Phases 0–9 are SEALED** (`rat/1.5` contracts → `rat/2.0` core → `rat/2.5`–`6.0`). Everything ≤
 `rat/2.0` is the **frozen wire**; every tag since is additive. `main` is the sealed line at
-**`rat/6.15`**: `rat/6.6` ported the clean-room DX improvements (ADR-039/040/041), `rat/6.7` the 7 core
+**`rat/6.16`**: `rat/6.6` ported the clean-room DX improvements (ADR-039/040/041), `rat/6.7` the 7 core
 hardenings (ADRs 042–048), `rat/6.8`–`6.13` the `state/v1` create-if-absent amendment (ADR-049) +
-its full adoption (lease · ticket store · all four state backends), `rat/6.14` the DX sweep
-(docs-truth + guides + the project-socket `rat call` fix), and `rat/6.15` the `rat validate`
-preflight + `--strict` boot gate (DX-1). The from-scratch rebuild +
+its full adoption (lease · ticket store · all four state backends), and the `rat/6.14`–`6.16` DX line:
+the docs-truth sweep + guides, the `rat validate` preflight + `--strict` boot gate (DX-1), and
+`rat capabilities` + the vector lint gate (DX-3/DX-4, incl. the gen-check/verify repair). The from-scratch rebuild +
 remote-dev-flow experiment the hardenings came from is sealed separately at **`clean-room/2.0`** (a
 parallel line, not merged — its `plugins/`+`platform/` wipe would destroy this corpus). **ADR-042's
 channel-authenticated identity also closes most of the Phase-10 "direct-gateway `--as` trust" debt
@@ -110,9 +121,9 @@ separate `rat-data-dev` repo**.
 
 **No pressing thread.** The code-level review arc (7 gaps + ADR-049) and the DX sweep are complete on
 `main` through `rat/6.14`, all green. Genuinely-open work is optional / longer-horizon — pick by appetite:
-- **DX engineering (newest queue):** backlog **⑤ DX-2…9** — the publish/distribution decision
-  (DX-2 unblocks external authors; highest leverage), `rat capabilities`, vector schema + harness
-  codegen, config dedup, secrets prod story, watch mode. (DX-1 `rat validate` landed at `rat/6.15`.)
+- **DX engineering (newest queue):** backlog **⑤ DX-2 · DX-5…9** — the publish/distribution decision
+  (DX-2 unblocks external authors; highest leverage), config dedup, secrets prod story, watch mode,
+  ADR-018 Q01, call flag order. (DX-1 landed at `rat/6.15`; DX-3 + DX-4 at `rat/6.16`.)
 - **Security keystone (highest value):** mTLS on the core↔plugin channel + `SubjectAssertion` signing
   (the second half of ADR-042 — the end-user principal is still an unsigned passthrough).
 - **Observability:** OTel spans + latency histograms; signed/rotated durable audit (`common/v1.AuditRecord`).
@@ -131,7 +142,7 @@ separate `rat-data-dev` repo**.
 
 ## Branching (in force)
 
-`main` is the sealed line (**`rat/6.15`**); additive increments land via `--no-ff` merges of topic
+`main` is the sealed line (**`rat/6.16`**); additive increments land via `--no-ff` merges of topic
 branches + an annotated `rat/N.M` tag. **Never commit directly to `main`** (a `PreToolUse` hook blocks
 it) — work on a topic branch. Full rules: [`.claude/rules/git-branching.md`](../.claude/rules/git-branching.md).
 

@@ -17,6 +17,38 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-10 — `rat/6.16`: `rat capabilities` + the vector lint gate (backlog DX-3 + DX-4)
+
+Two more DX-review engineering items, plus a broken gate found and fixed along the way:
+
+- **DX-3 — `rat capabilities [<axis>|<kind>]`** (`core/cmd/rat/capabilities.go`): renders
+  the capability registry compiled into the binary — URI · method · cardinality ·
+  request → response per axis, with the kind and the CONTRACT.md pointer — sourced from
+  the same `(rat.common.v1.capability)` annotations `rat plugin check` and the gateway
+  enforce, so it cannot drift. Kind-aware filtering; unknown axis errors with the valid
+  list. Handles the **frozen-wire wart** discovered en route: `deployment-runtime` URIs
+  keep the hyphen while the proto dir doesn't — the only axis where they diverge.
+  (`validate` + `capabilities`/`caps` also joined `builtinVerbs` — `validate` had been
+  missed at 6.15, so a contributed command could have shadowed it.)
+- **DX-4 — the conformance vectors can no longer lie silently.** Static half:
+  `contracts/schema/conformance-vector.v1.json` (envelope schema + a per-file **key
+  registry** generated from today's ground truth) enforced by
+  `scripts/validate-vectors.py` → **`make validate-vectors`, now part of `make verify`**.
+  All 21 vectors pass; an injected `revison` typo is caught with the JSON path and a
+  did-you-mean; a new vector file with step objects must register itself. Runtime half:
+  `rat.vectors` SDK helpers (`load` · `serve_inprocess` · `run_expect` — hard-fails any
+  expect key without a handler) + the canonical
+  `contracts/conformance/harness_template.py` replacing "copy the closest sibling".
+- **Found + fixed: `make gen-check` (and so `make verify`) was silently broken on
+  `main`** — the python codegen's output dir doesn't exist in the check-mode clean
+  workspace (`mkdir -p` added to `gen-python.sh`), and the freshness diff flagged the
+  hand-written SDK files (`ratplugin/`, `plugin.py`, `contrib.py`, the Dockerfiles) as
+  stale (now excluded explicitly). **`make verify` passes end-to-end for the first time
+  in a while** — lint · build · gen-check · compile-sdks · validate-vectors · core-test.
+- Docs: authoring guide (capabilities verb first in Discovering; template + helpers in
+  Conformance), conformance README (the two-defense section), AMENDING step 5 + friction
+  list, contracts README gates, CONTRIBUTING gates row, schema README gap-#2 note.
+
 ## 2026-06-10 — `rat/6.15`: `rat validate` — the static preflight (backlog DX-1)
 
 The first engineering item from the DX review: **boot misconfig now surfaces before boot,
