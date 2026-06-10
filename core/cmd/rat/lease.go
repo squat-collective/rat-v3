@@ -18,7 +18,9 @@ import (
 	"github.com/rat-dev/rat/core/lease"
 	statev1 "github.com/rat-dev/rat/gen/rat/state/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 // leaseCandidateID is this replica's election identity. It MUST be unique per process — two
@@ -71,12 +73,32 @@ func (a stateCAS) Put(ctx context.Context, key string, value []byte, ifRevision 
 	if err != nil {
 		return false, 0, err
 	}
-	switch r.GetOutcome() {
+	return outcomeToCAS(r.GetOutcome(), r.GetRevision(), "put")
+}
+
+// CreateIfAbsent uses the optional state/v1 create-if-absent RPC (ADR-049). A backend that doesn't
+// implement it returns gRPC Unimplemented → mapped to lease.ErrCreateIfAbsentUnsupported so the
+// lease falls back to a guarded unconditional create.
+func (a stateCAS) CreateIfAbsent(ctx context.Context, key string, value []byte) (bool, int64, error) {
+	r, err := a.client.CreateIfAbsent(ctx, &statev1.CreateIfAbsentRequest{Key: key, Value: value})
+	if err != nil {
+		if status.Code(err) == codes.Unimplemented {
+			return false, 0, lease.ErrCreateIfAbsentUnsupported
+		}
+		return false, 0, err
+	}
+	return outcomeToCAS(r.GetOutcome(), r.GetRevision(), "create-if-absent")
+}
+
+// outcomeToCAS maps a state/v1 PutOutcome onto the lease's (committed, revision, err) trichotomy:
+// COMMITTED → committed; CONFLICT → not committed (no error); UNKNOWN/UNSPECIFIED → unconfirmed err.
+func outcomeToCAS(outcome statev1.PutOutcome, revision int64, op string) (bool, int64, error) {
+	switch outcome {
 	case statev1.PutOutcome_PUT_OUTCOME_COMMITTED:
-		return true, r.GetRevision(), nil
+		return true, revision, nil
 	case statev1.PutOutcome_PUT_OUTCOME_CONFLICT:
-		return false, r.GetRevision(), nil
+		return false, revision, nil
 	default: // UNKNOWN / UNSPECIFIED → unconfirmed; the lease treats this as "uncertain"
-		return false, 0, fmt.Errorf("state put unconfirmed (outcome=%s)", r.GetOutcome())
+		return false, 0, fmt.Errorf("state %s unconfirmed (outcome=%s)", op, outcome)
 	}
 }

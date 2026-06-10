@@ -117,9 +117,11 @@ already names; this ADR makes it operational.
 
 ## Open questions
 
-- **Q01 — create-if-absent for `state/v1`.** An additive `PutRequest` mode ("succeed only if the
-  key is absent", e.g. `if_revision = -1`) would make cold-start election fully race-free. Additive,
-  `make breaking`-clean, but a frozen-contract change → its own ADR. Until then: pre-init the key.
+- **Q01 — create-if-absent for `state/v1`. RESOLVED (2026-06-10) by [ADR-049](049-state-v1-create-if-absent.md).**
+  Added as an additive, optional, capability-gated `CreateIfAbsent` RPC (a new capability, *not* the
+  rejected `if_revision = -1` sentinel — see ADR-049). The `StateStore` cold-start now uses it
+  (feature-detected, with the unconditional-create fallback), so cold-start election is race-free on a
+  backend that supports it — proven by a concurrent two-elector cold-start test. Caveat closed.
 - **Q02 — fold the lease onto a real durable state-backend reference.** The tests use a fake
   linearizable CAS; the sqlite-py backend can serve as the first real durable lease store (it
   already exposes CAS via `if_revision`). Wire + conformance-test it against `RAT_LEASE_STATE_ADDR`.
