@@ -76,6 +76,27 @@ class Store:
             c.execute("ROLLBACK")
             raise
 
+    def create_if_absent(self, key: str, value: bytes):
+        """Transactional atomic create-if-absent (ADR-049). Returns (created, revision): created
+        with the new global rev, or (False, existing rev) if the key already existed (no write).
+        BEGIN IMMEDIATE serializes writers, so exactly one of N concurrent creators commits."""
+        c = self._conn()
+        c.execute("BEGIN IMMEDIATE")
+        try:
+            row = c.execute("SELECT revision FROM kv WHERE key=?", (key,)).fetchone()
+            if row is not None:
+                c.execute("ROLLBACK")
+                return False, row[0]  # already exists
+            c.execute("UPDATE meta SET rev = rev + 1 WHERE id=0")
+            nr = c.execute("SELECT rev FROM meta WHERE id=0").fetchone()[0]
+            c.execute("INSERT INTO kv(key, value, revision) VALUES (?, ?, ?)", (key, value, nr))
+            c.execute("INSERT INTO log(key, value, revision) VALUES (?, ?, ?)", (key, value, nr))
+            c.execute("COMMIT")
+            return True, nr
+        except Exception:
+            c.execute("ROLLBACK")
+            raise
+
     def list(self, prefix: str) -> List[str]:
         rows = self._conn().execute("SELECT key FROM kv ORDER BY key").fetchall()
         return [r[0] for r in rows if r[0].startswith(prefix)]

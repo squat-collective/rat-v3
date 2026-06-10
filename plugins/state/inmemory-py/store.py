@@ -34,6 +34,18 @@ class Store:
             self._log.append((key, value, self._rev))
             return True, self._rev
 
+    def create_if_absent(self, key: str, value: bytes):
+        """Atomically create key ONLY if absent (ADR-049). Returns (created, revision): created
+        with the new rev, or (False, existing rev) if it already existed (no write). Atomic under
+        the lock, so N concurrent creators yield exactly one created=True."""
+        with self._lock:
+            if key in self._data:
+                return False, self._data[key][1]
+            self._rev += 1
+            self._data[key] = (value, self._rev)
+            self._log.append((key, value, self._rev))
+            return True, self._rev
+
     def list(self, prefix: str) -> List[str]:
         with self._lock:
             return sorted(k for k in self._data if k.startswith(prefix))

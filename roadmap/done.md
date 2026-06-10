@@ -17,6 +17,26 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-10 — `rat/6.12`: Python create-if-absent + cross-language golden vector — ADR-049 FULLY adopted
+
+Implemented `CreateIfAbsent` in both Python state references and added it to the shared cross-language
+conformance vector — the last ADR-049 thread.
+
+- **`inmemory-py`** (store + server): atomic create-if-absent under the store lock.
+- **`sqlite-py`** (store + server): atomic via `BEGIN IMMEDIATE` (read→check→insert serialized) — the
+  durable reference, mirroring the `INSERT … ON CONFLICT`-style guarantee.
+- **`state-v1.json`**: appended 3 lifecycle steps (create→COMMITTED · re-create→CONFLICT · get→
+  no-overwrite) on a fresh `cia/` key (no revision assertions, so earlier put/list/watch vectors are
+  unperturbed); wired the op into all three harnesses (`inmemory-go` via the stub gateway + the
+  caller's allow-list; the two Python harnesses call the servicer directly).
+- **All three references conform** to the updated golden vector: `inmemory-go` (`go test -race`),
+  `inmemory-py` + `sqlite-py` (`python harness_test.py` under the conformance image). Go audit-count
+  assertion stays consistent (14 mediated calls = 14 records).
+
+**ADR-049 is now fully adopted** — wire (6.8) → lease (6.9) → ticket store (6.11) → cross-language
+references (6.12). No proto/SDK change here (the contract landed at 6.8). Optional leftover:
+`memory-py`/`postgres-py` (not vector-harnessed) for production HA backends.
+
 ## 2026-06-10 — `rat/6.11`: Arrow-ticket store backed by state/v1 create-if-absent — ADR-049 Go adoption COMPLETE
 
 Wired the Arrow-ticket single-use store (ADR-048) onto the `state/v1` `CreateIfAbsent` (ADR-049) — the

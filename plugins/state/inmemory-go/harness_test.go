@@ -144,6 +144,7 @@ func newRig(t *testing.T) *rig {
 
 	core := newGateway(providerConn, "rat-strategy-test", []string{
 		"rat://state/v1/get", "rat://state/v1/put", "rat://state/v1/list", "rat://state/v1/watch",
+		"rat://state/v1/create-if-absent",
 	})
 
 	glis := bufconn.Listen(1 << 20)
@@ -243,6 +244,20 @@ func runStep(t *testing.T, r *rig, ctx context.Context, s vstep) {
 			return
 		}
 		assertWatch(t, s, events)
+	case "create-if-absent":
+		var resp statev1.CreateIfAbsentResponse
+		err := r.invoke(ctx, "rat://state/v1/create-if-absent",
+			&statev1.CreateIfAbsentRequest{Key: resolveKey(s), Value: []byte(s.Value)}, &resp)
+		if expectedError(t, s, err) {
+			return
+		}
+		e := s.Expect
+		if e.Outcome != "" && resp.GetOutcome() != outcomeEnum(t, e.Outcome) {
+			t.Fatalf("%s: outcome = %s, want %s", s.Step, resp.GetOutcome(), e.Outcome)
+		}
+		if e.Revision != nil && resp.GetRevision() != *e.Revision {
+			t.Fatalf("%s: revision = %d, want %d", s.Step, resp.GetRevision(), *e.Revision)
+		}
 	default:
 		t.Fatalf("%s: unknown op %q", s.Step, s.Op)
 	}
