@@ -67,8 +67,10 @@ path).
 
 - **The default is still per-process.** A single-producer deployment is unchanged; multi-producer
   correctness requires wiring a shared `CASStore` — opt-in, documented, not automatic.
-- **No `state/v1`-backed store yet.** Blocked on the create-if-absent amendment (ADR-043 Q01); today a
-  shared store needs an external backend with put-if-absent semantics.
+- **No `state/v1`-backed store yet. RESOLVED (2026-06-10) by [ADR-049](049-state-v1-create-if-absent.md).**
+  The `state/v1` `CreateIfAbsent` amendment landed, and `core/arrowticket/statecas` bridges
+  `SingleUseCAS` onto it — so the shared store now rides the **state axis** directly (no external
+  etcd/Redis required). The per-process `MemStore` remains the solo default.
 
 ## Alternatives considered
 
