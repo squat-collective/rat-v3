@@ -25,14 +25,14 @@ _sym_db = _symbol_database.Default()
 from rat.common.v1 import annotations_pb2 as rat_dot_common_dot_v1_dot_annotations__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1arat/secret/v1/secret.proto\x12\rrat.secret.v1\x1a\x1frat/common/v1/annotations.proto\"*\n\x0eResolveRequest\x12\x12\n\nsecret_ref\x18\x02 \x01(\tJ\x04\x08\x01\x10\x02\"M\n\x0fResolveResponse\x12\r\n\x05\x66ound\x18\x01 \x01(\x08\x12\x12\n\x05value\x18\x02 \x01(\x0c\x42\x03\x80\x01\x01\x12\x17\n\x0f\x65xpires_unix_ms\x18\x03 \x01(\x03\x32v\n\rSecretService\x12\x65\n\x07Resolve\x12\x1d.rat.secret.v1.ResolveRequest\x1a\x1e.rat.secret.v1.ResolveResponse\"\x1b\x8a\x97\"\x17rat://secret/v1/resolveB3Z1github.com/rat-dev/rat/gen/rat/secret/v1;secretv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1arat/secret/v1/secret.proto\x12\rrat.secret.v1\x1a\x1frat/common/v1/annotations.proto\"*\n\x0eResolveRequest\x12\x12\n\nsecret_ref\x18\x02 \x01(\tJ\x04\x08\x01\x10\x02\"M\n\x0fResolveResponse\x12\r\n\x05\x66ound\x18\x01 \x01(\x08\x12\x12\n\x05value\x18\x02 \x01(\x0c\x42\x03\x80\x01\x01\x12\x17\n\x0f\x65xpires_unix_ms\x18\x03 \x01(\x03\x32v\n\rSecretService\x12\x65\n\x07Resolve\x12\x1d.rat.secret.v1.ResolveRequest\x1a\x1e.rat.secret.v1.ResolveResponse\"\x1b\x8a\x97\"\x17rat://secret/v1/resolveB4Z2github.com/le-squat/rat/gen/rat/secret/v1;secretv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rat.secret.v1.secret_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z1github.com/rat-dev/rat/gen/rat/secret/v1;secretv1'
+  _globals['DESCRIPTOR']._serialized_options = b'Z2github.com/le-squat/rat/gen/rat/secret/v1;secretv1'
   _globals['_RESOLVERESPONSE'].fields_by_name['value']._loaded_options = None
   _globals['_RESOLVERESPONSE'].fields_by_name['value']._serialized_options = b'\200\001\001'
   _globals['_SECRETSERVICE'].methods_by_name['Resolve']._loaded_options = None

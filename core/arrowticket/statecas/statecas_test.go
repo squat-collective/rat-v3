@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rat-dev/rat/core/arrowticket"
-	statev1 "github.com/rat-dev/rat/gen/rat/state/v1"
+	"github.com/le-squat/rat/core/arrowticket"
+	statev1 "github.com/le-squat/rat/gen/rat/state/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

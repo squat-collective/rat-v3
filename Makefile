@@ -20,7 +20,7 @@ PY_IMAGE  ?= docker.io/library/python:3.12
 VERSION      ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 RELEASE_OS   ?= linux
 RELEASE_ARCH ?= amd64
-IMAGE        ?= ghcr.io/rat-dev/rat
+IMAGE        ?= ghcr.io/le-squat/rat
 
 # Container runtime detection (podman first).
 RUNTIME := $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null)

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/rat-dev/rat/gen/rat/common/v1"
+	commonv1 "github.com/le-squat/rat/gen/rat/common/v1"
 )
 
 // D2 — the ticket is the ONLY gate on the bulk leg. The Arrow bytes leg bypasses the

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rat-dev/rat/core/lease"
+	"github.com/le-squat/rat/core/lease"
 )
 
 // TestLeaderReconcilesFollowerIdleAndFailover: two replicas contend for one lease;

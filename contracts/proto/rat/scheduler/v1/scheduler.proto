@@ -15,7 +15,7 @@ package rat.scheduler.v1;
 
 import "rat/common/v1/annotations.proto";
 
-option go_package = "github.com/rat-dev/rat/gen/rat/scheduler/v1;schedulerv1";
+option go_package = "github.com/le-squat/rat/gen/rat/scheduler/v1;schedulerv1";
 
 service SchedulerService {
   // rat://scheduler/v1/schedule — register a trigger (cron expr or one-shot).

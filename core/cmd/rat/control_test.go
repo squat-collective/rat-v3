@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rat-dev/rat/core/lease"
-	"github.com/rat-dev/rat/core/reconciler"
-	"github.com/rat-dev/rat/core/registry"
-	corev1 "github.com/rat-dev/rat/gen/rat/core/v1"
-	deploymentruntimev1 "github.com/rat-dev/rat/gen/rat/deploymentruntime/v1"
+	"github.com/le-squat/rat/core/lease"
+	"github.com/le-squat/rat/core/reconciler"
+	"github.com/le-squat/rat/core/registry"
+	corev1 "github.com/le-squat/rat/gen/rat/core/v1"
+	deploymentruntimev1 "github.com/le-squat/rat/gen/rat/deploymentruntime/v1"
 )
 
 // fakeCtlRuntime is a deployment-runtime stub: every launched instance reports `status`.

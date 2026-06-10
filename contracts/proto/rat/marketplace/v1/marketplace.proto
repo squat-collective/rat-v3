@@ -22,7 +22,7 @@ package rat.marketplace.v1;
 
 import "rat/common/v1/annotations.proto";
 
-option go_package = "github.com/rat-dev/rat/gen/rat/marketplace/v1;marketplacev1";
+option go_package = "github.com/le-squat/rat/gen/rat/marketplace/v1;marketplacev1";
 
 service MarketplaceService {
   // rat://marketplace/v1/search — find plugins, optionally filtered to those

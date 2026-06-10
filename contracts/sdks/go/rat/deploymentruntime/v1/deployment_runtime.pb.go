@@ -27,7 +27,7 @@
 package deploymentruntimev1
 
 import (
-	_ "github.com/rat-dev/rat/gen/rat/common/v1"
+	_ "github.com/le-squat/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -657,7 +657,7 @@ const file_rat_deploymentruntime_v1_deployment_runtime_proto_rawDesc = "" +
 	"\x18DeploymentRuntimeService\x12\x83\x01\n" +
 	"\x06Launch\x12'.rat.deploymentruntime.v1.LaunchRequest\x1a(.rat.deploymentruntime.v1.LaunchResponse\"&\x8a\x97\"\"rat://deployment-runtime/v1/launch\x12\x8f\x01\n" +
 	"\tTerminate\x12*.rat.deploymentruntime.v1.TerminateRequest\x1a+.rat.deploymentruntime.v1.TerminateResponse\")\x8a\x97\"%rat://deployment-runtime/v1/terminate\x12\x97\x01\n" +
-	"\vHealthcheck\x12,.rat.deploymentruntime.v1.HealthcheckRequest\x1a-.rat.deploymentruntime.v1.HealthcheckResponse\"+\x8a\x97\"'rat://deployment-runtime/v1/healthcheckBIZGgithub.com/rat-dev/rat/gen/rat/deploymentruntime/v1;deploymentruntimev1b\x06proto3"
+	"\vHealthcheck\x12,.rat.deploymentruntime.v1.HealthcheckRequest\x1a-.rat.deploymentruntime.v1.HealthcheckResponse\"+\x8a\x97\"'rat://deployment-runtime/v1/healthcheckBJZHgithub.com/le-squat/rat/gen/rat/deploymentruntime/v1;deploymentruntimev1b\x06proto3"
 
 var (
 	file_rat_deploymentruntime_v1_deployment_runtime_proto_rawDescOnce sync.Once

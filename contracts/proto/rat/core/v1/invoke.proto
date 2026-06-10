@@ -35,7 +35,7 @@ syntax = "proto3";
 
 package rat.core.v1;
 
-option go_package = "github.com/rat-dev/rat/gen/rat/core/v1;corev1";
+option go_package = "github.com/le-squat/rat/gen/rat/core/v1;corev1";
 
 // CapabilityInvokeService has one Invoke variant per RPC cardinality (ADR-008).
 // All three are GENERIC byte-relays: the core enforces C2/C5/C7/C8 + traceparent

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rat-dev/rat/core/deploymentruntime"
-	"github.com/rat-dev/rat/core/lease"
-	deploymentruntimev1 "github.com/rat-dev/rat/gen/rat/deploymentruntime/v1"
+	"github.com/le-squat/rat/core/deploymentruntime"
+	"github.com/le-squat/rat/core/lease"
+	deploymentruntimev1 "github.com/le-squat/rat/gen/rat/deploymentruntime/v1"
 )
 
 // buildBin compiles core/testplugins/<pkg> to a temp binary the local-process runtime

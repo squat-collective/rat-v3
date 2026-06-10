@@ -32,9 +32,9 @@ import (
 	"strings"
 	"time"
 
-	commonv1 "github.com/rat-dev/rat/gen/rat/common/v1"
-	corev1 "github.com/rat-dev/rat/gen/rat/core/v1"
-	statev1 "github.com/rat-dev/rat/gen/rat/state/v1"
+	commonv1 "github.com/le-squat/rat/gen/rat/common/v1"
+	corev1 "github.com/le-squat/rat/gen/rat/core/v1"
+	statev1 "github.com/le-squat/rat/gen/rat/state/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -47,11 +47,11 @@ import (
 	// Blank imports register each axis's file descriptors + message types in
 	// protoregistry.Global* — that is how ratctl resolves any of their capabilities
 	// (capability → method → request/response type) without a hand-kept table.
-	_ "github.com/rat-dev/rat/gen/rat/catalog/v1"
-	_ "github.com/rat-dev/rat/gen/rat/engine/v1"
-	_ "github.com/rat-dev/rat/gen/rat/format/v1"
-	_ "github.com/rat-dev/rat/gen/rat/storage/v1"
-	_ "github.com/rat-dev/rat/gen/rat/strategy/v1"
+	_ "github.com/le-squat/rat/gen/rat/catalog/v1"
+	_ "github.com/le-squat/rat/gen/rat/engine/v1"
+	_ "github.com/le-squat/rat/gen/rat/format/v1"
+	_ "github.com/le-squat/rat/gen/rat/storage/v1"
+	_ "github.com/le-squat/rat/gen/rat/strategy/v1"
 	// state/v1 is imported NAMED (statev1) above — `apply` builds a state.PutRequest
 	// directly (binary project tarball, not protojson), so it needs the concrete type.
 )

@@ -45,7 +45,7 @@
 package tenancyv1
 
 import (
-	_ "github.com/rat-dev/rat/gen/rat/common/v1"
+	_ "github.com/le-squat/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -318,7 +318,7 @@ const file_rat_tenancy_v1_tenancy_proto_rawDesc = "" +
 	"\x18DENY_CODE_QUOTA_EXCEEDED\x10\x02\x12!\n" +
 	"\x1dDENY_CODE_CROSS_TENANT_DENIED\x10\x032v\n" +
 	"\x0eTenancyService\x12d\n" +
-	"\x06Decide\x12\x1d.rat.tenancy.v1.DecideRequest\x1a\x1e.rat.tenancy.v1.DecideResponse\"\x1b\x8a\x97\"\x17rat://tenancy/v1/decideB5Z3github.com/rat-dev/rat/gen/rat/tenancy/v1;tenancyv1b\x06proto3"
+	"\x06Decide\x12\x1d.rat.tenancy.v1.DecideRequest\x1a\x1e.rat.tenancy.v1.DecideResponse\"\x1b\x8a\x97\"\x17rat://tenancy/v1/decideB6Z4github.com/le-squat/rat/gen/rat/tenancy/v1;tenancyv1b\x06proto3"
 
 var (
 	file_rat_tenancy_v1_tenancy_proto_rawDescOnce sync.Once

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	deploymentruntimev1 "github.com/rat-dev/rat/gen/rat/deploymentruntime/v1"
-	statev1 "github.com/rat-dev/rat/gen/rat/state/v1"
+	deploymentruntimev1 "github.com/le-squat/rat/gen/rat/deploymentruntime/v1"
+	statev1 "github.com/le-squat/rat/gen/rat/state/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -180,7 +180,7 @@ func TestPodmanRefusesBelowI9(t *testing.T) {
 	_, err := rt.Launch(context.Background(), &deploymentruntimev1.LaunchRequest{
 		PluginId: "x",
 		// drop_all_capabilities missing.
-		Spec: &deploymentruntimev1.LaunchSpec{Image: "ghcr.io/rat-dev/x:1", Isolation: &deploymentruntimev1.IsolationProfile{RunAsNonRoot: true, NoNewPrivileges: true}},
+		Spec: &deploymentruntimev1.LaunchSpec{Image: "ghcr.io/le-squat/x:1", Isolation: &deploymentruntimev1.IsolationProfile{RunAsNonRoot: true, NoNewPrivileges: true}},
 	})
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("Launch below the I9 minimum = %v, want FailedPrecondition", status.Code(err))

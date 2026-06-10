@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rat-dev/rat/core/manifest"
-	"github.com/rat-dev/rat/core/supervisor"
-	deploymentruntimev1 "github.com/rat-dev/rat/gen/rat/deploymentruntime/v1"
+	"github.com/le-squat/rat/core/manifest"
+	"github.com/le-squat/rat/core/supervisor"
+	deploymentruntimev1 "github.com/le-squat/rat/gen/rat/deploymentruntime/v1"
 	"gopkg.in/yaml.v3"
 )
 

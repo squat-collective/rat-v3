@@ -51,9 +51,8 @@ Core-impl, **no wire change**. From the Q02 simulated panel ([reviews/Q02-tracke
 above still track manifest co-location, the localhost-attach inner loop, and author
 versioning; **federation #5** tracks new-axis-without-recompile.
 
-The one that remains:
-
-- **DX-2 (High; blocked on the publish decision)** — distribution: push the repo, cut binary releases (un-404 `scripts/install.sh`), publish `plugin-base-{go,py}` to ghcr, the Python SDK to PyPI, the Go SDK as a fetchable module. Until then **external plugin authors are structurally impossible** (the guides say so honestly).
+- ~~DX-2~~ — **done at `rat/6.18`** ([ADR-051](../docs/architecture/adrs/051-publish-apache2-le-squat.md)): published public at `github.com/le-squat/rat` under Apache-2.0; releases ship 4-platform binaries + install.sh + the daemon and plugin-base images on GHCR; the Go SDK is `go get`-able (module paths renamed `rat-dev`→`le-squat` with the publish).
+- **DX-2-residual (Low)** — **PyPI packaging** for the Python SDK (pyproject + a PyPI account/token; deferred by choice — the SDK ships in `ghcr.io/le-squat/rat-plugin-base-py` meanwhile). Also: the historical `rat/1.5`–`6.17` tags are local-only (each pushed tag cuts a Release — push deliberately or not at all), and `marketplace.go`'s official-index URL now points at `le-squat.github.io/marketplace` (still a placeholder until that Pages site exists).
 
 ---
 

@@ -1,4 +1,4 @@
-module github.com/rat-dev/rat/gen
+module github.com/le-squat/rat/gen
 
 go 1.25.0
 

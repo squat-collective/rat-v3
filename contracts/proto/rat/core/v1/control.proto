@@ -22,7 +22,7 @@ syntax = "proto3";
 
 package rat.core.v1;
 
-option go_package = "github.com/rat-dev/rat/gen/rat/core/v1;corev1";
+option go_package = "github.com/le-squat/rat/gen/rat/core/v1;corev1";
 
 // ControlService is served on the daemon's CONTROL listener alongside
 // CapabilityInvokeService. rat.toml stays the source of truth; these RPCs only apply a

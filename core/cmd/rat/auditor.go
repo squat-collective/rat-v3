@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/rat-dev/rat/core/gateway"
+	"github.com/le-squat/rat/core/gateway"
 )
 
 // StdoutAuditor is the daemon's audit sink: it implements gateway.Auditor by

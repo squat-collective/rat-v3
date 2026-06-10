@@ -403,7 +403,7 @@ const file_rat_core_v1_invoke_proto_rawDesc = "" +
 	"\x17CapabilityInvokeService\x12A\n" +
 	"\x06Invoke\x12\x1a.rat.core.v1.InvokeRequest\x1a\x1b.rat.core.v1.InvokeResponse\x12g\n" +
 	"\x12InvokeServerStream\x12&.rat.core.v1.InvokeServerStreamRequest\x1a'.rat.core.v1.InvokeServerStreamResponse0\x01\x12c\n" +
-	"\x10InvokeBidiStream\x12$.rat.core.v1.InvokeBidiStreamRequest\x1a%.rat.core.v1.InvokeBidiStreamResponse(\x010\x01B/Z-github.com/rat-dev/rat/gen/rat/core/v1;corev1b\x06proto3"
+	"\x10InvokeBidiStream\x12$.rat.core.v1.InvokeBidiStreamRequest\x1a%.rat.core.v1.InvokeBidiStreamResponse(\x010\x01B0Z.github.com/le-squat/rat/gen/rat/core/v1;corev1b\x06proto3"
 
 var (
 	file_rat_core_v1_invoke_proto_rawDescOnce sync.Once

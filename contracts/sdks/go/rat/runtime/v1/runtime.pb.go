@@ -16,7 +16,7 @@
 package runtimev1
 
 import (
-	v1 "github.com/rat-dev/rat/gen/rat/common/v1"
+	v1 "github.com/le-squat/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -309,7 +309,7 @@ const file_rat_runtime_v1_runtime_proto_rawDesc = "" +
 	"\tcompleted\x18\x02 \x01(\v2 .rat.runtime.v1.ExecuteCompletedH\x00R\tcompletedB\a\n" +
 	"\x05event2|\n" +
 	"\x0eRuntimeService\x12j\n" +
-	"\aExecute\x12\x1e.rat.runtime.v1.ExecuteRequest\x1a\x1f.rat.runtime.v1.ExecuteResponse\"\x1c\x8a\x97\"\x18rat://runtime/v1/execute0\x01B5Z3github.com/rat-dev/rat/gen/rat/runtime/v1;runtimev1b\x06proto3"
+	"\aExecute\x12\x1e.rat.runtime.v1.ExecuteRequest\x1a\x1f.rat.runtime.v1.ExecuteResponse\"\x1c\x8a\x97\"\x18rat://runtime/v1/execute0\x01B6Z4github.com/le-squat/rat/gen/rat/runtime/v1;runtimev1b\x06proto3"
 
 var (
 	file_rat_runtime_v1_runtime_proto_rawDescOnce sync.Once

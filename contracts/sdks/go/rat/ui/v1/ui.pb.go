@@ -24,7 +24,7 @@
 package uiv1
 
 import (
-	_ "github.com/rat-dev/rat/gen/rat/common/v1"
+	_ "github.com/le-squat/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -311,7 +311,7 @@ const file_rat_ui_v1_ui_proto_rawDesc = "" +
 	"\tUiService\x12]\n" +
 	"\bDescribe\x12\x1a.rat.ui.v1.DescribeRequest\x1a\x1b.rat.ui.v1.DescribeResponse\"\x18\x8a\x97\"\x14rat://ui/v1/describe\x12f\n" +
 	"\n" +
-	"RenderSlot\x12\x1c.rat.ui.v1.RenderSlotRequest\x1a\x1d.rat.ui.v1.RenderSlotResponse\"\x1b\x8a\x97\"\x17rat://ui/v1/render-slotB+Z)github.com/rat-dev/rat/gen/rat/ui/v1;uiv1b\x06proto3"
+	"RenderSlot\x12\x1c.rat.ui.v1.RenderSlotRequest\x1a\x1d.rat.ui.v1.RenderSlotResponse\"\x1b\x8a\x97\"\x17rat://ui/v1/render-slotB,Z*github.com/le-squat/rat/gen/rat/ui/v1;uiv1b\x06proto3"
 
 var (
 	file_rat_ui_v1_ui_proto_rawDescOnce sync.Once

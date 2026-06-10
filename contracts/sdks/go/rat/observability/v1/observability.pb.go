@@ -23,7 +23,7 @@
 package observabilityv1
 
 import (
-	_ "github.com/rat-dev/rat/gen/rat/common/v1"
+	_ "github.com/le-squat/rat/gen/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -295,7 +295,7 @@ const file_rat_observability_v1_observability_proto_rawDesc = "" +
 	"\x10SIGNAL_TYPE_SPAN\x10\x02\x12\x13\n" +
 	"\x0fSIGNAL_TYPE_LOG\x10\x032\x92\x01\n" +
 	"\x14ObservabilityService\x12z\n" +
-	"\x06Ingest\x12#.rat.observability.v1.IngestRequest\x1a$.rat.observability.v1.IngestResponse\"!\x8a\x97\"\x1drat://observability/v1/ingest(\x010\x01BAZ?github.com/rat-dev/rat/gen/rat/observability/v1;observabilityv1b\x06proto3"
+	"\x06Ingest\x12#.rat.observability.v1.IngestRequest\x1a$.rat.observability.v1.IngestResponse\"!\x8a\x97\"\x1drat://observability/v1/ingest(\x010\x01BBZ@github.com/le-squat/rat/gen/rat/observability/v1;observabilityv1b\x06proto3"
 
 var (
 	file_rat_observability_v1_observability_proto_rawDescOnce sync.Once

@@ -8,7 +8,7 @@ import (
 	"net"
 	"os"
 
-	catalogv1 "github.com/rat-dev/rat/gen/rat/catalog/v1"
+	catalogv1 "github.com/le-squat/rat/gen/rat/catalog/v1"
 	"google.golang.org/grpc"
 )
 

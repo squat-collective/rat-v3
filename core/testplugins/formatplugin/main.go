@@ -11,8 +11,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/rat-dev/rat/core/testplugins/formatsvc"
-	formatv1 "github.com/rat-dev/rat/gen/rat/format/v1"
+	"github.com/le-squat/rat/core/testplugins/formatsvc"
+	formatv1 "github.com/le-squat/rat/gen/rat/format/v1"
 	"google.golang.org/grpc"
 )
 
