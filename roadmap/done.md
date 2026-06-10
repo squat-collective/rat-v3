@@ -17,6 +17,20 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-10 — `rat/6.13`: postgres-py create-if-absent — production HA backend (ADR-049)
+
+Implemented `CreateIfAbsent` in `postgres-py` — the backend you actually point `RAT_LEASE_STATE_ADDR`
+at for real multi-replica HA. Uses Postgres's native **`INSERT … ON CONFLICT (k) DO NOTHING RETURNING`**,
+which is atomic **at the database across all clients and replicas** — strictly stronger than the
+in-process `_lock` shim `Put` uses (correct even with N postgres-py replicas). `RETURNING` distinguishes
+"we created it" (COMMITTED, rev 1) from "already existed" (CONFLICT, existing rev); no overwrite.
+Declared `rat://state/v1/create-if-absent` in the manifest `provides` (capability-presence negotiation).
+
+**Verified against a real Postgres** (podman): COMMITTED/CONFLICT/no-overwrite + **exactly-one-creator
+across 16 concurrent connections** (the production-HA atomicity property). `postgres-py` is EXPLORATORY
+with no `state-v1.json` harness (needs a live DB), so it's verified directly rather than via the golden
+vector. `make validate-manifests` 32/32. Only `memory-py` now lacks it (optional, secondary).
+
 ## 2026-06-10 — `rat/6.12`: Python create-if-absent + cross-language golden vector — ADR-049 FULLY adopted
 
 Implemented `CreateIfAbsent` in both Python state references and added it to the shared cross-language

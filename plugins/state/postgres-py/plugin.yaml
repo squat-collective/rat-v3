@@ -11,3 +11,4 @@ provides:
   - capability: rat://state/v1/get
   - capability: rat://state/v1/put
   - capability: rat://state/v1/list
+  - capability: rat://state/v1/create-if-absent

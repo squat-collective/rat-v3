@@ -110,6 +110,29 @@ class PostgresState(state_pb2_grpc.StateServiceServicer):
             c.commit()
         return state_pb2.PutResponse(outcome=state_pb2.PUT_OUTCOME_COMMITTED, revision=new_rev)
 
+    def CreateIfAbsent(self, req, context):
+        """Atomically create the key only if absent (ADR-049). Unlike Put (whose read→check→write is
+        serialized by the in-process _lock — a single-node shim), this uses Postgres's native
+        `INSERT … ON CONFLICT (k) DO NOTHING`, which is atomic at the DATABASE across ALL clients and
+        replicas — so it's the correct multi-replica HA primitive (the lease bootstrap / ticket store
+        backed by a shared Postgres). RETURNING tells us whether THIS insert won the row."""
+        self._ensure()
+        with self._conn() as c, c.cursor() as cur:
+            cur.execute(
+                "INSERT INTO rat_state (k, v, revision) VALUES (%s, %s, 1) "
+                "ON CONFLICT (k) DO NOTHING RETURNING revision",
+                (req.key, psycopg2.Binary(req.value)))
+            row = cur.fetchone()
+            if row is not None:  # we created it
+                c.commit()
+                return state_pb2.CreateIfAbsentResponse(outcome=state_pb2.PUT_OUTCOME_COMMITTED, revision=row[0])
+            # already existed (a concurrent/earlier creator won) → report the existing revision
+            cur.execute("SELECT revision FROM rat_state WHERE k = %s", (req.key,))
+            existing = cur.fetchone()
+            c.commit()
+        return state_pb2.CreateIfAbsentResponse(
+            outcome=state_pb2.PUT_OUTCOME_CONFLICT, revision=existing[0] if existing else 0)
+
     def List(self, req, context):
         self._ensure()
         with self._conn() as c, c.cursor() as cur:
