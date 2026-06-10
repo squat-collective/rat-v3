@@ -4,7 +4,7 @@
 > completion history lives in [`done.md`](done.md); the phase map in [`phases.md`](phases.md).
 > Updated: 2026-06-10.
 
-## ✅ Latest — `rat/6.19`: PUBLISHED 🐀 (DX-2 — the review is fully closed)
+## ✅ Latest — `rat/6.20`: PUBLISHED 🐀 — every channel verified anonymously (DX-2 closed)
 
 **`github.com/squat-collective/rat-v3`, public, Apache-2.0** ([ADR-051](../docs/architecture/adrs/051-publish-apache2-squat-collective.md)).
 Module paths renamed `rat-dev`→`squat-collective/rat-v3` (go-get works; wire proven held — suite +
@@ -168,7 +168,7 @@ separate `rat-data-dev` repo**.
 
 ## Branching (in force)
 
-`main` is the sealed line (**`rat/6.19`**, pushed to `github.com/squat-collective/rat-v3`); additive increments
+`main` is the sealed line (**`rat/6.20`**, pushed to `github.com/squat-collective/rat-v3`); additive increments
 land via `--no-ff` merges of topic branches + an annotated `rat/N.M` tag. **Never commit directly to `main`** (a `PreToolUse` hook blocks
 it) — work on a topic branch. Full rules: [`.claude/rules/git-branching.md`](../.claude/rules/git-branching.md).
 
