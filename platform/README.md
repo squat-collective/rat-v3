@@ -68,7 +68,7 @@ plugin is one entry + an image, and the reconciler self-heals crashes
 make plugin-images                                      # build rat/{state,secret,scheduler,dbt-runner,bff}:dev
 rat validate --plane platform/plugins.yaml              # preflight: images present, deps satisfied
 podman compose -f platform/compose.infra.yaml up -d     # Postgres + MinIO only
-( cd platform && /path/to/bin/rat serve --plane plugins.yaml )
+( cd platform && set -a && . ./.env && set +a && /path/to/dist/rat serve --plane plugins.yaml )
 podman compose -f platform/compose.infra.yaml down -v   # teardown (Ctrl-C rat first)
 ```
 
