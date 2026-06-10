@@ -57,6 +57,23 @@ func (s *store) put(key string, value []byte, ifRev int64) (committed bool, revi
 	return true, s.rev
 }
 
+// createIfAbsent atomically creates key ONLY if absent (ADR-049). Returns (created, revision):
+// created=true with the new rev on creation; created=false with the EXISTING rev if the key already
+// existed (no write happens). Atomic under the store mutex, so N concurrent creates of one key yield
+// exactly one created=true — the property the lease bootstrap (ADR-043 Q01) + the Arrow-ticket store
+// (ADR-048) rely on. An in-memory backend always knows the outcome, so UNKNOWN never arises.
+func (s *store) createIfAbsent(key string, value []byte) (created bool, revision int64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if e, ok := s.data[key]; ok {
+		return false, e.revision
+	}
+	s.rev++
+	s.data[key] = entry{value: value, revision: s.rev}
+	s.log = append(s.log, changeEvent{key: key, value: value, revision: s.rev})
+	return true, s.rev
+}
+
 func (s *store) list(prefix string) []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()

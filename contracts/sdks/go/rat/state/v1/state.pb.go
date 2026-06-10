@@ -183,7 +183,7 @@ func (x WatchResponse_Type) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WatchResponse_Type.Descriptor instead.
 func (WatchResponse_Type) EnumDescriptor() ([]byte, []int) {
-	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{9, 0}
+	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{11, 0}
 }
 
 type GetRequest struct {
@@ -600,6 +600,118 @@ func (x *DeleteResponse) GetFound() bool {
 	return false
 }
 
+// ADR-049 — additive CreateIfAbsent. Optional per backend (UNIMPLEMENTED allowed). Distinct
+// request/response messages satisfy buf RPC_REQUEST_RESPONSE_UNIQUE; the PutOutcome enum is reused.
+type CreateIfAbsentRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Plugin-relative key; subject to KEY GRAMMAR (file header). Non-empty.
+	Key string `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	// The value stored iff the key is created.
+	Value         []byte `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateIfAbsentRequest) Reset() {
+	*x = CreateIfAbsentRequest{}
+	mi := &file_rat_state_v1_state_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateIfAbsentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateIfAbsentRequest) ProtoMessage() {}
+
+func (x *CreateIfAbsentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_rat_state_v1_state_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateIfAbsentRequest.ProtoReflect.Descriptor instead.
+func (*CreateIfAbsentRequest) Descriptor() ([]byte, []int) {
+	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *CreateIfAbsentRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *CreateIfAbsentRequest) GetValue() []byte {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
+type CreateIfAbsentResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Reuses PutOutcome: COMMITTED == created (revision = the new key's revision); CONFLICT == the key
+	// ALREADY EXISTED (the create did not happen; revision = the existing key's revision); UNKNOWN ==
+	// the backend could not confirm — the caller MUST NOT assume it created the key (same fencing
+	// discipline as Put — reviews/06 C-4).
+	Outcome       PutOutcome `protobuf:"varint,1,opt,name=outcome,proto3,enum=rat.state.v1.PutOutcome" json:"outcome,omitempty"`
+	Revision      int64      `protobuf:"varint,2,opt,name=revision,proto3" json:"revision,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateIfAbsentResponse) Reset() {
+	*x = CreateIfAbsentResponse{}
+	mi := &file_rat_state_v1_state_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateIfAbsentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateIfAbsentResponse) ProtoMessage() {}
+
+func (x *CreateIfAbsentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_rat_state_v1_state_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateIfAbsentResponse.ProtoReflect.Descriptor instead.
+func (*CreateIfAbsentResponse) Descriptor() ([]byte, []int) {
+	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *CreateIfAbsentResponse) GetOutcome() PutOutcome {
+	if x != nil {
+		return x.Outcome
+	}
+	return PutOutcome_PUT_OUTCOME_UNSPECIFIED
+}
+
+func (x *CreateIfAbsentResponse) GetRevision() int64 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
+}
+
 type WatchRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Plugin-relative prefix; subject to KEY GRAMMAR (file header). MAY be empty.
@@ -612,7 +724,7 @@ type WatchRequest struct {
 
 func (x *WatchRequest) Reset() {
 	*x = WatchRequest{}
-	mi := &file_rat_state_v1_state_proto_msgTypes[8]
+	mi := &file_rat_state_v1_state_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -624,7 +736,7 @@ func (x *WatchRequest) String() string {
 func (*WatchRequest) ProtoMessage() {}
 
 func (x *WatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rat_state_v1_state_proto_msgTypes[8]
+	mi := &file_rat_state_v1_state_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -637,7 +749,7 @@ func (x *WatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchRequest.ProtoReflect.Descriptor instead.
 func (*WatchRequest) Descriptor() ([]byte, []int) {
-	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{8}
+	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *WatchRequest) GetPrefix() string {
@@ -666,7 +778,7 @@ type WatchResponse struct {
 
 func (x *WatchResponse) Reset() {
 	*x = WatchResponse{}
-	mi := &file_rat_state_v1_state_proto_msgTypes[9]
+	mi := &file_rat_state_v1_state_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -678,7 +790,7 @@ func (x *WatchResponse) String() string {
 func (*WatchResponse) ProtoMessage() {}
 
 func (x *WatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rat_state_v1_state_proto_msgTypes[9]
+	mi := &file_rat_state_v1_state_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -691,7 +803,7 @@ func (x *WatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchResponse.ProtoReflect.Descriptor instead.
 func (*WatchResponse) Descriptor() ([]byte, []int) {
-	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{9}
+	return file_rat_state_v1_state_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *WatchResponse) GetType() WatchResponse_Type {
@@ -752,7 +864,13 @@ const file_rat_state_v1_state_proto_rawDesc = "" +
 	"\vif_revision\x18\x03 \x01(\x03R\n" +
 	"ifRevisionJ\x04\b\x01\x10\x02\"&\n" +
 	"\x0eDeleteResponse\x12\x14\n" +
-	"\x05found\x18\x01 \x01(\bR\x05found\"Q\n" +
+	"\x05found\x18\x01 \x01(\bR\x05found\"E\n" +
+	"\x15CreateIfAbsentRequest\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x03 \x01(\fR\x05valueJ\x04\b\x01\x10\x02\"h\n" +
+	"\x16CreateIfAbsentResponse\x122\n" +
+	"\aoutcome\x18\x01 \x01(\x0e2\x18.rat.state.v1.PutOutcomeR\aoutcome\x12\x1a\n" +
+	"\brevision\x18\x02 \x01(\x03R\brevision\"Q\n" +
 	"\fWatchRequest\x12\x16\n" +
 	"\x06prefix\x18\x02 \x01(\tR\x06prefix\x12#\n" +
 	"\rfrom_revision\x18\x03 \x01(\x03R\ffromRevisionJ\x04\b\x01\x10\x02\"\xc6\x01\n" +
@@ -770,12 +888,13 @@ const file_rat_state_v1_state_proto_rawDesc = "" +
 	"\x17PUT_OUTCOME_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15PUT_OUTCOME_COMMITTED\x10\x01\x12\x18\n" +
 	"\x14PUT_OUTCOME_CONFLICT\x10\x02\x12\x17\n" +
-	"\x13PUT_OUTCOME_UNKNOWN\x10\x032\xcc\x03\n" +
+	"\x13PUT_OUTCOME_UNKNOWN\x10\x032\xcf\x04\n" +
 	"\fStateService\x12R\n" +
 	"\x03Get\x12\x18.rat.state.v1.GetRequest\x1a\x19.rat.state.v1.GetResponse\"\x16\x8a\x97\"\x12rat://state/v1/get\x12R\n" +
 	"\x03Put\x12\x18.rat.state.v1.PutRequest\x1a\x19.rat.state.v1.PutResponse\"\x16\x8a\x97\"\x12rat://state/v1/put\x12V\n" +
 	"\x04List\x12\x19.rat.state.v1.ListRequest\x1a\x1a.rat.state.v1.ListResponse\"\x17\x8a\x97\"\x13rat://state/v1/list\x12^\n" +
-	"\x06Delete\x12\x1b.rat.state.v1.DeleteRequest\x1a\x1c.rat.state.v1.DeleteResponse\"\x19\x8a\x97\"\x15rat://state/v1/delete\x12\\\n" +
+	"\x06Delete\x12\x1b.rat.state.v1.DeleteRequest\x1a\x1c.rat.state.v1.DeleteResponse\"\x19\x8a\x97\"\x15rat://state/v1/delete\x12\x80\x01\n" +
+	"\x0eCreateIfAbsent\x12#.rat.state.v1.CreateIfAbsentRequest\x1a$.rat.state.v1.CreateIfAbsentResponse\"#\x8a\x97\"\x1frat://state/v1/create-if-absent\x12\\\n" +
 	"\x05Watch\x12\x1a.rat.state.v1.WatchRequest\x1a\x1b.rat.state.v1.WatchResponse\"\x18\x8a\x97\"\x14rat://state/v1/watch0\x01B1Z/github.com/rat-dev/rat/gen/rat/state/v1;statev1b\x06proto3"
 
 var (
@@ -791,39 +910,44 @@ func file_rat_state_v1_state_proto_rawDescGZIP() []byte {
 }
 
 var file_rat_state_v1_state_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_rat_state_v1_state_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_rat_state_v1_state_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_rat_state_v1_state_proto_goTypes = []any{
-	(PutOutcome)(0),         // 0: rat.state.v1.PutOutcome
-	(WatchResponse_Type)(0), // 1: rat.state.v1.WatchResponse.Type
-	(*GetRequest)(nil),      // 2: rat.state.v1.GetRequest
-	(*GetResponse)(nil),     // 3: rat.state.v1.GetResponse
-	(*PutRequest)(nil),      // 4: rat.state.v1.PutRequest
-	(*PutResponse)(nil),     // 5: rat.state.v1.PutResponse
-	(*ListRequest)(nil),     // 6: rat.state.v1.ListRequest
-	(*ListResponse)(nil),    // 7: rat.state.v1.ListResponse
-	(*DeleteRequest)(nil),   // 8: rat.state.v1.DeleteRequest
-	(*DeleteResponse)(nil),  // 9: rat.state.v1.DeleteResponse
-	(*WatchRequest)(nil),    // 10: rat.state.v1.WatchRequest
-	(*WatchResponse)(nil),   // 11: rat.state.v1.WatchResponse
+	(PutOutcome)(0),                // 0: rat.state.v1.PutOutcome
+	(WatchResponse_Type)(0),        // 1: rat.state.v1.WatchResponse.Type
+	(*GetRequest)(nil),             // 2: rat.state.v1.GetRequest
+	(*GetResponse)(nil),            // 3: rat.state.v1.GetResponse
+	(*PutRequest)(nil),             // 4: rat.state.v1.PutRequest
+	(*PutResponse)(nil),            // 5: rat.state.v1.PutResponse
+	(*ListRequest)(nil),            // 6: rat.state.v1.ListRequest
+	(*ListResponse)(nil),           // 7: rat.state.v1.ListResponse
+	(*DeleteRequest)(nil),          // 8: rat.state.v1.DeleteRequest
+	(*DeleteResponse)(nil),         // 9: rat.state.v1.DeleteResponse
+	(*CreateIfAbsentRequest)(nil),  // 10: rat.state.v1.CreateIfAbsentRequest
+	(*CreateIfAbsentResponse)(nil), // 11: rat.state.v1.CreateIfAbsentResponse
+	(*WatchRequest)(nil),           // 12: rat.state.v1.WatchRequest
+	(*WatchResponse)(nil),          // 13: rat.state.v1.WatchResponse
 }
 var file_rat_state_v1_state_proto_depIdxs = []int32{
 	0,  // 0: rat.state.v1.PutResponse.outcome:type_name -> rat.state.v1.PutOutcome
-	1,  // 1: rat.state.v1.WatchResponse.type:type_name -> rat.state.v1.WatchResponse.Type
-	2,  // 2: rat.state.v1.StateService.Get:input_type -> rat.state.v1.GetRequest
-	4,  // 3: rat.state.v1.StateService.Put:input_type -> rat.state.v1.PutRequest
-	6,  // 4: rat.state.v1.StateService.List:input_type -> rat.state.v1.ListRequest
-	8,  // 5: rat.state.v1.StateService.Delete:input_type -> rat.state.v1.DeleteRequest
-	10, // 6: rat.state.v1.StateService.Watch:input_type -> rat.state.v1.WatchRequest
-	3,  // 7: rat.state.v1.StateService.Get:output_type -> rat.state.v1.GetResponse
-	5,  // 8: rat.state.v1.StateService.Put:output_type -> rat.state.v1.PutResponse
-	7,  // 9: rat.state.v1.StateService.List:output_type -> rat.state.v1.ListResponse
-	9,  // 10: rat.state.v1.StateService.Delete:output_type -> rat.state.v1.DeleteResponse
-	11, // 11: rat.state.v1.StateService.Watch:output_type -> rat.state.v1.WatchResponse
-	7,  // [7:12] is the sub-list for method output_type
-	2,  // [2:7] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	0,  // 1: rat.state.v1.CreateIfAbsentResponse.outcome:type_name -> rat.state.v1.PutOutcome
+	1,  // 2: rat.state.v1.WatchResponse.type:type_name -> rat.state.v1.WatchResponse.Type
+	2,  // 3: rat.state.v1.StateService.Get:input_type -> rat.state.v1.GetRequest
+	4,  // 4: rat.state.v1.StateService.Put:input_type -> rat.state.v1.PutRequest
+	6,  // 5: rat.state.v1.StateService.List:input_type -> rat.state.v1.ListRequest
+	8,  // 6: rat.state.v1.StateService.Delete:input_type -> rat.state.v1.DeleteRequest
+	10, // 7: rat.state.v1.StateService.CreateIfAbsent:input_type -> rat.state.v1.CreateIfAbsentRequest
+	12, // 8: rat.state.v1.StateService.Watch:input_type -> rat.state.v1.WatchRequest
+	3,  // 9: rat.state.v1.StateService.Get:output_type -> rat.state.v1.GetResponse
+	5,  // 10: rat.state.v1.StateService.Put:output_type -> rat.state.v1.PutResponse
+	7,  // 11: rat.state.v1.StateService.List:output_type -> rat.state.v1.ListResponse
+	9,  // 12: rat.state.v1.StateService.Delete:output_type -> rat.state.v1.DeleteResponse
+	11, // 13: rat.state.v1.StateService.CreateIfAbsent:output_type -> rat.state.v1.CreateIfAbsentResponse
+	13, // 14: rat.state.v1.StateService.Watch:output_type -> rat.state.v1.WatchResponse
+	9,  // [9:15] is the sub-list for method output_type
+	3,  // [3:9] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_rat_state_v1_state_proto_init() }
@@ -837,7 +961,7 @@ func file_rat_state_v1_state_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rat_state_v1_state_proto_rawDesc), len(file_rat_state_v1_state_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   10,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

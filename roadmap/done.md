@@ -17,7 +17,32 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
-## 2026-06-10 — Drafted [ADR-049](../docs/architecture/adrs/049-state-v1-create-if-absent.md): `state/v1` create-if-absent (**Proposed**)
+## 2026-06-10 — `rat/6.8`: `state/v1` create-if-absent IMPLEMENTED ([ADR-049](../docs/architecture/adrs/049-state-v1-create-if-absent.md) Accepted)
+
+Implemented the atomic create-if-absent primitive (the highest-leverage open follow-on — two accepted
+ADRs needed it: the HA lease bootstrap [043 Q01] + the Arrow-ticket store [048]). Q01–Q04 accepted with
+the recommendations.
+
+- **Proto (additive, `make breaking`-clean):** new optional RPC `CreateIfAbsent` on `StateService`,
+  capability `rat://state/v1/create-if-absent`, modeled on ADR-035's `Delete`. Reuses `PutOutcome`
+  (COMMITTED=created · CONFLICT=existed · UNKNOWN=unconfirmed). Frozen ≤`rat/2.0` methods untouched.
+- **SDKs regenerated** (Go + Python via `make gen-sdks`).
+- **Reference impl:** `plugins/state/inmemory-go` — atomic `createIfAbsent` (exactly-one-creator under
+  the store mutex) + the RPC. **Tests (`-race`):** a **32-racer concurrency vector** (exactly one
+  COMMITTED — the conformance atomicity property) + an RPC COMMITTED→CONFLICT contract test
+  (no-overwrite, malformed-key → INVALID_ARGUMENT).
+- **Scaffold test updated:** the kind-aware `state-backend` scaffold now derives 6 provides (the new
+  capability joins the descriptor-derived list, as `delete` already did). Full core suite green
+  (incl. `composition` against real providers); the gateway relays the new method with no change
+  (generic capability routing).
+
+**Negotiation by capability presence:** an old backend that doesn't implement it doesn't declare it →
+never silently misused (the reason a `create_only` field / `if_revision=-1` sentinel was rejected).
+**Staged follow-up (consumer adoption):** wire the lease bootstrap + ticket store to feature-detect +
+prefer it; Python backend impl + cross-language golden vector. (Pre-existing note: `make gen-check`
+`--check` mode has a Python temp-path bug — fails identically on a clean tree — unrelated to this change.)
+
+## 2026-06-10 — Drafted [ADR-049](../docs/architecture/adrs/049-state-v1-create-if-absent.md): `state/v1` create-if-absent (**Proposed → Accepted**)
 
 Decision-first ADR for the highest-leverage open follow-on: an **atomic create-if-absent** primitive the
 state axis lacks, which **two accepted ADRs need** — the HA lease bootstrap ([ADR-043](../docs/architecture/adrs/043-leader-election-over-the-state-axis.md) Q01,

@@ -69,11 +69,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	StateService_Get_FullMethodName    = "/rat.state.v1.StateService/Get"
-	StateService_Put_FullMethodName    = "/rat.state.v1.StateService/Put"
-	StateService_List_FullMethodName   = "/rat.state.v1.StateService/List"
-	StateService_Delete_FullMethodName = "/rat.state.v1.StateService/Delete"
-	StateService_Watch_FullMethodName  = "/rat.state.v1.StateService/Watch"
+	StateService_Get_FullMethodName            = "/rat.state.v1.StateService/Get"
+	StateService_Put_FullMethodName            = "/rat.state.v1.StateService/Put"
+	StateService_List_FullMethodName           = "/rat.state.v1.StateService/List"
+	StateService_Delete_FullMethodName         = "/rat.state.v1.StateService/Delete"
+	StateService_CreateIfAbsent_FullMethodName = "/rat.state.v1.StateService/CreateIfAbsent"
+	StateService_Watch_FullMethodName          = "/rat.state.v1.StateService/Watch"
 )
 
 // StateServiceClient is the client API for StateService service.
@@ -92,6 +93,16 @@ type StateServiceClient interface {
 	// handle UNIMPLEMENTED. Idempotent (absent key -> found=false, not an error). CAS via if_revision
 	// with the same fencing rigor as Put (deleting a lease key releases the lease).
 	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	// rat://state/v1/create-if-absent — atomically create one key (plugin+tenant relative) ONLY if it
+	// does not already exist. ADDITIVE amendment (ADR-049, modeled on ADR-035's Delete): a state-backend
+	// MAY leave it UNIMPLEMENTED — create-if-absent is OPTIONAL; a backend declares this capability in
+	// `provides` only if it implements it ATOMICALLY (two concurrent creates of one key yield exactly
+	// one COMMITTED), and consumers MUST handle its absence. Capability PRESENCE is the negotiation, so
+	// an old backend can never be silently misused. This is the primitive the leader-election lease
+	// BOOTSTRAP (ADR-043 Q01, the cold-start create race) and the Arrow-ticket single-use store (ADR-048)
+	// require — without it, neither can be backed by state/v1. It belongs to the multi-replica-eligibility
+	// conformance tier (linearizable CAS + ordered Watch + atomic create-if-absent), golden-vector gated.
+	CreateIfAbsent(ctx context.Context, in *CreateIfAbsentRequest, opts ...grpc.CallOption) (*CreateIfAbsentResponse, error)
 	// rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
 	// Each streamed message is a WatchResponse — named per the *Response convention
 	// buf STANDARD requires, even for streaming RPCs. Mediated via core
@@ -147,6 +158,16 @@ func (c *stateServiceClient) Delete(ctx context.Context, in *DeleteRequest, opts
 	return out, nil
 }
 
+func (c *stateServiceClient) CreateIfAbsent(ctx context.Context, in *CreateIfAbsentRequest, opts ...grpc.CallOption) (*CreateIfAbsentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateIfAbsentResponse)
+	err := c.cc.Invoke(ctx, StateService_CreateIfAbsent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *stateServiceClient) Watch(ctx context.Context, in *WatchRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[WatchResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &StateService_ServiceDesc.Streams[0], StateService_Watch_FullMethodName, cOpts...)
@@ -182,6 +203,16 @@ type StateServiceServer interface {
 	// handle UNIMPLEMENTED. Idempotent (absent key -> found=false, not an error). CAS via if_revision
 	// with the same fencing rigor as Put (deleting a lease key releases the lease).
 	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
+	// rat://state/v1/create-if-absent — atomically create one key (plugin+tenant relative) ONLY if it
+	// does not already exist. ADDITIVE amendment (ADR-049, modeled on ADR-035's Delete): a state-backend
+	// MAY leave it UNIMPLEMENTED — create-if-absent is OPTIONAL; a backend declares this capability in
+	// `provides` only if it implements it ATOMICALLY (two concurrent creates of one key yield exactly
+	// one COMMITTED), and consumers MUST handle its absence. Capability PRESENCE is the negotiation, so
+	// an old backend can never be silently misused. This is the primitive the leader-election lease
+	// BOOTSTRAP (ADR-043 Q01, the cold-start create race) and the Arrow-ticket single-use store (ADR-048)
+	// require — without it, neither can be backed by state/v1. It belongs to the multi-replica-eligibility
+	// conformance tier (linearizable CAS + ordered Watch + atomic create-if-absent), golden-vector gated.
+	CreateIfAbsent(context.Context, *CreateIfAbsentRequest) (*CreateIfAbsentResponse, error)
 	// rat://state/v1/watch — stream changes under a prefix (reconciler/event use).
 	// Each streamed message is a WatchResponse — named per the *Response convention
 	// buf STANDARD requires, even for streaming RPCs. Mediated via core
@@ -208,6 +239,9 @@ func (UnimplementedStateServiceServer) List(context.Context, *ListRequest) (*Lis
 }
 func (UnimplementedStateServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Delete not implemented")
+}
+func (UnimplementedStateServiceServer) CreateIfAbsent(context.Context, *CreateIfAbsentRequest) (*CreateIfAbsentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateIfAbsent not implemented")
 }
 func (UnimplementedStateServiceServer) Watch(*WatchRequest, grpc.ServerStreamingServer[WatchResponse]) error {
 	return status.Error(codes.Unimplemented, "method Watch not implemented")
@@ -305,6 +339,24 @@ func _StateService_Delete_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StateService_CreateIfAbsent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateIfAbsentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StateServiceServer).CreateIfAbsent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StateService_CreateIfAbsent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StateServiceServer).CreateIfAbsent(ctx, req.(*CreateIfAbsentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _StateService_Watch_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(WatchRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -338,6 +390,10 @@ var StateService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Delete",
 			Handler:    _StateService_Delete_Handler,
+		},
+		{
+			MethodName: "CreateIfAbsent",
+			Handler:    _StateService_CreateIfAbsent_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
