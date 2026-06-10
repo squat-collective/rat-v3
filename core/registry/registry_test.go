@@ -92,19 +92,61 @@ func TestAuthorizeAgainstRealManifests(t *testing.T) {
 	}
 }
 
-// TestNewRejectsDuplicateProvider proves the core refuses ambiguity rather than
-// picking a provider arbitrarily (the spike has no selection policy).
-func TestNewRejectsDuplicateProvider(t *testing.T) {
+// TestCoexistingProvidersSelectedByLabel (ADR-045): two providers of ONE capability coexist,
+// each labeled; a call's selector picks one deterministically. No selector (ambiguous) and a
+// non-matching selector both fail CLOSED — authorized but not allowed, never resolved arbitrarily.
+func TestCoexistingProvidersSelectedByLabel(t *testing.T) {
+	small := &manifest.Manifest{
+		Kind: "engine", Metadata: manifest.Metadata{Name: "engine-duckdb", Labels: map[string]string{"compute": "small"}},
+		Provides: []manifest.CapabilityRef{{Capability: "rat://engine/v1/execute"}},
+	}
+	big := &manifest.Manifest{
+		Kind: "engine", Metadata: manifest.Metadata{Name: "engine-spark", Labels: map[string]string{"compute": "big"}},
+		Provides: []manifest.CapabilityRef{{Capability: "rat://engine/v1/execute"}},
+	}
+	caller := &manifest.Manifest{
+		Kind: "strategy", Metadata: manifest.Metadata{Name: "flow"},
+		Requires: []manifest.CapabilityRef{{Capability: "rat://engine/v1/execute"}},
+	}
+	reg, err := New([]*manifest.Manifest{small, big, caller})
+	if err != nil {
+		t.Fatalf("New rejected two coexisting providers of one capability: %v", err)
+	}
+	if got := reg.ProvidersOf("rat://engine/v1/execute"); len(got) != 2 {
+		t.Fatalf("ProvidersOf = %v, want both providers", got)
+	}
+
+	// A selector picks the matching provider.
+	if d := reg.Select("flow", "rat://engine/v1/execute", map[string]string{"compute": "big"}); !d.Allowed || d.Provider != "engine-spark" {
+		t.Errorf("Select(compute=big) = %+v, want allowed via engine-spark", d)
+	}
+	if d := reg.Select("flow", "rat://engine/v1/execute", map[string]string{"compute": "small"}); !d.Allowed || d.Provider != "engine-duckdb" {
+		t.Errorf("Select(compute=small) = %+v, want allowed via engine-duckdb", d)
+	}
+
+	// No selector → ambiguous → fail closed (authorized, not allowed).
+	if d := reg.Select("flow", "rat://engine/v1/execute", nil); d.Allowed || !d.Authorized {
+		t.Errorf("Select(no selector) = %+v, want authorized-but-not-allowed (ambiguous)", d)
+	}
+	// A selector matching no provider → fail closed.
+	if d := reg.Select("flow", "rat://engine/v1/execute", map[string]string{"compute": "gpu"}); d.Allowed || !d.Authorized {
+		t.Errorf("Select(compute=gpu) = %+v, want authorized-but-not-allowed (no match)", d)
+	}
+}
+
+// TestNewAllowsDuplicateProviderName still rejects a duplicate plugin NAME (the one invariant
+// that stays).
+func TestNewAllowsDuplicateProviderName(t *testing.T) {
 	a := &manifest.Manifest{
-		Kind: "format", Metadata: manifest.Metadata{Name: "fmt-a"},
+		Kind: "format", Metadata: manifest.Metadata{Name: "dup"},
 		Provides: []manifest.CapabilityRef{{Capability: "rat://format/v1/scan"}},
 	}
 	b := &manifest.Manifest{
-		Kind: "format", Metadata: manifest.Metadata{Name: "fmt-b"},
-		Provides: []manifest.CapabilityRef{{Capability: "rat://format/v1/scan"}},
+		Kind: "format", Metadata: manifest.Metadata{Name: "dup"},
+		Provides: []manifest.CapabilityRef{{Capability: "rat://format/v1/overwrite"}},
 	}
 	if _, err := New([]*manifest.Manifest{a, b}); err == nil {
-		t.Fatal("New accepted two providers of the same capability; want an error")
+		t.Fatal("New accepted two plugins with the same name; want an error")
 	}
 }
 

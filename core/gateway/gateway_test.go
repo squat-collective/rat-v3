@@ -643,3 +643,65 @@ func TestPluginTokenRevoked(t *testing.T) {
 		t.Fatalf("after revoke: code = %v, want Unauthenticated", status.Code(err))
 	}
 }
+
+// --- ADR-045: provider selection by label ---------------------------------------------
+
+// selectCtx is callerCtx plus a rat-select label selector header.
+func selectCtx(caller, selector string) context.Context {
+	return metadata.AppendToOutgoingContext(callerCtx(caller), selectHeader, selector)
+}
+
+// TestSelectRoutesByLabel (ADR-045): two providers of ONE capability coexist, labeled
+// compute=small/big; a call's selector routes to the matching provider's connection. No
+// selector → FailedPrecondition (ambiguous, fail closed). A non-matching selector → likewise.
+func TestSelectRoutesByLabel(t *testing.T) {
+	connSmall := bufServer(t, func(s *grpc.Server) { statev1.RegisterStateServiceServer(s, fakeState{}) })  // "v:"+key
+	connBig := bufServer(t, func(s *grpc.Server) { statev1.RegisterStateServiceServer(s, fakeStateB{}) })   // "REBOUND:"+key
+
+	small := &manifest.Manifest{
+		Kind: "state-backend", Metadata: manifest.Metadata{Name: "state-small", Labels: map[string]string{"compute": "small"}},
+		Provides: []manifest.CapabilityRef{{Capability: "rat://state/v1/get"}},
+	}
+	big := &manifest.Manifest{
+		Kind: "state-backend", Metadata: manifest.Metadata{Name: "state-big", Labels: map[string]string{"compute": "big"}},
+		Provides: []manifest.CapabilityRef{{Capability: "rat://state/v1/get"}},
+	}
+	caller := &manifest.Manifest{
+		Kind: "strategy", Metadata: manifest.Metadata{Name: "rat-test-caller"},
+		Requires: []manifest.CapabilityRef{{Capability: "rat://state/v1/get"}},
+	}
+	reg, err := registry.New([]*manifest.Manifest{small, big, caller})
+	if err != nil {
+		t.Fatalf("registry.New: %v", err)
+	}
+	gw := New(reg, map[string]*grpc.ClientConn{"state-small": connSmall, "state-big": connBig}, &MemAuditor{},
+		statev1.File_rat_state_v1_state_proto)
+	client := corev1.NewCapabilityInvokeServiceClient(
+		bufServer(t, func(s *grpc.Server) { corev1.RegisterCapabilityInvokeServiceServer(s, gw) }))
+
+	get := func(ctx context.Context) (string, error) {
+		payload, _ := proto.Marshal(&statev1.GetRequest{Key: "k1"})
+		resp, err := client.Invoke(ctx, &corev1.InvokeRequest{Capability: "rat://state/v1/get", Payload: payload})
+		if err != nil {
+			return "", err
+		}
+		var gr statev1.GetResponse
+		_ = proto.Unmarshal(resp.GetResult(), &gr)
+		return string(gr.GetValue()), nil
+	}
+
+	if v, err := get(selectCtx("rat-test-caller", "compute=big")); err != nil || v != "REBOUND:k1" {
+		t.Fatalf("select compute=big = (%q, %v), want (REBOUND:k1, nil) — routed to state-big", v, err)
+	}
+	if v, err := get(selectCtx("rat-test-caller", "compute=small")); err != nil || v != "v:k1" {
+		t.Fatalf("select compute=small = (%q, %v), want (v:k1, nil) — routed to state-small", v, err)
+	}
+	// No selector with two providers → ambiguous → fail closed.
+	if _, err := get(callerCtx("rat-test-caller")); status.Code(err) != codes.FailedPrecondition {
+		t.Fatalf("no selector code = %v, want FailedPrecondition (ambiguous, fail closed)", status.Code(err))
+	}
+	// A selector matching no provider → fail closed.
+	if _, err := get(selectCtx("rat-test-caller", "compute=gpu")); status.Code(err) != codes.FailedPrecondition {
+		t.Fatalf("non-matching selector code = %v, want FailedPrecondition", status.Code(err))
+	}
+}

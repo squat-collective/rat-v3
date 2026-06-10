@@ -40,6 +40,12 @@ const callMetaHeader = "rat-callmeta-bin"
 // operator door (rat call) carries no token and keeps its reachability trust.
 const pluginTokenHeader = "rat-plugin-token"
 
+// selectHeader carries the call's provider-selection label selector (ADR-045) as "k=v,k=v"
+// — e.g. "compute=big,region=eu". The gateway matches it against providers' labels to pick
+// which of several providers of a capability serves this call. Absent == no selector (a
+// single provider routes; multiple providers without a selector fail closed as ambiguous).
+const selectHeader = "rat-select"
+
 // AuditRecord is emitted for EVERY capability decision (C4) — allow or deny — and,
 // for STREAMS, once more when the stream closes (the terminal record). The decision
 // record carries Allowed/Reason; the terminal record carries Terminal/Outcome/Frames/
@@ -236,6 +242,26 @@ func firstHeader(ctx context.Context, key string) string {
 	return ""
 }
 
+// parseSelector parses a "k=v,k=v" label selector (the rat-select header, ADR-045) into a map.
+// Empty/blank → nil (matches every provider). Malformed pairs (no "=") are skipped.
+func parseSelector(s string) map[string]string {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	out := map[string]string{}
+	for _, kv := range strings.Split(s, ",") {
+		k, v, ok := strings.Cut(kv, "=")
+		k, v = strings.TrimSpace(k), strings.TrimSpace(v)
+		if ok && k != "" {
+			out[k] = v
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
 // New builds a gateway. The route table (capability -> method) is derived from the
 // (rat.common.v1.capability) annotation on the supplied service descriptors — pass
 // the axis file descriptors whose plugins are connected.
@@ -375,10 +401,18 @@ func (g *Gateway) openCall(ctx context.Context, capURI string) (*openedCall, err
 	}
 	correlation := in.GetTrace().GetCorrelationId()
 
-	// C5 — the decision DERIVED from declared manifests; audited either way (C4).
-	d := g.reg.Authorize(caller, capURI)
+	// C5 authorization + ADR-045 provider selection — DERIVED from declared manifests; audited
+	// either way (C4). The optional rat-select header carries the call's label selector; the
+	// registry authorizes the caller and selects the matching provider.
+	selector := parseSelector(firstHeader(ctx, selectHeader))
+	d := g.reg.Select(caller, capURI, selector)
 	g.auditor.Record(AuditRecord{Capability: capURI, Caller: caller, Provider: d.Provider, Correlation: correlation, Allowed: d.Allowed, Reason: d.Reason})
 	if !d.Allowed {
+		if d.Authorized {
+			// Authorized, but the selector matched zero or >1 providers — a selection failure
+			// (fail closed, ADR-045), not an authz denial.
+			return nil, status.Error(codes.FailedPrecondition, d.Reason)
+		}
 		return nil, status.Error(codes.PermissionDenied, d.Reason)
 	}
 
