@@ -9,10 +9,13 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"log"
 	"strings"
 	"time"
 
+	"github.com/rat-dev/rat/core/gateway"
 	"github.com/rat-dev/rat/core/manifest"
 	"github.com/rat-dev/rat/core/reconciler"
 	"github.com/rat-dev/rat/core/registry"
@@ -30,8 +33,9 @@ type controlService struct {
 	corev1.UnimplementedControlServiceServer
 	reg     *registry.Registry
 	rec     *reconciler.Reconciler
-	gwAddr  string        // address launched plugins dial the gateway back on
-	readyTO time.Duration // how long to wait for a registered plugin to become Healthy
+	gw      *gateway.Gateway // the live gateway — to register/drop the plugin's C2 bearer token
+	gwAddr  string           // address launched plugins dial the gateway back on
+	readyTO time.Duration    // how long to wait for a registered plugin to become Healthy
 }
 
 // RegisterPlugin adds a plugin to the running plane: validate its manifest, register it
@@ -74,9 +78,16 @@ func (c *controlService) RegisterPlugin(ctx context.Context, req *corev1.Registe
 		return nil, status.Errorf(codes.InvalidArgument, "isolation: %v", err)
 	}
 	spec := &deploymentruntimev1.LaunchSpec{Image: ls.GetImage(), Isolation: profile, Env: ls.GetEnv()}
-	injectLaunchEnv(spec, name, c.gwAddr, m.PublishPorts())
+	// C2: mint + register this plugin's bearer token so the gateway authenticates it on the
+	// plugin door identically to a booted plugin. Dropped on every rollback path below.
+	tok := newPluginToken()
+	injectLaunchEnv(spec, name, c.gwAddr, tok, m.PublishPorts())
+	if c.gw != nil {
+		c.gw.SetPluginToken(tok, name)
+	}
 
 	if err := c.rec.AddDesired(reconciler.Desired{Name: name, Launch: spec}); err != nil {
+		c.dropToken(name)
 		c.reg.Deregister(name)
 		return nil, status.Errorf(codes.FailedPrecondition, "add desired: %v", err)
 	}
@@ -92,6 +103,7 @@ func (c *controlService) RegisterPlugin(ctx context.Context, req *corev1.Registe
 		}
 		if st == reconciler.Degraded || time.Now().After(deadline) {
 			c.rec.RemoveDesired(ctx, name) // rollback: terminate + unbind
+			c.dropToken(name)
 			c.reg.Deregister(name)
 			return nil, status.Errorf(codes.DeadlineExceeded,
 				"plugin %q did not become healthy (state=%s) — rolled back", name, st)
@@ -99,6 +111,7 @@ func (c *controlService) RegisterPlugin(ctx context.Context, req *corev1.Registe
 		select {
 		case <-ctx.Done():
 			c.rec.RemoveDesired(ctx, name)
+			c.dropToken(name)
 			c.reg.Deregister(name)
 			return nil, status.FromContextError(ctx.Err()).Err()
 		case <-time.After(50 * time.Millisecond):
@@ -112,11 +125,19 @@ func (c *controlService) DeregisterPlugin(ctx context.Context, req *corev1.Dereg
 	name := req.GetName()
 	present := c.reg.Plugin(name) != nil
 	c.rec.RemoveDesired(ctx, name)
+	c.dropToken(name)
 	c.reg.Deregister(name)
 	if present {
 		log.Printf("control: deregistered %q", name)
 	}
 	return &corev1.DeregisterPluginResponse{Name: name, WasPresent: present}, nil
+}
+
+// dropToken revokes a plugin's C2 bearer token (a no-op when the gateway isn't wired).
+func (c *controlService) dropToken(name string) {
+	if c.gw != nil {
+		c.gw.RemovePluginToken(name)
+	}
 }
 
 // ListPlugins reports the live plane: every registered plugin, joined with its reconcile
@@ -142,12 +163,12 @@ func (c *controlService) ListPlugins(_ context.Context, _ *corev1.ListPluginsReq
 	return &corev1.ListPluginsResponse{Plugins: out}, nil
 }
 
-// injectLaunchEnv supplies the two topology-dependent env vars a launched plugin needs to
-// call the gateway BACK — RAT_GATEWAY (the callback address) + RAT_PLUGIN_NAME (its caller
-// identity) — as DEFAULTS (an explicit plane/request env still wins). Shared by launchPlane
-// (the initial set) and the live RegisterPlugin path, so a live-added plugin is wired
-// identically to a booted one.
-func injectLaunchEnv(spec *deploymentruntimev1.LaunchSpec, name, gwAddr string, publishPorts []string) {
+// injectLaunchEnv supplies the topology-dependent env vars a launched plugin needs to call
+// the gateway BACK — RAT_GATEWAY (the callback address), RAT_PLUGIN_NAME (its caller identity),
+// and RAT_PLUGIN_TOKEN (its C2 bearer token for the authenticated plugin door) — as DEFAULTS
+// (an explicit plane/request env still wins). Shared by launchPlane (the initial set) and the
+// live RegisterPlugin path, so a live-added plugin is wired identically to a booted one.
+func injectLaunchEnv(spec *deploymentruntimev1.LaunchSpec, name, gwAddr, token string, publishPorts []string) {
 	if spec.Env == nil {
 		spec.Env = map[string]string{}
 	}
@@ -157,6 +178,9 @@ func injectLaunchEnv(spec *deploymentruntimev1.LaunchSpec, name, gwAddr string, 
 	if _, set := spec.Env["RAT_PLUGIN_NAME"]; !set {
 		spec.Env["RAT_PLUGIN_NAME"] = name
 	}
+	if _, set := spec.Env["RAT_PLUGIN_TOKEN"]; !set && token != "" {
+		spec.Env["RAT_PLUGIN_TOKEN"] = token
+	}
 	// ADR-040 (Gap 9): browser/HTTP ports the plugin declares in its manifest `ports`, passed to
 	// the deployment-runtime as a launch directive so it publishes them to the host.
 	if len(publishPorts) > 0 {
@@ -164,4 +188,13 @@ func injectLaunchEnv(spec *deploymentruntimev1.LaunchSpec, name, gwAddr string, 
 			spec.Env["RAT_PUBLISH_PORTS"] = strings.Join(publishPorts, ",")
 		}
 	}
+}
+
+// newPluginToken mints a 128-bit random bearer token (hex) for a launched plugin's C2
+// identity on the gateway's plugin door. Per-launch + secret: a relaunch re-mints, and only
+// the launched plugin and the gateway ever hold it.
+func newPluginToken() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
 }

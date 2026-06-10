@@ -255,12 +255,28 @@ func serveResolved(pl *Plane) error {
 		return err
 	}
 
-	srv := grpc.NewServer()
-	corev1.RegisterCapabilityInvokeServiceServer(srv, plane.Gateway)
+	// Two doors, two trust models (C2 / ADR-034). The CONTROL listener is the operator door
+	// (rat call / the ControlService), trusted by reachability — a per-project unix socket's
+	// filesystem perms or an operator TCP endpoint. The plugin-CALLBACK listener is the 0.0.0.0
+	// door launched plugins dial back on; it AUTHENTICATES each plugin by its per-launch bearer
+	// token (the gateway's PluginAuth interceptors), so a plugin can't forge another's identity.
+	ctlSrv := grpc.NewServer()
+	corev1.RegisterCapabilityInvokeServiceServer(ctlSrv, plane.Gateway)
 	// The live control plane (ADR-027): register/deregister plugins against the running
 	// daemon. Launch mode only — rat must be the launcher to materialize a live add.
 	if plane.Control != nil {
-		corev1.RegisterControlServiceServer(srv, plane.Control)
+		corev1.RegisterControlServiceServer(ctlSrv, plane.Control)
+	}
+	servers := []*grpc.Server{ctlSrv}
+
+	var cbSrv *grpc.Server
+	if cbLis != nil {
+		cbSrv = grpc.NewServer(
+			grpc.UnaryInterceptor(plane.Gateway.PluginAuthUnaryInterceptor),
+			grpc.StreamInterceptor(plane.Gateway.PluginAuthStreamInterceptor),
+		)
+		corev1.RegisterCapabilityInvokeServiceServer(cbSrv, plane.Gateway)
+		servers = append(servers, cbSrv)
 	}
 
 	// Publish this daemon's pid + global registry entry (slice 2c) so `rat down`/`ls`/
@@ -269,13 +285,16 @@ func serveResolved(pl *Plane) error {
 	registerDaemon(pl)
 	defer deregisterDaemon(pl)
 
-	// Serve the same gateway on both listeners. GracefulStop in drain() closes both.
-	serveErr := make(chan error, 2)
-	go func() { serveErr <- srv.Serve(ctlLis) }()
-	cbDesc := "(same as control)"
-	if cbLis != nil {
-		go func() { serveErr <- srv.Serve(cbLis) }()
-		cbDesc = cbLis.Addr().String()
+	// GracefulStop in drain() closes every server. When control is plain TCP (no separate
+	// callback door), plugins share the operator listener — an unauthenticated dev posture,
+	// flagged at assemble time; the secure default (unix-socket control + 0.0.0.0 callback)
+	// authenticates the plugin door.
+	serveErr := make(chan error, len(servers))
+	go func() { serveErr <- ctlSrv.Serve(ctlLis) }()
+	cbDesc := "(same as control — plugins UNAUTHENTICATED; use a unix-socket control for the authenticated plugin door)"
+	if cbSrv != nil {
+		go func() { serveErr <- cbSrv.Serve(cbLis) }()
+		cbDesc = cbLis.Addr().String() + " (token-authenticated)"
 	}
 	log.Printf("gateway serving — control %s · plugin-callbacks %s — %d plugin(s) up; Ctrl-C / SIGTERM to drain",
 		ctlLis.Addr(), cbDesc, len(pl.Specs))
@@ -283,10 +302,10 @@ func serveResolved(pl *Plane) error {
 	select {
 	case <-ctx.Done():
 		log.Print("signal received — draining")
-		drain(srv, plane)
+		drain(plane, servers...)
 		return nil
 	case err := <-serveErr:
-		drain(srv, plane)
+		drain(plane, servers...)
 		if err != nil {
 			return fmt.Errorf("gateway serve: %w", err)
 		}
@@ -337,10 +356,13 @@ type runningPlane struct {
 
 func (rp *runningPlane) Shutdown(ctx context.Context) { rp.shutdown(ctx) }
 
-// drain stops the gateway gracefully (in-flight calls finish, no new ones accepted),
-// then tears the plane down (stop the loop, terminate instances, close provider conns).
-func drain(srv *grpc.Server, plane *runningPlane) {
-	srv.GracefulStop()
+// drain stops every gateway server gracefully (in-flight calls finish, no new ones
+// accepted), then tears the plane down (stop the loop, terminate instances, close provider
+// conns). The operator + plugin doors are separate gRPC servers (C2), so both are stopped.
+func drain(plane *runningPlane, srvs ...*grpc.Server) {
+	for _, srv := range srvs {
+		srv.GracefulStop()
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
 	defer cancel()
 	plane.Shutdown(ctx)
@@ -394,13 +416,18 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 	}
 	manifests := make([]*manifest.Manifest, 0, len(pl.Specs))
 	desired := make([]reconciler.Desired, 0, len(pl.Specs))
+	tokens := map[string]string{} // plugin name -> per-launch bearer token (C2), registered once the gateway exists
 	for _, s := range pl.Specs {
 		manifests = append(manifests, s.Manifest)
 		if s.Launch != nil {
+			name := s.Manifest.Metadata.Name
 			// Inject the topology-dependent gateway-callback env (RAT_GATEWAY) + the caller
-			// identity (RAT_PLUGIN_NAME) the SAME way the live RegisterPlugin path does.
-			injectLaunchEnv(s.Launch, s.Manifest.Metadata.Name, gwAddr, s.Manifest.PublishPorts())
-			desired = append(desired, reconciler.Desired{Name: s.Manifest.Metadata.Name, Launch: s.Launch})
+			// identity (RAT_PLUGIN_NAME) + the per-launch bearer token (RAT_PLUGIN_TOKEN) the
+			// SAME way the live RegisterPlugin path does.
+			tok := newPluginToken()
+			injectLaunchEnv(s.Launch, name, gwAddr, tok, s.Manifest.PublishPorts())
+			tokens[name] = tok
+			desired = append(desired, reconciler.Desired{Name: name, Launch: s.Launch})
 		}
 	}
 	log.Printf("plugins dial the gateway back at %s (injected RAT_GATEWAY)", gwAddr)
@@ -410,6 +437,12 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 		return nil, fmt.Errorf("registry: %w", err)
 	}
 	gw := gateway.New(reg, nil, auditor, routableDescriptors()...)
+	// C2: authenticate the plugin door. Each launched plugin presents its token; the gateway
+	// derives caller_plugin from it, never from the wire envelope (closes identity forgery).
+	for name, tok := range tokens {
+		gw.SetPluginToken(tok, name)
+	}
+	gw.RequirePluginAuth(true)
 	rewire := newGatewayRewire(gw)
 	rec := reconciler.New(rt, desired, reconciler.Config{
 		BaseBackoff:      500 * time.Millisecond,
@@ -452,7 +485,7 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 	}
 	// The live control plane (ADR-027): drives the mutable registry + reconciler so a
 	// client can register/deregister a plugin against this running daemon — no restart.
-	control := &controlService{reg: reg, rec: rec, gwAddr: gwAddr, readyTO: pl.HealthTimeout}
+	control := &controlService{reg: reg, rec: rec, gw: gw, gwAddr: gwAddr, readyTO: pl.HealthTimeout}
 	return &runningPlane{Gateway: gw, Control: control, shutdown: shutdown}, nil
 }
 

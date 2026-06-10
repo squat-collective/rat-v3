@@ -53,6 +53,9 @@ class Gateway:
     def __init__(self):
         self.addr = os.environ.get("RAT_GATEWAY", "127.0.0.1:7777")
         self.name = os.environ.get("RAT_PLUGIN_NAME", "")
+        # C2: the per-launch bearer token rat injected. The gateway derives caller_plugin from
+        # it on the plugin door (the wire identity below is no longer trusted for authz).
+        self.token = os.environ.get("RAT_PLUGIN_TOKEN", "")
         self._chan = grpc.insecure_channel(self.addr)
         self._stub = invoke_pb2_grpc.CapabilityInvokeServiceStub(self._chan)
 
@@ -63,6 +66,8 @@ class Gateway:
             identity=context_pb2.Identity(caller_plugin=self.name, tenant=tenant),
         )
         md = [("rat-callmeta-bin", rc.SerializeToString())]
+        if self.token:
+            md.append(("rat-plugin-token", self.token))
         out = self._stub.Invoke(
             invoke_pb2.InvokeRequest(capability=capability, payload=req.SerializeToString()),
             metadata=md,
