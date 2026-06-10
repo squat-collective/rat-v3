@@ -139,6 +139,7 @@ func deregisterDaemon(pl *Plane) {
 func runUp(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("rat up", flag.ContinueOnError)
 	detach := fs.Bool("d", false, "run the daemon in the background")
+	strict := fs.Bool("strict", false, "preflight the project (rat validate) and refuse to boot on any error")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -148,6 +149,17 @@ func runUp(args []string, out io.Writer) error {
 	}
 	if pid, alive := runningPid(filepath.Join(dir, ".rat")); alive {
 		return fmt.Errorf("a daemon is already running for this project (pid %d) — `rat down` first", pid)
+	}
+	pl, err := LoadProject(tomlPath)
+	if err != nil {
+		return err
+	}
+	// The preflight is static, so it runs in THIS process even for -d (the detached
+	// child re-execs a plain `rat up` — by then the plane is already validated).
+	if *strict {
+		if err := strictPreflight(pl, tomlPath); err != nil {
+			return err
+		}
 	}
 	if *detach {
 		pid, err := spawnDetached(dir)
@@ -159,10 +171,6 @@ func runUp(args []string, out io.Writer) error {
 		}
 		fmt.Fprintf(out, "rat up: daemon started in background (pid %d) — `rat status` / `rat down`\n", pid)
 		return nil
-	}
-	pl, err := LoadProject(tomlPath)
-	if err != nil {
-		return err
 	}
 	return serveResolved(pl)
 }

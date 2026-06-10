@@ -81,8 +81,12 @@ func main() {
 		log.SetPrefix("rat serve: ")
 		fs := flag.NewFlagSet("serve", flag.ExitOnError)
 		planePath := fs.String("plane", "plane.yaml", "path to the plane file (the desired plugin set)")
+		strict := fs.Bool("strict", false, "preflight the plane (rat validate) and refuse to boot on any error")
 		_ = fs.Parse(args)
-		err = serve(*planePath)
+		err = serve(*planePath, *strict)
+	case "validate":
+		// the static preflight (DX-1): every boot-path check, no boot.
+		err = runValidate(args, os.Stdout)
 	case "up":
 		log.SetPrefix("rat: ")
 		err = runUp(args, os.Stdout)
@@ -157,12 +161,13 @@ PROJECT  (a project is a rat.toml — the declared plugin set)
   search      find plugins across the local + added marketplaces
 
 DAEMON  (run the project's plane)
-  up          start this project's daemon            (-d = background)
+  up          start this project's daemon            (-d = background, --strict = preflight)
   down        stop this project's daemon
   status      this project's daemon + its plugins
+  validate    preflight a plane/project WITHOUT booting (manifests · deps · images)
   ls          every rat daemon running on this machine
   hub         federate many workspaces behind one endpoint (ADR-033)
-  serve       run a daemon directly from a plane.yaml (low-level)
+  serve       run a daemon directly from a plane.yaml (low-level; --strict = preflight)
 
 AUTHOR  (build a plugin)
   plugin init     scaffold a plugin   (--kind <axis> --lang go|python|typescript|rust)
@@ -186,11 +191,17 @@ Docs: docs/ in the rat repo · ADRs in docs/architecture/adrs/.
 }
 
 // serve loads a YAML plane file and runs the daemon (`rat serve --plane …`, the low-level
-// path beneath the poetry verbs).
-func serve(planePath string) error {
+// path beneath the poetry verbs). strict runs the static preflight first and refuses to
+// boot on any error (DX-1) — without it, boot problems surface as warnings + Degraded.
+func serve(planePath string, strict bool) error {
 	pl, err := LoadPlane(planePath)
 	if err != nil {
 		return err
+	}
+	if strict {
+		if err := strictPreflight(pl, planePath); err != nil {
+			return err
+		}
 	}
 	return serveResolved(pl)
 }

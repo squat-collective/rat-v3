@@ -17,6 +17,34 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-10 — `rat/6.15`: `rat validate` — the static preflight (backlog DX-1)
+
+The first engineering item from the DX review: **boot misconfig now surfaces before boot,
+not as silent Degraded retries.** New `core/cmd/rat/validate.go`:
+
+- **`rat validate [--plane <file>]`** (defaults: the enclosing project's `rat.toml`, else
+  `./plane.yaml`) — static checks, nothing booted: manifests load · plugin names unique ·
+  launch-xor-attach (assemble's rule, surfaced pre-boot) · every capability URI is REAL
+  (`rat plugin check` semantics — hard-fail in linked axes, unverified-warning for
+  open-set axes) · provider `provides` stays on its kind's axis · **every `requires` has
+  a provider** (error — previously a log warning until a call hit NOT_FOUND) · **every
+  launch image is launchable now** (local: executable exists; podman: `image exists` via
+  `$RAT_PODMAN_BIN` — the runtime does not pull at launch) · launched providers declare
+  `resources.requests` (C4, warning). Honest about its limits: endpoints not dialed,
+  env/secret values not checked.
+- **`rat serve --strict` / `rat up --strict`** — same preflight as a boot gate; refuses
+  to come up on any error. Default behavior unchanged (additive).
+- **Tests:** 7 new cases (happy plane · the degraded-boot failure set · open-set axis is
+  warning-not-error · mixed-mode + duplicate names · render/exit paths). Full
+  `core-test` green.
+- **Proof on the real demo:** flagged all 5 unbuilt `plugins.yaml` images with the exact
+  rebuild hint, and **found a pre-existing real inconsistency** — attach-mode
+  `plane.yaml` declares `requires: rat://secret/v1/resolve` on three plugins but ships no
+  secret provider (the compose services use literal env creds instead; documented as a
+  known asymmetry in `platform/README.md`).
+- Docs: QUICKSTART gained the preflight step; the platform guide's "no validator yet"
+  passages replaced with the real commands; backlog DX-1 cut.
+
 ## 2026-06-10 — `rat/6.14`: the DX sweep — docs-truth, guides, and a real first-success path
 
 A four-journey DX frustration review (plugin author · platform operator · contract
