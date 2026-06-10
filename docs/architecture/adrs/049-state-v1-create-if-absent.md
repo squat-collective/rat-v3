@@ -20,8 +20,15 @@
 > alongside `inmemory-go`. All three references conform. **ADR-049 is fully adopted.** Note: the vector
 > steps live in the mandatory `lifecycle` and the reference backends all implement the full
 > multi-replica tier; a genuinely solo-only third-party backend (not implementing the optional
-> capability) would carry its own conformance profile. `memory-py`/`postgres-py` (not vector-harnessed)
-> can add it for production HA backends — `postgres-py` via `INSERT … ON CONFLICT DO NOTHING`.
+> capability) would carry its own conformance profile.
+>
+> **Production HA backend DONE (2026-06-10):** `postgres-py` implements `CreateIfAbsent` via Postgres's
+> native `INSERT … ON CONFLICT (k) DO NOTHING RETURNING` — atomic at the DATABASE across **all clients
+> and replicas** (not just one process), making it the correct shared backend for `RAT_LEASE_STATE_ADDR`
+> + the ticket store. Declared in its manifest `provides`. Verified against a real Postgres: COMMITTED/
+> CONFLICT/no-overwrite + **exactly-one-creator across 16 concurrent connections** (it has no
+> vector-harness — EXPLORATORY, needs a live DB — so it's verified directly, not via `state-v1.json`).
+> Remaining optional: `memory-py`.
 
 > Decision-first. This amends the **frozen** `state/v1` wire, so it is written and reviewed before any
 > code (CLAUDE.md #3). It follows the exact precedent of [ADR-035](035-state-axis-delete.md) (the
