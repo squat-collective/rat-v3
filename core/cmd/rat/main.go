@@ -176,6 +176,7 @@ AUTHOR  (build a plugin)
   capabilities    list every rat:// capability this rat links   rat capabilities [state|state-backend]
   plugin init     scaffold a plugin   (--kind <axis> --lang go|python|typescript|rust)
   plugin check    validate its manifest (static gate)
+  plugin dev      watch the dir; re-run check + test on change (the inner loop)
   plugin pack     build + stamp the manifest + verify it serves what it declares
   plugin publish  push the verified image to a registry
 
