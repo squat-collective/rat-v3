@@ -25,14 +25,14 @@ _sym_db = _symbol_database.Default()
 from rat.common.v1 import context_pb2 as rat_dot_common_dot_v1_dot_context__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19rat/common/v1/event.proto\x12\rrat.common.v1\x1a\x1brat/common/v1/context.proto\"\xcd\x01\n\x05\x45vent\x12.\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.rat.common.v1.RequestContext\x12\x10\n\x08\x65vent_id\x18\x02 \x01(\t\x12\x0c\n\x04type\x18\x03 \x01(\t\x12\x19\n\x11timestamp_unix_ms\x18\x04 \x01(\x03\x12\x0e\n\x06source\x18\x05 \x01(\t\x12\x0f\n\x07payload\x18\x06 \x01(\x0c\x12\x15\n\rpartition_key\x18\x07 \x01(\t\x12\x11\n\tsignature\x18\x08 \x01(\x0c\x12\x0e\n\x06key_id\x18\t \x01(\tB?Z=github.com/squat-collective/rat-v3/gen/rat/common/v1;commonv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19rat/common/v1/event.proto\x12\rrat.common.v1\x1a\x1brat/common/v1/context.proto\"\xcd\x01\n\x05\x45vent\x12.\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.rat.common.v1.RequestContext\x12\x10\n\x08\x65vent_id\x18\x02 \x01(\t\x12\x0c\n\x04type\x18\x03 \x01(\t\x12\x19\n\x11timestamp_unix_ms\x18\x04 \x01(\x03\x12\x0e\n\x06source\x18\x05 \x01(\t\x12\x0f\n\x07payload\x18\x06 \x01(\x0c\x12\x15\n\rpartition_key\x18\x07 \x01(\t\x12\x11\n\tsignature\x18\x08 \x01(\x0c\x12\x0e\n\x06key_id\x18\t \x01(\tBMZKgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1;commonv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rat.common.v1.event_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z=github.com/squat-collective/rat-v3/gen/rat/common/v1;commonv1'
+  _globals['DESCRIPTOR']._serialized_options = b'ZKgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1;commonv1'
   _globals['_EVENT']._serialized_start=74
   _globals['_EVENT']._serialized_end=279
 # @@protoc_insertion_point(module_scope)

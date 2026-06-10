@@ -1,4 +1,4 @@
-module github.com/squat-collective/rat-v3/gen
+module github.com/squat-collective/rat-v3/contracts/sdks/go
 
 go 1.25.0
 

@@ -148,7 +148,7 @@ The `ratplugin` runtime SDK ([ADR-029](../architecture/adrs/029-plugin-runtime-s
 kills the two chunks of boilerplate every plugin repeats — serving and consuming —
 and gets the cross-cutting envelope (identity + trace, ADR-007) right once.
 
-**Go** (`github.com/squat-collective/rat-v3/gen/ratplugin`, in [`contracts/sdks/go/ratplugin/`](../../contracts/sdks/go/ratplugin/plugin.go)):
+**Go** (`github.com/squat-collective/rat-v3/contracts/sdks/go/ratplugin`, in [`contracts/sdks/go/ratplugin/`](../../contracts/sdks/go/ratplugin/plugin.go)):
 
 ```go
 ratplugin.Serve(func(s grpc.ServiceRegistrar) {        // RAT_PLUGIN_ADDR + graceful SIGTERM drain
@@ -184,8 +184,10 @@ server against the generated stubs is always a valid plugin.
 
 **Where the SDK comes from.** Three ways (ADR-051):
 
-- **Go, as a module:** `go get github.com/squat-collective/rat-v3/gen` — the committed SDK is
-  fetchable directly (the `ratplugin` runtime SDK rides in the same module).
+- **Go, as a module:** `go get github.com/squat-collective/rat-v3/contracts/sdks/go@latest`
+  — the committed SDK is fetchable directly (the `ratplugin` runtime SDK rides in the
+  same module; the path is long because Go requires a nested module's path to match its
+  subdirectory).
 - **Either language, via the published base images:** every release pushes
   `ghcr.io/squat-collective/rat-v3-plugin-base-{go,py}` — `FROM` those with no clone of this repo.
 - **From a clone:** `make plugin-base-py` / `make plugin-base-go` build the same bases

@@ -439,7 +439,7 @@ const file_rat_common_v1_context_proto_rawDesc = "" +
 	"\tsignature\x18\x02 \x01(\fR\tsignature\x120\n" +
 	"\x14bound_correlation_id\x18\x03 \x01(\tR\x12boundCorrelationId\x12&\n" +
 	"\x0fexpires_unix_ms\x18\x04 \x01(\x03R\rexpiresUnixMs\x12\x15\n" +
-	"\x06key_id\x18\x05 \x01(\tR\x05keyIdB?Z=github.com/squat-collective/rat-v3/gen/rat/common/v1;commonv1b\x06proto3"
+	"\x06key_id\x18\x05 \x01(\tR\x05keyIdBMZKgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1;commonv1b\x06proto3"
 
 var (
 	file_rat_common_v1_context_proto_rawDescOnce sync.Once

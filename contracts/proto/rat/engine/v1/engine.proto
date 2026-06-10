@@ -24,7 +24,7 @@ package rat.engine.v1;
 import "rat/common/v1/annotations.proto";
 import "rat/common/v1/data.proto";
 
-option go_package = "github.com/squat-collective/rat-v3/gen/rat/engine/v1;enginev1";
+option go_package = "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/engine/v1;enginev1";
 
 service EngineService {
   // Run a statement for effect (DDL, INSERT…SELECT).

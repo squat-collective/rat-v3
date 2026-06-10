@@ -3,7 +3,7 @@ module github.com/squat-collective/rat-v3/plugins/state/inmemory-go
 go 1.25.0
 
 require (
-	github.com/squat-collective/rat-v3/gen v0.0.0
+	github.com/squat-collective/rat-v3/contracts/sdks/go v0.0.0
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
 )
@@ -15,4 +15,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
 )
 
-replace github.com/squat-collective/rat-v3/gen => ../../../contracts/sdks/go
+replace github.com/squat-collective/rat-v3/contracts/sdks/go => ../../../contracts/sdks/go

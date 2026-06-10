@@ -443,7 +443,7 @@ const file_rat_common_v1_data_proto_rawDesc = "" +
 	"\x0fArrowStreamRole\x12!\n" +
 	"\x1dARROW_STREAM_ROLE_UNSPECIFIED\x10\x00\x12%\n" +
 	"!ARROW_STREAM_ROLE_PRODUCER_HOSTED\x10\x01\x12%\n" +
-	"!ARROW_STREAM_ROLE_CONSUMER_HOSTED\x10\x02B?Z=github.com/squat-collective/rat-v3/gen/rat/common/v1;commonv1b\x06proto3"
+	"!ARROW_STREAM_ROLE_CONSUMER_HOSTED\x10\x02BMZKgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1;commonv1b\x06proto3"
 
 var (
 	file_rat_common_v1_data_proto_rawDescOnce sync.Once

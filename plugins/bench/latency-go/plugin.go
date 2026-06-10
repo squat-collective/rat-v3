@@ -15,9 +15,9 @@ import (
 	"context"
 	"fmt"
 
-	commonv1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
-	runtimev1 "github.com/squat-collective/rat-v3/gen/rat/runtime/v1"
-	statev1 "github.com/squat-collective/rat-v3/gen/rat/state/v1"
+	commonv1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1"
+	runtimev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/runtime/v1"
+	statev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/state/v1"
 )
 
 // plugin serves both a unary (StateService.Get) and a streaming (RuntimeService.

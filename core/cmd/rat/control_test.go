@@ -10,8 +10,8 @@ import (
 	"github.com/squat-collective/rat-v3/core/lease"
 	"github.com/squat-collective/rat-v3/core/reconciler"
 	"github.com/squat-collective/rat-v3/core/registry"
-	corev1 "github.com/squat-collective/rat-v3/gen/rat/core/v1"
-	deploymentruntimev1 "github.com/squat-collective/rat-v3/gen/rat/deploymentruntime/v1"
+	corev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/core/v1"
+	deploymentruntimev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/deploymentruntime/v1"
 )
 
 // fakeCtlRuntime is a deployment-runtime stub: every launched instance reports `status`.

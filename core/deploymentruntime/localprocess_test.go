@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	deploymentruntimev1 "github.com/squat-collective/rat-v3/gen/rat/deploymentruntime/v1"
-	statev1 "github.com/squat-collective/rat-v3/gen/rat/state/v1"
+	deploymentruntimev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/deploymentruntime/v1"
+	statev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/state/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"

@@ -25,12 +25,12 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import descriptor_pb2 as google_dot_protobuf_dot_descriptor__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1frat/common/v1/annotations.proto\x12\rrat.common.v1\x1a google/protobuf/descriptor.proto:4\n\ncapability\x12\x1e.google.protobuf.MethodOptions\x18\xf1\xa2\x04 \x01(\tB?Z=github.com/squat-collective/rat-v3/gen/rat/common/v1;commonv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1frat/common/v1/annotations.proto\x12\rrat.common.v1\x1a google/protobuf/descriptor.proto:4\n\ncapability\x12\x1e.google.protobuf.MethodOptions\x18\xf1\xa2\x04 \x01(\tBMZKgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1;commonv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'rat.common.v1.annotations_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z=github.com/squat-collective/rat-v3/gen/rat/common/v1;commonv1'
+  _globals['DESCRIPTOR']._serialized_options = b'ZKgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1;commonv1'
 # @@protoc_insertion_point(module_scope)

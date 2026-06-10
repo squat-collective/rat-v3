@@ -20,8 +20,8 @@ import (
 
 	"github.com/squat-collective/rat-v3/core/deploymentruntime"
 	"github.com/squat-collective/rat-v3/core/manifest"
-	commonv1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
-	deploymentruntimev1 "github.com/squat-collective/rat-v3/gen/rat/deploymentruntime/v1"
+	commonv1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1"
+	deploymentruntimev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/deploymentruntime/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -963,9 +963,9 @@ func goFiles(name, kind string) map[string]string {
 package main
 
 import (
-	"github.com/squat-collective/rat-v3/gen/ratplugin"
+	"github.com/squat-collective/rat-v3/contracts/sdks/go/ratplugin"
 	"google.golang.org/grpc"
-	// TODO: import your axis stubs, e.g. secretv1 "github.com/squat-collective/rat-v3/gen/rat/secret/v1"
+	// TODO: import your axis stubs, e.g. secretv1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/secret/v1"
 )
 
 func main() {
@@ -996,8 +996,8 @@ go 1.25
 require google.golang.org/grpc v1.81.1
 
 // the rat Go SDK — provided at /sdk by the plugin-base-go build image. Import the axis stubs
-// you need, e.g. secretv1 "github.com/squat-collective/rat-v3/gen/rat/secret/v1"; ` + "`rat plugin pack`" + ` resolves it.
-replace github.com/squat-collective/rat-v3/gen => /sdk
+// you need, e.g. secretv1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/secret/v1"; ` + "`rat plugin pack`" + ` resolves it.
+replace github.com/squat-collective/rat-v3/contracts/sdks/go => /sdk
 `
 	return map[string]string{
 		"main.go":    main,

@@ -20,7 +20,7 @@ package rat.ui.v1;
 
 import "rat/common/v1/annotations.proto";
 
-option go_package = "github.com/squat-collective/rat-v3/gen/rat/ui/v1;uiv1";
+option go_package = "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/ui/v1;uiv1";
 
 service UiService {
   // rat://ui/v1/describe — enumerate the surfaces this UI exposes and the slots

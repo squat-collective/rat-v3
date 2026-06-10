@@ -228,7 +228,7 @@ const file_rat_common_v1_event_proto_rawDesc = "" +
 	"\apayload\x18\x06 \x01(\fR\apayload\x12#\n" +
 	"\rpartition_key\x18\a \x01(\tR\fpartitionKey\x12\x1c\n" +
 	"\tsignature\x18\b \x01(\fR\tsignature\x12\x15\n" +
-	"\x06key_id\x18\t \x01(\tR\x05keyIdB?Z=github.com/squat-collective/rat-v3/gen/rat/common/v1;commonv1b\x06proto3"
+	"\x06key_id\x18\t \x01(\tR\x05keyIdBMZKgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1;commonv1b\x06proto3"
 
 var (
 	file_rat_common_v1_event_proto_rawDescOnce sync.Once

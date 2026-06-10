@@ -13,7 +13,7 @@ package rat.runtime.v1;
 import "rat/common/v1/annotations.proto";
 import "rat/common/v1/data.proto";
 
-option go_package = "github.com/squat-collective/rat-v3/gen/rat/runtime/v1;runtimev1";
+option go_package = "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/runtime/v1;runtimev1";
 
 service RuntimeService {
   // rat://runtime/v1/execute — run a unit of work. Streams progress so the

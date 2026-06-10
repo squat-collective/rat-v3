@@ -24,7 +24,7 @@
 package secretv1
 
 import (
-	_ "github.com/squat-collective/rat-v3/gen/rat/common/v1"
+	_ "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -170,7 +170,7 @@ const file_rat_secret_v1_secret_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\fB\x03\x80\x01\x01R\x05value\x12&\n" +
 	"\x0fexpires_unix_ms\x18\x03 \x01(\x03R\rexpiresUnixMs2v\n" +
 	"\rSecretService\x12e\n" +
-	"\aResolve\x12\x1d.rat.secret.v1.ResolveRequest\x1a\x1e.rat.secret.v1.ResolveResponse\"\x1b\x8a\x97\"\x17rat://secret/v1/resolveB?Z=github.com/squat-collective/rat-v3/gen/rat/secret/v1;secretv1b\x06proto3"
+	"\aResolve\x12\x1d.rat.secret.v1.ResolveRequest\x1a\x1e.rat.secret.v1.ResolveResponse\"\x1b\x8a\x97\"\x17rat://secret/v1/resolveBMZKgithub.com/squat-collective/rat-v3/contracts/sdks/go/rat/secret/v1;secretv1b\x06proto3"
 
 var (
 	file_rat_secret_v1_secret_proto_rawDescOnce sync.Once

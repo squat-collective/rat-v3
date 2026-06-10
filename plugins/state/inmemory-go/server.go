@@ -10,7 +10,7 @@ package main
 import (
 	"context"
 
-	statev1 "github.com/squat-collective/rat-v3/gen/rat/state/v1"
+	statev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/state/v1"
 )
 
 type stateServer struct {

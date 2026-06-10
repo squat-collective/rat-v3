@@ -28,13 +28,19 @@ precondition.
    `rat-v3`. See Alternatives #6 for the v3-as-a-branch-of-v2 idea, considered and
    rejected.)*
 3. **The module-path rename `rat-dev` → `squat-collective/rat-v3` lands with the publication** —
-   `go get github.com/squat-collective/rat-v3/gen` must actually work, so the Go module paths, the
+   the SDK must actually be `go get`-able, so the Go module paths, the
    proto `go_package` options, the committed SDKs (regenerated), `install.sh`'s default
    repo, and the GHCR image refs all follow the org. **This consciously trips
    `buf breaking`'s `FILE_SAME_GO_PACKAGE` rule against the pre-rename baseline — once,
    for this seal.** `go_package` is build metadata, not wire shape: the full core suite,
    conformance (32/32), and the regenerated cross-language SDKs prove the wire held.
    Historical ADRs keep their `rat-dev` mentions (they were true when written).
+   *(Second same-day correction, found by the live outside-in verification: Go requires a
+   nested module's import path to EQUAL repo-root + subdirectory, so the Phase-0 vanity
+   module `…/rat-v3/gen` (living at `contracts/sdks/go/`) could never be fetched. The
+   module is now `github.com/squat-collective/rat-v3/contracts/sdks/go` — long but real —
+   with subdir-prefixed semver tags (`contracts/sdks/go/vX.Y.Z`) so `@latest` resolves.
+   Shipped as `rat/6.19`.)*
 4. **Distribution is GitHub Releases + GHCR** (the existing `release.yml`, repaired +
    extended): per `rat/N.M` tag — 4-platform static binaries + `SHA256SUMS` +
    `install.sh` on the Release, and `ghcr.io/squat-collective/rat-v3` (daemon) **plus

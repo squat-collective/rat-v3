@@ -17,9 +17,9 @@ import (
 	"strings"
 	"sync"
 
-	commonv1 "github.com/squat-collective/rat-v3/gen/rat/common/v1"
-	corev1 "github.com/squat-collective/rat-v3/gen/rat/core/v1"
-	runtimev1 "github.com/squat-collective/rat-v3/gen/rat/runtime/v1"
+	commonv1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/common/v1"
+	corev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/core/v1"
+	runtimev1 "github.com/squat-collective/rat-v3/contracts/sdks/go/rat/runtime/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"

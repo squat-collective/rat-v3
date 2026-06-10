@@ -25,8 +25,10 @@ chosen by Tom):
 
 - **License: Apache-2.0** (canonical LICENSE + NOTICE) — the ecosystem bet: permissive +
   patent grant, the K8s/NATS/Temporal-tier norm.
-- **Module-path rename `rat-dev` → `squat-collective/rat-v3`** so `go get github.com/squat-collective/rat-v3/gen`
-  actually works: 25 protos' `go_package`, full SDK regen, 89 core Go files + every Go
+- **Module-path rename `rat-dev` → `squat-collective/rat-v3`** so the SDK is `go get`-able
+  (the live verification then caught that Go ALSO requires a nested module's path to match
+  its subdir — fixed at `rat/6.19`: the module is `…/rat-v3/contracts/sdks/go`,
+  semver-tagged `contracts/sdks/go/vX.Y.Z`): 25 protos' `go_package`, full SDK regen, 89 core Go files + every Go
   reference plugin's module, Makefile/install.sh/marketplace-URL. **Consciously trips
   `buf breaking`'s FILE_SAME_GO_PACKAGE once** — metadata-only; the wire is proven held
   (full core suite + conformance 32/32 green under the new paths). Historical ADRs keep

@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/pelletier/go-toml/v2 v2.3.1
-	github.com/squat-collective/rat-v3/gen v0.0.0
+	github.com/squat-collective/rat-v3/contracts/sdks/go v0.0.0
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
@@ -17,4 +17,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
 )
 
-replace github.com/squat-collective/rat-v3/gen => ../contracts/sdks/go
+replace github.com/squat-collective/rat-v3/contracts/sdks/go => ../contracts/sdks/go
