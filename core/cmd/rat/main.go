@@ -87,6 +87,9 @@ func main() {
 	case "validate":
 		// the static preflight (DX-1): every boot-path check, no boot.
 		err = runValidate(args, os.Stdout)
+	case "capabilities", "caps":
+		// the readable in-binary capability registry (DX-3).
+		err = runCapabilities(args, os.Stdout)
 	case "up":
 		log.SetPrefix("rat: ")
 		err = runUp(args, os.Stdout)
@@ -170,6 +173,7 @@ DAEMON  (run the project's plane)
   serve       run a daemon directly from a plane.yaml (low-level; --strict = preflight)
 
 AUTHOR  (build a plugin)
+  capabilities    list every rat:// capability this rat links   rat capabilities [state|state-backend]
   plugin init     scaffold a plugin   (--kind <axis> --lang go|python|typescript|rust)
   plugin check    validate its manifest (static gate)
   plugin pack     build + stamp the manifest + verify it serves what it declares
