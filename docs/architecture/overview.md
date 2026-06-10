@@ -2,6 +2,14 @@
 
 The full architecture in one document. ADRs in `docs/architecture/adrs/` resolve specific decisions; this doc gives the integrated picture.
 
+> **Status:** written at design time (Phase 0) and still the right *conceptual* map — but
+> the system it describes has since been **built and sealed** (phases 0–9, `main` at
+> `rat/6.13`), including hardenings this doc predates (ADRs 042–048: channel-authenticated
+> plugin identity, HA lease, bounded reconciler RPCs, label/selector provider selection,
+> native `/metrics` + durable audit, hub proxying, arrow-ticket store — and the ADR-049
+> `state/v1` amendment). Where this doc and an Accepted ADR disagree, **the ADR wins**.
+> Live state: [`roadmap/current.md`](../../roadmap/current.md).
+
 ## The shape
 
 ```

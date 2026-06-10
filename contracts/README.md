@@ -3,10 +3,18 @@
 The **contract triple** — the entire surface a plugin author builds against:
 
 1. **Manifest** — [`schema/plugin.v1.json`](schema/plugin.v1.json) (JSON Schema 2020-12). The operator/author-editable description of a plugin.
-2. **Proto** — `proto/` (one `.proto` per axis; sub-phase 0b, not yet written). The gRPC wire contract.
+2. **Proto** — `proto/` (one `.proto` per axis + `common/` cross-cutting + the core's own services). The gRPC wire contract.
 3. **Capability URIs** — `rat://<axis>/<major>/<capability>`. The only coupling between plugins.
 
-This directory is **Phase 0** work (see [`../roadmap/phases.md`](../roadmap/phases.md)). Nothing here is frozen until the `rat/1` freeze gate (sub-phase 0h) — until then, everything is draft and may change without ceremony.
+This surface is **FROZEN** at `rat/1` (Phase 0 sealed at `rat/1.5`; everything ≤ `rat/2.0`
+is the frozen wire — see [`../roadmap/current.md`](../roadmap/current.md)). Post-freeze
+changes land as **additive, capability-gated amendments** — [`AMENDING.md`](AMENDING.md)
+documents the procedure; `state/v1` `delete` (ADR-035) and `create-if-absent` (ADR-049)
+are the precedents. `make breaking` enforces the freeze against `main`.
+
+**Writing a plugin against these contracts?** Start with
+[`../docs/guides/authoring-a-plugin.md`](../docs/guides/authoring-a-plugin.md), then read
+your axis's `CONTRACT.md` (next to its proto).
 
 ## Layout
 
@@ -18,31 +26,24 @@ contracts/
 ├── codegen/               # pinned connectionless codegen toolchain (ADR-018): Go + Python
 ├── .gitignore             # excludes only sdks/go/go.sum (the SDKs themselves ARE committed)
 ├── schema/
-│   ├── plugin.v1.json     # the manifest envelope schema (sub-phase 0a) ✅
+│   ├── plugin.v1.json     # the manifest envelope schema ✅ FROZEN v1 (ADR-011)
+│   ├── kinds/             # 18 per-kind schemas layered on the envelope (ADR-011)
 │   └── README.md          # schema design notes + the per-kind decision
-├── proto/                 # axis service contracts (sub-phase 0b)
+├── proto/                 # axis service contracts — FROZEN rat/1 (+ additive amendments)
 │   └── rat/
-│       ├── common/v1/
-│       │   ├── context.proto   # C1: RequestContext (trace+identity+tenant) ✅
-│       │   └── data.proto      # shared TableRef / ArrowStream / WriteResult ✅
-│       ├── engine/v1/engine.proto      # Execute/Query/Preview ✅
-│       ├── runtime/v1/runtime.proto    # Execute (streaming) ✅
-│       ├── format/v1/format.proto      # Resolve/Write/Maintain ✅
-│       ├── strategy/v1/strategy.proto  # Apply ✅
-│       ├── catalog/v1/catalog.proto    # GetTable/CreateBranch/MergeBranch ✅
-│       ├── storage/v1/storage.proto    # VendCredentials (C7 scope) ✅
-│       ├── state/v1/state.proto        # Get/Put/List/Watch (tier-0, C3) ✅
-│       ├── identity/v1/identity.proto  # Authenticate/Authorize (C2) ✅
-│       ├── tenancy/v1/tenancy.proto    # Decide (C7 structural) ✅
-│       ├── deploymentruntime/v1/…      # Launch/Terminate/Healthcheck (tier-0, I9) ✅
-│       ├── scheduler/v1/scheduler.proto    # Schedule/Cancel/WatchDue ✅
-│       ├── secret/v1/secret.proto          # Resolve (I13 secret contract) ✅
-│       ├── observability/v1/…          # Ingest (export sink; core self-observes) ✅
-│       ├── auditlog/v1/auditlog.proto  # Append (I8 mandatory audit, hash-chain) ✅
-│       ├── ui/v1/ui.proto              # Describe/RenderSlot (portal slots) ✅
-│       ├── notifications/v1/…          # Send ✅
-│       ├── marketplace/v1/…            # Search/Get (capability-aware, N2) ✅
-│       └── billing/v1/billing.proto    # Record (per-tenant metering) ✅
+│       ├── common/v1/     # context (C1), data, event envelope, audit record, the
+│       │                  # capability annotation, + the canonical ERROR_MODEL.md
+│       ├── core/v1/       # the core's own wire: CapabilityInvokeService (ADR-005/008)
+│       │                  # + ControlService (live register/deregister, ADR-027)
+│       └── <axis>/v1/     # one dir per axis (18) — <axis>.proto + CONTRACT.md, the
+│                          # per-axis author guide: engine, runtime, format, strategy,
+│                          # catalog, storage, state, identity, tenancy,
+│                          # deploymentruntime, scheduler, secret, observability,
+│                          # auditlog, ui, notifications, marketplace, billing
+├── conformance/           # golden vectors per axis + cross-language context-carriage
+├── sdks/                  # COMMITTED generated Go + Python SDKs + the hand-written
+│   ├── go/                # runtime SDKs: Go `ratplugin` (Serve/Gateway/CallerTenant)
+│   └── python/            # + Python `rat/plugin.py` — ADR-029
 └── examples/
     ├── rat-strategy-scd2.plugin.yaml     # canonical valid manifest
     ├── rat-format-deltalake.plugin.yaml  # second valid manifest (signed)
@@ -54,37 +55,38 @@ contracts/
 | Sub-phase | Artifact | Status |
 |---|---|---|
 | 0a | Manifest envelope schema (`plugin.v1.json`) | ✅ **FROZEN v1** (ADR-011) |
-| 0a | Example + negative manifests | ✅ draft (validated by `scripts/validate-manifests.py`) |
-| 0b | 18 axis protos + 2 common (all v1 axes drafted) | ✅ draft — buf lint + build + generate clean |
-| 0b | Per-kind manifest schemas (derive from protos) | ✅ **DONE** — 18 in `schema/kinds/` (ADR-011) |
-| 0c | Cross-cutting protos (`common/v1/context.proto` ✅ + `data.proto` ✅; event-bus envelope ⬜) | 🔶 context+data drafted |
-| 0d–0e | 12 reference implementations | ⬜ not started |
-| 0f | Conformance harness + `rat plugin validate` | ⬜ not started |
-| 0g | Per-axis `CONTRACT.md` | ⬜ not started |
-| 0h | `rat/1` freeze | ⬜ not started |
+| 0a | Example + negative manifests | ✅ gated by `make validate-manifests` |
+| 0b | 18 axis protos + common | ✅ **FROZEN `rat/1`** (ADR-009; `make breaking` guards) |
+| 0b | Per-kind manifest schemas | ✅ 18 in `schema/kinds/` (ADR-011) |
+| 0c | Cross-cutting protos (context, data, event envelope, audit, annotations) | ✅ frozen with 0b |
+| 0d–0e | Reference implementations | ✅ — [`../plugins/`](../plugins/), 40 plugins; the ADR-003 two-reference gate held for the data-plane axes |
+| 0f | Conformance harness + manifest validation | ✅ `make conformance` + `make validate-manifests` + `rat plugin check` (ADR-026) |
+| 0g | Per-axis `CONTRACT.md` | ✅ 18 author guides, each next to its proto |
+| 0h | `rat/1` freeze | ✅ **SEALED** — Phase 0 closed at `rat/1.5` (2026-06-01) |
+| post-freeze | Additive amendments | `state/v1` `delete` (ADR-035) + `create-if-absent` (ADR-049) — procedure in [`AMENDING.md`](AMENDING.md) |
 
 ## Validating the contracts (container-only, per Tom's rule)
 
-**Protos** — lint + compile via buf. The image needs a writable HOME and
-`--userns=keep-id` so its cache dir is writable:
+Everything runs through `make` from the repo root (podman preferred, docker fallback —
+nothing installs on the host):
 
 ```bash
-cd contracts
-podman run --rm --userns=keep-id -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
-  -v "$PWD:/workspace:Z" -w /workspace docker.io/bufbuild/buf:1.47.2 lint
-podman run --rm --userns=keep-id -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
-  -v "$PWD:/workspace:Z" -w /workspace docker.io/bufbuild/buf:1.47.2 build
+make check               # FAST per-commit gate: buf lint (seconds)
+make verify              # FULL: lint + build + SDK freshness + SDK compile + core tests
+make breaking            # the freeze gate: buf breaking vs the sealed baseline (main)
+make conformance         # every reference plugin against its golden vectors
+make validate-manifests  # examples + per-kind schemas + the INVALID corpus
 ```
 
-Both pass clean (0 findings). Codegen runs **connectionless** via pinned local
-toolchain images (ADR-018, `make gen-sdks`) — no BSR/network at gen time. The
-generated SDKs **are committed** under `sdks/<lang>/` (ADR-006 D1) for **Go +
+Codegen runs **connectionless** via pinned local toolchain images (ADR-018,
+`make gen-sdks`; freshness gated by `make gen-check`) — no BSR/network at gen time.
+The generated SDKs **are committed** under `sdks/<lang>/` (ADR-006 D1) for **Go +
 Python**, the consumed languages (ADR-037 trimmed the unused TS + Rust trees);
 the proto stays the source of truth and any language regenerates on demand.
 
-**Manifests** — no `rat plugin validate` yet (sub-phase 0f). Any JSON Schema
-2020-12 validator works; we used a containerized `python:3.12-slim` + `jsonschema`
-to confirm the two example manifests pass and the negative vectors are rejected.
+**Manifests** — per-plugin validation is `rat plugin check` (envelope + per-kind
+schema + capability/axis coherence, ADR-026); the repo-wide gate is
+`make validate-manifests`.
 
 ## Critical concerns baked in (from [`../reviews/00-synthesis.md`](../reviews/00-synthesis.md))
 
@@ -97,11 +99,14 @@ ones that touch the **manifest** are in `plugin.v1.json` from day one:
 
 The remaining Critical concerns (C1 trace context, C2 plugin-auth, C3 state
 namespacing, C6 conformance, C7 tenancy, C9 two-reference, C10 listener split)
-live in the protos (0b/0c) and the core (Phase 1), not the manifest — tracked in
-[`../roadmap/backlog.md`](../roadmap/backlog.md) as prospective ADRs 004–013.
+live in the protos and the core, not the manifest — they landed as ADRs 004–013
+(see the [ADR index](../docs/architecture/adrs/README.md)) and are enforced by the
+sealed core (C2 hardened by ADR-042's channel-authenticated identity at `rat/6.7`).
 
 ## Related
 
+- [`AMENDING.md`](AMENDING.md) — how to amend a frozen axis (the additive-amendment procedure + the measured cost).
+- [`../docs/guides/authoring-a-plugin.md`](../docs/guides/authoring-a-plugin.md) — the plugin-author walkthrough.
 - [ADR-002](../docs/architecture/adrs/002-founding-tech-stack.md) D3 (JSON Schema for manifests), D4 (capability major-versioning).
 - [ADR-003](../docs/architecture/adrs/003-two-references-before-contract-freeze.md) — the two-reference freeze gate.
 - [docs/architecture/overview.md](../docs/architecture/overview.md) — the contract triple section this schema formalizes.

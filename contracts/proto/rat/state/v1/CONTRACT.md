@@ -1,11 +1,13 @@
 # `state/v1` — plugin contract (author guide)
 
-> ⚠️ **Status (2026-06-01) — the orchestrating core is NOT built yet (Phase 1).** The C2/C5/C7
-> enforcement, capability routing, and audit emission this guide describes are the contract the
-> core MUST implement — they do **not** run today. The wire contract + reference plugins here are
-> real and frozen (`rat/1`); the core is *designed, not running*, and `make conformance` tests
-> references against golden vectors, **not** a live deployment. See
-> [reviews/08](../../../../../reviews/08-post-freeze-board-review.md).
+> **Status (2026-06-10) — the core is built and sealed.** What this guide describes **runs
+> today**: capability routing, channel-authenticated plugin identity (C2, ADR-042), C5
+> capability authz, deadline-bounding, and mandatory audit emission are enforced by the
+> sealed core (`rat/2.0`, hardened through `rat/6.13`). `make conformance` checks the
+> references against the golden vectors; `make composition` runs the cross-axis suite
+> against real providers. The wire stays frozen (`rat/1`); post-freeze changes land as
+> additive, capability-gated amendments (e.g. ADR-035 `delete` + ADR-049
+> `create-if-absent` on `state/v1`).
 
 > Canonical guide for implementing a `kind: state-backend` plugin. Pairs with the
 > wire contract [`state.proto`](state.proto) and the golden vectors
@@ -25,7 +27,13 @@ state on behalf of every other plugin, namespaced per-plugin and per-tenant.
 | `rat://state/v1/get` | `Get` | unary | read one key |
 | `rat://state/v1/put` | `Put` | unary | write one key, optionally compare-and-set |
 | `rat://state/v1/list` | `List` | unary | list keys under a prefix |
+| `rat://state/v1/delete` | `Delete` | unary | **optional** (ADR-035 amendment) — remove one key, optionally compare-and-set |
+| `rat://state/v1/create-if-absent` | `CreateIfAbsent` | unary | **optional** (ADR-049 amendment) — atomically create a key only if it doesn't exist |
 | `rat://state/v1/watch` | `Watch` | server-streaming | stream changes under a prefix |
+
+The two optional capabilities are **additive post-freeze amendments**: a backend declares
+them in `provides` only if it implements them; consumers MUST feature-detect (capability
+presence is the negotiation) and handle `UNIMPLEMENTED`.
 
 ## The RPCs
 
@@ -39,6 +47,13 @@ state on behalf of every other plugin, namespaced per-plugin and per-tenant.
   cannot be relied on for fencing). A CAS conflict is a *normal outcome*.
 - **`List(prefix)` → `{keys}`** — `prefix` MAY be empty (== this plugin+tenant
   namespace).
+- **`Delete(key, if_revision)` → `{outcome, found}`** *(optional, ADR-035)* — idempotent
+  (absent key → `found=false`, not an error); CAS via `if_revision` with the same fencing
+  rigor as `Put` (deleting a lease key releases the lease).
+- **`CreateIfAbsent(key, value)` → `{outcome, revision}`** *(optional, ADR-049)* — MUST be
+  **atomic**: two concurrent creates of one key yield exactly one `COMMITTED` (the loser
+  gets `CONFLICT`). This is the primitive behind the leader-election lease *bootstrap*
+  (ADR-043 Q01 cold-start race) and the Arrow-ticket single-use store (ADR-048).
 - **`Watch(prefix, from_revision)` → stream `{type, key, value, revision}`** —
   `from_revision=0` == from now. Events MUST be delivered in revision order.
 
@@ -49,13 +64,16 @@ state on behalf of every other plugin, namespaced per-plugin and per-tenant.
    control char (< 0x20), or contains a `.`/`..` path component or `../`/`..\` →
    `INVALID_ARGUMENT`. This makes the gateway's namespace prefixing a real boundary,
    not naive string concat a crafted key can escape.
-2. **Linearizable CAS + ordered Watch** (reviews/06 C-4) — to be eligible as the
-   reconciler's leader-election lease backend, single-key CAS MUST be **linearizable**
-   and Watch **ordered**. A backend that can only offer eventually-consistent reads
-   MUST run in a strongly-consistent mode or declare itself solo-only (two stale CAS
-   reads → two leaders → split-brain). This is gated by golden vectors, not a comment.
-3. Both above are exercised by [`state-v1.json`](../../../../conformance/state-v1.json):
-   the CAS COMMITTED/CONFLICT path + the 6 key-grammar rejections.
+2. **Linearizable CAS + ordered Watch + atomic create-if-absent** (reviews/06 C-4;
+   ADR-049) — to be eligible as the reconciler's leader-election lease backend, single-key
+   CAS MUST be **linearizable**, Watch **ordered**, and — if the backend declares
+   `create-if-absent` — the create MUST be **atomic** (this is the multi-replica
+   eligibility tier). A backend that can only offer eventually-consistent reads MUST run
+   in a strongly-consistent mode or declare itself solo-only (two stale CAS reads → two
+   leaders → split-brain). This is gated by golden vectors, not a comment.
+3. The above are exercised by [`state-v1.json`](../../../../conformance/state-v1.json):
+   the CAS COMMITTED/CONFLICT path, the create-if-absent create/conflict/no-overwrite
+   steps, + the 6 key-grammar rejections.
 
 ## Cross-cutting (every axis)
 

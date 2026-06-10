@@ -11,6 +11,14 @@
 there only as a phase-seal merge. For all active work, you are on a branch. A
 `PreToolUse` hook enforces this deterministically — but the discipline is yours first.
 
+> **Era note (2026-06-10):** the phased era (0–9) is sealed; there is currently no living
+> `phase-N` integration branch for day-to-day work. Current practice (see
+> [`roadmap/current.md`](../../roadmap/current.md)): topic branches fork **directly off
+> `main`** with descriptive slugs (`adr-049-create-if-absent`, `fix-arrowticket-flake`,
+> `dx-sweep`) and land via a `--no-ff` merge with a `seal(rat/N.M): …` message + an
+> annotated `rat/N.M` tag. The `phase-N` topology below remains the pattern if/when a new
+> long phase opens; the `main`-guard and merge rules apply identically either way.
+
 ## Branch topology
 
 ```
