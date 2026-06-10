@@ -16,6 +16,7 @@ type fakeCAS struct {
 	rev     int64
 	found   bool
 	failPut bool
+	noCIA   bool // simulate a backend that lacks the optional create-if-absent capability
 }
 
 func (f *fakeCAS) Get(_ context.Context, _ string) ([]byte, int64, bool, error) {
@@ -32,6 +33,23 @@ func (f *fakeCAS) Put(_ context.Context, _ string, value []byte, ifRevision int6
 	}
 	if ifRevision > 0 && ifRevision != f.rev {
 		return false, f.rev, nil // deterministic CAS CONFLICT
+	}
+	f.val, f.found = value, true
+	f.rev++
+	return true, f.rev, nil
+}
+
+func (f *fakeCAS) CreateIfAbsent(_ context.Context, _ string, value []byte) (bool, int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.noCIA {
+		return false, 0, ErrCreateIfAbsentUnsupported
+	}
+	if f.failPut {
+		return false, 0, errors.New("backend unavailable")
+	}
+	if f.found {
+		return false, f.rev, nil // already exists — a concurrent creator won
 	}
 	f.val, f.found = value, true
 	f.rev++
@@ -131,5 +149,44 @@ func TestStateStoreCASFencing(t *testing.T) {
 	}
 	if ok, _, err := ss.Renew("A", tok1, at(t0, 21), sttl); ok || err != nil {
 		t.Fatalf("Renew(stale token) = (%v,%v), want (false,nil) — a CAS conflict is not an error", ok, err)
+	}
+}
+
+// TestStateStoreColdStartRaceSingleLeader (ADR-049): two electors cold-start CONCURRENTLY on a
+// never-before-existing key; the atomic CreateIfAbsent elects exactly one leader — closing the
+// cold-start race the unconditional-create path (ADR-043 Q01) could not. Run under -race.
+func TestStateStoreColdStartRaceSingleLeader(t *testing.T) {
+	cas := &fakeCAS{}
+	key := "rat/lease/rat-serve"
+	a := NewElector("A", NewStateStore(cas, key, time.Second), sttl)
+	b := NewElector("B", NewStateStore(cas, key, time.Second), sttl)
+	t0 := time.Unix(9000, 0)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { defer wg.Done(); a.Step(t0) }()
+	go func() { defer wg.Done(); b.Step(t0) }()
+	wg.Wait()
+
+	leaders := 0
+	if a.IsLeader() {
+		leaders++
+	}
+	if b.IsLeader() {
+		leaders++
+	}
+	if leaders != 1 {
+		t.Fatalf("cold-start race elected %d leaders, want exactly 1 (atomic create-if-absent)", leaders)
+	}
+}
+
+// TestStateStoreFallbackWithoutCreateIfAbsent (ADR-049 Q04): a backend lacking the optional
+// create-if-absent capability still works — the lease falls back to a guarded unconditional create
+// and acquires the cold lease.
+func TestStateStoreFallbackWithoutCreateIfAbsent(t *testing.T) {
+	cas := &fakeCAS{noCIA: true}
+	a := NewElector("A", NewStateStore(cas, "rat/lease/rat-serve", time.Second), sttl)
+	if !a.Step(time.Unix(9100, 0)) || !a.IsLeader() {
+		t.Fatal("acquire via the unconditional-create fallback failed when create-if-absent is unsupported")
 	}
 }

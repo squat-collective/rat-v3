@@ -3,8 +3,14 @@ package lease
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 )
+
+// ErrCreateIfAbsentUnsupported is returned by a StateCAS whose backend lacks the optional
+// state/v1 create-if-absent capability (ADR-049). The lease catches it and falls back to a
+// guarded unconditional create (the legacy cold-start path), so a CAS-only backend still works.
+var ErrCreateIfAbsentUnsupported = errors.New("lease: backend has no create-if-absent (state/v1 ADR-049)")
 
 // StateStore is the multi-replica Backend: the leader-election lease as a single key in a
 // SHARED state-backend, driven by the state/v1 compare-and-set primitive (state.proto C5/CAS).
@@ -17,13 +23,12 @@ import (
 // not a plugin a replica launches (that would be circular: you need the lease to decide who
 // launches). In practice it is an external/attached backend at a fixed address.
 //
-// CREATE RACE (honest caveat). state/v1 has no create-if-absent primitive — `if_revision` can
-// CAS an existing key or write unconditionally, but cannot atomically "create only if absent."
-// So STEADY-STATE contention (the key already exists) is pure CAS and split-brain-free: exactly
-// one Acquire/Renew commits per revision. The ONE race is two replicas creating a
-// never-before-existing lease key at the same instant. Mitigate by pre-initializing the key, or
-// by staggered replica starts (the second replica then sees the key present and CASes normally).
-// A create-if-absent amendment to state/v1 would close it fully (noted in ADR-043).
+// COLD-START RACE — CLOSED when the backend supports create-if-absent (ADR-049). STEADY-STATE
+// contention (the key already exists) is pure CAS and split-brain-free. The historical race —
+// two replicas creating a never-before-existing key at the same instant — is now closed by the
+// atomic `CreateIfAbsent` (exactly one creator wins). A backend WITHOUT that optional capability
+// falls back to a guarded unconditional create (the legacy path: still racy on simultaneous cold
+// start — mitigate by pre-init / staggered starts), so a CAS-only backend keeps working.
 type StateStore struct {
 	cas         StateCAS
 	key         string
@@ -41,6 +46,12 @@ type StateCAS interface {
 	// (the write did not happen). A non-nil err is the UNKNOWN/transport case — the outcome
 	// is unconfirmed (state/v1 PUT_OUTCOME_UNKNOWN), which the lease treats as "uncertain."
 	Put(ctx context.Context, key string, value []byte, ifRevision int64) (committed bool, revision int64, err error)
+	// CreateIfAbsent atomically creates key with value ONLY if absent (state/v1 create-if-absent,
+	// ADR-049 — the cold-start primitive). committed=true → created (we are the sole creator);
+	// committed=false (err==nil) → the key already existed (a concurrent creator won). A non-nil
+	// err is the UNKNOWN/transport case. An implementation whose backend lacks the optional
+	// capability MUST return ErrCreateIfAbsentUnsupported so the lease falls back.
+	CreateIfAbsent(ctx context.Context, key string, value []byte) (committed bool, revision int64, err error)
 }
 
 // leaseRecord is the value stored at the lease key.
@@ -59,9 +70,11 @@ func NewStateStore(cas StateCAS, key string, callTimeout time.Duration) *StateSt
 	return &StateStore{cas: cas, key: key, callTimeout: callTimeout}
 }
 
-// Acquire takes the lease iff it is unheld or expired at now, via a CAS on the observed
-// revision. Two contenders that both observe the same revision both CAS on it; the backend's
-// linearizable CAS lets exactly one commit (the loser sees a bumped revision → CONFLICT).
+// Acquire takes the lease iff it is unheld or expired at now. When the key EXISTS (expired or
+// ours), it CAS-overwrites on the observed revision — the backend's linearizable CAS lets exactly
+// one of two same-revision contenders commit. When the key is ABSENT (cold start), it uses the
+// atomic CreateIfAbsent (ADR-049) so exactly one of two simultaneous creators wins — closing the
+// cold-start race; a backend lacking that capability falls back to a guarded unconditional create.
 func (s *StateStore) Acquire(candidate string, now time.Time, ttl time.Duration) (bool, uint64, error) {
 	ctx, cancel := s.ctx()
 	defer cancel()
@@ -69,23 +82,33 @@ func (s *StateStore) Acquire(candidate string, now time.Time, ttl time.Duration)
 	if err != nil {
 		return false, 0, err
 	}
+
 	if found {
 		if rec, derr := decodeLease(val); derr == nil &&
 			rec.Holder != "" && rec.Holder != candidate && now.UnixMilli() < rec.ExpiryUnixMs {
 			return false, 0, nil // held by someone else and still live
 		}
+		// Expired or already ours → CAS-overwrite on the observed revision.
+		return s.outcome(s.put(ctx, candidate, now.Add(ttl), rev))
 	}
-	// CAS on the observed revision (an absent key writes unconditionally — the create race above).
-	ifRev := int64(0)
-	if found {
-		ifRev = rev
+
+	// Absent → atomic create-if-absent (closes the cold-start race); fall back to a guarded
+	// unconditional create when the backend lacks the optional capability (ADR-049 / Q04).
+	committed, newRev, err := s.createIfAbsent(ctx, candidate, now.Add(ttl))
+	if errors.Is(err, ErrCreateIfAbsentUnsupported) {
+		committed, newRev, err = s.put(ctx, candidate, now.Add(ttl), 0)
 	}
-	committed, newRev, err := s.put(ctx, candidate, now.Add(ttl), ifRev)
+	return s.outcome(committed, newRev, err)
+}
+
+// outcome maps a (committed, revision, err) write result onto the Backend's (ok, token, err):
+// err → uncertain; !committed → lost (conflict/already-created); committed → acquired.
+func (s *StateStore) outcome(committed bool, newRev int64, err error) (bool, uint64, error) {
 	if err != nil {
 		return false, 0, err
 	}
 	if !committed {
-		return false, 0, nil // lost the acquire race
+		return false, 0, nil
 	}
 	return true, uint64(newRev), nil
 }
@@ -109,6 +132,11 @@ func (s *StateStore) Renew(candidate string, token uint64, now time.Time, ttl ti
 func (s *StateStore) put(ctx context.Context, holder string, expiry time.Time, ifRevision int64) (bool, int64, error) {
 	b, _ := json.Marshal(leaseRecord{Holder: holder, ExpiryUnixMs: expiry.UnixMilli()})
 	return s.cas.Put(ctx, s.key, b, ifRevision)
+}
+
+func (s *StateStore) createIfAbsent(ctx context.Context, holder string, expiry time.Time) (bool, int64, error) {
+	b, _ := json.Marshal(leaseRecord{Holder: holder, ExpiryUnixMs: expiry.UnixMilli()})
+	return s.cas.CreateIfAbsent(ctx, s.key, b)
 }
 
 func (s *StateStore) ctx() (context.Context, context.CancelFunc) {

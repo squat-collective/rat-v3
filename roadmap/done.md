@@ -17,6 +17,24 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-10 — `rat/6.9`: lease bootstrap uses create-if-absent — ADR-043 Q01 CLOSED
+
+Wired the HA lease's cold-start to the new `state/v1` `CreateIfAbsent` (ADR-049), closing the
+**ADR-043 Q01 cold-start race for real** — the headline payoff. The `StateStore`:
+- **Existing key** (expired/ours) → CAS-overwrite on the observed revision (unchanged).
+- **Absent key** (cold start) → **atomic `CreateIfAbsent`** so exactly one of N simultaneous creators
+  wins; **feature-detected**, falling back to a guarded unconditional create when a backend lacks the
+  capability (gRPC `Unimplemented` → `lease.ErrCreateIfAbsentUnsupported`) — ADR-049 Q04.
+- The cmd/rat `stateCAS` adapter implements `CreateIfAbsent` via the new RPC (shared
+  `outcomeToCAS` mapping); the `StateCAS` interface + the lease `fakeCAS` gained the method.
+
+**Tests (`-race`):** two electors cold-starting **concurrently** on a never-before-existing key →
+exactly one leader (the race the unconditional path couldn't prevent); a `noCIA` backend still acquires
+via the fallback. All existing lease + full core suite green (incl. `composition` vs real providers).
+
+**Remaining ADR-049 adoption:** the Arrow-ticket store (ADR-048) adapter; Python state-backend impl +
+cross-language golden vector.
+
 ## 2026-06-10 — `rat/6.8`: `state/v1` create-if-absent IMPLEMENTED ([ADR-049](../docs/architecture/adrs/049-state-v1-create-if-absent.md) Accepted)
 
 Implemented the atomic create-if-absent primitive (the highest-leverage open follow-on — two accepted
