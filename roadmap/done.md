@@ -17,6 +17,22 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-10 — `rat/6.11`: Arrow-ticket store backed by state/v1 create-if-absent — ADR-049 Go adoption COMPLETE
+
+Wired the Arrow-ticket single-use store (ADR-048) onto the `state/v1` `CreateIfAbsent` (ADR-049) — the
+second + final Go-side consumer. New package **`core/arrowticket/statecas`**: a producer-side adapter
+bridging `arrowticket.SingleUseCAS` onto `CreateIfAbsent` (narrow `Client` interface; COMMITTED→first-use,
+CONFLICT→replay, UNKNOWN/transport/`Unimplemented`→**fail closed**). So a producer's consumed-ticket set
+now lives in the **shared state axis** — no external etcd/Redis (closes the ADR-048 caveat). arrowticket
+stays gRPC/proto-free; the adapter carries the dependency.
+
+**Tests (`-race`):** outcome mapping (incl. fail-closed on UNKNOWN + Unimplemented); the full chain
+Minter → CASStore → statecas → CreateIfAbsent (validate once, replay refused); shared-across-minters
+(restart/replica replay closed over the real state-CAS path). Full core suite green.
+
+**ADR-049 adoption now complete on the Go side** (both consumers — lease + ticket store — wired).
+Remaining: Python state-backend impl + cross-language golden vector.
+
 ## 2026-06-10 — `rat/6.10`: fix the Arrow-ticket same-millisecond replay collision (flake root cause)
 
 `TestBulkLegTicketIsTheOnlyGate` flaked ~25% (in isolation too). **Root cause (a real bug, not a test

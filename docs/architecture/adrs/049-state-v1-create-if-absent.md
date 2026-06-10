@@ -5,13 +5,18 @@
 > **Implemented (v1):** the RPC + messages are in the frozen-additive `state/v1` (buf-breaking-clean),
 > Go + Python SDKs regenerated, and the **`inmemory-go` reference backend** implements it atomically
 > with an in-suite **concurrency test** (32 racers → exactly one COMMITTED) + an RPC contract test.
-> **Consumer adoption — lease DONE (2026-06-10):** the lease bootstrap (`core/lease.StateStore`) now
-> feature-detects `CreateIfAbsent` and uses it for the cold-start (closing **ADR-043 Q01** for real),
-> falling back to a guarded unconditional create when a backend lacks the capability (Q04). Proven by a
-> concurrent two-elector cold-start test (exactly one leader) + a fallback test. **Remaining:** the
-> Arrow-ticket store (ADR-048) adapter; Python state-backend impl + a cross-language golden vector in
-> `state-v1.json` (kept out of the shared vector file for now so the optional capability doesn't force
-> every reference backend to implement it at once).
+> **Consumer adoption — BOTH wired (2026-06-10):**
+> - **Lease** (`core/lease.StateStore`) feature-detects `CreateIfAbsent` for the cold-start (closing
+>   **ADR-043 Q01** for real), with a guarded unconditional-create fallback (Q04). Tested: concurrent
+>   two-elector cold-start → exactly one leader; fallback path.
+> - **Arrow-ticket store** (ADR-048): `core/arrowticket/statecas` bridges `arrowticket.SingleUseCAS`
+>   onto `CreateIfAbsent`, so the consumed-ticket set lives in the shared state axis (no external
+>   etcd/Redis). Tested end-to-end (Minter → CASStore → adapter) + shared-across-minters (replay closed
+>   across restart/replicas).
+>
+> **Remaining (Go-side adoption complete):** Python state-backend impl + a cross-language golden vector
+> in `state-v1.json` (kept out of the shared vector file for now so the optional capability doesn't
+> force every reference backend to implement it at once).
 
 > Decision-first. This amends the **frozen** `state/v1` wire, so it is written and reviewed before any
 > code (CLAUDE.md #3). It follows the exact precedent of [ADR-035](035-state-axis-delete.md) (the
