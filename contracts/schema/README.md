@@ -45,8 +45,12 @@ the envelope and adding `kind` (const) + a `provides`-MUST-contain rule for that
 capability negotiation means a plugin implements a subset (a non-branching catalog, a
 read-only format). The cores were made derivable by first rolling the
 `(rat.common.v1.capability)` annotation across all 18 axis protos. Gap #2 (semantic
-"`iceberg` is an impl name, not a verb") remains a `rat plugin validate` lint, NOT a schema
-check — its static half lives in [`scripts/validate-manifests.py`](../../scripts/validate-manifests.py)
+"`iceberg` is an impl name, not a verb") is closed in practice by **two registry
+consumers** of those annotations: `rat plugin check` hard-fails any capability that
+doesn't resolve to an annotated RPC in a linked axis, and **`rat capabilities`** (DX-3,
+`rat/6.16`) renders the whole registry readably — so authors copy real URIs instead of
+guessing. The schema-side static half stays in
+[`scripts/validate-manifests.py`](../../scripts/validate-manifests.py)
 (envelope + per-kind + negative vectors). See ADR-011 for the full per-axis core table +
 the kind↔capability-axis-segment mapping.
 

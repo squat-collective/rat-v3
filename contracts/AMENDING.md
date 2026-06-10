@@ -53,9 +53,10 @@ or sentinel value.**
 4. **Gate it** — `make check` (lint), `make breaking` (must pass = additive).
 5. **Extend the golden vector** — `conformance/<axis>-v1.json`: lifecycle steps for the
    happy path, the conflict/edge path, and the "old data unchanged" assertion (ADR-049
-   added create→COMMITTED, re-create→CONFLICT, get→no-overwrite). The vectors are
-   convention-JSON with **no schema validation** — re-run a reference harness and watch
-   your new steps actually execute (a typo'd `op`/`expect` key is silently skipped).
+   added create→COMMITTED, re-create→CONFLICT, get→no-overwrite). Any **new step/expect
+   key must be registered** in `schema/conformance-vector.v1.json`'s key registry —
+   `make validate-vectors` gates it (an unregistered key would be silently skipped by
+   every harness). Then re-run a reference harness and watch the new steps execute.
 6. **Implement in the references** — at least one per language
    (`plugins/<axis>/<impl>/`); concurrency-sensitive amendments need a `-race` test
    (ADR-049: N racers → exactly one `COMMITTED`).
@@ -100,7 +101,8 @@ per-kind schema, descriptors, i.e. a core recompile.)
 - **Python codegen toolchain** is a pinned custom path (`codegen/Dockerfile.python`:
   standalone protoc + pinned `grpcio-tools`), not `buf generate` — ADR-018 Q01 is still
   open. If `make gen-sdks` fails on Python, suspect the toolchain image, not your proto.
-- **No vector schema:** conformance vectors are unvalidated JSON (step 5's caveat).
+- ~~No vector schema~~ — closed at `rat/6.16`: `make validate-vectors` enforces the
+  envelope schema + per-file key registry (step 5).
 
 ## Related
 

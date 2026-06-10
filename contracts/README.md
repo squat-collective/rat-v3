@@ -72,11 +72,15 @@ nothing installs on the host):
 
 ```bash
 make check               # FAST per-commit gate: buf lint (seconds)
-make verify              # FULL: lint + build + SDK freshness + SDK compile + core tests
+make verify              # FULL: lint + build + SDK freshness + SDK compile + vector lint + core tests
 make breaking            # the freeze gate: buf breaking vs the sealed baseline (main)
 make conformance         # every reference plugin against its golden vectors
 make validate-manifests  # examples + per-kind schemas + the INVALID corpus
+make validate-vectors    # golden-vector lint: envelope schema + per-file key registry
 ```
+
+Capability discovery is a CLI verb: **`rat capabilities [<axis>|<kind>]`** renders the
+registry compiled into the binary (the same annotations the gateway enforces).
 
 Codegen runs **connectionless** via pinned local toolchain images (ADR-018,
 `make gen-sdks`; freshness gated by `make gen-check`) — no BSR/network at gen time.

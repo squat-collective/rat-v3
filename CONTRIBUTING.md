@@ -19,6 +19,7 @@ First contact: [QUICKSTART.md](QUICKSTART.md).
 | touching `contracts/proto/` | `make breaking` | the change is additive vs the sealed `main` baseline |
 | touching a reference plugin | `make conformance` | every reference still passes its golden vectors |
 | touching manifests/schemas | `make validate-manifests` | examples + per-kind schemas + the INVALID corpus |
+| touching golden vectors | `make validate-vectors` | envelope schema + per-file key registry (a typo'd key is otherwise silently skipped) |
 
 Note the asymmetry by design: the commit hook is **lint-only** (fast); `make verify` is
 the full gate. A commit that passes the hook can still fail `verify` — run it before you
