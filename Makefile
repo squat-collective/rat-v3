@@ -34,7 +34,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage validate-manifests bench core-test core-serve-smoke ratctl-smoke rat-build rat-image stateplugin-image plugin-base-go plugin-base-py plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking release-build release-image release-checksums clean help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage validate-manifests validate-vectors bench core-test core-serve-smoke ratctl-smoke rat-build rat-image stateplugin-image plugin-base-go plugin-base-py plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking release-build release-image release-checksums clean help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -52,7 +52,7 @@ clean: ## Remove all build output + caches (everything here is gitignored + rege
 check: lint ## FAST per-commit gate — buf lint only (seconds)
 
 ## --- full verification (pre-push / CI) ---------------------------------------
-verify: lint build gen-check compile-sdks core-test ## FULL check — lint + build + sdk fresh + compile + core tests
+verify: lint build gen-check compile-sdks validate-vectors core-test ## FULL check — lint + build + sdk fresh + compile + vector lint + core tests
 
 lint: ## buf lint the protos
 	@echo ">> buf lint"
@@ -100,6 +100,11 @@ context-carriage: ## Cross-run the 2 context-carriage references (Go + Python) o
 validate-manifests: ## Validate example manifests vs envelope + per-kind schemas; assert the INVALID corpus is rejected
 	@$(RUNTIME) run --rm -v "$(CURDIR)":/work:Z -v rat-pipcache:/root/.cache/pip -w /work \
 	  $(PY_IMAGE) bash -c 'pip install -q --root-user-action=ignore jsonschema pyyaml >/dev/null 2>&1 && python scripts/validate-manifests.py'
+
+validate-vectors: ## Lint the golden conformance vectors (envelope schema + per-file key registry — DX-4)
+	@echo ">> validate-vectors (a typo'd step/expect key is silently skipped by every harness — this gate catches it)"
+	@$(RUNTIME) run --rm -v "$(CURDIR)":/work:Z -v rat-pipcache:/root/.cache/pip -w /work \
+	  $(PY_IMAGE) bash -c 'pip install -q --root-user-action=ignore jsonschema >/dev/null 2>&1 && python scripts/validate-vectors.py'
 
 bench: ## Per-RPC latency benchmark: core-mediated gateway overhead vs direct (0f)
 	@$(RUNTIME) run --rm $(RUNFLAGS) -v "$(CURDIR)":/work:Z -v rat-gocache:/go/pkg/mod \

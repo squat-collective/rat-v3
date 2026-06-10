@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rat://schema/conformance-vector/v1",
+  "title": "RAT golden conformance vector — envelope + per-file key registry",
+  "description": "Two-layer contract for contracts/conformance/*-v1.json, enforced by scripts/validate-vectors.py (make validate-vectors). LAYER 1 — this JSON Schema: the envelope every vector shares (a declared axis; sections are free-form by design, because each axis's steps are intentionally shaped differently). LAYER 2 — $defs.keyRegistry: the per-file allowlist of step-object keys and expect keys. The registry exists because a typo'd key ('rows_afected', 'expectt') is SILENTLY SKIPPED by every harness — the vector passes while testing nothing. Extending a vector with a genuinely new key is a conscious act: add it to the registry in the same change. A NEW vector file containing step objects must register itself here before the gate passes.",
+  "type": "object",
+  "required": ["axis"],
+  "properties": {
+    "axis": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*(/[a-z0-9.-]+)*$",
+      "description": "The axis this vector exercises, usually versioned ('state/v1'); variant suites use sub-paths ('strategy/scd2', 'engine/embed/v1')."
+    },
+    "_comment": { "type": "string" }
+  },
+  "$defs": {
+    "keyRegistry": {
+      "description": "filename-stem → {step_keys, expect_keys}. A 'step object' is any object carrying step/op/expect. Files without step objects (pure data tables like composition-v1, engine-embed-v1, scheduler-v1, strategy-scd2-v1) need no entry.",
+      "auditlog-v1": {
+        "step_keys": ["append", "expect_acks", "step"],
+        "expect_keys": []
+      },
+      "billing-v1": {
+        "step_keys": ["events", "expect", "step"],
+        "expect_keys": ["recorded"]
+      },
+      "catalog-v1": {
+        "step_keys": ["branch", "expect", "expected_into_snapshot", "expected_snapshot", "from_branch", "idempotency_key", "identifier", "into_branch", "op", "snapshot_id", "step"],
+        "expect_keys": ["already_applied", "branch", "code", "snapshot_id", "snapshot_id_set", "table"]
+      },
+      "deploymentruntime-v1": {
+        "step_keys": ["expect", "image", "isolation", "step"],
+        "expect_keys": ["code"]
+      },
+      "engine-real-v1": {
+        "step_keys": ["expect", "limit", "op", "sql", "step"],
+        "expect_keys": ["code", "columns", "row_count", "rows_contain"]
+      },
+      "engine-v1": {
+        "step_keys": ["expect", "limit", "op", "sql", "step"],
+        "expect_keys": ["code", "row_count", "rows_affected", "rows_contain", "rows_exclude_keys", "snapshot_id_set"]
+      },
+      "format-v1": {
+        "step_keys": ["expect", "merge_keys", "op", "source", "step", "table_override"],
+        "expect_keys": ["code", "row_count", "rows_affected", "rows_affected_absent", "rows_contain", "snapshot_id_set"]
+      },
+      "identity-v1": {
+        "step_keys": ["action", "credential", "expect", "step", "subject"],
+        "expect_keys": ["allowed", "authenticated", "deny_code", "subject", "tenant"]
+      },
+      "marketplace-v1": {
+        "step_keys": ["deployment_capabilities", "expect", "kind", "plugin_id", "step"],
+        "expect_keys": ["code", "kind", "plugin_ids", "signed"]
+      },
+      "notifications-v1": {
+        "step_keys": ["body", "expect", "severity", "step", "target", "title"],
+        "expect_keys": ["code", "delivered"]
+      },
+      "observability-v1": {
+        "step_keys": ["expect", "points"],
+        "expect_keys": ["accepted", "rejected"]
+      },
+      "runtime-v1": {
+        "step_keys": ["expect", "op", "step", "work"],
+        "expect_keys": ["code", "completed", "final_fraction", "progress_count", "progress_fraction_absent", "progress_has_fraction"]
+      },
+      "secret-v1": {
+        "step_keys": ["expect", "secret_ref", "step", "tenant"],
+        "expect_keys": ["found", "value"]
+      },
+      "state-v1": {
+        "step_keys": ["expect", "from_revision", "if_revision", "key", "key_inject", "key_len", "op", "prefix", "step", "value"],
+        "expect_keys": ["code", "found", "keys", "outcome", "revision", "value", "watch_events"]
+      },
+      "storage-v1": {
+        "step_keys": ["expect", "mode", "op", "prefix", "step"],
+        "expect_keys": ["code", "credentials_present", "scope"]
+      },
+      "tenancy-v1": {
+        "step_keys": ["counterparty_tenant", "expect", "kind", "step", "subject_action"],
+        "expect_keys": ["allowed", "deny_code"]
+      },
+      "ui-v1": {
+        "step_keys": ["component", "expect", "slot", "step"],
+        "expect_keys": ["asset_ref_present", "code", "display_name", "props_schema_present", "slots"]
+      }
+    }
+  }
+}

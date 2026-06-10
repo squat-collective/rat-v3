@@ -51,8 +51,8 @@ loop, and author versioning; **federation #5** tracks new-axis-without-recompile
 
 - ~~DX-1~~ — **done at `rat/6.15`**: `rat validate` + `rat up/serve --strict` (see [done.md](done.md)).
 - **DX-2 (High; blocked on the publish decision)** — distribution: push the repo, cut binary releases (un-404 `scripts/install.sh`), publish `plugin-base-{go,py}` to ghcr, the Python SDK to PyPI, the Go SDK as a fetchable module. Until then **external plugin authors are structurally impossible** (the guides say so honestly).
-- **DX-3 (Med)** — `rat capabilities [--kind <axis>]`: list capability URIs from the linked descriptors (today: proto-scanning or CONTRACT.md reading; pairs with the schema README's "curated capability registry + lint" gap).
-- **DX-4 (Med)** — a conformance-vector **JSON Schema + lint gate** (a typo'd `op`/`expect` key is silently skipped by every harness today) + a harness **template/codegen** so new references stop copy-pasting ~200 lines.
+- ~~DX-3~~ — **done at `rat/6.16`**: `rat capabilities [<axis>|<kind>]` (see [done.md](done.md)).
+- ~~DX-4~~ — **done at `rat/6.16`**: vector envelope schema + key registry + `make validate-vectors` (in `verify`) + `harness_template.py` + `rat.vectors` helpers. Residual: a full harness *codegen* stays unqueued until a third+ reference per axis makes it pay.
 - **DX-5 (Med)** — platform-bundle config dedup: one source of env facts (the Postgres DSN appears ~6×, the gateway address 4× across compose/plugins.yaml/profiles.yml/bff), or generate compose/plane entries from manifests.
 - **DX-6 (Med)** — the secrets production story: a Vault/KMS reference secret-backend behind `rat://secret/v1/resolve` + credential rotation without a full-daemon restart (today: edit plugins.yaml `RAT_SECRETS` blob, restart everything).
 - **DX-7 (Low-Med)** — `rat plugin dev` watch mode (rebuild + relaunch on change); until then the three-loop pattern in [the authoring guide](../docs/guides/authoring-a-plugin.md#iterating-fast) is the documented workflow.

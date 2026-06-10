@@ -107,6 +107,25 @@ trivial in-process row registry rather than a typed Arrow stream (the control
 contract is what's under test in 0d — the real Arrow Flight wire is deferred to a
 production reference). A typed-Arrow conformance pass is future work.
 
+## The vector lint gate + the harness template (DX-4)
+
+Two defenses against the silent-skip hazard (a typo'd `op`/`expect` key passes while
+testing nothing — every harness skips keys it doesn't recognize):
+
+- **Static — `make validate-vectors`** (part of `make verify`): every `*-v1.json`
+  validates against the envelope schema
+  [`../schema/conformance-vector.v1.json`](../schema/conformance-vector.v1.json), and
+  every step-object/expect key must be registered in that schema's per-file
+  **key registry**. Unknown key → FAIL with a did-you-mean. Extending a vector with a
+  genuinely new key means registering it in the same change; a new vector file with
+  step objects must register itself.
+- **Runtime — `rat.vectors.run_expect`** (the Python SDK helper): a harness built on it
+  hard-fails any expect key it has no handler for.
+
+New harnesses start from the canonical template,
+[`harness_template.py`](harness_template.py) (uses `rat.vectors`: `load` ·
+`serve_inprocess` · `run_expect`) — not from "the closest sibling".
+
 ## Adding an axis
 
 When a second data-plane axis reaches 0d (two impls), add `<axis>-v1.json` here

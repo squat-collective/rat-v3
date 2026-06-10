@@ -61,6 +61,7 @@ var builtinVerbs = map[string]bool{
 	"ls": true, "init": true, "add": true, "remove": true, "rm": true, "call": true,
 	"apply": true, "version": true, "ui": true, "plugin": true, "search": true,
 	"list": true, "marketplace": true, "market": true, "context": true, "ctx": true,
+	"validate": true, "capabilities": true, "caps": true,
 }
 
 // validateCommands checks a plugin's contributed CLI commands (ADR-041): each names a real

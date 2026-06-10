@@ -57,8 +57,16 @@ launch under the I9 sandbox and serve every capability it declares — ready for
 
 ## Discovering capabilities
 
-Capability URIs (`rat://<axis>/v1/<verb>`) are the only coupling between plugins. Two
-places to find them, always in agreement:
+Capability URIs (`rat://<axis>/v1/<verb>`) are the only coupling between plugins. The
+fastest way to see them is the CLI — it renders the registry compiled into the binary
+(the very annotations `rat plugin check` and the gateway enforce, so it cannot drift):
+
+```sh
+rat capabilities                  # everything, grouped by axis
+rat capabilities state-backend    # one kind (or its axis: `rat capabilities state`)
+```
+
+Two slower places, always in agreement with it:
 
 - **The CONTRACT.md table.** Each axis guide opens with a capability table — URI,
   RPC method, cardinality, semantics. This is the readable form.
@@ -201,10 +209,16 @@ key-grammar vectors. Your CONTRACT.md lists the axis's specific obligations.
 
 **How they run.** Each reference carries a small hand-written harness
 (`harness_test.py` / `harness_test.go`) that boots its own service in-process on a
-random port, loads the shared JSON, and drives the steps over real gRPC. There is no
-harness codegen yet — **copy the closest sibling's harness** and point it at your
-servicer; [`plugins/state/sqlite-py/harness_test.py`](../../plugins/state/sqlite-py/harness_test.py)
-is a good model (vectors + durability + a CAS race in ~200 lines).
+random port, loads the shared JSON, and drives the steps over real gRPC. Start from
+**the canonical template**,
+[`contracts/conformance/harness_template.py`](../../contracts/conformance/harness_template.py)
+— it uses the `rat.vectors` SDK helpers (`load` · `serve_inprocess` · `run_expect`,
+which **hard-fails on an expect key your harness doesn't handle** instead of silently
+skipping it). For a filled-in real example of the same shape, see
+[`plugins/state/sqlite-py/harness_test.py`](../../plugins/state/sqlite-py/harness_test.py).
+The vectors themselves are gated by `make validate-vectors` (an envelope schema + a
+per-file key registry in `contracts/schema/conformance-vector.v1.json`) — extending a
+vector with a new key means registering it there in the same change.
 
 ```sh
 make conformance      # every reference, containerized, one pass/fail matrix
@@ -243,8 +257,9 @@ There is no watch mode; the loop above is the workflow.
   outside this one must build the bases themselves first.
 - **`rat plugin test` doesn't run the golden vectors.** It launch+smoke-verifies
   serving; behavioral conformance is the separate harness path (ADR-026 Q03).
-- **The conformance harness is copy-paste.** No codegen; copy the closest sibling's
-  `harness_test.*` and adapt it.
+- **The conformance harness is still hand-assembled.** No codegen — but there is now one
+  canonical template (`contracts/conformance/harness_template.py`) + the `rat.vectors`
+  helpers, instead of "copy whichever sibling you found first".
 - **No watch mode.** Every `test`/`pack` is a full image rebuild; the fast loop is your
   language's own unit tests.
 - **`ratplugin` is Go + Python only.** TypeScript/Rust scaffolds work but hand-roll the

@@ -6,6 +6,10 @@
 # rat/<axis>/v1 package dirs. Fully local/offline — no buf, no BSR.
 set -e
 protos=$(cd proto && find rat -name '*.proto' -type f | sort)
+# protoc does NOT create output dirs. gen-sdks.sh --check regenerates into a clean
+# workspace whose sdks/ was wiped — without this mkdir the freshness gate dies here
+# (which it silently did; found + fixed during DX-4).
+mkdir -p sdks/python
 protoc -Iproto --python_out=sdks/python $protos
 python -m grpc_tools.protoc -Iproto --grpc_python_out=sdks/python $protos
 echo "OK: python SDK (protoc-35 messages + grpcio-tools grpc stubs)"
