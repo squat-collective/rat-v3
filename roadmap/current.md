@@ -154,7 +154,7 @@ separate `rat-data-dev` repo**.
 - **Selection v1.5/v2:** richer selector operators (`in`/`!=`/preference) + plane `select:` ergonomics;
   then load-balanced replicas (the reconciler-replica change).
 - **Federation:** NATS-leaf cross-machine transport (ADR-033 Q01 / ADR-047 follow-on).
-- **Housekeeping:** the `rat-data-dev` repo is local/unpushed — push when ready.
+- ~~Housekeeping: push rat-data-dev~~ — **done**: public at [github.com/squat-collective/rat-data-dev](https://github.com/squat-collective/rat-data-dev) (Apache-2.0, links repointed at rat-v3).
 
 ## What's NOT in flight
 
