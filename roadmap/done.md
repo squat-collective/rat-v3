@@ -17,6 +17,19 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-10 — Drafted [ADR-049](../docs/architecture/adrs/049-state-v1-create-if-absent.md): `state/v1` create-if-absent (**Proposed**)
+
+Decision-first ADR for the highest-leverage open follow-on: an **atomic create-if-absent** primitive the
+state axis lacks, which **two accepted ADRs need** — the HA lease bootstrap ([ADR-043](../docs/architecture/adrs/043-leader-election-over-the-state-axis.md) Q01,
+the cold-start create race) and the Arrow-ticket single-use store ([ADR-048](../docs/architecture/adrs/048-arrow-ticket-shared-single-use-store.md),
+which currently needs a non-`state/v1` backend). **Recommends:** an additive, optional, **capability-gated
+RPC `CreateIfAbsent`** (capability `rat://state/v1/create-if-absent`), modeled exactly on ADR-035's
+additive `Delete` — capability *presence* is the negotiation, so an old backend that ignores it can never
+be silently misused (rejected the unsafe `create_only` field / `if_revision=-1` sentinel for that reason).
+Joins the multi-replica-eligibility conformance tier (+ a concurrency golden vector). `make breaking`-clean.
+**Awaiting accept + Q01–Q04** (reuse `PutOutcome` · ship-RPC+vector together · symmetric delete-if-absent ·
+lease feature-detect). No code, frozen ≤`rat/2.0` methods untouched. Implements via sqlite-py first.
+
 ## 2026-06-10 — `rat/6.7`: ported the clean-room core hardenings (7 gaps, ADRs 042–048)
 
 Ported the **production-hardening wave** (sealed on the clean-room as `clean-room/2.0`) onto `main`'s
