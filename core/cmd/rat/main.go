@@ -451,9 +451,16 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 		ReadinessTimeout: pl.HealthTimeout,
 		Rewire:           rewire,
 	})
+	// Leader election backend (gap #1 / ADR-043): in-memory for solo (default), or a SHARED
+	// state-backend over state/v1 CAS when RAT_LEASE_STATE_ADDR is set — the latter is what
+	// makes multiple `rat serve` replicas elect exactly one leader (real HA).
+	leaseBackend, closeLease, err := newLeaseBackend()
+	if err != nil {
+		return nil, err
+	}
 	loopCtx, cancelLoop := context.WithCancel(context.Background())
 	loop := &reconciler.Loop{
-		Elector:    lease.NewElector("rat-serve", lease.NewStore(), 10*time.Second),
+		Elector:    lease.NewElector(leaseCandidateID(pl.Instance), leaseBackend, 10*time.Second),
 		Reconciler: rec,
 		Tick:       200 * time.Millisecond,
 	}
@@ -472,6 +479,7 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 				cancelLoop()
 				rec.Shutdown(context.Background())
 				rewire.Close()
+				closeLease()
 				return nil, fmt.Errorf("plugin %q never became healthy within %s", d.Name, pl.HealthTimeout)
 			}
 			time.Sleep(50 * time.Millisecond)
@@ -482,6 +490,7 @@ func launchPlane(pl *Plane, rt deploymentruntimev1.DeploymentRuntimeServiceServe
 		cancelLoop()      // stop the reconcile loop (so no pass races the teardown)
 		rec.Shutdown(ctx) // terminate launched instances
 		rewire.Close()    // close the gateway provider conns
+		closeLease()      // close the shared lease-backend conn (no-op for in-memory)
 	}
 	// The live control plane (ADR-027): drives the mutable registry + reconciler so a
 	// client can register/deregister a plugin against this running daemon — no restart.

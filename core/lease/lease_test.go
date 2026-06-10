@@ -14,21 +14,21 @@ func at(base time.Time, secs int) time.Time { return base.Add(time.Duration(secs
 func TestStoreAcquireRenewExpire(t *testing.T) {
 	s := NewStore()
 	t0 := time.Unix(1000, 0)
-	ok, tok := s.Acquire("A", t0, ttl)
-	if !ok || tok == 0 {
-		t.Fatalf("Acquire(A) = (%v,%d), want (true, >0)", ok, tok)
+	ok, tok, err := s.Acquire("A", t0, ttl)
+	if !ok || tok == 0 || err != nil {
+		t.Fatalf("Acquire(A) = (%v,%d,%v), want (true, >0, nil)", ok, tok, err)
 	}
-	if !s.Renew("A", tok, at(t0, 10), ttl) {
+	if ok, _, _ := s.Renew("A", tok, at(t0, 10), ttl); !ok {
 		t.Fatal("Renew(A) within ttl failed")
 	}
-	if got, _ := s.Acquire("B", at(t0, 20), ttl); got {
+	if got, _, _ := s.Acquire("B", at(t0, 20), ttl); got {
 		t.Fatal("B acquired a live lease")
 	}
 	// Last renew was at +10 → expiry +40; B acquires only after that.
-	if got, _ := s.Acquire("B", at(t0, 41), ttl); !got {
+	if got, _, _ := s.Acquire("B", at(t0, 41), ttl); !got {
 		t.Fatal("B failed to acquire the expired lease")
 	}
-	if s.Renew("A", tok, at(t0, 42), ttl) {
+	if ok, _, _ := s.Renew("A", tok, at(t0, 42), ttl); ok {
 		t.Fatal("A renewed with a stale token after losing the lease")
 	}
 }
