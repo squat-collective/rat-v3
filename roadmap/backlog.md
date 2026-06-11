@@ -41,6 +41,24 @@ Core-impl, **no wire change**. From the Q02 simulated panel ([reviews/Q02-tracke
 - **EC-5 (Med)** — publish a **governance commitment** before recruiting external authors: who may propose a `rat://` axis/capability, how a community plugin contests a first-party one, the trust-root model for conformance authorities (plural/federated?), and a contract + reference-marketplace relicense pledge.
 - **EC-6 (Low)** — a "versioning for authors" CONTRACT.md section (two version axes + `compatible_core`); consider a manifest sidecar resolvable without re-imaging. Plus the architect F8 doc fix: regenerate `overview.md`'s manifest example from a real validating `contracts/examples/*.plugin.yaml`.
 
+## ⑥ Orphaned-container reaping — found chasing a phantom identity (2026-06-11)
+
+The rat-v3-demo#1 ghost: an interval-py scheduler container from a pre-publication
+experiment ran **unnoticed for two days**, firing `apply` at `:7777` until a new gateway
+bound the port and C5 refused it (correctly). Root cause is systemic and CURRENT: **a
+killed / non-drained daemon leaks its launched plugin containers** — only a clean SIGTERM
+drain terminates them (observed across three generations of sessions in one sweep: the old
+experiment, the demo run, the repro attempts; 30+ orphans reaped by hand).
+
+- **OR-1 (High)** — label every launched container with the instance id + plane identity
+  (`podman run --label rat.instance=…`), and on daemon boot **reap or adopt** stale
+  containers carrying this instance's label. The reconciler already knows the desired set;
+  the boot pass makes actual ⊆ desired again.
+- **OR-2 (Med)** — surface them: `rat ls --orphans` / `rat status` flags containers
+  labeled by ANY rat instance whose daemon is gone.
+- **OR-3 (Low)** — crash-path hygiene: a pid-file heartbeat so `rat down` (or the next
+  `rat up`) can tell a live daemon from a corpse and clean accordingly.
+
 ## ⑤ DX cluster — engineering residue of the 2026-06-10 frustration review
 
 **Nine of ten items closed** across `rat/6.14`–`6.17` (the full log per item is in
