@@ -2,7 +2,7 @@
 
 > **Always read this first when opening a Claude session.** Concise by design — the full
 > completion history lives in [`done.md`](done.md); the phase map in [`phases.md`](phases.md).
-> Updated: 2026-06-10.
+> Updated: 2026-06-11.
 
 ## ✅ Latest — `rat/6.21`: the binary IS the interface; the demo is independent (ADR-052/053)
 
@@ -104,9 +104,9 @@ replicas · fully-parallel per-plugin reconcile. See [done.md](done.md) for the 
 
 **Phases 0–9 are SEALED** (`rat/1.5` contracts → `rat/2.0` core → `rat/2.5`–`6.0`). Everything ≤
 `rat/2.0` is the **frozen wire**; every tag since is additive. `main` is the sealed line at
-**`rat/6.18`**: `rat/6.6` ported the clean-room DX improvements (ADR-039/040/041), `rat/6.7` the 7 core
+**`rat/6.21`**: `rat/6.6` ported the clean-room DX improvements (ADR-039/040/041), `rat/6.7` the 7 core
 hardenings (ADRs 042–048), `rat/6.8`–`6.13` the `state/v1` create-if-absent amendment (ADR-049) +
-its full adoption, and the `rat/6.14`–`6.18` **DX line**: docs-truth + guides + first-success (6.14),
+its full adoption, and the `rat/6.14`–`6.21` **DX line**: docs-truth + guides + first-success (6.14),
 `rat validate` + `--strict` (6.15), `rat capabilities` + the vector lint gate + the gen-check repair
 (6.16), plane `${VAR}` interpolation (ADR-050) + the vault-py secret-backend + `rat plugin dev` (6.17),
 and the **publication** — Apache-2.0, `github.com/squat-collective/rat-v3`, GHCR distribution (ADR-051, 6.18). The from-scratch rebuild +
