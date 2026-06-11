@@ -4,7 +4,7 @@
 > completion history lives in [`done.md`](done.md); the phase map in [`phases.md`](phases.md).
 > Updated: 2026-06-11.
 
-## ✅ Latest — `rat/6.21`: the binary IS the interface; the demo is independent (ADR-052/053)
+## ✅ Latest — `rat/6.22`: the binary IS the interface; the demo is independent (ADR-052/053)
 
 Zero-`make` everywhere a user/author stands: the release ships the full plugin-image
 matrix to GHCR; the scaffold defaults to the published bases (`init → pack → publish`
@@ -12,7 +12,12 @@ with no clone); the QUICKSTART is zero-clone (images pull at `rat up`); `rat val
 learned real pull semantics (its "podman never pulls" claim was wrong). And the data
 platform demo **graduated to [rat-v3-demo](https://github.com/squat-collective/rat-v3-demo)**
 — binary + podman + that repo, nothing else (its bff publishes from its own CI, FROM the
-published base). `make` survives only for hacking on rat's core. Details: [done.md](done.md).
+published base). `make` survives only for hacking on rat's core. (`rat/6.22` fixed the one release-matrix
+casualty: the dbt-runner baked its sample from the departed `platform/` — now from its own
+tree; `fail-fast: false`.) **Stranger-proven end to end**: the zero-clone QUICKSTART, the
+zero-clone author path, and the demo medallion from a fresh `rat-v3-demo` clone (5 images
+pulled, 22s cold-to-wired, run history `status: success`, fully audited; scheduler identity
+quirk filed as rat-v3-demo#1). Details: [done.md](done.md).
 
 ## ✅ `rat/6.20`: PUBLISHED 🐀 — every channel verified anonymously (DX-2 closed)
 
@@ -104,9 +109,9 @@ replicas · fully-parallel per-plugin reconcile. See [done.md](done.md) for the 
 
 **Phases 0–9 are SEALED** (`rat/1.5` contracts → `rat/2.0` core → `rat/2.5`–`6.0`). Everything ≤
 `rat/2.0` is the **frozen wire**; every tag since is additive. `main` is the sealed line at
-**`rat/6.21`**: `rat/6.6` ported the clean-room DX improvements (ADR-039/040/041), `rat/6.7` the 7 core
+**`rat/6.22`**: `rat/6.6` ported the clean-room DX improvements (ADR-039/040/041), `rat/6.7` the 7 core
 hardenings (ADRs 042–048), `rat/6.8`–`6.13` the `state/v1` create-if-absent amendment (ADR-049) +
-its full adoption, and the `rat/6.14`–`6.21` **DX line**: docs-truth + guides + first-success (6.14),
+its full adoption, and the `rat/6.14`–`6.22` **DX line**: docs-truth + guides + first-success (6.14),
 `rat validate` + `--strict` (6.15), `rat capabilities` + the vector lint gate + the gen-check repair
 (6.16), plane `${VAR}` interpolation (ADR-050) + the vault-py secret-backend + `rat plugin dev` (6.17),
 and the **publication** — Apache-2.0, `github.com/squat-collective/rat-v3`, GHCR distribution (ADR-051, 6.18). The from-scratch rebuild +
@@ -178,7 +183,7 @@ separate `rat-data-dev` repo**.
 
 ## Branching (in force)
 
-`main` is the sealed line (**`rat/6.21`**, pushed to `github.com/squat-collective/rat-v3`); additive increments
+`main` is the sealed line (**`rat/6.22`**, pushed to `github.com/squat-collective/rat-v3`); additive increments
 land via `--no-ff` merges of topic branches + an annotated `rat/N.M` tag. **Never commit directly to `main`** (a `PreToolUse` hook blocks
 it) — work on a topic branch. Full rules: [`.claude/rules/git-branching.md`](../.claude/rules/git-branching.md).
 
