@@ -34,7 +34,7 @@ endif
 BUF := $(RUNTIME) run --rm $(RUNFLAGS) -e HOME=/tmp -e XDG_CACHE_HOME=/tmp/.cache \
        -v "$(CURDIR)/$(CONTRACTS):/workspace:Z" -w /workspace $(BUF_IMAGE)
 
-.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage validate-manifests validate-vectors bench core-test core-serve-smoke ratctl-smoke rat-build rat-image stateplugin-image plugin-base-go plugin-base-py plugin-images platform-up platform-run platform-down platform-socket platform-socket-down core-test-podman breaking release-build release-image release-checksums clean help
+.PHONY: check verify lint build gen-sdks gen-images gen-check compile-sdks conformance composition context-carriage validate-manifests validate-vectors bench core-test core-serve-smoke ratctl-smoke rat-build rat-image stateplugin-image plugin-base-go plugin-base-py core-test-podman breaking release-build release-image release-checksums clean help
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -174,33 +174,11 @@ plugin-base-py: ## ADR-026: build rat/plugin-base-py (the rat Python SDK + grpc 
 	@echo ">> building localhost/rat/plugin-base-py:dev (Python SDK baked in)"
 	@$(RUNTIME) build -t localhost/rat/plugin-base-py:dev $(CONTRACTS)/sdks/python
 
-plugin-images: ## ADR-022: build the launchable Python plugin images (rat/<name>:dev) — the platform's plugins
-	@echo ">> building the Python plugin images"
-	@$(RUNTIME) build -f plugins/state/postgres-py/Dockerfile   -t rat/state:dev .
-	@$(RUNTIME) build -f plugins/secret/env-py/Dockerfile       -t rat/secret:dev .
-	@$(RUNTIME) build -f plugins/scheduler/cron-py/Dockerfile   -t rat/scheduler:dev .
-	@$(RUNTIME) build -f plugins/runner/dbt-duckdb/Dockerfile   -t rat/dbt-runner:dev .
-	@$(RUNTIME) build -f platform/bff.Dockerfile                 -t rat/bff:dev .
-	@echo ">> built: rat/{state,secret,scheduler,dbt-runner,bff}:dev"
-	@# (rat/{engine,catalog}:dev — duckdb-ml + ducklake — graduated to the rat-data-dev repo;
-	@#  the launch-mode platform embeds engine+catalog in the dbt-runner, not standalone plugins.)
-
-## --- the data platform bundle (ADR-020) --------------------------------------
-platform-up: rat-image ## ADR-020 S1: bring up the always-on data platform stack (Postgres+MinIO + dbt-runner/state/scheduler/bff + rat serve)
-	@echo ">> platform: $(notdir $(RUNTIME)) compose up — the always-on stack (rat serve attaches to the plugins)"
-	@$(RUNTIME) compose -f platform/compose.yaml up -d
-
-platform-run: ## ADR-020 S1: run the medallion once through the rat serve gateway (bronze→silver→gold)
-	@$(RUNTIME) compose -f platform/compose.yaml run --rm runner
-
-platform-down: ## tear the data platform stack down (and its volumes)
-	@$(RUNTIME) compose -f platform/compose.yaml down -v
-
-platform-socket: ## ADR-022 socket-mount: rat AS A CONTAINER launches the plugins as siblings (infra = Postgres+MinIO only)
-	@./platform/run-socket-mount.sh up
-
-platform-socket-down: ## tear the socket-mount platform down
-	@./platform/run-socket-mount.sh down
+# NOTE (ADR-052/053): the plugin images publish from the release matrix
+# (.github/workflows/release.yml → ghcr.io/squat-collective/rat-v3-*), and the data
+# platform demo graduated to github.com/squat-collective/rat-v3-demo — `plugin-images`
+# and the `platform-*` targets left with it. The plugin-base + stateplugin targets stay
+# for SDK hackers building local :dev variants.
 
 ## --- podman deployment-runtime LIVE full-profile proof (D1 / ADR-016 §4) ------
 # Drives a REAL `podman run` (nested) under the full I9 profile and asserts the kernel

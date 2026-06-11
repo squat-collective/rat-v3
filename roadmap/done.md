@@ -17,6 +17,35 @@ Reverse chronological. Each entry: date, what was accomplished, links to artifac
 
 ---
 
+## 2026-06-11 — `rat/6.21`: the binary is the interface + the demo graduates (ADR-052/053)
+
+The maintainer's call: *"rat should be a single binary, easy to execute, like docker or
+podman"* — and *"the demo should be outside the core, absolutely independent."*
+
+- **ADR-052 — zero-`make` user/author paths.** release.yml gains the plugin-image matrix
+  (`rat-v3-stateplugin` multi-arch + dbt-runner / state-postgres / secret-env /
+  scheduler-cron, amd64-first); the scaffold's Dockerfiles default to the PUBLISHED bases
+  (`ghcr.io/squat-collective/rat-v3-plugin-base-{py,go}:latest`) so `rat plugin init →
+  pack → publish` needs **no clone and no make**; the QUICKSTART is zero-clone end to end
+  (the demo plugin pulls from GHCR at `rat up`). `make` remains for hacking on rat's own
+  core — exactly where docker's and podman's own Makefiles live.
+- **`rat validate` learned real pull semantics** — its "the podman runtime does not pull
+  at launch" claim was wrong (the runtime launches via `podman run`, which auto-pulls):
+  a locally-absent ref that resolves remotely (`podman manifest inspect`, no pull) is now
+  a will-pull NOTE; a ref that resolves nowhere stays the error.
+- **ADR-053 — `platform/` graduated to
+  [github.com/squat-collective/rat-v3-demo](https://github.com/squat-collective/rat-v3-demo)**:
+  prerequisites = the binary + podman + that repo. Its planes reference GHCR images;
+  the attach-mode compose runs published images (no more pip-from-source services); the
+  bff (demo glue) moved with it and is published by the demo repo's own CI
+  (`rat-v3-demo-bff`, FROM the plugin-base — ADR-052 eating its own dogfood); `run.py`
+  retired (the bff + `rat call`/`rat apply` cover it). rat-v3 shed `plugin-images` + the
+  `platform-*` make targets.
+- Verified post-release like a stranger: the zero-clone QUICKSTART (GHCR stateplugin
+  pulled at `rat up`), the zero-clone author path (`rat plugin init → pack` against the
+  published base), and the demo's launch-mode medallion from a fresh clone of
+  rat-v3-demo only.
+
 ## 2026-06-10 — `rat/6.18`: PUBLISHED — Apache-2.0, `github.com/squat-collective/rat-v3` (DX-2, ADR-051)
 
 The last DX item, and the big one-way door, taken deliberately

@@ -53,7 +53,8 @@ rat/
 ├── core/                     # the Go core: the six things + cross-cutting enforcement
 │   └── cmd/rat/              # the one binary: project/daemon/author/marketplace/client
 ├── plugins/                  # 40 reference + demo plugins across the 18 axes
-├── platform/                 # the batteries-included data-platform demo (dbt medallion)
+│                             # (the data-platform DEMO graduated to the rat-v3-demo
+│                             #  repo — ADR-053; images publish from release.yml)
 ├── marketplace/              # the local marketplace index (signing, distribution)
 ├── scripts/                  # conformance/composition/codegen/install runners
 ├── dist/                     # build output (gitignored): `make rat-build` → dist/rat

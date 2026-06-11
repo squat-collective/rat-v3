@@ -14,7 +14,7 @@ the gaps; the queued fixes live in [roadmap/backlog.md](../../roadmap/backlog.md
 
 | | **`rat.toml` project** | **`plane.yaml` attach** | **`plugins.yaml` launch** | **socket-mount** |
 |---|---|---|---|---|
-| Bring-up | `rat init` / `rat add` / `rat up` | `rat serve --plane plane.yaml` | `rat serve --plane plugins.yaml` | `make platform-socket` (rat runs *as* a container) |
+| Bring-up | `rat init` / `rat add` / `rat up` | `rat serve --plane plane.yaml` | `rat serve --plane plugins.yaml` | the demo's `./run-socket-mount.sh` (rat runs *as* a container) |
 | Who runs the plugins | rat launches them (`local` or `podman` runtime) | **you do** (compose, systemd, k8s sidecars); rat dials `endpoint:` | rat launches each from its `launch.image`, reconciler-supervised | same as launch, but rat drives the **host's** podman over a mounted socket; plugins are siblings on a shared network |
 | Spec style | command-written TOML (poetry model, [ADR-023](../architecture/adrs/023-rat-as-a-per-project-daemon.md)) — never hand-edited | hand-written YAML | hand-written YAML ([ADR-022](../architecture/adrs/022-plugins-are-launched-not-composed.md)) | the same `plugins.yaml` |
 | Durability | `.rat/data/<plugin>` mounted at `/data` ([ADR-031](../architecture/adrs/031-durable-local-storage.md)) | whatever your runner gives the containers | **ephemeral** (no `/data` mount on a raw `--plane`) | ephemeral |
@@ -37,7 +37,7 @@ Rules of thumb:
 - **Socket-mount is launch mode with rat itself containerized**: it drives the host's
   rootless podman through the user socket and dials sibling containers by name over podman
   DNS — the same shape as k8s pod-to-pod. See
-  [platform/run-socket-mount.sh](../../platform/run-socket-mount.sh).
+  [run-socket-mount.sh in rat-v3-demo](https://github.com/squat-collective/rat-v3-demo/blob/main/run-socket-mount.sh).
 
 All four converge on the same daemon: one gateway, C5 authorization, mandatory audit.
 The topology changes who *starts* plugins, never how they're *called*.
@@ -88,7 +88,7 @@ plugin's `ref://` env vars point at.
 
 1. the manifest under `manifests/`;
 2. a `plugins.yaml` entry (`name` + `manifest` + `launch: {image, isolation, env}`);
-3. an **image** (a `Makefile` build target — see `plugin-images` — typically `FROM`
+3. an **image** — `rat plugin pack` yours, or reference a published one (ADR-052; typically `FROM`
    the SDK base images of [ADR-026](../architecture/adrs/026-plugin-authoring-and-packaging.md));
 4. if it needs credentials: a new `ref://` entry in the secret plugin's store (today: the
    `RAT_SECRETS` JSON blob on the `rat-secret` entry), plus the ref string in the new
@@ -105,10 +105,10 @@ Four patterns coexist in the demo platform. Know which one you're looking at:
 
 | Pattern | Where you see it | Grade |
 |---|---|---|
-| **Compose env plaintext** | [platform/compose.yaml](../../platform/compose.yaml): `POSTGRES_PASSWORD`, `RAT_S3_SECRET=minioadmin`, full DSNs with passwords inline | demo-only. Real deployments must not ship credentials in compose files. |
-| **`RAT_SECRETS` JSON blob** | [platform/plugins.yaml](../../platform/plugins.yaml): the `rat-secret` plugin (env-py) is *seeded* with one env var holding the whole `tenant → ref → value` map | demo-only — but it concentrates every value into **one trust boundary** (the secret plugin), which is the right shape. |
+| **Compose env plaintext** | [compose.yaml in rat-v3-demo](https://github.com/squat-collective/rat-v3-demo/blob/main/compose.yaml): `POSTGRES_PASSWORD`, `RAT_S3_SECRET=minioadmin`, full DSNs with passwords inline | demo-only. Real deployments must not ship credentials in compose files. |
+| **`RAT_SECRETS` JSON blob** | [plugins.yaml in rat-v3-demo](https://github.com/squat-collective/rat-v3-demo/blob/main/plugins.yaml): the `rat-secret` plugin (env-py) is *seeded* with one env var holding the whole `tenant → ref → value` map | demo-only — but it concentrates every value into **one trust boundary** (the secret plugin), which is the right shape. |
 | **`ref://` resolution** | consumers carry only refs (`RAT_STATE_PG_REF=ref://state/pg-dsn`, `RAT_LAKE_PG_REF`, …) and resolve them via `rat://secret/v1/resolve` — gateway-routed, C5-authorized, audited | **the production contract.** No credential in any plane file or consumer env. |
-| **dbt `env_var()` interpolation** | [platform/dbt-project/profiles.yml](../../platform/dbt-project/profiles.yml): `{{ env_var('RAT_S3_KEY', 'minioadmin') }}` — the dbt-runner resolves refs, then exports the values as env vars for dbt | a bridge into dbt's own config language; the committed *defaults* are demo creds. |
+| **dbt `env_var()` interpolation** | [dbt-project/profiles.yml in rat-v3-demo](https://github.com/squat-collective/rat-v3-demo/blob/main/dbt-project/profiles.yml): `{{ env_var('RAT_S3_KEY', 'minioadmin') }}` — the dbt-runner resolves refs, then exports the values as env vars for dbt | a bridge into dbt's own config language; the committed *defaults* are demo creds. |
 
 **The production backend exists: [`plugins/secret/vault-py`](../../plugins/secret/vault-py/)**
 (DX-6) — HashiCorp Vault KV v2 behind the same `rat://secret/v1/resolve`. It fetches **at
@@ -116,7 +116,7 @@ resolve time**, so rotating a secret in Vault is visible on the next resolve wit
 restarts** (verified live: resolve → rotate → re-resolve against one uninterrupted plugin
 process; its README has the exact commands). Pattern 3 + vault-py is the production shape;
 patterns 1 and 4's literal values are demo conveniences (now deduplicated into
-[`platform/.env`](../../platform/.env), ADR-050), and pattern 2 is the seed mechanism for
+[the demo's `.env`](https://github.com/squat-collective/rat-v3-demo/blob/main/.env), ADR-050), and pattern 2 is the seed mechanism for
 the demo env-py store only.
 
 ## Durability & `.rat/`
@@ -177,7 +177,7 @@ is localhost/trusted-network only until the identity plugin + TLS land
 
 ## Related
 
-- [platform/README.md](../../platform/README.md) — the batteries-included demo platform
+- [rat-v3-demo](https://github.com/squat-collective/rat-v3-demo) — the batteries-included demo platform (independent of this repo, ADR-053)
   (all of attach, launch, and socket-mount, runnable).
 - [ADR-020](../architecture/adrs/020-data-platform-bundle.md) — the data platform bundle.
 - [ADR-021](../architecture/adrs/021-orchestrator-pipelines-as-code.md) — pipelines are

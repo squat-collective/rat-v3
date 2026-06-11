@@ -4,7 +4,17 @@
 > completion history lives in [`done.md`](done.md); the phase map in [`phases.md`](phases.md).
 > Updated: 2026-06-10.
 
-## ✅ Latest — `rat/6.20`: PUBLISHED 🐀 — every channel verified anonymously (DX-2 closed)
+## ✅ Latest — `rat/6.21`: the binary IS the interface; the demo is independent (ADR-052/053)
+
+Zero-`make` everywhere a user/author stands: the release ships the full plugin-image
+matrix to GHCR; the scaffold defaults to the published bases (`init → pack → publish`
+with no clone); the QUICKSTART is zero-clone (images pull at `rat up`); `rat validate`
+learned real pull semantics (its "podman never pulls" claim was wrong). And the data
+platform demo **graduated to [rat-v3-demo](https://github.com/squat-collective/rat-v3-demo)**
+— binary + podman + that repo, nothing else (its bff publishes from its own CI, FROM the
+published base). `make` survives only for hacking on rat's core. Details: [done.md](done.md).
+
+## ✅ `rat/6.20`: PUBLISHED 🐀 — every channel verified anonymously (DX-2 closed)
 
 **`github.com/squat-collective/rat-v3`, public, Apache-2.0** ([ADR-051](../docs/architecture/adrs/051-publish-apache2-squat-collective.md)).
 Module paths renamed `rat-dev`→`squat-collective/rat-v3` (go-get works; wire proven held — suite +
@@ -168,7 +178,7 @@ separate `rat-data-dev` repo**.
 
 ## Branching (in force)
 
-`main` is the sealed line (**`rat/6.20`**, pushed to `github.com/squat-collective/rat-v3`); additive increments
+`main` is the sealed line (**`rat/6.21`**, pushed to `github.com/squat-collective/rat-v3`); additive increments
 land via `--no-ff` merges of topic branches + an annotated `rat/N.M` tag. **Never commit directly to `main`** (a `PreToolUse` hook blocks
 it) — work on a topic branch. Full rules: [`.claude/rules/git-branching.md`](../.claude/rules/git-branching.md).
 
