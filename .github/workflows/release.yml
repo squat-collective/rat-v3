@@ -132,6 +132,7 @@ jobs:
     needs: binaries
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false   # one image's failure must not cancel the others mid-push
       matrix:
         include:
           - { image: stateplugin,    file: core/testplugins/stateplugin/Dockerfile,  platforms: "linux/amd64,linux/arm64" }

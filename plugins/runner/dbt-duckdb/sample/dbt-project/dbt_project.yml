@@ -1,0 +1,11 @@
+name: rat_demo
+version: "1.0.0"
+config-version: 2
+profile: rat
+
+model-paths: ["models"]
+
+models:
+  rat_demo:
+    +materialized: table
+    +database: lake # materialize the medallion INTO the shared DuckLake (Q2)

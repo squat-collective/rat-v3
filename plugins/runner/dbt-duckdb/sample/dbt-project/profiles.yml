@@ -1,0 +1,27 @@
+# dbt profile for the rat dbt-runner — Q2: materialize the medallion into the SHARED remote
+# DuckLake (Postgres catalog + S3/MinIO data) so other plugins + the UI can read the tables
+# (not a local /tmp DuckDB trapped in the runner). The connection bits come from env vars rat
+# injects (RAT_LAKE_PG / RAT_LAKE_DATA / RAT_S3_*), so no credential is committed in this file.
+#
+# dbt-duckdb 1.9.4 attaches DuckLake natively: the `options.data_path` on the attach emits
+# `ATTACH 'ducklake:postgres:…' AS lake (DATA_PATH 's3://…')`, and a TYPE S3 secret carries
+# the MinIO creds. Models materialize with `+database: lake` (see dbt_project.yml).
+rat:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ":memory:" # the main db is throwaway; the lake (attached below) is the real store
+      extensions: [ducklake, httpfs, postgres]
+      secrets:
+        - type: s3
+          key_id: "{{ env_var('RAT_S3_KEY', 'minioadmin') }}"
+          secret: "{{ env_var('RAT_S3_SECRET', 'minioadmin') }}"
+          endpoint: "{{ env_var('RAT_S3_ENDPOINT', 'host.containers.internal:59010') }}"
+          url_style: path
+          use_ssl: false
+      attach:
+        - path: "ducklake:postgres:{{ env_var('RAT_LAKE_PG') }}"
+          alias: lake
+          options:
+            data_path: "{{ env_var('RAT_LAKE_DATA', 's3://rat/lake/') }}"

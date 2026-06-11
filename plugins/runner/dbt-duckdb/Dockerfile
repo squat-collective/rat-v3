@@ -14,9 +14,10 @@ COPY plugins/runner/dbt-duckdb/ /plugin/
 COPY contracts/sdks/python/rat /usr/local/lib/python3.12/site-packages/rat
 # DEMO shortcut: bake a sample dbt project + landing data so a launched runner has
 # something to run. Real projects arrive via `rat apply` (ADR-021 Q1 — upload/mount), not
-# baked into the runner. dbt writes only to /tmp (the I9 tmpfs); rootfs stays read-only.
-COPY platform/dbt-project/ /project/
-COPY platform/landing/ /landing/
+# baked into the runner (the fixture lives in sample/ — the demo repo carries the
+# user-editable copy, ADR-053). dbt writes only to /tmp (the I9 tmpfs); rootfs stays read-only.
+COPY plugins/runner/dbt-duckdb/sample/dbt-project/ /project/
+COPY plugins/runner/dbt-duckdb/sample/landing/ /landing/
 RUN pip install --no-cache-dir grpcio==1.80.0 protobuf==7.35.0 \
  && python -m venv /opt/dbtvenv \
  && /opt/dbtvenv/bin/pip install --no-cache-dir dbt-duckdb==1.9.4 duckdb==1.5.3
