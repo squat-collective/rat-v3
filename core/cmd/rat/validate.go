@@ -21,8 +21,8 @@ package main
 //     capability in an axis this rat links, merely note one in an axis it can't see
 //   - a provider's `provides` stays on its kind's axis
 //   - every `requires` has a provider in the plane (else the gateway has no route)
-//   - every launch image is launchable NOW (local: executable exists; podman: image
-//     present — the podman runtime does NOT pull at launch)
+//   - every launch image is launchable (local: executable exists; podman: present
+//     locally, or remotely resolvable — `podman run` pulls at launch, ADR-052)
 //   - launched providers declare resources.requests (C4) — warning, not error: the
 //     authoring gate mandates it, the runtime currently launches unbounded without it
 
@@ -44,30 +44,39 @@ type vIssue struct {
 }
 
 // imageProbe answers "could the runtime launch this image, as things stand?".
-// Injectable so tests don't need podman.
-type imageProbe func(runtime, image string) error
+// Returns (note, err): err = unlaunchable; a non-empty note = launchable with a caveat
+// worth surfacing (e.g. "will be pulled at launch"). Injectable so tests don't need podman.
+type imageProbe func(runtime, image string) (string, error)
 
 // defaultImageProbe mirrors what each deployment-runtime will actually do at launch.
-func defaultImageProbe(runtime, image string) error {
+func defaultImageProbe(runtime, image string) (string, error) {
 	switch runtime {
 	case "local":
 		fi, err := os.Stat(image)
 		if err != nil {
-			return fmt.Errorf("binary %q not found (the local runtime execs a filesystem path)", image)
+			return "", fmt.Errorf("binary %q not found (the local runtime execs a filesystem path)", image)
 		}
 		if fi.IsDir() || fi.Mode()&0o111 == 0 {
-			return fmt.Errorf("%q is not an executable binary", image)
+			return "", fmt.Errorf("%q is not an executable binary", image)
 		}
 	case "podman":
 		bin := os.Getenv("RAT_PODMAN_BIN")
 		if bin == "" {
 			bin = "podman"
 		}
-		if exec.Command(bin, "image", "exists", image).Run() != nil {
-			return fmt.Errorf("image %q not found locally — the podman runtime does not pull at launch (build it, or `%s pull %s` first)", image, bin, image)
+		if exec.Command(bin, "image", "exists", image).Run() == nil {
+			return "", nil
 		}
+		// Not local — fine by itself: the runtime launches via `podman run`, which
+		// auto-pulls (ADR-052; this probe's old "does not pull" claim was wrong). But a
+		// typo'd ref would still crash-loop to Degraded at launch, so verify the ref
+		// RESOLVES remotely (manifest inspect — no pull, no layers).
+		if exec.Command(bin, "manifest", "inspect", image).Run() == nil {
+			return "not local — will be pulled at launch", nil
+		}
+		return "", fmt.Errorf("image %q is neither local nor remotely resolvable (`%s manifest inspect` failed) — a typo'd ref crash-loops at launch", image, bin)
 	}
-	return nil
+	return "", nil
 }
 
 // preflight runs every static check against an already-loaded plane and returns the
@@ -134,8 +143,10 @@ func preflight(pl *Plane, probe imageProbe) []vIssue {
 		if s.Launch == nil {
 			continue
 		}
-		if err := probe(pl.Runtime, s.Launch.Image); err != nil {
+		if note, err := probe(pl.Runtime, s.Launch.Image); err != nil {
 			bad("%s: launch %v", s.Manifest.Metadata.Name, err)
+		} else if note != "" {
+			warn("%s: launch image %q %s", s.Manifest.Metadata.Name, s.Launch.Image, note)
 		}
 		if !s.Manifest.HasResources() {
 			warn("%s: launched provider declares no resources.requests (C4 — mandatory at the authoring gate; the runtime launches it unbounded)", s.Manifest.Metadata.Name)

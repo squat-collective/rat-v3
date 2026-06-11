@@ -129,6 +129,30 @@ requires:
 	}
 }
 
+func TestPreflightPullableImageIsNoteNotError(t *testing.T) {
+	// ADR-052: a locally-absent image that resolves remotely is launchable — `podman
+	// run` pulls. The probe surfaces it as a note (warning), never an error.
+	bin := filepath.Join(t.TempDir(), "p")
+	vWrite(t, bin, "#!/bin/sh\n")
+	_ = os.Chmod(bin, 0o755)
+	pl := vPlane(t, `
+runtime: podman
+plugins:
+  - name: state
+    manifest: ./state.plugin.yaml
+    launch: { image: ghcr.io/example/thing:1 }
+`, map[string]string{"state.plugin.yaml": goodState})
+
+	pullable := func(runtime, image string) (string, error) {
+		return "not local — will be pulled at launch", nil
+	}
+	errs, warns := issuesByLevel(preflight(pl, pullable))
+	if len(errs) != 0 {
+		t.Fatalf("pullable image must not error: %q", errs)
+	}
+	wantContains(t, warns, "will be pulled at launch")
+}
+
 func TestPreflightOpenSetAxisIsWarningNotError(t *testing.T) {
 	// A kind with no well-known axis providing/requiring capabilities of an axis this
 	// rat does not link: unverified (warning), never an error — the open-set promise.

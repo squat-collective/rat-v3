@@ -53,10 +53,11 @@ rat up --strict / rat serve --strict   # same checks; refuse to boot on any erro
 ```
 
 It statically checks: manifests load · names unique · every capability URI is real ·
-every `requires` has a provider · every launch image is present (the podman runtime
-does **not** pull at launch) · providers declare `resources.requests`. What it can't
-see: attach endpoints aren't dialed, and env/secret *values* aren't checked — a wrong
-DSN still surfaces at first call.
+every `requires` has a provider · every launch image is **resolvable** (present locally,
+or pullable — `podman run` pulls at launch, so a remote ref is a note, not an error;
+a ref that resolves nowhere is the error, ADR-052) · providers declare
+`resources.requests`. What it can't see: attach endpoints aren't dialed, and env/secret
+*values* aren't checked — a wrong DSN still surfaces at first call.
 
 **`rat.toml` project — one command:**
 
