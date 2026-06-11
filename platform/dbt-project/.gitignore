@@ -1,5 +1,0 @@
-# dbt-generated cruft (written into the project at runtime)
-.user.yml
-target/
-logs/
-dbt_packages/

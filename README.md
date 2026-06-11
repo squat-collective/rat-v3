@@ -18,11 +18,11 @@ No clone needed: `curl -fsSL https://github.com/squat-collective/rat-v3/releases
 
 | dir | what |
 |---|---|
-| [`QUICKSTART.md`](QUICKSTART.md) | RAT in five minutes — build, boot, call, get refused by C5, read the audit |
+| [`QUICKSTART.md`](QUICKSTART.md) | RAT in five minutes — install, boot, call, get refused by C5, read the audit (no clone, no make — ADR-052) |
 | [`core/`](core/) | the Go control-plane core (the six things + cross-cutting enforcement) — sealed `rat/2.0`, hardened through `rat/6.13` |
 | [`contracts/`](contracts/) | the frozen `.proto` wire + per-axis `CONTRACT.md` author guides + committed SDKs + golden vectors ([amending procedure](contracts/AMENDING.md)) |
-| [`plugins/`](plugins/) | 40 reference + demo plugins across the 18 frozen axes |
-| [`platform/`](platform/) | the batteries-included data-platform demo (a dbt medallion driven through the audited gateway) |
+| [`plugins/`](plugins/) | 40 reference + demo plugins across the 18 frozen axes (images publish to GHCR per release) |
+| [rat-v3-demo ↗](https://github.com/squat-collective/rat-v3-demo) | the batteries-included data-platform demo — its own repo, runs with just the binary + podman (ADR-053) |
 | [`docs/`](docs/) | the vision, the architecture overview, the numbered ADRs + the [how-to guides](docs/guides/) |
 | [`reviews/`](reviews/) | the internal adversarial reviews + the Q02 external-review kit |
 | [`roadmap/`](roadmap/) | where we are / what's done / what's next ([current.md](roadmap/current.md) first) |

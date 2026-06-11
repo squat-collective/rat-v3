@@ -1,5 +1,0 @@
-# rat.yaml — turns this dbt project into a rat pipeline (ADR-021). The ONLY
-# rat-specific file; everything else is a standard dbt project.
-kind: pipeline
-runner: dbt              # which pipeline-runner plugin executes it
-schedule: "*/1 * * * *"  # rat schedules the refresh (the platform demo overrides the cadence)

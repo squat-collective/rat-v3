@@ -937,10 +937,11 @@ if __name__ == "__main__":
 func pyFiles(name, kind string, svc protoreflect.ServiceDescriptor, caps []axisCap) map[string]string {
 	server := pyServerStub(name, kind, svc, caps)
 
-	dockerfile := `# __NAME__ plugin image — FROM the rat python base (the rat SDK + grpc are baked in, ADR-026).
-# Your plugin repo carries only its OWN code; the SDK arrives via the base image, not vendored.
-# Build the base once: ` + "`make plugin-base-py`" + ` in the rat repo (a published ghcr image later).
-FROM localhost/rat/plugin-base-py:dev
+	dockerfile := `# __NAME__ plugin image — FROM the published rat python base (the rat SDK + grpc baked in,
+# ADR-026/ADR-052). Your repo carries only its OWN code; no rat clone, no make. Pin the base
+# to a release tag (e.g. :6.21) for reproducible builds — :latest rides the newest SDK.
+# SDK hackers: a clone's ` + "`make plugin-base-py`" + ` builds localhost/rat/plugin-base-py:dev instead.
+FROM ghcr.io/squat-collective/rat-v3-plugin-base-py:latest
 WORKDIR /plugin
 COPY . /plugin/
 # your plugin's OWN extra deps (duckdb, boto3, …) go in requirements.txt; the rat SDK is already present.
@@ -976,10 +977,12 @@ func main() {
 }
 `, name, kind)
 
-	dockerfile := `# __NAME__ plugin image (Go) — built FROM the rat Go SDK base (the gen SDK at /sdk, replace'd
-# in go.mod); ships a static binary on scratch (the SDK is compiled in, none at runtime).
-# Build the base once: ` + "`make plugin-base-go`" + ` in the rat repo (a published module later).
-FROM localhost/rat/plugin-base-go:dev AS build
+	dockerfile := `# __NAME__ plugin image (Go) — built FROM the published rat Go SDK base (the gen SDK at /sdk,
+# replace'd in go.mod); ships a static binary on scratch (ADR-052: no rat clone, no make).
+# Pin the base to a release tag for reproducible builds — :latest rides the newest SDK.
+# (Or skip the base entirely: the SDK is also ` + "`go get`" + `-able — see the authoring guide.)
+# SDK hackers: a clone's ` + "`make plugin-base-go`" + ` builds localhost/rat/plugin-base-go:dev instead.
+FROM ghcr.io/squat-collective/rat-v3-plugin-base-go:latest AS build
 ENV CGO_ENABLED=0 GOFLAGS=-mod=mod GOTOOLCHAIN=local
 WORKDIR /src
 COPY . .

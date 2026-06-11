@@ -1,31 +1,20 @@
 # 🐀 RAT in five minutes
 
 A control plane, one plugin, one authorized call, one refused call, and the audit trail
-that proves it. Every command below was run against this repo as written.
+that proves it. **No clone, no `make` — just `podman` (or docker) and a shell** (ADR-052:
+the binary is the interface). Every command below was run as written.
 
-**Prereqs:** `podman` (or docker) + `make`. Nothing installs on the host — builds and
-tests run in containers.
-
-## 0 · Get the CLI
-
-No clone needed:
+## 1 · Get the CLI
 
 ```bash
 curl -fsSL https://github.com/squat-collective/rat-v3/releases/latest/download/install.sh | sh
 ./rat --help          # the verb map: PROJECT / DAEMON / AUTHOR / MARKETPLACE / CLIENT
 ```
 
-(From a clone, `make rat-build` builds the same thing into `dist/rat`.)
-
-## 1 · Build the demo plugin image (~1 min)
-
-```bash
-make stateplugin-image    # → rat/stateplugin:dev
-```
-
-This is the wire-stub state plugin the core uses in its own launch tests — it speaks
-`state/v1` well enough to prove the control plane end-to-end. (Writing a *real* backend
-is the first exercise in [docs/guides/authoring-a-plugin.md](docs/guides/authoring-a-plugin.md).)
+The demo plugin comes from the registry — `ghcr.io/squat-collective/rat-v3-stateplugin`,
+a wire-stub `state/v1` backend the core uses in its own launch tests. It's pulled for
+you at `rat up`. (Writing a *real* backend is the first exercise in
+[docs/guides/authoring-a-plugin.md](docs/guides/authoring-a-plugin.md).)
 
 ## 2 · Create a project — a declared plugin set
 
@@ -65,15 +54,16 @@ requires:
   - capability: rat://state/v1/list
 EOF
 
-rat add state --image rat/stateplugin:dev --manifest state.plugin.yaml
+rat add state --image ghcr.io/squat-collective/rat-v3-stateplugin:latest --manifest state.plugin.yaml
 rat add dev --manifest dev.plugin.yaml       # driver: no image, just an identity
 ```
 
 ## 3 · Preflight, then up
 
 ```bash
-rat validate  # static checks: capabilities real · requires satisfied · image present
-rat up -d     # launches the plugin container (I9 isolation), wires the gateway
+rat validate  # capabilities real · requires satisfied · image resolvable
+              #   ⚠ state: launch image "ghcr.io/…stateplugin:latest" not local — will be pulled at launch
+rat up -d     # pulls the image (first time), launches it (I9 isolation), wires the gateway
 rat status    # project — running · socket: .rat/daemon.sock · plugins (2)
 ```
 
@@ -127,7 +117,8 @@ rat down
 
 | You want… | Go to |
 |---|---|
-| the full data-platform demo (dbt medallion, UI, scheduler) | [platform/README.md](platform/README.md) — `make platform-up` |
+| the full data-platform demo (dbt medallion, UI, scheduler) | [github.com/squat-collective/rat-v3-demo](https://github.com/squat-collective/rat-v3-demo) — independent of this repo (ADR-053) |
+| hacking on rat itself (the only place `make` lives) | clone this repo → `make help` (`rat-build`, `verify`, `conformance`, …) |
 | to write a real plugin | [docs/guides/authoring-a-plugin.md](docs/guides/authoring-a-plugin.md) |
 | to compose your own platform | [docs/guides/building-a-platform.md](docs/guides/building-a-platform.md) |
 | the why and the architecture | [docs/vision.md](docs/vision.md) → [docs/architecture/overview.md](docs/architecture/overview.md) |
