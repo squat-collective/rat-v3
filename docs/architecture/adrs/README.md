@@ -56,6 +56,8 @@ Architecture Decision Records. One ADR per concept; no multi-topic ADRs. Numbere
 | [049](049-state-v1-create-if-absent.md) | `state/v1` create-if-absent — an additive, capability-gated atomic primitive | Accepted | 2026-06-10 |
 | [050](050-plane-file-env-interpolation.md) | Plane-file env interpolation (`${VAR}`) | Accepted | 2026-06-10 |
 | [051](051-publish-apache2-squat-collective.md) | Publish RAT v3: Apache-2.0, `github.com/squat-collective/rat-v3`, GHCR distribution | Accepted | 2026-06-10 |
+| [052](052-the-binary-is-the-interface.md) | The binary is the interface — zero-`make` user/author paths, GHCR image matrix | Accepted | 2026-06-11 |
+| [053](053-the-demo-lives-outside-the-core.md) | The demo lives outside the core — graduates to `rat-v3-demo` | Accepted | 2026-06-11 |
 
 ## Template
 
