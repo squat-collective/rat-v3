@@ -1,0 +1,10 @@
+order_id,customer,product,amount,status,order_date
+1001,Alice,Widget,29.99,COMPLETED,2026-05-01
+1002,bob,Gadget,,completed,2026-05-01
+1003,Alice,Widget,29.99,Completed,2026-05-01
+1004,Carol,Gizmo,149.50,PENDING,2026-05-02
+1005,,Widget,29.99,completed,2026-05-02
+1006,Dave,Gadget,49.00,CANCELLED,2026-05-02
+1003,Alice,Widget,29.99,Completed,2026-05-01
+1007,Erin,Gizmo,149.50,completed,2026-05-03
+1008,Frank,Widget,29.99,COMPLETED,2026-05-03
